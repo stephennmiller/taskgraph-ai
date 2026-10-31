@@ -9,6 +9,7 @@ import * as fsPromises from 'node:fs/promises';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { LoopConfig } from '../types.js';
 import { fakeClaude } from './fake-claude.js';
+import { parseCompletion } from './iteration-result.js';
 import { LoopService } from './loop.service.js';
 
 vi.mock('node:child_process');
@@ -37,12 +38,7 @@ describe('LoopService completion', () => {
 	});
 
 	describe('marker position', () => {
-		const parse = (output: string) =>
-			(
-				new LoopService({ projectRoot: '/p' }) as unknown as {
-					parseCompletion(o: string, c: number): { status: string };
-				}
-			).parseCompletion(output, 0);
+		const parse = (output: string) => parseCompletion(output, 0);
 
 		it('ignores a marker quoted inside a sentence', () => {
 			expect(parse(QUOTED).status).toBe('success');

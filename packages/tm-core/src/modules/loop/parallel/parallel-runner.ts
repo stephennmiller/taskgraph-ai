@@ -39,9 +39,14 @@ import {
 } from './parallel-plan.js';
 import { isSafeTaskId } from '../../../common/utils/safe-task-id.js';
 import {
+	capArgs,
 	loopIterationTimeoutMs,
 	timeoutMessage
 } from '../services/iteration-limits.js';
+import {
+	STREAM_JSON_ARGS,
+	findResultEvent
+} from '../services/stream-events.js';
 import { TaskWorktrees } from './task-worktrees.js';
 import { isFinishedStatus } from '../task-progress.js';
 import type {
@@ -87,6 +92,19 @@ function openLog(file: string): number {
 	return fs.openSync(file, flags, 0o600);
 }
 
+/** The cost and turns at the end of a task's log, if Claude Code got that far */
+function readSpend(task: ParallelTask, from: number): void {
+	try {
+		// From where this run started: a rerun appends to the failed run's log
+		const log = fs.readFileSync(task.logFile).subarray(from);
+		const run = findResultEvent(log.toString('utf8'));
+		if (run?.costUsd !== undefined) task.costUsd = run.costUsd;
+		if (run?.turns !== undefined) task.turns = run.turns;
+	} catch {
+		// No log (the spawn failed): nothing was spent
+	}
+}
+
 const describeSpawnError = (error: NodeJS.ErrnoException, command: string) =>
 	error.code === 'ENOENT'
 		? `${command} isn't installed or isn't on PATH`
@@ -108,6 +126,17 @@ export class ParallelLoopRunner {
 		const command = options.command ?? 'claude';
 		const spawner = options.spawner ?? spawn;
 		const claimant = options.claimant?.trim() || resolveClaimant();
+		// stream-json, so the log ends with the cost; the budget split evenly
+		const claudeArgs = [
+			...STREAM_JSON_ARGS,
+			...capArgs({
+				maxTurns: options.maxTurns,
+				maxBudgetUsd:
+					options.maxBudgetUsd === undefined
+						? undefined
+						: options.maxBudgetUsd / limit
+			})
+		];
 		const git = new TaskWorktrees(this.projectRoot);
 		// Checked before anything is claimed, so a missing runtime or token
 		// costs nothing
@@ -199,10 +228,20 @@ export class ParallelLoopRunner {
 						container: !!workers
 					});
 					let cmd = command;
-					let args = ['-p', prompt, '--dangerously-skip-permissions'];
+					let args = [
+						'-p',
+						prompt,
+						'--dangerously-skip-permissions',
+						...claudeArgs
+					];
 					let cwd: string;
 					if (workers) {
-						const prepared = await workers.prepare(entry.task, base, prompt);
+						const prepared = await workers.prepare(
+							entry.task,
+							base,
+							prompt,
+							claudeArgs
+						);
 						entry.hasWorktree = true;
 						entry.createdBranch = prepared.createdBranch;
 						entry.container = prepared.name;
@@ -261,11 +300,17 @@ export class ParallelLoopRunner {
 		}
 
 		await this.settle(running, git, workers, base, tag, claimant, aborted);
+		const costs = running.flatMap((r) =>
+			r.task.costUsd === undefined ? [] : [r.task.costUsd]
+		);
 		return {
 			tasks: running.map((r) => r.task),
 			readyCount: wave.length,
 			skippedIds,
-			aborted
+			aborted,
+			...(costs.length
+				? { totalCostUsd: costs.reduce((a, b) => a + b, 0) }
+				: {})
 		};
 	}
 
@@ -284,6 +329,7 @@ export class ParallelLoopRunner {
 	): Promise<void> {
 		const { task } = entry;
 		const log = openLog(task.logFile);
+		const logStart = fs.fstatSync(log).size;
 		const timeout = loopIterationTimeoutMs();
 		const timers: NodeJS.Timeout[] = [];
 		return new Promise<void>((resolve) => {
@@ -297,6 +343,7 @@ export class ParallelLoopRunner {
 				settled = true;
 				for (const timer of timers) clearTimeout(timer);
 				task.exitCode = exitCode;
+				readSpend(task, logStart);
 				this.finish(entry, state, error);
 				resolve();
 			};

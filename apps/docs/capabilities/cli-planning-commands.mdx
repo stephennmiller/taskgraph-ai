@@ -70,6 +70,9 @@ taskgraph add-task --prompt="Description" --priority=high
 # File work you found while doing task 3; it doesn't wait for task 3
 taskgraph add-task --prompt="Description" --discovered-from=3
 
+# Assign it to a teammate by GitHub login
+taskgraph add-task --prompt="Description" --assignee=octocat
+
 # Add acceptance criteria (repeat --ac for each one)
 taskgraph add-task --prompt="Description" --ac="Users can log in" --ac="Tokens expire after 15 minutes"
 ```

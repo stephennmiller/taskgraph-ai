@@ -5,6 +5,7 @@ import { appendNote } from './notes.js';
 import {
 	PRIME_RULES,
 	buildPrimeContext,
+	findUnmetCriteria,
 	findUnnotedInProgress
 } from './prime-context.js';
 
@@ -59,7 +60,8 @@ describe('buildPrimeContext', () => {
 				title: 'Login endpoint',
 				status: 'in-progress',
 				priority: 'medium',
-				doneWhen: ['Returns 401 on a bad password']
+				doneWhen: ['Returns 401 on a bad password'],
+				criteria: [{ text: 'Returns 401 on a bad password', checked: false }]
 			}
 		]);
 	});
@@ -116,7 +118,8 @@ describe('buildPrimeContext', () => {
 				status: 'in-progress',
 				priority: 'medium',
 				parentTitle: 'Auth',
-				doneWhen: ['curl returns 200']
+				doneWhen: ['curl returns 200'],
+				criteria: []
 			}
 		]);
 		// 3.3 waits on 3.2; 3 itself is in progress, so it isn't "ready"
@@ -324,5 +327,42 @@ describe('findUnnotedInProgress', () => {
 		expect(
 			findUnnotedInProgress([createTask({ id: 1, title: 'Todo' })], since)
 		).toEqual([]);
+	});
+});
+
+describe('findUnmetCriteria', () => {
+	it('lists the unchecked criteria of each in-progress task, numbered as --check takes them', () => {
+		const { inProgress } = buildPrimeContext(
+			[
+				createTask({
+					id: 1,
+					title: 'Login endpoint',
+					status: 'in-progress',
+					acceptanceCriteria: [
+						{ text: 'Returns 401 on a bad password', checked: true },
+						'Rate limited per IP'
+					]
+				}),
+				createTask({
+					id: 2,
+					title: 'All checked',
+					status: 'in-progress',
+					acceptanceCriteria: [{ text: 'Done', checked: true }]
+				}),
+				createTask({
+					id: 3,
+					title: 'Strategy only',
+					status: 'in-progress',
+					testStrategy: 'Tests pass'
+				})
+			],
+			{ tag: 'master' }
+		);
+
+		const unmet = findUnmetCriteria(inProgress);
+
+		expect(unmet.map((u) => [u.task.id, u.unmet])).toEqual([
+			['1', [{ number: 2, text: 'Rate limited per IP' }]]
+		]);
 	});
 });

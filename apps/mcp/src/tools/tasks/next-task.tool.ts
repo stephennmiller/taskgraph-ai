@@ -23,7 +23,7 @@ const NextTaskSchema = z.object({
 		.boolean()
 		.optional()
 		.describe(
-			'Also start the task: set it in-progress and record who claimed it, in one locked write, so parallel sessions never get the same task. Setting it back to pending releases it.'
+			'Also start the task: set it in-progress and record who claimed it, in one locked write, so parallel sessions never get the same task. A task nobody is assigned to is assigned to the GitHub login gh is signed in as. Setting it back to pending releases it.'
 		)
 });
 
@@ -58,7 +58,10 @@ export function registerNextTaskTool(server: FastMCP) {
 						context,
 						'Error claiming next task',
 						async () => {
-							const claim = await tmCore.tasks.claimNext({ tag });
+							const claim = await tmCore.tasks.claimNext({
+								tag,
+								assignee: (await tmCore.github.currentLogin()) ?? undefined
+							});
 							log.info(
 								claim
 									? `Claimed ${claim.task.id} for ${claim.claimedBy}`

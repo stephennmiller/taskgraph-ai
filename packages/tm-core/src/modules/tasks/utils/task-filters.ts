@@ -216,6 +216,21 @@ export function filterByStatus<T extends Task>(
 }
 
 /**
+ * The tasks assigned to `login` (lowercase, as stored), or with a subtask
+ * assigned to it (a claim can take a subtask); all of them without a login
+ */
+export function filterByAssignee<T extends Task>(
+	tasks: T[],
+	login?: string
+): T[] {
+	if (!login) return tasks;
+	// A hand-edited file may hold `Alice`; logins compare case-insensitively
+	const mine = (item: { assignee?: string }) =>
+		item.assignee?.toLowerCase() === login;
+	return tasks.filter((task) => mine(task) || task.subtasks?.some(mine));
+}
+
+/**
  * The statuses a `--status` value names (`pending` or `pending,review`), or
  * undefined for `all` or no value. Throws a VALIDATION_ERROR naming the valid
  * statuses when one is unknown, so CLI and MCP refuse the same values.

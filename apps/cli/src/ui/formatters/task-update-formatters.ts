@@ -10,6 +10,8 @@
  *
  *   ✓ Added a note to task 3  Store sessions in SQLite
  *
+ *   ✓ Assigned task 3 to octocat  Store sessions in SQLite
+ *
  *   ✓ Updated 3 tasks
  *     2  Build the login API
  *     3  Store sessions in SQLite
@@ -72,6 +74,24 @@ export function formatTaskUpdated(
 		resultLine(`Updated task ${task.id}`, task.title, width),
 		showHint(task.id, width)
 	].join('\n');
+}
+
+/**
+ * Format the confirmation after `update-task --assignee` set or cleared
+ * who a task is for.
+ *
+ * @param assignee - The login now assigned; undefined when it was cleared
+ */
+export function formatAssigned(
+	task: UpdatedTaskRef,
+	assignee: string | undefined,
+	width = terminalWidth()
+): string {
+	task = sanitizeForTerminal(task);
+	const lead = assignee
+		? `Assigned task ${task.id} to ${sanitizeForTerminal(assignee)}`
+		: `Unassigned task ${task.id}`;
+	return resultLine(lead, task.title, width);
 }
 
 /**

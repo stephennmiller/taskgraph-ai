@@ -13,10 +13,11 @@ const tasks = {
 	requireTasksFile: vi.fn()
 };
 const config = { getActiveTag: vi.fn(() => 'master') };
+const github = { currentLogin: vi.fn(async () => 'octocat') };
 
 vi.mock('@tm/core', async (importOriginal) => ({
 	...(await importOriginal<typeof import('@tm/core')>()),
-	createTmCore: vi.fn(async () => ({ tasks, config }))
+	createTmCore: vi.fn(async () => ({ tasks, config, github }))
 }));
 
 import { registerNextTaskTool } from './next-task.tool.js';
@@ -175,7 +176,10 @@ describe('next_task', () => {
 			await register().execute({ projectRoot, claim: true }, ctx)
 		);
 
-		expect(tasks.claimNext).toHaveBeenCalledWith({ tag: 'master' });
+		expect(tasks.claimNext).toHaveBeenCalledWith({
+			tag: 'master',
+			assignee: 'octocat'
+		});
 		expect(result.data).toMatchObject({
 			// #661: subtask IDs in full, as get_task gives them
 			nextTask: { id: '3', subtasks: [{ id: '3.1', parentId: '3' }] },

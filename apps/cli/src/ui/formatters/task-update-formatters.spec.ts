@@ -5,7 +5,8 @@ import {
 	formatNotesAdded,
 	formatNothingToUpdate,
 	formatTasksUpdated,
-	formatTaskUpdated
+	formatTaskUpdated,
+	formatAssigned
 } from './task-update-formatters.js';
 
 const plain = (text: string) => stripVTControlCharacters(text);
@@ -196,5 +197,18 @@ describe('formatNothingToUpdate', () => {
 			'No tasks to update: none from 9 on are unfinished',
 			'Run taskgraph list to see task IDs'
 		]);
+	});
+});
+
+describe('formatAssigned', () => {
+	it('names who the task is for, or that nobody is', () => {
+		const task = { id: 3, title: 'Store sessions' };
+
+		expect(plain(formatAssigned(task, 'octocat', 80))).toBe(
+			'✓ Assigned task 3 to octocat  Store sessions'
+		);
+		expect(plain(formatAssigned(task, undefined, 80))).toBe(
+			'✓ Unassigned task 3  Store sessions'
+		);
 	});
 });

@@ -1,8 +1,10 @@
 /**
- * @fileoverview expand and update-task against a real tasks.json, with the
- * AI call mocked: a dependency the AI writes for a subtask that would loop
- * back to the subtask's own parent is dropped (#824). A parent can't finish
- * before its subtasks, so such a subtask could never start.
+ * @fileoverview expand, update-task and update --from against a real
+ * tasks.json, with the AI call mocked: a dependency the AI writes for a
+ * subtask that would loop back to the subtask's own parent is dropped (#824),
+ * and so is any other the AI writes for the task or a subtask it keeps that
+ * would close a loop (#832). A parent can't finish before its subtasks, so
+ * such a subtask could never start.
  */
 
 import * as fs from 'node:fs';
@@ -110,21 +112,128 @@ describe('AI-written subtask dependencies that loop through the parent', () => {
 		expect(kept).toHaveLength(1);
 	});
 
-	it('update-task drops a dependency on a task that waits on the parent', async () => {
-		// Task 2 waits on 1, so a subtask of 1 can't wait on 2; 3 is fine
-		write(
-			task('1', [], [aiSubtask(1, [])] as never),
-			task('2', ['1']),
-			task('3')
-		);
+	/** Task 1 rewritten by `via`; `during` runs while the AI is writing */
+	const rewrite = (via: string, aiTask: object, during = () => {}) => {
+		const updateTask = via === 'update-task';
+		generateObject.mockImplementation(async () => {
+			during();
+			return reply(updateTask ? { task: aiTask } : { tasks: [aiTask] }) as any;
+		});
+		const input = { prompt: 'Rewrite it' };
+		return updateTask
+			? tmCore.tasks.updateWithPrompt({ ...input, id: '1' })
+			: tmCore.tasks.updateFrom({ ...input, from: 1 });
+	};
+
+	it.each(['update-task', 'update --from'])(
+		'%s drops a dependency on a task that waits on the parent',
+		async (via) => {
+			// Task 2 waits on 1, so a subtask of 1 can't wait on 2; 3 is fine
+			write(
+				task('1', [], [aiSubtask(1, [])] as never),
+				task('2', ['1']),
+				task('3')
+			);
+
+			await rewrite(via, {
+				...task('1'),
+				subtasks: [aiSubtask(1, ['2', '3'])]
+			});
+
+			expect(savedTask('1').subtasks[0].dependencies).toEqual(['3']);
+		}
+	);
+
+	it.each(['update-task', 'update --from'])(
+		'%s drops a task dependency that loops back to it (#832)',
+		async (via) => {
+			// Task 2 waits on 1, so 1 can't wait on 2; 3 is fine
+			write(task('1'), task('2', ['1']), task('3'));
+
+			await rewrite(via, task('1', ['2', '3']));
+
+			expect(savedTask('1')).toMatchObject({
+				dependencies: ['3'],
+				metadata: { dependencySources: { '3': 'inferred' } }
+			});
+		}
+	);
+
+	it.each(['update-task', 'update --from'])(
+		'%s drops a dependency of a kept subtask on a task that waits on it (#832)',
+		async (via) => {
+			// Task 2 waits on 1.2, so 1.2 can't wait on 2; 3 is fine
+			write(
+				task('1', [], [aiSubtask(1, []), aiSubtask(2, [])] as never),
+				task('2', ['1.2']),
+				task('3')
+			);
+
+			await rewrite(via, {
+				...task('1'),
+				subtasks: [aiSubtask(1, []), aiSubtask(2, ['2', '3'])]
+			});
+
+			expect(savedTask('1').subtasks[1].dependencies).toEqual(['3']);
+		}
+	);
+
+	it.each(['update-task', 'update --from'])(
+		'%s checks for loops against tasks.json as saved, not as read before the AI call (#832)',
+		async (via) => {
+			write(task('1', [], [aiSubtask(1, [])] as never), task('2'), task('3'));
+
+			// Task 2 starts waiting on 1 while the AI is writing
+			await rewrite(
+				via,
+				{ ...task('1', ['2']), subtasks: [aiSubtask(1, ['2', '3'])] },
+				() => {
+					const data = JSON.parse(fs.readFileSync(tasksPath, 'utf8'));
+					data.master.tasks[1].dependencies = ['1'];
+					fs.writeFileSync(tasksPath, JSON.stringify(data));
+				}
+			);
+
+			expect(savedTask('1')).toMatchObject({
+				dependencies: [],
+				subtasks: [{ dependencies: ['3'] }]
+			});
+		}
+	);
+
+	it.each(['update-task', 'update --from'])(
+		'%s keeps a new dependency that loops only through one it drops (#832)',
+		async (via) => {
+			// 1.2 → 2 loops on its own (2 waits on 1.2). 1.1 → 3 is fine without
+			// it, though 3 → 1.2 → 2 → 1.1 would loop with it
+			write(
+				task('1', [], [aiSubtask(1, []), aiSubtask(2, [])] as never),
+				task('2', ['1.1', '1.2']),
+				task('3', ['1.2'])
+			);
+
+			await rewrite(via, {
+				...task('1'),
+				subtasks: [aiSubtask(1, ['3']), aiSubtask(2, ['2'])]
+			});
+
+			expect(savedTask('1').subtasks.map((st: any) => st.dependencies)).toEqual(
+				[['3'], []]
+			);
+		}
+	);
+
+	it('update --from drops one of two new dependencies of different tasks that loop together (#832)', async () => {
+		write(task('1'), task('2'));
 		generateObject.mockResolvedValue(
-			reply({
-				task: { ...task('1'), subtasks: [aiSubtask(1, ['2', '3'])] }
-			}) as any
+			reply({ tasks: [task('1', ['2']), task('2', ['1'])] }) as any
 		);
 
-		await tmCore.tasks.updateWithPrompt({ id: '1', prompt: 'Rewrite it' });
+		await tmCore.tasks.updateFrom({ prompt: 'Rewrite them', from: 1 });
 
-		expect(savedTask('1').subtasks[0].dependencies).toEqual(['3']);
+		// The first task's is checked first, so it stays
+		expect(savedTask('1').dependencies).toEqual(['2']);
+		expect(savedTask('2')).toMatchObject({ dependencies: [] });
+		expect(savedTask('2').metadata).toBeUndefined();
 	});
 });

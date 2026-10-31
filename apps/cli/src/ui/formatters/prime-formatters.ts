@@ -29,9 +29,12 @@
 
 import {
 	fenceAsData,
+	findUnmetCriteria,
 	type PluginCliCheck,
 	type PrimeContext,
+	type PrimeInProgressTask,
 	type PrimeTask,
+	type PrimeUnmetCriteria,
 	sanitizeForTerminal,
 	TASK_DATA_TAG
 } from '@tm/core';
@@ -261,6 +264,110 @@ export function formatUnnotedReminder(tasks: PrimeTask[]): string {
 		`If ${one ? "it's" : 'one is'} finished, check its criteria and close it:`,
 		`${INDENT}${theme.brand(`taskgraph set-status --id=${id} --status=done`)}`,
 		`If you didn't work on ${one ? 'it' : 'them'}, say so in one line and stop.`
+	].join('\n');
+}
+
+/** Most criteria the plugin's per-prompt and Stop hook text lists for a task */
+const MAX_HOOK_CRITERIA = 5;
+/** Longest title or criterion in that text, in characters */
+const MAX_HOOK_TEXT = 100;
+
+/** `2. Rate limited per IP` lines for unchecked criteria, the rest counted */
+function unmetLines(id: string, unmet: PrimeUnmetCriteria['unmet']): string[] {
+	const lines = unmet
+		.slice(0, MAX_HOOK_CRITERIA)
+		.map((c) => `${INDENT}${c.number}. ${cut(oneLine(c.text), MAX_HOOK_TEXT)}`);
+	const hidden = unmet.length - MAX_HOOK_CRITERIA;
+	if (hidden > 0) lines.push(`${INDENT}${hidden} more: taskgraph show ${id}`);
+	return lines;
+}
+
+/**
+ * The task in progress, which the plugin's UserPromptSubmit hook adds to
+ * each prompt (`prime --current`) so it stays in view in a long session, e.g.
+ *
+ *   TaskGraph task in progress:
+ *   <task-data>
+ *   3.2  Add the login endpoint · in Auth
+ *     Unchecked (1 of 3 checked):
+ *     2. Rate limited per IP
+ *     3. Logs each failed attempt
+ *   </task-data>
+ *   Check off each criterion that holds: taskgraph set-status --id=3.2 --check=<n>
+ *
+ * At most 13 lines, with titles and criteria cut to MAX_HOOK_TEXT. Empty
+ * when nothing is in progress.
+ */
+export function formatCurrentTask(inProgress: PrimeInProgressTask[]): string {
+	if (inProgress.length === 0) return '';
+	const task = sanitizeForTerminal(inProgress[0]);
+	const parent = task.parentTitle ? ` · in ${oneLine(task.parentTitle)}` : '';
+	const data = [
+		`${task.id}  ${cut(oneLine(task.title) + parent, MAX_HOOK_TEXT)}`
+	];
+	let next = '';
+	const [open] = findUnmetCriteria([task]);
+	if (open) {
+		const total = task.criteria.length;
+		data.push(
+			`${INDENT}Unchecked (${total - open.unmet.length} of ${total} checked):`,
+			...unmetLines(task.id, open.unmet)
+		);
+		next = `Check off each criterion that holds: taskgraph set-status --id=${task.id} --check=<n>`;
+	} else if (task.criteria.length > 0) {
+		next = `All its criteria are checked. Close it: taskgraph set-status --id=${task.id} --status=done`;
+	} else if (task.doneWhen.length > 0) {
+		data.push(
+			`${INDENT}Done when: ${cut(oneLine(task.doneWhen[0]), MAX_HOOK_TEXT)}`
+		);
+	}
+	const lines = [
+		'TaskGraph task in progress:',
+		fenceAsData(data.join('\n'), TASK_DATA_TAG)
+	];
+	if (next) lines.push(next);
+	if (inProgress.length > 1) {
+		lines.push(
+			`${inProgress.length - 1} more in progress: taskgraph list --status=in-progress`
+		);
+	}
+	return lines.join('\n');
+}
+
+/**
+ * Why the plugin's Stop hook keeps Claude going (`prime --unmet-criteria`):
+ * a task is in progress with acceptance criteria not yet checked, e.g.
+ *
+ *   Task 3.2 is still in progress with unchecked acceptance criteria:
+ *   <task-data>
+ *     2. Rate limited per IP
+ *   </task-data>
+ *   If the work is done, verify each one, then check it off and close the task:
+ *     taskgraph set-status --id=3.2 --check=<n> --status=done
+ *   If you're stopping on purpose (waiting on the user, or leaving it for
+ *   later), say so in one line and stop.
+ *
+ * Empty when every in-progress task's criteria are checked.
+ */
+export function formatUnmetCriteria(unmet: PrimeUnmetCriteria[]): string {
+	if (unmet.length === 0) return '';
+	unmet = sanitizeForTerminal(unmet);
+	const one = unmet.length === 1;
+	const id = one ? unmet[0].task.id : '<id>';
+	const data = one
+		? unmetLines(id, unmet[0].unmet)
+		: unmet.flatMap((u) => [
+				`Task ${u.task.id}:`,
+				...unmetLines(u.task.id, u.unmet)
+			]);
+	return [
+		one
+			? `Task ${id} is still in progress with unchecked acceptance criteria:`
+			: 'These tasks are still in progress with unchecked acceptance criteria:',
+		fenceAsData(data.join('\n'), TASK_DATA_TAG),
+		'If the work is done, verify each one, then check it off and close the task:',
+		`${INDENT}taskgraph set-status --id=${id} --check=<n> --status=done`,
+		"If you're stopping on purpose (waiting on the user, or leaving it for later), say so in one line and stop."
 	].join('\n');
 }
 

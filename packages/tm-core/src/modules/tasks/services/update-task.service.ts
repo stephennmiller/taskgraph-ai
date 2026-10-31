@@ -33,22 +33,18 @@ import {
 	reconcileDependencySources,
 	withoutReservedMetadata
 } from '../../dependencies/dependency-provenance.js';
-import { withoutLoopsThroughParent } from '../../dependencies/dependency-edges.js';
-import { dropReferences } from '../../dependencies/removed-references.js';
-import { cleanGeneratedSubtaskDependencies } from '../../dependencies/subtask-dependency.js';
+import { untrustLoopIfResearch } from '../../loop/untrust-after-research.js';
 import { keepStoredFields } from '../utils/stored-fields.js';
-import { fullSubtaskId } from '../validation/task-id.js';
 import type { TaskService } from './task-service.js';
 import {
 	aiDependencies,
 	keepDoneSubtasks,
 	keepStatus,
-	keptSubtaskIds,
-	matchSubtasks,
 	mergeRewrite,
 	promptView,
 	removedError,
-	siblingsAsSaved,
+	rewriteSubtasks,
+	settleRewrites,
 	taskIdOf
 } from './update-task-helpers.js';
 
@@ -207,6 +203,7 @@ export class UpdateTaskService {
 		const ai = new AiService(aiConfig.toHost());
 		if (append) {
 			const response = await ai.generateText(request);
+			untrustLoopIfResearch(response, projectRoot);
 			const text =
 				typeof response.mainResult === 'string'
 					? response.mainResult.trim()
@@ -236,35 +233,25 @@ export class UpdateTaskService {
 			schema: COMMAND_SCHEMAS['update-task-by-id'],
 			objectName: 'task'
 		});
+		untrustLoopIfResearch(response, projectRoot);
+		const debug = (message: string) => {
+			if (aiConfig.debug) hooks.onDebug?.(message);
+		};
 		const { updated, relabel } = this.rewrite(
-			tasks,
 			stored,
 			response.mainResult?.task,
 			prompt,
 			metadata,
 			warn,
-			(message) => {
-				if (aiConfig.debug) hooks.onDebug?.(message);
-			}
+			debug
 		);
 		const { result: saved } = await this.taskService.modifyTasks((current) => {
 			const index = current.findIndex((t) => String(t.id) === taskId);
 			if (index === -1) throw removedError(taskId);
-			const merged = mergeRewrite(
-				stored,
-				updated,
-				relabel(current[index]),
-				warn
-			);
+			const now = relabel(current[index]);
+			const merged = mergeRewrite(stored, updated, now, warn);
 			current[index] = merged;
-			// Nothing may keep pointing at a subtask the rewrite removed (#804)
-			const kept = new Set((merged.subtasks ?? []).map((st) => String(st.id)));
-			dropReferences(
-				current,
-				(stored.subtasks ?? [])
-					.filter((st) => !kept.has(String(st.id)))
-					.map((st) => fullSubtaskId(merged.id, st.id))
-			);
+			settleRewrites(current, [{ stored, now, saved: merged }], debug);
 			return { tasks: current, result: merged };
 		}, tag);
 		return {
@@ -308,16 +295,14 @@ export class UpdateTaskService {
 	}
 
 	/**
-	 * The AI's rewrite of `stored` (one of `tasks`), ready to save: its ID
-	 * and status kept (status unless the prompt mentions it), each subtask
-	 * under the ID of the stored one it matches (#576, #804) and without a
-	 * dependency that loops back to the task (#824), done subtasks restored,
+	 * The AI's rewrite of `stored`, ready to save: its ID and status kept
+	 * (status unless the prompt mentions it), each subtask under the ID of
+	 * the stored one it matches (see rewriteSubtasks), done subtasks restored,
 	 * and every field the AI left out or nulled kept. `relabel` gives a copy of
 	 * the task as saved since with a subtask added during the call moved off
 	 * an ID the rewrite gave a new one
 	 */
 	private rewrite(
-		tasks: Task[],
 		stored: Task,
 		aiTask: any,
 		prompt: string,
@@ -349,34 +334,9 @@ export class UpdateTaskService {
 		if (Array.isArray(updated.subtasks)) {
 			// Matched subtasks keep their stored IDs, so dependencies on them from
 			// other tasks still name them (#804); new ones get the next free ID
-			const matched = matchSubtasks(original, updated.subtasks);
-			const ids = keptSubtaskIds(original, matched, updated.subtasks.length);
-			const newIds = new Set(ids.filter((_, i) => !matched[i]));
-			const deps = siblingsAsSaved(stored.id, updated.subtasks, ids, original);
-			updated.subtasks = updated.subtasks.map((subtask: any, i: number) => {
-				const id = ids[i];
-				const before = matched[i];
-				const corrected = {
-					...subtask,
-					id,
-					// A number is a sibling; a string is a task or subtask
-					dependencies: withoutLoopsThroughParent(
-						tasks,
-						stored.id,
-						id,
-						cleanGeneratedSubtaskDependencies(deps[i], stored.id),
-						debug
-					),
-					status: subtask.status || 'pending',
-					testStrategy: subtask.testStrategy ?? null
-				};
-				keepStoredFields(corrected, before);
-				assignMetadata(
-					corrected,
-					reconcileDependencySources(corrected, before, stored.id)
-				);
-				return corrected;
-			});
+			const { subtasks, newIds } = rewriteSubtasks(stored, updated.subtasks);
+			updated.subtasks = subtasks;
+			const ids = subtasks.map((st) => st.id);
 			// A subtask added during the call under an ID a new one took moves on
 			relabel = (task) => {
 				if (!Array.isArray(task.subtasks)) return task;
@@ -488,6 +448,7 @@ export class UpdateTaskService {
 			commandName: 'update-tasks',
 			outputType: input.outputType ?? 'cli'
 		});
+		untrustLoopIfResearch(response, projectRoot);
 		const returned = response.mainResult?.tasks;
 		if (!Array.isArray(returned)) {
 			throw new Error('Parsed AI response for updated tasks was not an array.');
@@ -517,17 +478,22 @@ export class UpdateTaskService {
 		}
 
 		const { result: saved } = await this.taskService.modifyTasks((current) => {
-			const kept: Task[] = [];
+			const done: Array<{ stored: Task; now: Task; saved: Task }> = [];
 			for (const [id, { stored, updated }] of rewritten) {
 				const index = current.findIndex((t) => String(t.id) === id);
 				if (index === -1) {
 					warn(`Task ${id} was removed while it was being updated`);
 					continue;
 				}
-				current[index] = mergeRewrite(stored, updated, current[index], warn);
-				kept.push(current[index]);
+				const now = current[index];
+				current[index] = mergeRewrite(stored, updated, now, warn);
+				done.push({ stored, now, saved: current[index] });
 			}
-			return { tasks: kept.length ? current : null, result: kept };
+			settleRewrites(current, done, debug);
+			return {
+				tasks: done.length ? current : null,
+				result: done.map(({ saved }) => saved)
+			};
 		}, tag);
 		debug(`Applied updates to ${saved.length} tasks in the dataset.`);
 		return {
@@ -557,46 +523,19 @@ export class UpdateTaskService {
 				priority: ai.priority ?? null,
 				details: ai.details ?? null,
 				testStrategy: ai.testStrategy ?? null,
+				// Each subtask keeps the ID of the stored one it matches, so the
+				// save and the restores below follow it when the AI renumbers
+				// (#576); a new one gets the next free ID
 				subtasks: Array.isArray(ai.subtasks)
-					? ai.subtasks.map((subtask: any) => ({
-							...subtask,
-							dependencies: cleanGeneratedSubtaskDependencies(
-								subtask.dependencies,
-								task.id
-							),
-							status: subtask.status ?? 'pending',
-							testStrategy: subtask.testStrategy ?? null
-						}))
+					? rewriteSubtasks(task, ai.subtasks).subtasks
 					: null
 			},
 			task
 		) as Task;
 		// Dependencies the AI added are recorded as inferred; earlier marks stay
 		assignMetadata(merged, reconcileDependencySources(merged, task));
-		if (Array.isArray(merged.subtasks)) {
-			// Each subtask keeps the ID of the stored one it matches, so the save
-			// and the restores below follow it when the AI renumbers (#576); a
-			// new one gets the next free ID
-			const original = task.subtasks ?? [];
-			const matched = matchSubtasks(original, merged.subtasks);
-			const ids = keptSubtaskIds(original, matched, merged.subtasks.length);
-			// Restore what the schema can't return from the matched subtask
-			merged.subtasks = merged.subtasks.map((subtask, i) => {
-				const before = matched[i];
-				const restored = keepStoredFields({ ...subtask, id: ids[i] }, before);
-				assignMetadata(
-					restored,
-					reconcileDependencySources(subtask, before, task.id)
-				);
-				return restored;
-			});
-			if (task.subtasks?.length) {
-				merged.subtasks = keepDoneSubtasks(
-					task.subtasks,
-					merged.subtasks,
-					warn
-				);
-			}
+		if (Array.isArray(merged.subtasks) && task.subtasks?.length) {
+			merged.subtasks = keepDoneSubtasks(task.subtasks, merged.subtasks, warn);
 		}
 		keepStatus(task, merged, prompt, warn);
 		return merged;

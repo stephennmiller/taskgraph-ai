@@ -143,6 +143,10 @@ const withEntry = (trusted: unknown[], root: string) => [
 	{ path: root, tasks: tasksHash(root) }
 ];
 
+/** Why an approved run stopped: `keepLoopTrust` found the approval withdrawn */
+export const TRUST_LOST =
+	'Approval for this project was withdrawn during the run: parse-prd, github import or research added to the tasks. Run loop again to approve the tasks as they are now.';
+
 /**
  * Between iterations of an approved run: carry the approval over to the
  * tasks as the run left them (statuses, notes, subtasks Claude added).

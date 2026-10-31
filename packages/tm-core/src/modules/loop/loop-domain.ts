@@ -312,6 +312,8 @@ export class LoopDomain {
 			taskId: partial.taskId,
 			sandbox: partial.sandbox ?? false,
 			verbose: partial.verbose ?? false,
+			maxTurns: partial.maxTurns,
+			maxBudgetUsd: partial.maxBudgetUsd,
 			callbacks: partial.callbacks
 		};
 	}
