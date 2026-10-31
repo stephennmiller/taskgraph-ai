@@ -228,14 +228,9 @@ export function aiErrorHint(error: unknown): string | undefined {
 	return undefined;
 }
 
-/**
- * Print an error message (and hint) to stderr, preceded by a blank line so
- * it separates from whatever the command printed before failing.
- */
+/** Print an error message (and hint) to stderr */
 export function printError(message: string, hint?: string): void {
-	console.error(
-		`\n${formatErrorMessage({ message: cleanMessage(message), hint })}`
-	);
+	console.error(formatErrorMessage({ message: cleanMessage(message), hint }));
 }
 
 /**
@@ -256,7 +251,7 @@ export function displayError(
 		hint?: string;
 	} = {}
 ): void {
-	console.error(`\n${formatErrorMessage(describeError(error, options.hint))}`);
+	console.error(formatErrorMessage(describeError(error, options.hint)));
 
 	// Show stack trace in debug mode or if forced
 	if ((isDebugMode() || options.forceStack) && error?.stack) {

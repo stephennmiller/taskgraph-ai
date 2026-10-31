@@ -258,11 +258,12 @@ describe('printError and displayError', () => {
 		vi.restoreAllMocks();
 	});
 
-	it('writes to stderr after a blank line', () => {
+	it('writes to stderr with no blank line before the mark (#881)', () => {
 		printError('Tag "x" not found', 'Run `taskgraph tags` to see your tags');
+		displayError(new Error('boom'), { skipExit: true });
 
 		expect(plain(output.join('\n'))).toBe(
-			'\n✗ Tag "x" not found\n  Run taskgraph tags to see your tags'
+			'✗ Tag "x" not found\n  Run taskgraph tags to see your tags\n✗ boom'
 		);
 	});
 

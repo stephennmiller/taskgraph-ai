@@ -102,7 +102,8 @@ export class ParsePrdProgress {
 		if (this.interactive) {
 			this.spinner = createSpinner({
 				text: this.statusText(),
-				stream: this.options.stream
+				stream: this.options.stream,
+				elapsed: false
 			}).start();
 			this.ticker = setInterval(() => this.refresh(), 1000);
 			this.ticker.unref?.();
