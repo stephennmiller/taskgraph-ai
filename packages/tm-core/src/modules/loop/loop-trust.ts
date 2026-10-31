@@ -6,6 +6,7 @@
  * either since (another branch, a pull, a hand edit) needs a new one.
  */
 
+import { execFileSync } from 'node:child_process';
 import { createHash, randomUUID } from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
@@ -16,6 +17,7 @@ import {
 	TASKGRAPH_CONFIG_FILE,
 	TASKGRAPH_TASKS_FILE
 } from '../../common/constants/paths.js';
+import { isWithin } from '../../common/utils/project-root-finder.js';
 import { readPrdSection } from '../prd/prd-coverage.js';
 import { PRD_SOURCE_KEY } from '../prd/prd-sections.js';
 import { normalizeDefinitionOfDone } from '../tasks/utils/acceptance-criteria.js';
@@ -97,6 +99,44 @@ function definitionOfDone(root: string): Set<string> {
  */
 const CLAUDE_FILES = ['CLAUDE.md', '.taskgraph/CLAUDE.md', '.mcp.json'];
 
+/**
+ * Files Claude Code loads that are normally each user's own and untracked;
+ * they count only when the repository commits them
+ */
+const LOCAL_FILES = ['CLAUDE.local.md', '.claude/settings.local.json'];
+
+/**
+ * Which of `LOCAL_FILES` git tracks, in one call; none outside a repository.
+ * Runs before the project is approved, so the repository's own config must
+ * not name a program for git to start or a bare repository for it to use
+ */
+function trackedLocalFiles(root: string): Set<string> {
+	try {
+		const out = execFileSync(
+			'git',
+			[
+				'-c',
+				'core.fsmonitor=false',
+				'-c',
+				'safe.bareRepository=explicit',
+				'ls-files',
+				'-z',
+				'--',
+				...LOCAL_FILES
+			],
+			{
+				cwd: root,
+				encoding: 'utf8',
+				stdio: ['ignore', 'pipe', 'ignore'],
+				timeout: 10000
+			}
+		);
+		return new Set(out.split('\0'));
+	} catch {
+		return new Set();
+	}
+}
+
 const sha256 = (data: string | Buffer) =>
 	createHash('sha256').update(data).digest('hex');
 
@@ -106,16 +146,26 @@ const CLAUDE_DIR_MAX_BYTES = 8 * 1024 * 1024;
 
 /**
  * Everything under `.claude` (rules, agents, commands, skills, hooks,
- * settings) as [path, content] pairs in a fixed order, less the user's own
- * `settings.local.json` and Claude Code's `worktrees`. A symlink gives its
- * link text and isn't followed; a file past the byte budget gives its size
- * and change times, which rewriting it changes. Past the entry cap the walk
- * stops and a value that never repeats goes in, so loop asks every time.
+ * settings) as [path, content] pairs in a fixed order, less Claude Code's
+ * `worktrees` and an untracked `settings.local.json`. A symlink gives its
+ * link text, and the content too when it resolves to a file or folder
+ * inside the project; links that leave the project aren't followed. A file past the
+ * byte budget gives its size and change times, which rewriting it changes.
+ * Past the entry cap the walk stops and a value that never repeats goes in,
+ * so loop asks every time.
+ * @param tracked - From `trackedLocalFiles`
  */
-function claudeDir(root: string): unknown {
+function claudeDir(root: string, tracked: Set<string>): unknown {
 	const out: Array<[string, string]> = [];
 	let seen = 0;
 	let bytes = 0;
+	const content = (file: string, stat: fs.Stats) => {
+		if (bytes + stat.size > CLAUDE_DIR_MAX_BYTES)
+			return `${stat.size}:${stat.mtimeMs}:${stat.ctimeMs}`;
+		bytes += stat.size;
+		// Bytes, not text: decoding would make different binaries look alike
+		return sha256(fs.readFileSync(file));
+	};
 	const visit = (rel: string): boolean => {
 		if (++seen > CLAUDE_DIR_MAX_ENTRIES) return false;
 		const full = path.join(root, rel);
@@ -123,26 +173,35 @@ function claudeDir(root: string): unknown {
 			const stat = fs.lstatSync(full);
 			if (stat.isSymbolicLink()) {
 				out.push([rel, `link:${fs.readlinkSync(full)}`]);
-			} else if (stat.isDirectory()) {
-				for (const name of fs.readdirSync(full).sort()) {
-					if (
-						rel === '.claude' &&
-						(name === 'settings.local.json' || name === 'worktrees')
-					)
-						continue;
-					if (!visit(`${rel}/${name}`)) return false;
+				const target = fs.realpathSync(full);
+				if (isWithin(root, target)) {
+					const targetStat = fs.statSync(target);
+					if (targetStat.isFile()) out.push([rel, content(target, targetStat)]);
+					else if (targetStat.isDirectory()) return walk(rel);
 				}
+			} else if (stat.isDirectory()) {
+				return walk(rel);
 			} else if (!stat.isFile()) {
 				out.push([rel, 'special']); // A FIFO would block a read
-			} else if (bytes + stat.size <= CLAUDE_DIR_MAX_BYTES) {
-				bytes += stat.size;
-				// Bytes, not text: decoding would make different binaries look alike
-				out.push([rel, sha256(fs.readFileSync(full))]);
 			} else {
-				out.push([rel, `${stat.size}:${stat.mtimeMs}:${stat.ctimeMs}`]);
+				out.push([rel, content(full, stat)]);
 			}
 		} catch (error) {
 			out.push([rel, `error:${(error as NodeJS.ErrnoException).code}`]);
+		}
+		return true;
+	};
+	// Through a symlink too; a link loop ends at the entry cap or path length
+	const walk = (rel: string): boolean => {
+		for (const name of fs.readdirSync(path.join(root, rel)).sort()) {
+			if (
+				rel === '.claude' &&
+				(name === 'worktrees' ||
+					(name === 'settings.local.json' &&
+						!tracked.has('.claude/settings.local.json')))
+			)
+				continue;
+			if (!visit(`${rel}/${name}`)) return false;
 		}
 		return true;
 	};
@@ -152,9 +211,9 @@ function claudeDir(root: string): unknown {
 /**
  * Hash of every tag's tasks, less progress marks and each tag's bookkeeping
  * `metadata`, so set-status or checking off a criterion keeps an approval;
- * with the files in `CLAUDE_FILES` (null when missing), `.claude`, the
- * Definition of Done and the PRD sections tasks cite, which `show` prints
- * with each task
+ * with the files in `CLAUDE_FILES` (null when missing), the tracked
+ * `LOCAL_FILES`, `.claude`, the Definition of Done and the PRD sections
+ * tasks cite, which `show` prints with each task
  */
 function trustHash(root: string): string {
 	const doneItems = definitionOfDone(root);
@@ -182,7 +241,10 @@ function trustHash(root: string): string {
 	} catch {
 		// Not JSON: hash it as it is, so any change still counts
 	}
-	const files = CLAUDE_FILES.map((file) => {
+	const tracked = trackedLocalFiles(root);
+	// Untracked, CLAUDE.local.md adds nothing, so approvals from before stay valid
+	const local = tracked.has('CLAUDE.local.md') ? ['CLAUDE.local.md'] : [];
+	const files = [...CLAUDE_FILES, ...local].map((file) => {
 		try {
 			return fs.readFileSync(path.join(root, file), 'utf8');
 		} catch {
@@ -191,7 +253,7 @@ function trustHash(root: string): string {
 	});
 	const prd = [...sources].map((s) => readPrdSection(s, root) ?? null);
 	return sha256(
-		JSON.stringify([text, files, claudeDir(root), [...doneItems], prd])
+		JSON.stringify([text, files, claudeDir(root, tracked), [...doneItems], prd])
 	);
 }
 

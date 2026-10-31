@@ -1,8 +1,8 @@
-import { spawn } from 'node:child_process';
+import { execFileSync, spawn } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
 	isLoopTrusted,
 	keepLoopTrust,
@@ -260,7 +260,85 @@ describe('loop trust', () => {
 		expect(isLoopTrusted(project, home)).toBe(false);
 	});
 
-	it('hashes a symlink under .claude by its target path, not what it points to', () => {
+	const git = (...args: string[]) =>
+		execFileSync('git', args, { cwd: project, stdio: 'ignore' });
+
+	it.each(['.claude/settings.local.json', 'CLAUDE.local.md'])(
+		'asks again when %s is tracked by git and changed',
+		(file) => {
+			writeFile(file, '{}');
+			git('init', '-q');
+			git('add', file);
+			writeTasks([task]);
+			trustLoop(project, home);
+
+			writeFile(file, '{"hooks": {}}');
+
+			expect(isLoopTrusted(project, home)).toBe(false);
+		}
+	);
+
+	it.each(['.claude/settings.local.json', 'CLAUDE.local.md'])(
+		'keeps the approval when an untracked %s in a git repository changed',
+		(file) => {
+			writeFile(file, '{}');
+			git('init', '-q');
+			writeTasks([task]);
+			trustLoop(project, home);
+
+			writeFile(file, '{"hooks": {}}');
+
+			expect(isLoopTrusted(project, home)).toBe(true);
+		}
+	);
+
+	it('checks tracked files without running a program the repository config names', () => {
+		const marker = path.join(base, 'ran');
+		writeFile('fsmonitor.sh', `#!/bin/sh\ntouch '${marker}'\n`);
+		fs.chmodSync(path.join(project, 'fsmonitor.sh'), 0o755);
+		writeFile('CLAUDE.local.md', 'Old');
+		git('init', '-q');
+		git('add', 'CLAUDE.local.md');
+		git('config', 'core.fsmonitor', path.join(project, 'fsmonitor.sh'));
+		writeTasks([task]);
+		trustLoop(project, home);
+
+		writeFile('CLAUDE.local.md', 'New');
+
+		expect(isLoopTrusted(project, home)).toBe(false);
+		expect(fs.existsSync(marker)).toBe(false);
+	});
+
+	it('treats local files as untracked when git cannot run', () => {
+		writeFile('CLAUDE.local.md', 'Old');
+		git('init', '-q');
+		git('add', 'CLAUDE.local.md');
+		vi.stubEnv('PATH', '');
+		try {
+			writeTasks([task]);
+			trustLoop(project, home);
+
+			writeFile('CLAUDE.local.md', 'New');
+
+			expect(isLoopTrusted(project, home)).toBe(true);
+		} finally {
+			vi.unstubAllEnvs();
+		}
+	});
+
+	it('asks again when a file in a folder a symlink under .claude names inside the project changed', () => {
+		writeFile('shared/skills/review/SKILL.md', 'Old');
+		fs.mkdirSync(path.join(project, '.claude'));
+		fs.symlinkSync('../shared/skills', path.join(project, '.claude/skills'));
+		writeTasks([task]);
+		trustLoop(project, home);
+
+		writeFile('shared/skills/review/SKILL.md', 'New');
+
+		expect(isLoopTrusted(project, home)).toBe(false);
+	});
+
+	it('asks again when the file a symlink under .claude names inside the project changed', () => {
 		writeFile('notes.md', 'Old');
 		writeFile('other.md', 'Other');
 		fs.mkdirSync(path.join(project, '.claude/rules'), { recursive: true });
@@ -270,11 +348,25 @@ describe('loop trust', () => {
 		trustLoop(project, home);
 
 		writeFile('notes.md', 'New');
-		expect(isLoopTrusted(project, home)).toBe(true);
+		expect(isLoopTrusted(project, home)).toBe(false);
 
+		trustLoop(project, home);
 		fs.rmSync(link);
 		fs.symlinkSync('../../other.md', link);
 		expect(isLoopTrusted(project, home)).toBe(false);
+	});
+
+	it('does not follow a symlink under .claude that leaves the project', () => {
+		const outside = path.join(base, 'outside.md');
+		fs.writeFileSync(outside, 'Old');
+		fs.mkdirSync(path.join(project, '.claude/rules'), { recursive: true });
+		fs.symlinkSync(outside, path.join(project, '.claude/rules/outside.md'));
+		writeTasks([task]);
+		trustLoop(project, home);
+
+		fs.writeFileSync(outside, 'New');
+
+		expect(isLoopTrusted(project, home)).toBe(true);
 	});
 
 	it('notices a rewrite of a file past the .claude byte budget', () => {
