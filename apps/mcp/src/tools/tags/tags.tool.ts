@@ -7,7 +7,11 @@ import { neutralizeTaskData, TASK_DATA_NOTE, type TmCore } from '@tm/core';
 import type { FastMCP } from 'fastmcp';
 import { z } from 'zod';
 import type { ToolContext } from '../../shared/types.js';
-import { handleApiResult, withToolContext } from '../../shared/utils.js';
+import {
+	errorMessage,
+	handleApiResult,
+	withToolContext
+} from '../../shared/utils.js';
 
 const projectRoot = z
 	.string()
@@ -39,7 +43,7 @@ function tagTool<TArgs extends { projectRoot: string }>(
 		} catch (error: any) {
 			result = {
 				success: false,
-				error: { message: GIT_ERRORS[error?.code] ?? error.message }
+				error: { message: GIT_ERRORS[error?.code] ?? errorMessage(error) }
 			};
 		}
 		return handleApiResult({

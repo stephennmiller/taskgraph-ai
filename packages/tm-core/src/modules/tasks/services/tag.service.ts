@@ -11,7 +11,7 @@ import {
 	ERROR_CODES,
 	TaskGraphError
 } from '../../../common/errors/taskgraph-error.js';
-import { recordCurrentTag } from '../utils/branch-tag.js';
+import { assertStateWritable, recordCurrentTag } from '../utils/branch-tag.js';
 import { assertTagName, isReservedNewTagName } from '../utils/tag-names.js';
 
 /**
@@ -242,6 +242,7 @@ export class TagService {
 			return { tagName: name, deleted: false, cancelled: true };
 		}
 
+		if (wasCurrentTag) await assertStateWritable(this.context.projectRoot);
 		await this.storage.deleteTag(name);
 		if (wasCurrentTag) {
 			await recordCurrentTag(this.context.projectRoot, 'master');
@@ -284,6 +285,7 @@ export class TagService {
 		}
 
 		const wasCurrentTag = this.context.getActiveTag() === oldName;
+		if (wasCurrentTag) await assertStateWritable(this.context.projectRoot);
 		await this.storage.renameTag(oldName, newName);
 		if (wasCurrentTag) {
 			await recordCurrentTag(this.context.projectRoot, newName);

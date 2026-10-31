@@ -100,3 +100,5 @@ Tags keep separate task lists for branches, features or experiments.
 - **`migrationNoticeShown`**: whether the one-time tag-system notice was displayed
 
 TaskGraph manages this file; do not edit it by hand. It's per-machine, so `taskgraph init` adds it to `.gitignore`: two people on different tags don't conflict.
+
+When the file is missing, `master` is current. When it can't be read or saved, for example after a merge left conflict markers in it, commands fail and name the file instead of quietly using `master`. Fix it, or delete it: it holds only the current tag and branch-tag mappings.

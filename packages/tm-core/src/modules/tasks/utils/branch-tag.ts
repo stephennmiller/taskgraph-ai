@@ -17,6 +17,7 @@ import {
 	isValidBranchForTag,
 	sanitizeBranchNameForTag
 } from '../../../common/utils/git-utils.js';
+import { stateFileError } from '../../config/services/runtime-state-manager.service.js';
 import { FileOperations } from '../../storage/adapters/file-storage/file-operations.js';
 
 /** A git branch and the tag name it maps to */
@@ -133,25 +134,48 @@ export async function recordBranchTag(
 }
 
 /**
- * Make tagName the current tag in state.json. A failed write is logged, not
- * thrown: the tag change it follows has already been saved.
+ * Change state.json, failing with the file's path and the way out
+ * @throws {TaskGraphError} when state.json can't be read or saved
+ */
+async function saveStateFile(
+	projectRoot: string,
+	change: (state: Record<string, unknown>) => void
+): Promise<void> {
+	try {
+		await updateStateFile(projectRoot, change);
+	} catch (error) {
+		throw stateFileError(
+			'save',
+			path.join(projectRoot, TASKGRAPH_STATE_FILE),
+			error
+		);
+	}
+}
+
+/**
+ * Check that state.json can be saved, before a tag change that must be
+ * followed by recordCurrentTag: the change can't be undone once made (#807)
+ * @throws {TaskGraphError} as recordCurrentTag does
+ */
+export async function assertStateWritable(projectRoot: string): Promise<void> {
+	await saveStateFile(projectRoot, () => {});
+}
+
+/**
+ * Make tagName the current tag in state.json.
+ * @throws {TaskGraphError} when state.json can't be saved, so the caller
+ * never reports a switch that didn't happen
  */
 export async function recordCurrentTag(
 	projectRoot: string,
 	tagName: string
 ): Promise<void> {
-	try {
-		await updateStateFile(projectRoot, (state) => {
-			state.currentTag = tagName;
-			state.lastSwitched = new Date().toISOString();
-			state.branchTagMapping ??= {};
-			state.migrationNoticeShown ??= false;
-		});
-	} catch (error) {
-		getLogger('BranchTag').warn(
-			`Could not update current tag in state.json: ${(error as Error).message}`
-		);
-	}
+	await saveStateFile(projectRoot, (state) => {
+		state.currentTag = tagName;
+		state.lastSwitched = new Date().toISOString();
+		state.branchTagMapping ??= {};
+		state.migrationNoticeShown ??= false;
+	});
 }
 
 /**

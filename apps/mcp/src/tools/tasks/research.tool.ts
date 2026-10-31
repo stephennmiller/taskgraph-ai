@@ -7,9 +7,12 @@
 import { neutralizeTaskData, TASK_DATA_NOTE } from '@tm/core';
 import type { FastMCP } from 'fastmcp';
 import { z } from 'zod';
-import { errorMessage } from '../../shared/tool-reply.js';
 import type { ToolContext } from '../../shared/types.js';
-import { handleApiResult, withToolContext } from '../../shared/utils.js';
+import {
+	errorMessage,
+	handleApiResult,
+	withToolContext
+} from '../../shared/utils.js';
 
 // The schema clients see, kept as the legacy tool had it
 const ResearchSchema = z.object({

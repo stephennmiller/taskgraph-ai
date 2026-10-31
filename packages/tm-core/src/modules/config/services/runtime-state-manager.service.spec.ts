@@ -78,21 +78,32 @@ describe('RuntimeStateManager', () => {
 			expect(state.currentTag).toBe('env-tag');
 		});
 
-		it('should handle file read errors gracefully', async () => {
+		it('fails on a state.json it cannot read, naming the file', async () => {
 			fs.mkdirSync(statePath, { recursive: true });
 
-			const state = await stateManager.loadState();
-
-			expect(state.currentTag).toBe(DEFAULT_TAG);
+			await expect(stateManager.loadState()).rejects.toThrow(statePath);
 		});
 
-		it('should handle invalid JSON gracefully', async () => {
-			writeState('invalid json');
+		// A broken state.json used to switch the current tag to master silently (#807)
+		it('fails on invalid JSON instead of falling back to master', async () => {
+			writeState('{"currentTag": "feat",\n<<<<<<< HEAD\n');
 
-			const state = await stateManager.loadState();
+			const error = await stateManager.loadState().catch((e) => e);
 
-			expect(state.currentTag).toBe(DEFAULT_TAG);
+			expect(error.message).toContain(statePath);
+			expect(error.hint).toMatch(/delete it/);
 		});
+
+		it.each(['[]', 'null'])(
+			'fails on %s, which no tag change could be saved over',
+			async (raw) => {
+				writeState(raw);
+
+				await expect(stateManager.loadState()).rejects.toThrow(
+					'does not hold a JSON object'
+				);
+			}
+		);
 	});
 
 	describe('saveState', () => {
@@ -151,9 +162,7 @@ describe('RuntimeStateManager', () => {
 			// A file where the .taskgraph directory should be
 			fs.writeFileSync(path.join(root, '.taskgraph'), '');
 
-			await expect(stateManager.saveState()).rejects.toThrow(
-				'Failed to save runtime state'
-			);
+			await expect(stateManager.saveState()).rejects.toThrow("Couldn't save");
 		});
 
 		it('refuses to overwrite an invalid state.json, and says how to recover', async () => {
@@ -161,7 +170,7 @@ describe('RuntimeStateManager', () => {
 
 			const error = await stateManager.setCurrentTag('next').catch((e) => e);
 
-			expect(error.getUserMessage()).toContain(statePath);
+			expect(error.message).toContain(statePath);
 			expect(error.hint).toMatch(/delete it/);
 			expect(readRaw()).toBe('{"branchTagMapping": ');
 		});
