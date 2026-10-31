@@ -43,17 +43,15 @@ import {
 	assignMetadata,
 	reconcileDependencySources
 } from '../../dependencies/dependency-provenance.js';
+import { withoutLoopsThroughParent } from '../../dependencies/dependency-edges.js';
 import { orderGeneratedSubtasks } from '../../dependencies/forward-dependencies.js';
 import { removeAllSubtasks } from '../../dependencies/removed-references.js';
-import {
-	cleanGeneratedSubtaskDependencies,
-	isSiblingReference,
-	resolveSubtaskDependency
-} from '../../dependencies/subtask-dependency.js';
+import { cleanGeneratedSubtaskDependencies } from '../../dependencies/subtask-dependency.js';
 import { getPrdSource } from '../../prd/prd-sections.js';
 import { setGeneratedCriteria } from '../utils/acceptance-criteria.js';
 import { TAG_NAME_PATTERN } from '../utils/tag-names.js';
 import { degenerateReply } from './expand-reply-check.js';
+import { renumberSubtasks } from './expand-subtask-ids.js';
 import type { TaskService } from './task-service.js';
 
 /**
@@ -178,46 +176,6 @@ function explicitCount(num: ExpandOptions['num']): number | undefined {
 	return Number(String(num).trim());
 }
 
-/**
- * Number the new subtasks on from the highest ID the task has now, and point
- * their dependencies on each other at the new IDs. The AI call ran without
- * the lock, so another writer may have added a subtask meanwhile (#569).
- */
-function renumberSubtasks(
-	taskId: string,
-	existing: Subtask[],
-	added: Subtask[]
-): void {
-	// A subtask may be stored as "3.2" rather than 2
-	const highest = Math.max(
-		0,
-		...existing.map((s) => Number(String(s.id).split('.').pop()) || 0)
-	);
-	// A repeated AI ID gets its own new ID; a reference to it means the first
-	const newIds = new Map<string, number>();
-	added.forEach((s, i) => {
-		if (!newIds.has(String(s.id))) newIds.set(String(s.id), highest + i + 1);
-	});
-	added.forEach((subtask, i) => {
-		subtask.id = String(highest + i + 1);
-		subtask.dependencies = (subtask.dependencies ?? []).map((raw) => {
-			const dep = resolveSubtaskDependency(taskId, raw);
-			const newId = dep.startsWith(`${taskId}.`)
-				? newIds.get(dep.slice(taskId.length + 1))
-				: undefined;
-			if (newId === undefined) return raw;
-			return typeof raw === 'number' && isSiblingReference(newId)
-				? newId
-				: `${taskId}.${newId}`;
-		});
-		// The inferred marks are keyed by dependency ID
-		assignMetadata(
-			subtask,
-			reconcileDependencySources(subtask, undefined, taskId)
-		);
-	});
-}
-
 export class ExpandTaskService {
 	constructor(
 		private readonly taskService: TaskService,
@@ -267,6 +225,7 @@ export class ExpandTaskService {
 		// force: the prompt and the search see the task without its subtasks
 		const task: Task =
 			input.force && hadSubtasks ? { ...stored, subtasks: [] } : stored;
+		const view = tasks.map((t) => (t === stored ? task : t));
 		const warn = (message: string) => hooks.onWarning?.(message);
 		const aiConfig = new AiConfig(this.configManager, (level, message) =>
 			level === 'warn' ? warn(message) : hooks.onDebug?.(message)
@@ -296,12 +255,7 @@ export class ExpandTaskService {
 				complexityReasoningContext: analysis?.reasoning
 					? `\nComplexity Analysis Reasoning: ${analysis.reasoning}`
 					: '',
-				gatheredContext: await this.gatherContext(
-					tasks.map((t) => (t === stored ? task : t)),
-					tasks,
-					task,
-					warn
-				),
+				gatheredContext: await this.gatherContext(view, tasks, task, warn),
 				useResearch,
 				expansionPrompt,
 				hasCodebaseAnalysis: aiConfig.hasCodebaseAnalysis(
@@ -378,7 +332,7 @@ export class ExpandTaskService {
 					ERROR_CODES.VALIDATION_ERROR
 				);
 			}
-			addedSubtasks = this.prepareSubtasks(task, generated, (message) => {
+			addedSubtasks = this.prepareSubtasks(view, task, generated, (message) => {
 				logger.debug(message);
 				if (aiConfig.debug) hooks.onDebug?.(message);
 			});
@@ -582,6 +536,7 @@ export class ExpandTaskService {
 
 	/** The AI's subtasks, ordered and ready to store */
 	private prepareSubtasks(
+		tasks: Task[],
 		task: Task,
 		generated: any[],
 		debug: (message: string) => void
@@ -603,6 +558,13 @@ export class ExpandTaskService {
 			// The AI's criteria are stored as unchecked items (none: no field)
 			const prepared = setGeneratedCriteria({
 				...subtask,
+				dependencies: withoutLoopsThroughParent(
+					tasks,
+					task.id,
+					subtask.id,
+					subtask.dependencies ?? [],
+					debug
+				),
 				status: subtask.status ?? 'pending',
 				testStrategy: subtask.testStrategy ?? null
 			});

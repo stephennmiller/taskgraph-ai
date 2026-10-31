@@ -198,6 +198,46 @@ describe('moveTasksIn', () => {
 		]);
 	});
 
+	it('refuses a task whose dependencies reach its new parent, changing nothing (#824)', () => {
+		// 5 waits on 4, which waits on 3; task 3 can't finish before 3.2 (5)
+		const tasks = sample();
+		const before = structuredClone(tasks);
+
+		expect(() => moveTasksIn(tasks, '5', '3.2', 'master', noArchive)).toThrow(
+			'Cannot move task 5 to 3.2: that would make a dependency loop'
+		);
+		expect(tasks).toEqual(before);
+	});
+
+	it('refuses a subtask whose sibling dependency reaches its new parent (#824)', () => {
+		// 2.2 waits on 2.1, which waits on 1 through its parent
+		const tasks = sample();
+		const before = structuredClone(tasks);
+
+		expect(() => moveTasksIn(tasks, '2.2', '1.1', 'master', noArchive)).toThrow(
+			'Cannot move subtask 2.2 to 1.1: that would make a dependency loop'
+		);
+		expect(tasks).toEqual(before);
+	});
+
+	it('refuses a subtask that what its new parent waits on depends on (#824)', () => {
+		// 5 waits on 4, 4 on 2, 2 on 2.2, and 2.2 on 2.1, which would be 5.1
+		const tasks = sample();
+
+		expect(() => moveTasksIn(tasks, '2.1', '5.1', 'master', noArchive)).toThrow(
+			'Cannot move subtask 2.1 to 5.1: that would make a dependency loop'
+		);
+	});
+
+	it('moves a subtask away from a parent its new parent waits on (#824)', () => {
+		// 5 waits on 4 and 4 on 2, but 2 stops waiting on the subtask
+		const tasks = sample();
+
+		moveTasksIn(tasks, '2.2', '5.1', 'master', noArchive);
+
+		expect(tasks[4].subtasks.map((st) => st.dependencies)).toEqual([['2.1']]);
+	});
+
 	it('refuses an archived destination ID', () => {
 		expect(() =>
 			moveTasksIn(sample(), '3', '9', 'master', new Set(['9']))
