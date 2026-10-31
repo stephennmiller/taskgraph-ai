@@ -14,6 +14,7 @@ import {
 	createTaskLookup
 } from '../../dependencies/dependency-check.js';
 import { isArchivedReference } from './archive.js';
+import { assigneeOf } from './assignee.js';
 
 const logger = getLogger('TaskFilters');
 
@@ -224,9 +225,7 @@ export function filterByAssignee<T extends Task>(
 	login?: string
 ): T[] {
 	if (!login) return tasks;
-	// A hand-edited file may hold `Alice`; logins compare case-insensitively
-	const mine = (item: { assignee?: string }) =>
-		item.assignee?.toLowerCase() === login;
+	const mine = (item: { assignee?: unknown }) => assigneeOf(item) === login;
 	return tasks.filter((task) => mine(task) || task.subtasks?.some(mine));
 }
 

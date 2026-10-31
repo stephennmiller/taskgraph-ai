@@ -91,4 +91,13 @@ describe('filterByAssignee', () => {
 		]);
 		expect(filterByAssignee(tasks)).toHaveLength(3);
 	});
+
+	it('skips an assignee that is not a string (#860)', () => {
+		const tasks = [
+			{ id: '1', assignee: 5, subtasks: [{ id: '1', assignee: {} }] },
+			{ id: '2', assignee: 'octocat', subtasks: [] }
+		] as unknown as Task[];
+
+		expect(filterByAssignee(tasks, 'octocat').map((t) => t.id)).toEqual(['2']);
+	});
 });

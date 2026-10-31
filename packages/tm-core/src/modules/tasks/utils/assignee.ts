@@ -28,3 +28,13 @@ export function normalizeAssignee(value: string): string | null {
 	}
 	return login;
 }
+
+/**
+ * `item`'s assignee as sync and filters compare it: lowercase, since a
+ * hand-edited file may hold `Alice`; undefined when it isn't a string
+ */
+export function assigneeOf(item: { assignee?: unknown }): string | undefined {
+	return typeof item.assignee === 'string'
+		? item.assignee.toLowerCase() || undefined
+		: undefined;
+}

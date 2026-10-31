@@ -11,6 +11,7 @@ import type {
 	RemoteIssue,
 	SyncTask
 } from '../types.js';
+import { assigneeOf } from '../../tasks/utils/assignee.js';
 import { hashIssue, parseMarker, renderIssue } from './issue-renderer.js';
 
 export interface PlanInput {
@@ -103,7 +104,7 @@ export function planSync(input: PlanInput): PushPlan {
 					reason: 'content changed'
 				};
 			}
-			if (task.assignee !== link.assignee) {
+			if (assigneeOf(task) !== link.assignee) {
 				return {
 					...base,
 					action: 'update',

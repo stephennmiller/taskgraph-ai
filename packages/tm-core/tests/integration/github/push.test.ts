@@ -228,12 +228,43 @@ describe('GitHub push - integration', () => {
 		await setup([makeTask('1')]);
 		await push();
 		await tmCore.tasks.modifyTask('1', () => ({ metadata: {} }), 'master');
-		github.getViewer = () => Promise.reject(new Error('403'));
+		github.getViewer = () =>
+			Promise.reject(
+				new Error(
+					'GitHub request GET user failed (403): Resource not accessible by integration'
+				)
+			);
 
 		const rerun = await push();
 
 		expect(rerun.created).toBe(1);
 		expect(((await readTasks())[0].metadata as any).github.issueNumber).toBe(2);
+	});
+
+	it('stops instead of duplicating issues when the account lookup fails otherwise (#860)', async () => {
+		await setup([makeTask('1')]);
+		await push();
+		await tmCore.tasks.modifyTask('1', () => ({ metadata: {} }), 'master');
+		github.getViewer = () =>
+			Promise.reject(new Error('gh api user timed out after 60s'));
+
+		await expect(push()).rejects.toThrow('timed out');
+		expect(github.issues).toHaveLength(1);
+	});
+
+	it('stops instead of duplicating issues when the account lookup is rate limited (#860)', async () => {
+		await setup([makeTask('1')]);
+		await push();
+		await tmCore.tasks.modifyTask('1', () => ({ metadata: {} }), 'master');
+		github.getViewer = () =>
+			Promise.reject(
+				new Error(
+					'GitHub request GET user failed (403): API rate limit exceeded for user ID 1.'
+				)
+			);
+
+		await expect(push()).rejects.toThrow('rate limit');
+		expect(github.issues).toHaveLength(1);
 	});
 
 	it('keeps a claim made while the issue was being created (#655)', async () => {
