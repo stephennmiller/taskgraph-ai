@@ -44,7 +44,11 @@ export function completeIteration(
 		// A cap that stopped Claude says more than its exit code
 		message: (status === 'error' && run?.capHit) || message,
 		...(run?.costUsd !== undefined ? { costUsd: run.costUsd } : {}),
-		...(run?.turns !== undefined ? { turns: run.turns } : {})
+		...(run?.turns !== undefined ? { turns: run.turns } : {}),
+		...(run?.sessionId ? { sessionId: run.sessionId } : {}),
+		...(run?.contextTokens !== undefined
+			? { contextTokens: run.contextTokens }
+			: {})
 	};
 }
 

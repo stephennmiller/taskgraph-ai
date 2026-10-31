@@ -54,6 +54,7 @@ export interface LoopCommandOptions {
 	maxTurns?: string;
 	maxBudgetUsd?: string;
 	model?: string;
+	fresh?: boolean;
 }
 
 export class LoopCommand extends Command {
@@ -104,6 +105,10 @@ export class LoopCommand extends Command {
 			.option(
 				'--model <model>',
 				"Run every iteration on this model instead of the one the task's complexity picks"
+			)
+			.option(
+				'--fresh',
+				'Start each iteration in a new Claude Code session instead of resuming the last one'
 			)
 			.option(
 				'--parallel <n>',
@@ -206,6 +211,7 @@ export class LoopCommand extends Command {
 				verbose: options.verbose ?? false,
 				...caps,
 				model,
+				fresh: options.fresh,
 				callbacks: this.createOutputCallbacks(options.output ?? true)
 			};
 
@@ -437,6 +443,7 @@ export class LoopCommand extends Command {
 						`  Iteration ${iteration.iteration} completed: ${iteration.status}`
 					) +
 						formatLoopSpend({
+							session: iteration.session,
 							model: iteration.model,
 							effort: iteration.effort,
 							costUsd: iteration.costUsd,

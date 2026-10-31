@@ -153,9 +153,11 @@ describe('LoopService cost and caps', () => {
 		await service.run(config({ iterations: 2 }));
 
 		expect(written()).toMatch(
-			/# Iteration 1: success · \$0\.60 · 5 turns · \d+s\n/
+			/# Iteration 1: success · fresh · \$0\.60 · 5 turns · \d+s\n/
 		);
-		expect(written()).toMatch(/# Iteration 2: success · \$0\.60 · 5 turns/);
+		expect(written()).toMatch(
+			/# Iteration 2: success · fresh · \$0\.60 · 5 turns/
+		);
 		expect(written()).toContain('- Spent: $1.20 · 10 turns');
 	});
 

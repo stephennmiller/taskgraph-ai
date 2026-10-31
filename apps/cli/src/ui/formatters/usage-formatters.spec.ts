@@ -133,4 +133,12 @@ describe('formatLoopSpend', () => {
 			' · high effort'
 		);
 	});
+
+	it('says first whether the iteration resumed the last session', () => {
+		expect(
+			stripVTControlCharacters(
+				formatLoopSpend({ session: 'resumed', model: 'sonnet', turns: 3 })
+			)
+		).toBe(' · resumed · sonnet · 3 turns');
+	});
 });

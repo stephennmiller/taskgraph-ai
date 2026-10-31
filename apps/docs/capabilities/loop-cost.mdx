@@ -1,7 +1,7 @@
 ---
 title: Loop Cost and Models
 sidebarTitle: "Loop Cost and Models"
-description: "What each loop iteration costs, how to cap a run, and how a task's complexity picks its model and effort"
+description: "What each loop iteration costs, how to cap a run, how a task's complexity picks its model and effort, and when loop reuses a Claude Code session"
 ---
 
 ## Cost and caps
@@ -9,8 +9,8 @@ description: "What each loop iteration costs, how to cap a run, and how a task's
 Every iteration reads what Claude Code reported spending, in dollars, and how many turns it took. Each iteration's status line shows them, with its duration, and the summary adds the run's total to the iterations line:
 
 ```
-  Iteration 1 completed: success · $0.42 · 12 turns · 3m 10s
-  Iteration 2 completed: success · $0.31 · 9 turns · 2m 4s
+  Iteration 1 completed: success · fresh · $0.42 · 12 turns · 3m 10s
+  Iteration 2 completed: success · resumed · $0.31 · 9 turns · 2m 4s
 
 Loop Complete
 ────────────────────────────────────────
@@ -45,11 +45,11 @@ When the task an iteration works on has a complexity score from [`analyze-comple
 A task without a score (a subtask, a task `analyze-complexity` hasn't scored, or a preset that picks its own work such as `linting`) runs as before, with Claude Code's own model and effort. The status line and the progress file show what each iteration ran at, next to its cost:
 
 ```
-  Iteration 1 completed: success · sonnet, low effort · $0.12 · 6 turns · 48s
+  Iteration 1 completed: success · fresh · sonnet, low effort · $0.12 · 6 turns · 48s
 ```
 
 ```
-# Iteration 1: success · complexity 2 · sonnet, low effort · $0.12 · 6 turns · 48s
+# Iteration 1: success · fresh · complexity 2 · sonnet, low effort · $0.12 · 6 turns · 48s
 ```
 
 `--model <model>` runs every iteration on that model (an alias such as `opus`, or a full model name). It replaces the band's model only; the band's effort still applies.
@@ -69,3 +69,24 @@ Set your own bands under `loop.bands` in `.taskgraph/config.json`. A task goes i
 ```
 
 A score above the last band's `maxScore` runs with Claude Code's defaults. `"bands": []` turns the picking off. A band `loop` can't use (a `maxScore` that isn't a whole number from 1 to 10, two bands with the same `maxScore`, an unknown effort, a model name that starts with `-`) stops the run before Claude Code starts, with the band named.
+
+## Session reuse
+
+A new `claude -p` session re-reads `CLAUDE.md`, explores the repo again and often re-runs the test suite before it starts on the task. So after an iteration succeeds, the next one resumes its session (`claude -p --resume <session-id>`) and goes straight to the next task. The status line and the progress file say which each iteration did, `resumed` or `fresh`.
+
+An iteration starts a new session instead when:
+
+- the previous iteration failed, timed out or reported no session
+- the previous session's context reached `loop.resumeMaxContextTokens` (default 100000), read from the input, cache-write and cache-read tokens of its last API call
+- the task runs at a different model or effort than the previous one (see [Model and effort by complexity](#model-and-effort-by-complexity))
+- the run uses `--sandbox`, whose sessions stay in the container; `--parallel` tasks always start fresh
+
+`--fresh` starts every iteration in a new session, as loop did before. To change the limit, or turn resuming off with `0`:
+
+```json
+{
+  "loop": { "resumeMaxContextTokens": 60000 }
+}
+```
+
+A value that isn't a whole number of 0 or more stops the run before Claude Code starts.

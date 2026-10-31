@@ -84,6 +84,10 @@ export interface ClaudeRunResult {
 	turns?: number;
 	/** Why Claude Code stopped early, when a --max-turns or --max-budget-usd cap ended it */
 	capHit?: string;
+	/** The session to `--resume` for the next task (#841) */
+	sessionId?: string;
+	/** Tokens in the context window at the last API call */
+	contextTokens?: number;
 }
 
 const CAP_HIT: Record<string, string> = {
@@ -105,8 +109,32 @@ export function readResultEvent(
 		text: typeof event.result === 'string' ? event.result : '',
 		costUsd: finite(event.total_cost_usd),
 		turns: finite(event.num_turns),
-		...(Object.hasOwn(CAP_HIT, subtype) ? { capHit: CAP_HIT[subtype] } : {})
+		...(Object.hasOwn(CAP_HIT, subtype) ? { capHit: CAP_HIT[subtype] } : {}),
+		// A UUID; never something `claude` would read as a flag
+		...(typeof event.session_id === 'string' &&
+		/^[A-Za-z0-9][\w-]*$/.test(event.session_id)
+			? { sessionId: event.session_id }
+			: {})
 	};
+}
+
+/**
+ * The context an `assistant` event's API call sent: input, cache writes and
+ * cache reads. Undefined for other events and for a subagent's messages.
+ * (The `result` event's usage sums every turn, so it can't size the context.)
+ */
+export function contextTokens(
+	event: Record<string, unknown>
+): number | undefined {
+	if (event.type !== 'assistant' || event.parent_tool_use_id) return undefined;
+	const usage = (event.message as { usage?: Record<string, unknown> })?.usage;
+	const input = finite(usage?.input_tokens);
+	if (input === undefined) return undefined;
+	return (
+		input +
+		(finite(usage?.cache_creation_input_tokens) ?? 0) +
+		(finite(usage?.cache_read_input_tokens) ?? 0)
+	);
 }
 
 /**
@@ -115,13 +143,19 @@ export function readResultEvent(
  */
 export function findResultEvent(output: string): ClaudeRunResult | undefined {
 	const lines = output.split('\n');
+	let run: ClaudeRunResult | undefined;
 	for (let i = lines.length - 1; i >= 0; i--) {
-		const event = parseEvent(lines[i]);
-		if (event?.type === 'result') {
-			return readResultEvent(event as Record<string, unknown>);
+		const event = parseEvent(lines[i]) as Record<string, unknown> | undefined;
+		if (!event) continue;
+		if (!run) {
+			if (event.type === 'result') run = readResultEvent(event);
+			continue;
 		}
+		// The last assistant event before the result sizes the context
+		const tokens = contextTokens(event);
+		if (tokens !== undefined) return { ...run, contextTokens: tokens };
 	}
-	return undefined;
+	return run;
 }
 
 /** The output with its stream-json events taken out, for a run with no result event */

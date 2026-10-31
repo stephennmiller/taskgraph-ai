@@ -2,10 +2,8 @@
  * @fileoverview Loop Service - Orchestrates running Claude Code iterations (sandbox or CLI mode)
  */
 
-import { readFile } from 'node:fs/promises';
 import { getLogger } from '../../../common/logger/index.js';
 import type { TaskStatus } from '../../../common/types/index.js';
-import { TASK_DATA_RULE } from '../../../common/utils/prompt-tag.js';
 import { isTaskPreset } from '../loop-task.js';
 import { isLoopTrusted } from '../loop-trust.js';
 import {
@@ -13,7 +11,10 @@ import {
 	modelArgs,
 	pickModelEffort
 } from '../model-bands.js';
-import { PRESETS, isPreset as checkIsPreset } from '../presets/index.js';
+import {
+	DEFAULT_RESUME_MAX_CONTEXT_TOKENS,
+	resumableSession
+} from '../session-resume.js';
 import { statusProgress } from '../task-progress.js';
 import {
 	checkSandboxAuth,
@@ -21,6 +22,7 @@ import {
 	stopSandbox
 } from './docker-sandbox.js';
 import { buildCommandArgs, spawnIteration } from './iteration-process.js';
+import { buildPrompt } from './loop-prompt.js';
 import {
 	completeIteration,
 	createErrorIteration,
@@ -33,6 +35,7 @@ import {
 } from './progress-file.js';
 import {
 	type ClaudeRunResult,
+	contextTokens,
 	findResultEvent,
 	handleStreamEvent,
 	isValidStreamEvent,
@@ -53,7 +56,6 @@ import type {
 	LoopConfig,
 	LoopIteration,
 	LoopOutputCallbacks,
-	LoopPreset,
 	LoopResult
 } from '../types.js';
 
@@ -68,10 +70,6 @@ export interface LoopServiceOptions {
 	/** A task's complexity score, which picks the iteration's model and effort */
 	taskComplexity?: (id: string, tag?: string) => Promise<unknown>;
 }
-
-/** Appended to every prompt, presets and custom files alike */
-const SIGNAL_RULE =
-	'To stop the loop, end your reply with the <loop-complete> or <loop-blocked> marker alone on the last line. A marker anywhere else is ignored.';
 
 export class LoopService {
 	private readonly projectRoot: string;
@@ -164,8 +162,17 @@ export class LoopService {
 			// Notify presentation layer of iteration start
 			config.callbacks?.onIterationStart?.(i, config.iterations);
 
-			const prompt = await this.buildPrompt(config, i);
+			const prompt = await buildPrompt(config, i);
 			const choice = await this.chooseModel(config);
+			// A sandbox keeps its sessions in the container, not here
+			const resume =
+				config.fresh || config.sandbox
+					? undefined
+					: resumableSession(
+							iterations.at(-1),
+							choice,
+							config.resumeMaxContextTokens ?? DEFAULT_RESUME_MAX_CONTEXT_TOKENS
+						);
 			const iteration = await this.executeIteration(
 				prompt,
 				i,
@@ -173,11 +180,13 @@ export class LoopService {
 				config.verbose ?? false,
 				[
 					...capArgs({ maxTurns: config.maxTurns, maxBudgetUsd: left }),
-					...modelArgs(choice)
+					...modelArgs(choice),
+					...(resume ? ['--resume', resume] : [])
 				],
 				config.callbacks
 			);
 			Object.assign(iteration, choice);
+			iteration.session = resume ? 'resumed' : 'fresh';
 			iterations.push(iteration);
 			spent += iteration.costUsd ?? 0;
 
@@ -369,40 +378,6 @@ export class LoopService {
 		}
 	}
 
-	private isPreset(name: string): name is LoopPreset {
-		return checkIsPreset(name);
-	}
-
-	private async resolvePrompt(prompt: string): Promise<string> {
-		if (this.isPreset(prompt)) {
-			return PRESETS[prompt];
-		}
-		const content = await readFile(prompt, 'utf-8');
-		if (!content.trim()) {
-			throw new Error(`Custom prompt file '${prompt}' is empty`);
-		}
-		return content;
-	}
-
-	private buildContextHeader(config: LoopConfig, iteration: number): string {
-		const tagInfo = config.tag ? ` (tag: ${config.tag})` : '';
-		// The pinned task replaces the preset's `taskgraph next` step
-		const taskInfo = config.taskId
-			? `\n\nWork on task ${config.taskId} only. Use it in place of the task taskgraph next would pick, and read it with taskgraph show ${config.taskId}.`
-			: '';
-		return `@${config.progressFile} @CLAUDE.md
-
-Loop iteration ${iteration} of ${config.iterations}${tagInfo}${taskInfo}`;
-	}
-
-	private async buildPrompt(
-		config: LoopConfig,
-		iteration: number
-	): Promise<string> {
-		const basePrompt = await this.resolvePrompt(config.prompt);
-		return `${this.buildContextHeader(config, iteration)}\n\n${basePrompt}\n\n${TASK_DATA_RULE}\n\n${SIGNAL_RULE}`;
-	}
-
 	private async executeIteration(
 		prompt: string,
 		iterationNum: number,
@@ -524,6 +499,7 @@ Loop iteration ${iteration} of ${config.iterations}${tagInfo}${taskInfo}`;
 			// Track stdout completion to handle race between data and close events
 			let stdoutEnded = false;
 			let run: ClaudeRunResult | undefined;
+			let context: number | undefined;
 			let buffer = '';
 
 			const processLine = (line: string): void => {
@@ -539,9 +515,12 @@ Loop iteration ${iteration} of ${config.iterations}${tagInfo}${taskInfo}`;
 
 					handleStreamEvent(event, callbacks);
 
+					const tokens = contextTokens(event as Record<string, unknown>);
+					if (tokens !== undefined) context = tokens;
 					// Final result: its text is checked for completion markers
 					if (event.type === 'result') {
 						run = readResultEvent(event as Record<string, unknown>);
+						if (context !== undefined) run.contextTokens = context;
 					}
 				} catch (error) {
 					// Log malformed JSON for debugging (non-JSON lines like system output are expected)

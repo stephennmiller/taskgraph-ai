@@ -36,7 +36,7 @@ function spend(costUsd?: number, turns?: number): string[] {
 	];
 }
 
-/** `# Iteration 2: success · complexity 2 · sonnet, low effort · $0.42 · 12 turns · 83s` */
+/** `# Iteration 2: success · resumed · complexity 2 · sonnet, low effort · $0.42 · 12 turns · 83s` */
 export async function appendIterationLine(
 	file: string,
 	iteration: LoopIteration
@@ -47,6 +47,7 @@ export async function appendIterationLine(
 	].filter(Boolean);
 	const facts = [
 		iteration.status,
+		...(iteration.session ? [iteration.session] : []),
 		...(iteration.complexity !== undefined
 			? [`complexity ${iteration.complexity}`]
 			: []),
