@@ -274,6 +274,8 @@ export class ParallelLoopRunner {
 						entry.createdBranch = createdBranch;
 						cwd = await git.projectIn(entry.task.worktree);
 					}
+					// Now as well as in settle, so a crash before then doesn't strand it
+					await this.recordBranch(git, entry.task.branch);
 					if (aborted) {
 						this.finish(entry, 'stopped');
 						callbacks?.onTaskEnd?.({ ...entry.task });
@@ -513,13 +515,25 @@ export class ParallelLoopRunner {
 			} else {
 				task.kept = false;
 			}
-			if (hasWorktree) await git.recordBranch(task.branch);
+			if (hasWorktree) await this.recordBranch(git, task.branch);
 			if (releaseClaim || !hasWork) {
 				await this.release(task.id, tag, claimant);
 			}
 			task.claimed = await this.isClaimed(task.id, tag, claimant);
 			task.finished =
 				task.state === 'done' && (await this.isFinished(task.id, tag));
+		}
+	}
+
+	/** TaskWorktrees.recordBranch; a failure only costs the next run that shortcut */
+	private async recordBranch(
+		git: TaskWorktrees,
+		branch: string
+	): Promise<void> {
+		try {
+			await git.recordBranch(branch);
+		} catch (error) {
+			this.logger.warn(`Couldn't record where ${branch} was left:`, error);
 		}
 	}
 
