@@ -93,8 +93,8 @@ export interface LoopConfig {
 	 * model-bands.ts); none means Claude Code's defaults every time
 	 */
 	bands?: LoopBand[];
-	/** Start every iteration in a new Claude Code session instead of resuming the last one (#841) */
-	fresh?: boolean;
+	/** Resume the previous iteration's Claude Code session for the next task when it can (#841); off by default */
+	reuseSession?: boolean;
 	/**
 	 * Resume the previous iteration's session only while its context is
 	 * below this many tokens (default DEFAULT_RESUME_MAX_CONTEXT_TOKENS; 0
@@ -138,7 +138,7 @@ export interface LoopIteration {
 	model?: string;
 	/** `--effort` the iteration ran with, when one was picked */
 	effort?: LoopEffort;
-	/** Whether the iteration resumed the previous one's Claude Code session or started a new one */
+	/** With reuseSession: whether the iteration resumed the previous one's Claude Code session or started a new one */
 	session?: 'resumed' | 'fresh';
 	/** Claude Code's session ID, from its result event */
 	sessionId?: string;

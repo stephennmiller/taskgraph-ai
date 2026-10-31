@@ -68,7 +68,7 @@ taskgraph loop -n 5 --verbose
 
 ### Cost, caps and models
 
-Each iteration's status line shows what it cost, how many turns it took and the model and effort it ran at. `--max-turns` and `--max-budget-usd` cap a run, a task's complexity score picks its model and effort, and each iteration resumes the last one's Claude Code session when it can. See [Loop cost and models](/capabilities/loop-cost).
+Each iteration's status line shows what it cost, how many turns it took and the model and effort it ran at. `--max-turns` and `--max-budget-usd` cap a run, a task's complexity score picks its model and effort and `--reuse-session` resumes the last iteration's Claude Code session for the next task. See [Loop cost and models](/capabilities/loop-cost).
 
 ### Permission prompts
 
@@ -116,7 +116,7 @@ It then prints the number of iterations, the tasks completed and the final statu
 | `--max-turns`            | number | -                               | Stop each Claude Code run after this many turns. See [Cost and caps](/capabilities/loop-cost#cost-and-caps).                          |
 | `--max-budget-usd`       | number | -                               | Stop the run once it has spent this many US dollars; each iteration gets what's left. See [Cost and caps](/capabilities/loop-cost#cost-and-caps). |
 | `--model`                | string | -                               | Run every iteration on this model instead of the one the task's complexity picks. See [Model and effort by complexity](/capabilities/loop-cost#model-and-effort-by-complexity). |
-| `--fresh`                | flag   | -                               | Start each iteration in a new Claude Code session instead of resuming the last one. See [Session reuse](/capabilities/loop-cost#session-reuse). |
+| `--reuse-session`        | flag   | -                               | Resume the last iteration's Claude Code session for the next task instead of starting a new one. See [Session reuse](/capabilities/loop-cost#session-reuse). |
 | `--parallel`             | number | -                               | Run up to N ready tasks at once, each in its own git worktree and branch. See [Run tasks in parallel](/capabilities/loop-parallel). |
 | `--container`            | flag   | -                               | With `--parallel`: run each task in its own Docker container. See [Run each task in a container](/capabilities/loop-parallel#run-each-task-in-a-container). |
 | `--container-image`      | string | `docker/sandbox-templates:claude-code` | The image `--container` uses.                                                                          |

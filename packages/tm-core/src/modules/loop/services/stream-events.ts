@@ -100,6 +100,24 @@ const finite = (value: unknown) =>
 		? value
 		: undefined;
 
+/**
+ * What this run spent. A resumed session's `total_cost_usd` carries on from
+ * the earlier runs' total, so sum `model_usage_since_last_result` (this
+ * run's calls, subagents included) when Claude Code sends it
+ */
+function runCost(event: Record<string, unknown>): number | undefined {
+	const since = event.model_usage_since_last_result;
+	if (since && typeof since === 'object') {
+		const costs = Object.values(since).map((usage) =>
+			finite((usage as { costUSD?: unknown } | null)?.costUSD)
+		);
+		if (!costs.includes(undefined)) {
+			return (costs as number[]).reduce((sum, cost) => sum + cost, 0);
+		}
+	}
+	return finite(event.total_cost_usd);
+}
+
 /** The fields loop keeps from a `result` event; fields of the wrong type are left out */
 export function readResultEvent(
 	event: Record<string, unknown>
@@ -107,12 +125,14 @@ export function readResultEvent(
 	const subtype = typeof event.subtype === 'string' ? event.subtype : '';
 	return {
 		text: typeof event.result === 'string' ? event.result : '',
-		costUsd: finite(event.total_cost_usd),
+		costUsd: runCost(event),
 		turns: finite(event.num_turns),
 		...(Object.hasOwn(CAP_HIT, subtype) ? { capHit: CAP_HIT[subtype] } : {}),
-		// A UUID; never something `claude` would read as a flag
+		// A UUID; never something `claude` would read as a flag, nor the session
+		// of a Claude Code that runs loop, which a cloud session's child reports
 		...(typeof event.session_id === 'string' &&
-		/^[A-Za-z0-9][\w-]*$/.test(event.session_id)
+		/^[A-Za-z0-9][\w-]*$/.test(event.session_id) &&
+		event.session_id !== process.env.CLAUDE_CODE_SESSION_ID
 			? { sessionId: event.session_id }
 			: {})
 	};

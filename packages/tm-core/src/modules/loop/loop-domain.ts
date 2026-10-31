@@ -324,7 +324,7 @@ export class LoopDomain {
 			maxBudgetUsd: partial.maxBudgetUsd,
 			model: partial.model,
 			bands: partial.bands ?? this.loopBands(),
-			fresh: partial.fresh,
+			reuseSession: partial.reuseSession,
 			resumeMaxContextTokens:
 				partial.resumeMaxContextTokens ??
 				resolveResumeLimit(this.loopSettings()),

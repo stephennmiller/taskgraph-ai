@@ -14,8 +14,17 @@ import { LoopService } from './loop.service.js';
 vi.mock('node:child_process');
 vi.mock('node:fs/promises');
 
-/** One run in session `id` whose last API call sent `context` tokens */
-const session = (id: string, context: number, status = 0) =>
+/**
+ * One run in session `id` whose last API call sent `context` tokens. Like
+ * Claude Code, total_cost_usd is the session's running total (`total`, 0.1
+ * by default) and model_usage_since_last_result holds this run's spend
+ */
+const session = (
+	id: string,
+	context: number,
+	status = 0,
+	{ total = 0.1, since }: { total?: number; since?: number } = {}
+) =>
 	fakeClaude({
 		stdout: [
 			JSON.stringify({
@@ -40,7 +49,14 @@ const session = (id: string, context: number, status = 0) =>
 				subtype: status ? 'error_during_execution' : 'success',
 				result: 'Did one task',
 				session_id: id,
-				total_cost_usd: 0.1,
+				total_cost_usd: total,
+				...(since !== undefined
+					? {
+							model_usage_since_last_result: {
+								'claude-sonnet': { costUSD: since }
+							}
+						}
+					: {}),
 				num_turns: 2
 			}),
 			''
@@ -53,6 +69,7 @@ const config = (fields: Partial<LoopConfig> = {}): LoopConfig => ({
 	iterations: 3,
 	sleepSeconds: 0,
 	progressFile: '/test/progress.txt',
+	reuseSession: true,
 	...fields
 });
 
@@ -126,17 +143,127 @@ describe('LoopService session resume', () => {
 		expect([0, 1, 2].map(resumedFrom)).toEqual([undefined, undefined, 's-2']);
 	});
 
-	it('starts every iteration fresh with --fresh, or a limit of 0', async () => {
+	it('starts every iteration fresh without --reuse-session, or with a limit of 0', async () => {
 		spawn.mockImplementation(() => session('s-1', 1_000));
 
-		const fresh = await service.run(config({ fresh: true }));
+		const plain = await service.run(config({ reuseSession: undefined }));
 		const off = await service.run(config({ resumeMaxContextTokens: 0 }));
 
 		expect(spawn.mock.calls.map((_, i) => resumedFrom(i))).toEqual(
 			Array(6).fill(undefined)
 		);
-		expect(fresh.iterations.every((it) => it.session === 'fresh')).toBe(true);
+		// Off by default: the status line and progress file don't change
+		expect(plain.iterations.every((it) => it.session === undefined)).toBe(true);
 		expect(off.iterations.every((it) => it.session === 'fresh')).toBe(true);
+	});
+
+	it("counts a resumed run's own spend, not the session's running total", async () => {
+		spawn
+			.mockImplementationOnce(() =>
+				session('s-1', 1_000, 0, { total: 0.3, since: 0.3 })
+			)
+			.mockImplementationOnce(() =>
+				session('s-1', 2_000, 0, { total: 0.6, since: 0.3 })
+			)
+			.mockImplementationOnce(() =>
+				session('s-1', 3_000, 0, { total: 0.9, since: 0.3 })
+			);
+
+		const result = await service.run(config({ maxBudgetUsd: 1 }));
+
+		expect(result.iterations.map((it) => it.costUsd)).toEqual([0.3, 0.3, 0.3]);
+		expect(result.finalStatus).toBe('max_iterations');
+		expect(resumedFrom(2)).toBe('s-1');
+	});
+
+	it('tells a resumed session that a new iteration starts', async () => {
+		spawn.mockImplementation(() => session('s-1', 1_000));
+
+		await service.run(config({ iterations: 2 }));
+
+		const prompt = (call: number) =>
+			(spawn.mock.calls[call][1] as string[]).join(' ');
+		expect(prompt(0)).not.toContain('A new loop iteration starts here');
+		expect(prompt(1)).toContain('A new loop iteration starts here');
+	});
+
+	it("retries fresh in the same iteration when the session can't be resumed", async () => {
+		spawn
+			.mockImplementationOnce(() => session('s-1', 1_000))
+			.mockImplementationOnce(
+				() =>
+					fakeClaude({
+						stdout: `${JSON.stringify({ type: 'result', subtype: 'error_during_execution', is_error: true, num_turns: 0, total_cost_usd: 0, session_id: 's-1' })}\n`,
+						status: 1
+					}) as never
+			)
+			.mockImplementationOnce(() => session('s-2', 1_000));
+
+		const result = await service.run(config({ iterations: 2 }));
+
+		expect([0, 1, 2].map(resumedFrom)).toEqual([undefined, 's-1', undefined]);
+		expect(result.iterations).toHaveLength(2);
+		expect(result.iterations[1]).toMatchObject({
+			status: 'success',
+			session: 'fresh',
+			sessionId: 's-2'
+		});
+	});
+
+	it('starts fresh after an iteration that changed no task and made no commit', async () => {
+		service = new LoopService({
+			projectRoot: '/test/project',
+			taskStatuses: async () => new Map([['1', 'pending']]),
+			headCommit: async () => 'abc'
+		});
+		spawn.mockImplementation(() => session('s-1', 1_000));
+
+		await service.run(config({ iterations: 2 }));
+
+		expect(resumedFrom(1)).toBeUndefined();
+	});
+
+	it('starts fresh after Claude said all tasks were done while one was ready', async () => {
+		service = new LoopService({
+			projectRoot: '/test/project',
+			findReadyTask: async () => '2'
+		});
+		spawn
+			.mockImplementationOnce(
+				() =>
+					fakeClaude({
+						stdout: [
+							JSON.stringify({
+								type: 'assistant',
+								message: { content: [], usage: { input_tokens: 1_000 } }
+							}),
+							JSON.stringify({
+								type: 'result',
+								result: 'Done\n<loop-complete>ALL_DONE</loop-complete>',
+								session_id: 's-1',
+								num_turns: 1
+							}),
+							''
+						].join('\n')
+					}) as never
+			)
+			.mockImplementation(() => session('s-2', 1_000));
+
+		const result = await service.run(config({ iterations: 2 }));
+
+		expect(result.iterations[0].message).toContain('task 2 is ready');
+		expect(resumedFrom(1)).toBeUndefined();
+	});
+
+	it('never resumes the session of the Claude Code that runs loop', async () => {
+		vi.stubEnv('CLAUDE_CODE_SESSION_ID', 's-parent');
+		spawn.mockImplementation(() => session('s-parent', 1_000));
+
+		const result = await service.run(config({ iterations: 2 }));
+		vi.unstubAllEnvs();
+
+		expect(result.iterations[0].sessionId).toBeUndefined();
+		expect(resumedFrom(1)).toBeUndefined();
 	});
 
 	it("doesn't resume in the Docker sandbox, whose sessions stay in the container", async () => {

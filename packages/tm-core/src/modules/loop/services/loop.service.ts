@@ -135,6 +135,8 @@ export class LoopService {
 		let consecutiveErrors = 0;
 		let stalled = 0;
 		let spent = 0;
+		// The iteration whose session the next one may resume
+		let resumeFrom: LoopIteration | undefined;
 		// Only a run that works on tasks can be stuck on one
 		const watchesTasks = !!config.taskId || isTaskPreset(config.prompt);
 
@@ -164,31 +166,37 @@ export class LoopService {
 			}
 			config.callbacks?.onIterationStart?.(i, config.iterations);
 
-			const prompt = await buildPrompt(config, i);
 			const choice = await this.chooseModel(config);
-			// A sandbox keeps its sessions in the container, not here
-			const resume =
-				config.fresh || config.sandbox
-					? undefined
-					: resumableSession(
-							iterations.at(-1),
+			// Opt-in (#841); a sandbox keeps its sessions in the container, not here
+			let resume =
+				config.reuseSession && !config.sandbox
+					? resumableSession(
+							resumeFrom,
 							choice,
 							config.resumeMaxContextTokens ?? DEFAULT_RESUME_MAX_CONTEXT_TOKENS
-						);
-			const iteration = await this.executeIteration(
-				prompt,
-				i,
-				config.sandbox ?? false,
-				config.verbose ?? false,
-				[
-					...capArgs({ maxTurns: config.maxTurns, maxBudgetUsd: left }),
-					...modelArgs(choice),
-					...(resume ? ['--resume', resume] : [])
-				],
-				config.callbacks
-			);
+						)
+					: undefined;
+			const run = async () =>
+				this.executeIteration(
+					await buildPrompt(config, i, !!resume),
+					i,
+					config.sandbox ?? false,
+					config.verbose ?? false,
+					[
+						...capArgs({ maxTurns: config.maxTurns, maxBudgetUsd: left }),
+						...modelArgs(choice),
+						...(resume ? ['--resume', resume] : [])
+					],
+					config.callbacks
+				);
+			let iteration = await run();
+			// The session couldn't be resumed (gone, or never written): don't spend an iteration on it
+			if (resume && iteration.status === 'error' && iteration.turns === 0) {
+				resume = undefined;
+				iteration = await run();
+			}
 			Object.assign(iteration, choice);
-			iteration.session = resume ? 'resumed' : 'fresh';
+			if (config.reuseSession) iteration.session = resume ? 'resumed' : 'fresh';
 			// Reported no cost: count all it was given (#855)
 			if (iteration.costUnknown && left !== undefined) iteration.costUsd = left;
 			iterations.push(iteration);
@@ -206,6 +214,8 @@ export class LoopService {
 			const headAfter = await this.readHead();
 			const committed = !!headAfter && headAfter !== head;
 			head = headAfter;
+			// Resume only a session that got somewhere
+			resumeFrom = progress.changed || committed ? iteration : undefined;
 
 			// Claude can say all tasks are done while one is still ready; keep going then
 			if (iteration.status === 'complete') {
@@ -213,6 +223,8 @@ export class LoopService {
 				if (ready) {
 					iteration.status = 'success';
 					iteration.message = `Claude said all tasks are done, but task ${ready} is ready`;
+					// That session believes the work is done
+					resumeFrom = undefined;
 					this.reportError(
 						config.callbacks,
 						`${iteration.message}. Continuing.`,

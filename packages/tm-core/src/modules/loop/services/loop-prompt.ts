@@ -37,10 +37,16 @@ export function buildContextHeader(
 Loop iteration ${iteration} of ${config.iterations}${tagInfo}${taskInfo}`;
 }
 
+/** Opens a resumed iteration's prompt: the history above it is the last task's */
+const RESUMED_NOTE =
+	'A new loop iteration starts here. The conversation above was the previous iteration; treat its task as finished or handed over, and follow the steps below from the start.';
+
 export async function buildPrompt(
 	config: LoopConfig,
-	iteration: number
+	iteration: number,
+	resumed = false
 ): Promise<string> {
 	const basePrompt = await resolvePrompt(config.prompt);
-	return `${buildContextHeader(config, iteration)}\n\n${basePrompt}\n\n${TASK_DATA_RULE}\n\n${SIGNAL_RULE}`;
+	const header = buildContextHeader(config, iteration);
+	return `${resumed ? `${RESUMED_NOTE}\n\n` : ''}${header}\n\n${basePrompt}\n\n${TASK_DATA_RULE}\n\n${SIGNAL_RULE}`;
 }

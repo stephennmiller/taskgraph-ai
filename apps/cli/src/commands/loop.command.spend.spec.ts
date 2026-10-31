@@ -150,7 +150,7 @@ describe('LoopCommand cost and caps', () => {
 		);
 	});
 
-	it('passes --fresh to tm-core and says whether each iteration resumed', async () => {
+	it('passes --reuse-session to tm-core and says whether each iteration resumed', async () => {
 		run.mockImplementation(async (config) => {
 			config.callbacks.onIterationEnd({
 				iteration: 2,
@@ -161,9 +161,11 @@ describe('LoopCommand cost and caps', () => {
 			return result();
 		});
 
-		await execute({ fresh: true });
+		await execute({ reuseSession: true });
 
-		expect(run).toHaveBeenCalledWith(expect.objectContaining({ fresh: true }));
+		expect(run).toHaveBeenCalledWith(
+			expect.objectContaining({ reuseSession: true })
+		);
 		expect(printed()).toContain(
 			'  Iteration 2 completed: success · resumed · $0.42'
 		);
