@@ -198,7 +198,7 @@ describe('tasks.updateFrom', () => {
 					{ id: 1, title: 'Sub', status: 'pending', dependencies: ['3'] }
 				]
 			}),
-			fromAi(3, { dependencies: [2] })
+			fromAi(3, { dependencies: [1] })
 		);
 
 		await update();
@@ -210,7 +210,7 @@ describe('tasks.updateFrom', () => {
 			taskLinks: { 3: 'discovered-from' },
 			dependencySources: { 3: 'inferred' }
 		});
-		expect(three.metadata).toEqual({ dependencySources: { 2: 'inferred' } });
+		expect(three.metadata).toEqual({ dependencySources: { 1: 'inferred' } });
 	});
 
 	it('warns about each sent task the AI did not return', async () => {
@@ -288,6 +288,49 @@ describe('tasks.updateFrom', () => {
 			['2', 'B', 'in-progress', 'B notes'],
 			['3', 'New', 'pending', undefined]
 		]);
+	});
+
+	it('keeps stored subtask IDs when the AI inserts and drops a step, and drops references to the dropped one (#827)', async () => {
+		const sub = (id: number, title: string, dependencies: unknown[] = []) => ({
+			id,
+			title,
+			status: 'pending',
+			dependencies
+		});
+		write([
+			stored('1', {
+				dependencies: ['2.3'],
+				metadata: { dependencySources: { '2.3': 'inferred' } }
+			}),
+			stored('2', {
+				subtasks: [sub(1, 'A'), sub(2, 'B'), sub(3, 'C'), sub(4, 'D', [3])]
+			})
+		]);
+		// The AI adds a step before B, drops C and renumbers: D's 3 is B
+		answer(
+			fromAi(2, {
+				subtasks: [
+					sub(1, 'A'),
+					sub(2, 'New', [1]),
+					sub(3, 'B'),
+					sub(4, 'D', [3])
+				]
+			})
+		);
+
+		await update();
+
+		const [one, two] = savedTasks();
+		expect(
+			two.subtasks.map((s: any) => [s.id, s.title, s.dependencies])
+		).toEqual([
+			['1', 'A', []],
+			['5', 'New', [1]],
+			['2', 'B', []],
+			['4', 'D', [2]]
+		]);
+		expect(one.dependencies).toEqual([]);
+		expect(one.metadata?.dependencySources).toBeUndefined();
 	});
 
 	it('updates every unfinished task from 0, as legacy did', async () => {
