@@ -87,11 +87,13 @@ export async function executePush(
 			issueNumbers: numbers.get(tag)
 		});
 
+	/** `assignee` is what GitHub now holds, as far as the push knows */
 	const saveLink = async (
 		{ tag, task }: SyncTask,
 		issueNumber: number,
 		url: string,
-		bodyHash: string
+		bodyHash: string,
+		assignee: string | undefined
 	) => {
 		const link: GitHubLink = {
 			repo,
@@ -99,7 +101,8 @@ export async function executePush(
 			url,
 			syncedAt: now().toISOString(),
 			lastPushedStatus: task.status,
-			bodyHash
+			bodyHash,
+			...(assignee && { assignee })
 		};
 		// Read metadata under the lock: a claim made during the push stays
 		const saved = await deps.tasks.modifyTask(
@@ -128,7 +131,8 @@ export async function executePush(
 		const target = find(step);
 		if (!target || step.issueNumber === undefined) continue;
 		setNumber(step.tag, step.taskId, step.issueNumber);
-		await saveLink(target, step.issueNumber, step.url ?? '', '');
+		// GitHub's assignee is unknown here: no base, so pass 2 writes the task's
+		await saveLink(target, step.issueNumber, step.url ?? '', '', undefined);
 	}
 
 	const labels = new Set<string>([BASE_LABEL]);
@@ -143,18 +147,26 @@ export async function executePush(
 		const target = find(step);
 		if (!target) continue;
 		const rendered = render(target);
+		const { assignee } = target.task;
 		await pace();
-		const issue = await client.createIssue({
-			title: rendered.title,
-			body: rendered.body,
-			labels: rendered.labels
-		});
+		const issue = await withAssigneeHint(
+			() =>
+				client.createIssue({
+					title: rendered.title,
+					body: rendered.body,
+					labels: rendered.labels,
+					...(assignee && { assignees: [assignee] })
+				}),
+			assignee,
+			repo
+		);
 		setNumber(step.tag, step.taskId, issue.number);
 		await saveLink(
 			target,
 			issue.number,
 			issue.url,
-			hashIssue(asCreated(rendered))
+			hashIssue(asCreated(rendered)),
+			assignee
 		);
 		counts.created++;
 	}
@@ -167,16 +179,25 @@ export async function executePush(
 		if (!link) continue;
 		const rendered = render(target);
 		const hash = hashIssue(rendered);
-		if (hash === link.bodyHash) continue;
+		const { assignee } = target.task;
+		const reassign = assignee !== link.assignee;
+		if (hash === link.bodyHash && !reassign) continue;
 		await pace();
-		await client.updateIssue(link.issueNumber, {
-			title: rendered.title,
-			body: rendered.body,
-			labels: rendered.labels,
-			state: rendered.state,
-			stateReason: rendered.stateReason
-		});
-		await saveLink(target, link.issueNumber, link.url, hash);
+		await withAssigneeHint(
+			() =>
+				client.updateIssue(link.issueNumber, {
+					title: rendered.title,
+					body: rendered.body,
+					labels: rendered.labels,
+					state: rendered.state,
+					stateReason: rendered.stateReason,
+					// Only a local change is written, so one made on GitHub stays
+					...(reassign && { assignees: assignee ? [assignee] : [] })
+				}),
+			reassign ? assignee : undefined,
+			repo
+		);
+		await saveLink(target, link.issueNumber, link.url, hash, assignee);
 		if (step.action === 'update') counts.updated++;
 	}
 
@@ -191,4 +212,29 @@ export async function executePush(
 	}
 
 	return counts;
+}
+
+/**
+ * Run a GitHub write that sets `assignee`; GitHub refuses (422) a login that
+ * can't be assigned in the repo, so say how to fix that
+ */
+async function withAssigneeHint<T>(
+	write: () => Promise<T>,
+	assignee: string | undefined,
+	repo: string
+): Promise<T> {
+	try {
+		return await write();
+	} catch (error) {
+		if (
+			!assignee ||
+			!(error instanceof Error) ||
+			!/\(422\)/.test(error.message)
+		) {
+			throw error;
+		}
+		throw Object.assign(error, {
+			hint: `Only collaborators on ${repo} can be assigned. Add ${assignee} as a collaborator, or change the task's assignee with \`taskgraph update-task <id> --assignee <login>\``
+		});
+	}
 }

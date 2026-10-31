@@ -55,7 +55,10 @@ describe('GhCliClient', () => {
 	});
 
 	it('lists issues by label via execFile with an argument array, skipping pull requests', () => {
-		respond(200, [rawIssue(1), rawIssue(2, { pull_request: {} })]);
+		respond(200, [
+			rawIssue(1, { assignees: [{ login: 'OctoCat' }] }),
+			rawIssue(2, { pull_request: {} })
+		]);
 
 		return client.listIssues('taskgraph').then((issues) => {
 			expect(execFileMock.mock.calls[0][0]).toBe('gh');
@@ -73,6 +76,7 @@ describe('GhCliClient', () => {
 					title: 't1',
 					body: 'b',
 					labels: ['taskgraph'],
+					assignees: ['octocat'],
 					state: 'open',
 					stateReason: undefined
 				}

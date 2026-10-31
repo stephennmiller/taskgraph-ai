@@ -64,6 +64,7 @@ interface RawIssue {
 	title: string;
 	body: string | null;
 	labels: Array<{ name: string } | string>;
+	assignees?: Array<{ login: string }> | null;
 	state: 'open' | 'closed';
 	state_reason?: 'completed' | 'not_planned' | 'reopened' | null;
 	pull_request?: unknown;
@@ -79,6 +80,7 @@ function toRemoteIssue(raw: RawIssue): RemoteIssue {
 		title: raw.title,
 		body: raw.body ?? '',
 		labels: raw.labels.map((l) => (typeof l === 'string' ? l : l.name)),
+		assignees: (raw.assignees ?? []).map((a) => a.login.toLowerCase()),
 		state: raw.state,
 		stateReason:
 			raw.state_reason === 'completed' || raw.state_reason === 'not_planned'

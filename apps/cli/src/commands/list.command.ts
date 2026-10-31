@@ -9,6 +9,7 @@ import {
 	createTmCore,
 	fenceAsData,
 	filterBlockingTasks,
+	filterByAssignee,
 	filterByStatus,
 	filterReadyTasks,
 	neutralizeTaskData,
@@ -94,6 +95,7 @@ export class ListTasksCommand extends Command {
 				'Show only tasks ready to work on (dependencies satisfied)'
 			)
 			.option('--blocking', 'Show only tasks that block other tasks')
+			.option('--mine', 'Show only tasks assigned to you (your GitHub login)')
 			.option(
 				'--all-tags',
 				'Show tasks from all tags (combine with --ready for actionable tasks)'
@@ -327,6 +329,7 @@ export class ListTasksCommand extends Command {
 		}
 
 		filteredTasks = filterByStatus(filteredTasks, options.status);
+		filteredTasks = filterByAssignee(filteredTasks, await this.mine(options));
 		if (!options.withSubtasks) {
 			filteredTasks = filteredTasks.map((task) => ({ ...task, subtasks: [] }));
 		}
@@ -447,6 +450,7 @@ export class ListTasksCommand extends Command {
 		}
 
 		filteredTasks = filterByStatus(filteredTasks, options.status);
+		filteredTasks = filterByAssignee(filteredTasks, await this.mine(options));
 
 		return {
 			tasks: filteredTasks,
@@ -454,6 +458,12 @@ export class ListTasksCommand extends Command {
 			filtered: filteredTasks.length,
 			allTags: true
 		};
+	}
+
+	/** The signed-in GitHub login for --mine; throws with a fix when gh can't say */
+	private async mine(options: ListCommandOptions): Promise<string | undefined> {
+		if (!options.mine || !this.tmCore) return undefined;
+		return this.tmCore.github.requireLogin();
 	}
 
 	/**
@@ -598,9 +608,10 @@ export class ListTasksCommand extends Command {
 	private emptyListFilter(options: ListCommandOptions): string | undefined {
 		if (options.ready) return 'ready';
 		if (options.blocking) return 'blocking';
-		return options.status && options.status !== 'all'
-			? options.status.split(',').join(' or ')
-			: undefined;
+		if (options.status && options.status !== 'all') {
+			return options.status.split(',').join(' or ');
+		}
+		return options.mine ? 'assigned' : undefined;
 	}
 
 	/**

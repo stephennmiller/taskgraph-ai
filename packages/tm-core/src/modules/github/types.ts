@@ -15,6 +15,11 @@ export interface GitHubLink {
 	/** Hash of the issue content last written to GitHub */
 	bodyHash: string;
 	/**
+	 * The assignee at the last push or pull; the base a sync compares against.
+	 * Absent when nobody was assigned, or on links saved by older versions
+	 */
+	assignee?: string;
+	/**
 	 * The issue was written by hand and imported; push never changes it, and
 	 * pull reads only whether it is open or closed
 	 */
@@ -40,6 +45,8 @@ export interface RemoteIssue {
 	title: string;
 	body: string;
 	labels: string[];
+	/** Logins, lowercase */
+	assignees: string[];
 	state: IssueState;
 	stateReason?: IssueStateReason;
 }
@@ -132,6 +139,11 @@ export interface PullStep {
 	from?: TaskStatus;
 	/** The status the issue stands for */
 	to?: TaskStatus;
+	/**
+	 * The assignee the pull gives the task, when it changes: a login, or null
+	 * to clear it. Applied whatever `action` is
+	 */
+	assignTo?: string | null;
 	reason?: string;
 }
 
@@ -159,6 +171,8 @@ export interface PullResult {
 	synced: number;
 	conflicts: number;
 	skipped: number;
+	/** Tasks whose assignee the pull changed */
+	assigned: number;
 }
 
 export interface ImportOptions {

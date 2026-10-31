@@ -5,7 +5,14 @@
  * sync (`link.lastPushedStatus`); a side has "changed" when it differs from it.
  */
 
-import type { PullPlan, PullStep, RemoteIssue, SyncTask } from '../types.js';
+import type { Task } from '../../../common/types/index.js';
+import type {
+	GitHubLink,
+	PullPlan,
+	PullStep,
+	RemoteIssue,
+	SyncTask
+} from '../types.js';
 import { sameStatus, statusFromIssue } from './issue-status.js';
 import { getLink } from './sync-planner.js';
 
@@ -39,6 +46,7 @@ export function planPull(input: PullPlanInput): PullPlan {
 			};
 		}
 
+		const assignTo = assigneeFromIssue(task, link, issue);
 		const from = task.status;
 		// An imported issue says only open (pending) or closed. Push never
 		// writes to it, so a local change can't conflict with it
@@ -46,7 +54,13 @@ export function planPull(input: PullPlanInput): PullPlan {
 			link.imported && issue.state === 'open'
 				? 'pending'
 				: statusFromIssue(issue, link.lastPushedStatus);
-		const step = { ...base, issueNumber: link.issueNumber, from, to };
+		const step = {
+			...base,
+			issueNumber: link.issueNumber,
+			from,
+			to,
+			...(assignTo !== undefined && { assignTo })
+		};
 		const localChanged =
 			!link.imported && !sameStatus(from, link.lastPushedStatus);
 		const remoteChanged = !sameStatus(to, link.lastPushedStatus);
@@ -72,4 +86,30 @@ export function planPull(input: PullPlanInput): PullPlan {
 	});
 
 	return { repo: input.repo, steps };
+}
+
+/** The issue's assignee as the task would hold it: the task's own if it is among them */
+function issueAssignee(task: Task, issue: RemoteIssue): string | undefined {
+	const local = task.assignee;
+	return local && issue.assignees.includes(local) ? local : issue.assignees[0];
+}
+
+/**
+ * The assignee a pull gives the task: the issue's, when it changed on GitHub
+ * since the last sync and not locally, or when both sides already agree
+ * (then only the link's base moves). A login, null for nobody, or undefined
+ * to leave the task alone (unchanged on GitHub, or changed on both sides,
+ * where the local one is kept)
+ */
+function assigneeFromIssue(
+	task: Task,
+	link: GitHubLink,
+	issue: RemoteIssue
+): string | null | undefined {
+	const remote = issueAssignee(task, issue);
+	if (remote === link.assignee) return undefined;
+	// Both sides agree already: only the base moves
+	if (remote === task.assignee) return remote ?? null;
+	if (task.assignee !== link.assignee) return undefined;
+	return remote ?? null;
 }

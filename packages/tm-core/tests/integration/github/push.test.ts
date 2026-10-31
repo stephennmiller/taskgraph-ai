@@ -51,6 +51,7 @@ class InMemoryGitHub implements GitHubClient {
 			number,
 			url: `https://github.com/${REPO}/issues/${number}`,
 			state: 'open',
+			assignees: [],
 			...input
 		};
 		this.issues.push(issue);

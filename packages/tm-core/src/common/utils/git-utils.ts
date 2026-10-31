@@ -395,3 +395,15 @@ export function isValidBranchForTag(branchName: string): boolean {
 	const sanitized = sanitizeBranchNameForTag(branchName);
 	return sanitized.length > 0 && sanitized !== 'unknown-branch';
 }
+
+/**
+ * The signed-in GitHub user's login, lowercase, from `gh api user`; null when
+ * gh is missing or not signed in
+ */
+export async function getGitHubLogin(cwd?: string): Promise<string | null> {
+	const { stdout, error } = await runGh(['api', 'user', '--jq', '.login'], {
+		cwd
+	});
+	const login = stdout.trim().toLowerCase();
+	return error || !login ? null : login;
+}

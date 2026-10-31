@@ -19,6 +19,9 @@ taskgraph update-task --id=<id> --prompt='<prompt>'
 
 # Use research-backed updates (research model)
 taskgraph update-task --id=<id> --prompt='<prompt>' --research
+
+# Assign the task to a GitHub login, no prompt or AI needed ('' clears it)
+taskgraph update-task --id=<id> --assignee=octocat
 ```
 
 When the AI rewrites the subtasks, each one it kept keeps its ID, so dependencies on it from other tasks still point at it. A subtask it adds gets the next free ID, and dependencies on a subtask it drops are removed.

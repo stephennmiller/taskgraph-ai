@@ -14,6 +14,8 @@ export interface CreateIssueInput {
 	title: string;
 	body: string;
 	labels: string[];
+	/** Logins to assign; replaces the issue's assignees */
+	assignees?: string[];
 }
 
 export interface UpdateIssueInput extends Partial<CreateIssueInput> {

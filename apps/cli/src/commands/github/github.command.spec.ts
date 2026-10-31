@@ -92,6 +92,7 @@ const PULL_RESULT = (overrides: Partial<PullResult> = {}): PullResult => ({
 	synced: 0,
 	conflicts: 1,
 	skipped: 1,
+	assigned: 0,
 	...overrides
 });
 
@@ -211,6 +212,33 @@ describe('GithubCommand', () => {
 				expect.objectContaining({ dryRun: false })
 			);
 			expect(output()).toContain('Pull complete');
+		});
+
+		it('pulls an assignee change on its own, without asking', async () => {
+			const plan: PullPlan = {
+				repo: 'acme/app',
+				steps: [
+					{
+						action: 'skip',
+						tag: 'master',
+						taskId: '3',
+						title: 'Third',
+						assignTo: 'octocat'
+					}
+				]
+			};
+			github.planPull.mockResolvedValue(plan);
+			github.pull.mockResolvedValue(
+				PULL_RESULT({ plan, applied: 0, conflicts: 0, assigned: 1 })
+			);
+
+			await (command as any).runPull({});
+
+			expect(confirm).not.toHaveBeenCalled();
+			expect(github.pull).toHaveBeenCalledWith(
+				expect.objectContaining({ dryRun: false })
+			);
+			expect(output()).toContain('reassigned 1');
 		});
 
 		it('does not pull when the confirmation is declined', async () => {
@@ -613,6 +641,7 @@ describe('GithubCommand', () => {
 			expect(printed()).toMatchInlineSnapshot(`
 				{
 				  "applied": "number",
+				  "assigned": "number",
 				  "conflicts": "number",
 				  "dryRun": "boolean",
 				  "plan": {

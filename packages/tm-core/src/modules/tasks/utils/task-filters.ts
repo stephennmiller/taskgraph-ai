@@ -215,6 +215,14 @@ export function filterByStatus<T extends Task>(
 		: tasks;
 }
 
+/** The tasks assigned to `login` (lowercase, as stored); all of them without one */
+export function filterByAssignee<T extends Task>(
+	tasks: T[],
+	login?: string
+): T[] {
+	return login ? tasks.filter((task) => task.assignee === login) : tasks;
+}
+
 /**
  * The statuses a `--status` value names (`pending` or `pending,review`), or
  * undefined for `all` or no value. Throws a VALIDATION_ERROR naming the valid

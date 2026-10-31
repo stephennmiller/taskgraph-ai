@@ -10,7 +10,11 @@ import path from 'node:path';
 import { TASK_DATA_NOTE } from '@tm/core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-const tasks = { updateWithPrompt: vi.fn(), updateFrom: vi.fn() };
+const tasks = {
+	updateWithPrompt: vi.fn(),
+	updateFrom: vi.fn(),
+	assign: vi.fn()
+};
 const config = { getActiveTag: vi.fn(() => 'master') };
 
 vi.mock('@tm/core', async (importOriginal) => ({
@@ -204,7 +208,10 @@ describe('update_task', () => {
 	});
 
 	it.each([
-		[{}, 'Either prompt or metadata must be provided for update-task'],
+		[
+			{},
+			'Either prompt, metadata or assignee must be provided for update-task'
+		],
 		[{ metadata: '[1]' }, 'Invalid metadata: must be a JSON object']
 	])('refuses %o without calling tm-core', async (args, message) => {
 		const result = await tool().execute(
@@ -215,6 +222,22 @@ describe('update_task', () => {
 		expect(result.isError).toBe(true);
 		expect(text(result)).toContain(message);
 		expect(tasks.updateWithPrompt).not.toHaveBeenCalled();
+	});
+
+	it('assigns without the AI when only an assignee is given', async () => {
+		tasks.assign.mockResolvedValue({ id: 3, title: 'T', assignee: 'octocat' });
+
+		const result = await tool().execute(
+			{ id: '3', assignee: '@OctoCat', projectRoot: project },
+			ctx
+		);
+
+		expect(tasks.assign).toHaveBeenCalledWith('3', '@OctoCat', 'master');
+		expect(tasks.updateWithPrompt).not.toHaveBeenCalled();
+		expect(reply(result).data).toMatchObject({
+			assignee: 'octocat',
+			updated: true
+		});
 	});
 
 	it("refuses a file other than the project's tasks.json", async () => {
