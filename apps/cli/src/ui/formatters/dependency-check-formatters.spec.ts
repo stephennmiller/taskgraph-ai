@@ -171,6 +171,20 @@ describe('formatDependencyFixes', () => {
 		]);
 	});
 
+	it('says which dependency it rewrote in its stored form (#864)', () => {
+		const output = formatDependencyFixes({
+			...counts,
+			fixes: [
+				{ type: 'rewritten', taskId: 3, dependencyId: '1.1', storedAs: '1.01' }
+			]
+		});
+
+		expect(lines(output)).toEqual([
+			'✓ Fixed 1 dependency problem',
+			'  3  wrote 1.01 as subtask 1.1'
+		]);
+	});
+
 	it('reports problems it left for the user', () => {
 		const output = formatDependencyFixes({
 			...counts,

@@ -155,10 +155,12 @@ First promote it to a full task using:
 			const deps: unknown[] = [];
 			for (const dep of item.dependencies ?? []) {
 				if (dep == null) continue;
-				const full =
+				// Older versions stored "1.01" as typed; it is 1.1 here too
+				const full = normalizeTaskId(
 					parentId === undefined
 						? String(dep)
-						: resolveSubtaskDependency(parentId, dep);
+						: resolveSubtaskDependency(parentId, dep)
+				);
 				if (holderMoved && !isMoved(full)) {
 					const live = liveInSource(full);
 					const archived = !live && isArchivedReference(full, sourceArchived);

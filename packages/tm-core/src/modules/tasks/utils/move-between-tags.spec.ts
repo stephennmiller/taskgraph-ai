@@ -81,6 +81,23 @@ describe('moveTasksBetweenTags', () => {
 		expect(ids(tags.get('master') ?? [])).toEqual([]);
 	});
 
+	it('reads a dependency stored as "01" as task 1, which stays behind (#864)', () => {
+		const tags = tagsWith();
+		tags.set('empty', []);
+		(tags.get('master') as any[])[2].dependencies = ['01'];
+
+		let error: any;
+		try {
+			moveTasksBetweenTags(tags, ['3'], 'master', 'empty', {}, archived);
+		} catch (e) {
+			error = e;
+		}
+
+		expect(error?.context.details.conflicts[0].message).toBe(
+			'Task 3 depends on 1 (in master)'
+		);
+	});
+
 	it('reads "05" as task 5, bringing its dependencies along (#864)', () => {
 		const tags = tagsWith();
 		tags.set('feature', []);

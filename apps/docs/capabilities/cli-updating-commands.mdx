@@ -120,6 +120,8 @@ taskgraph validate-dependencies
 taskgraph fix-dependencies
 ```
 
+Commands read `01` as task 1 and `1.01` as subtask 1.1, and `add-dependency` stores the plain form. Older versions stored `1.01` as typed, which `validate-dependencies` reports as missing; `fix-dependencies` rewrites it as `1.1` rather than removing it.
+
 Once `parse-prd` has recorded where tasks came from, `validate-dependencies` also checks the PRD: it lists sections no task covers, tasks that cite a heading the PRD no longer has (renamed or removed), and tasks with no section. A task covers its section and the sections inside it. These are warnings: only dependency problems make the command exit 1.
 
 ```

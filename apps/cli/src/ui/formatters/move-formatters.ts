@@ -8,7 +8,7 @@
  *   ✓ Moved 2 tasks from "backlog" to "sprint"
  *   Next: taskgraph validate-dependencies, then fix-dependencies
  *
- *   ✗ Can't move tasks from "backlog" to "sprint": 1 dependency stays behind
+ *   ✗ Can't move tasks from "backlog" to "sprint": 1 dependency conflict
  *     Task 5 depends on 4 (in backlog)
  *     Move them too: taskgraph move ... --with-dependencies, or drop them with
  *     --ignore-dependencies (or restore them first, when archived)

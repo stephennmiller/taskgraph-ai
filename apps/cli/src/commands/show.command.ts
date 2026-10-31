@@ -206,7 +206,10 @@ export class ShowCommand extends Command {
 		return {
 			task: await this.withPrdSection(taskId, result.task, options.tag),
 			found: result.task !== null,
-			originalTaskId: result.isSubtask ? taskId : undefined
+			// The stored ID ("1.3" for "01.03"), or as typed when not found
+			originalTaskId: result.isSubtask
+				? String(result.task?.id ?? taskId)
+				: undefined
 		};
 	}
 

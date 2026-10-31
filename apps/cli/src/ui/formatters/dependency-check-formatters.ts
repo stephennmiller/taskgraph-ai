@@ -40,9 +40,17 @@ export interface DependencyIssue {
 
 /** One change `fix-dependencies` made */
 export interface DependencyFix {
-	type: 'missing' | 'self' | 'duplicate' | 'circular' | 'missing-link';
+	type:
+		| 'missing'
+		| 'self'
+		| 'duplicate'
+		| 'circular'
+		| 'missing-link'
+		| 'rewritten';
 	taskId: Id;
 	dependencyId?: Id;
+	/** For `rewritten`: the dependency as it was stored ("1.01") */
+	storedAs?: Id;
 }
 
 /** How much was checked, for the muted summary */
@@ -114,6 +122,8 @@ function describeFix(fix: DependencyFix): string {
 			return `removed ${dep} to break a loop`;
 		case 'missing-link':
 			return `removed its link to ${dep}, which doesn't exist`;
+		case 'rewritten':
+			return `wrote ${safeId(fix.storedAs ?? '?')} as ${dep}`;
 	}
 }
 

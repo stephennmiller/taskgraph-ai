@@ -1,11 +1,16 @@
 /**
  * createTaskLookup: which IDs name a task or subtask, as validate-dependencies
- * and add-dependency check them.
+ * and add-dependency check them, and what fixTaskDependencies does with an ID
+ * stored as typed.
  */
 
 import { describe, expect, it } from 'vitest';
 import type { Task } from '../../common/types/index.js';
-import { createTaskLookup } from './dependency-check.js';
+import {
+	createTaskLookup,
+	fixTaskDependencies,
+	validateTaskDependencies
+} from './dependency-check.js';
 
 const asTasks = (tasks: Record<string, any>[]) => tasks as unknown as Task[];
 
@@ -30,5 +35,38 @@ describe('createTaskLookup', () => {
 		]) {
 			expect(exists(id), `id ${id}`).toBe(false);
 		}
+	});
+});
+
+describe('fixTaskDependencies with IDs older versions stored as typed (#864)', () => {
+	it('rewrites them in their stored form rather than removing them', () => {
+		const tasks = asTasks([
+			{ id: '1', dependencies: [], subtasks: [{ id: '1', dependencies: [] }] },
+			{
+				id: '2',
+				dependencies: ['01', '1.01', '1', '09', '1x'],
+				subtasks: [{ id: '1', dependencies: ['01.01', 1] }]
+			}
+		]);
+
+		const { fixes } = fixTaskDependencies(tasks);
+
+		expect(tasks[1].dependencies).toEqual(['1', '1.1']);
+		expect(tasks[1].subtasks[0].dependencies).toEqual(['1.1']);
+		expect(fixes).toEqual([
+			{ type: 'rewritten', taskId: '2', dependencyId: '1', storedAs: '01' },
+			{ type: 'rewritten', taskId: '2', dependencyId: '1.1', storedAs: '1.01' },
+			{
+				type: 'rewritten',
+				taskId: '2.1',
+				dependencyId: '1.1',
+				storedAs: '01.01'
+			},
+			{ type: 'duplicate', taskId: '2', dependencyId: '1' },
+			{ type: 'missing', taskId: '2', dependencyId: '09' },
+			{ type: 'missing', taskId: '2', dependencyId: '1x' },
+			{ type: 'self', taskId: '2.1' }
+		]);
+		expect(validateTaskDependencies(tasks).issues).toEqual([]);
 	});
 });

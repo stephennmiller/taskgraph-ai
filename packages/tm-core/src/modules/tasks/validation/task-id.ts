@@ -51,10 +51,13 @@ export function isValidTaskIdFormat(id: string): boolean {
 export function canonicalTaskId(id: string | number): string | undefined {
 	const text = String(id).trim();
 	if (!/^\d+(\.\d+)?$/.test(text)) return undefined;
-	return text
-		.split('.')
-		.map((part) => String(parseInt(part, 10)))
-		.join('.');
+	return (
+		text
+			.split('.')
+			// Drop leading zeros as text: parseInt rounds a long ID
+			.map((part) => part.replace(/^0+(?=\d)/, ''))
+			.join('.')
+	);
 }
 
 /** canonicalTaskId, or the ID trimmed when it isn't one, for lookups to miss */
