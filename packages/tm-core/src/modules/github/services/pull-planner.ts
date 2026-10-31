@@ -46,7 +46,7 @@ export function planPull(input: PullPlanInput): PullPlan {
 			};
 		}
 
-		const assignTo = assigneeFromIssue(task, link, issue);
+		const assignee = assigneeChange(task, link, issue);
 		const from = task.status;
 		// An imported issue says only open (pending) or closed. Push never
 		// writes to it, so a local change can't conflict with it
@@ -59,7 +59,7 @@ export function planPull(input: PullPlanInput): PullPlan {
 			issueNumber: link.issueNumber,
 			from,
 			to,
-			...(assignTo !== undefined && { assignTo })
+			...assignee
 		};
 		const localChanged =
 			!link.imported && !sameStatus(from, link.lastPushedStatus);
@@ -95,21 +95,18 @@ function issueAssignee(task: Task, issue: RemoteIssue): string | undefined {
 }
 
 /**
- * The assignee a pull gives the task: the issue's, when it changed on GitHub
- * since the last sync and not locally, or when both sides already agree
- * (then only the link's base moves). A login, null for nobody, or undefined
- * to leave the task alone (unchanged on GitHub, or changed on both sides,
- * where the local one is kept)
+ * What a pull does with the assignee: `assignTo` when it changed on GitHub
+ * since the last sync and not locally, `githubAssignee` when it changed on
+ * both sides to different logins (the task keeps its own), else nothing
  */
-function assigneeFromIssue(
+function assigneeChange(
 	task: Task,
 	link: GitHubLink,
 	issue: RemoteIssue
-): string | null | undefined {
+): Pick<PullStep, 'assignTo' | 'githubAssignee'> {
 	const remote = issueAssignee(task, issue);
-	if (remote === link.assignee) return undefined;
-	// Both sides agree already: only the base moves
-	if (remote === task.assignee) return remote ?? null;
-	if (task.assignee !== link.assignee) return undefined;
-	return remote ?? null;
+	if (remote === link.assignee || remote === task.assignee) return {};
+	return task.assignee === link.assignee
+		? { assignTo: remote ?? null }
+		: { githubAssignee: remote ?? null };
 }

@@ -214,7 +214,7 @@ describe('GithubCommand', () => {
 			expect(output()).toContain('Pull complete');
 		});
 
-		it('pulls an assignee change on its own, without asking', async () => {
+		it('asks before changing an assignee, then pulls', async () => {
 			const plan: PullPlan = {
 				repo: 'acme/app',
 				steps: [
@@ -234,7 +234,8 @@ describe('GithubCommand', () => {
 
 			await (command as any).runPull({});
 
-			expect(confirm).not.toHaveBeenCalled();
+			expect(confirm).toHaveBeenCalledTimes(1);
+			expect(output()).toContain('assignee -> octocat');
 			expect(github.pull).toHaveBeenCalledWith(
 				expect.objectContaining({ dryRun: false })
 			);

@@ -86,16 +86,27 @@ describe('Task assignees', () => {
 		await setup([makeTask('1', { assignee: 'alice' })]);
 		await push();
 		await tmCore.tasks.assign('1', '@Bob');
-		const update = vi.spyOn(github, 'updateIssue');
 
 		const result = await push();
 
 		expect(result.updated).toBe(1);
-		expect(update).toHaveBeenCalledWith(
-			1,
-			expect.objectContaining({ assignees: ['bob'] })
-		);
+		expect(issue(1).assignees).toEqual(['bob']);
 		expect((await push()).updated).toBe(0);
+	});
+
+	it('swaps only its own assignee, keeping others assigned on GitHub', async () => {
+		await setup([makeTask('1', { assignee: 'alice' }), makeTask('2')]);
+		await push();
+		issue(1).assignees = ['alice', 'carol'];
+		issue(2).assignees = ['dave'];
+		await tmCore.tasks.assign('1', 'bob');
+		// A claim on a task linked to a hand-assigned issue adds to it
+		await tmCore.tasks.assign('2', 'erin');
+
+		await push();
+
+		expect(issue(1).assignees).toEqual(['carol', 'bob']);
+		expect(issue(2).assignees).toEqual(['dave', 'erin']);
 	});
 
 	it('leaves an assignee set on GitHub alone when the task has none', async () => {
@@ -125,6 +136,19 @@ describe('Task assignees', () => {
 		// The pulled assignee is the base now, so a push has nothing to write for it
 		const link = (await readTask('1')).metadata?.github as GitHubLink;
 		expect(link.assignee).toBe('carol');
+	});
+
+	it('lists an assignee changed on both sides, keeping the local one', async () => {
+		await setup([makeTask('1', { assignee: 'alice' })]);
+		await push();
+		issue(1).assignees = ['carol'];
+		await tmCore.tasks.assign('1', 'bob');
+
+		const result = await domain.pull({ repo: REPO, dryRun: true });
+
+		expect(result.assigned).toBe(0);
+		expect(result.plan.steps[0]).toMatchObject({ githubAssignee: 'carol' });
+		expect(result.plan.steps[0].assignTo).toBeUndefined();
 	});
 
 	it('clears the task when its issue was unassigned', async () => {
@@ -170,6 +194,57 @@ describe('Task assignees', () => {
 		)) as Task[];
 		expect(task.assignee).toBe('frank');
 		expect((task.metadata?.github as GitHubLink).assignee).toBe('frank');
+	});
+
+	it('keeps the task assigned when GitHub dropped the assignee without saying so', async () => {
+		await setup([makeTask('1', { assignee: 'alice' })]);
+		// Without push access, GitHub creates the issue and ignores assignees
+		const create = github.createIssue.bind(github);
+		vi.spyOn(github, 'createIssue').mockImplementation(
+			({ assignees: _, ...input }) => create(input)
+		);
+		await push();
+
+		await domain.pull({ repo: REPO });
+
+		expect((await readTask('1')).assignee).toBe('alice');
+	});
+
+	it('keeps an assignee changed while the pull was reading GitHub', async () => {
+		await setup([makeTask('1')]);
+		await push();
+		issue(1).assignees = ['bob'];
+		const list = github.listIssues.bind(github);
+		vi.spyOn(github, 'listIssues').mockImplementation(async (...args) => {
+			const issues = await list(...args);
+			await tmCore.tasks.assign('1', 'carol');
+			return issues;
+		});
+
+		await domain.pull({ repo: REPO });
+
+		expect((await readTask('1')).assignee).toBe('carol');
+	});
+
+	it("gives a task import links to the issue's assignee, unless it has one", async () => {
+		await setup([
+			makeTask('1', { title: 'Fix login (#7)' }),
+			makeTask('2', { title: 'Fix logout (#8)', assignee: 'dave' })
+		]);
+		github.issues = [7, 8].map((number) => ({
+			number,
+			url: `https://github.com/${REPO}/issues/${number}`,
+			title: 'Hand written',
+			body: '',
+			labels: [],
+			assignees: ['erin'],
+			state: 'open' as const
+		}));
+
+		await domain.import({ repo: REPO });
+
+		expect((await readTask('1')).assignee).toBe('erin');
+		expect((await readTask('2')).assignee).toBe('dave');
 	});
 
 	it('says who can be assigned when GitHub refuses the login', async () => {

@@ -118,6 +118,8 @@ export class TaskEditCommands {
 			assignee?: string;
 		} = {}
 	): Promise<TaskClaim | null> {
+		// A bad login fails before the claim is written
+		if (options.assignee) normalizeAssignee(options.assignee);
 		const claim = await this.taskService.claimNextTask(
 			options.tag,
 			options.claimant,

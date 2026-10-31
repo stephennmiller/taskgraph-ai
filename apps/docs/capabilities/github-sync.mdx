@@ -59,15 +59,15 @@ Tasks that were never pushed or imported, or whose issue is gone, are skipped. P
 
 ## Assignees
 
-A task's assignee is a GitHub login. Set it with `add-task --assignee` or `update-task --assignee`, and `next --claim` sets it to your login when nobody has the task. `taskgraph list --mine` shows the tasks assigned to you.
+A task's assignee is a GitHub login. Set it with `add-task --assignee` or `update-task --assignee`, and `next --claim` sets it to your login when nobody has the task. `taskgraph list --mine` shows the tasks assigned to you, and tasks with a subtask assigned to you.
 
 Assignees sync both ways. Like status, each side is compared with the assignee at the last push or pull:
 
-- **Push** writes a task's assignee to its issue when it changed locally. An assignee someone set on GitHub stays when the task has none.
-- **Pull** gives the task the issue's assignee when it changed on GitHub and not locally. When both changed, the task keeps its own. An issue with several assignees keeps the task's one if it is among them, otherwise the first.
-- **Import** gives each new task the issue's first assignee.
+- **Push** adds the task's assignee to its issue when it changed locally, and removes the one it last synced. Anyone else assigned on GitHub stays.
+- **Pull** gives the task the issue's assignee when it changed on GitHub and not locally, and asks first unless you pass `--yes`. When both changed, the task keeps its own and the plan lists GitHub's. An issue with several assignees keeps the task's one if it is among them, otherwise the first.
+- **Import** gives each task the issue's first assignee, unless a task it links already has one. Push never writes to an imported issue, so a local change to its assignee stays local.
 
-GitHub only accepts collaborators on the repository as assignees. When it refuses one, push stops and says which login to fix.
+GitHub only accepts collaborators on the repository as assignees. When it refuses one, push stops and says which login to fix. Without push access to the repository, GitHub drops assignees without an error; the task keeps its own.
 
 ## Importing existing issues
 

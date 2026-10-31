@@ -47,6 +47,9 @@ class FakeGitHub implements GitHubClient {
 		Object.assign(issue, input);
 		return { ...issue };
 	}
+	async changeAssignees(): Promise<RemoteIssue> {
+		throw new Error('these tests assign nobody');
+	}
 	async ensureLabels() {}
 }
 

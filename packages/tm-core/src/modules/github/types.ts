@@ -144,6 +144,11 @@ export interface PullStep {
 	 * to clear it. Applied whatever `action` is
 	 */
 	assignTo?: string | null;
+	/**
+	 * GitHub's assignee (null for nobody) when the assignee changed on both
+	 * sides; the task keeps its own
+	 */
+	githubAssignee?: string | null;
 	reason?: string;
 }
 

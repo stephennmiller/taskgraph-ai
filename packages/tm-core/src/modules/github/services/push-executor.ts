@@ -8,10 +8,12 @@
 
 import type { TasksDomain } from '../../tasks/tasks-domain.js';
 import type { GitHubClient } from '../adapters/github-client.interface.js';
+import { stripTerminalControls } from '../../../common/utils/terminal-text.js';
 import type {
 	GitHubLink,
 	PlanStep,
 	PushPlan,
+	RemoteIssue,
 	RenderedIssue,
 	SyncTask
 } from '../types.js';
@@ -119,6 +121,32 @@ export async function executePush(
 		wrote = true;
 	};
 
+	/**
+	 * Move the issue from the last synced assignee to the task's, leaving
+	 * anyone else assigned on GitHub alone
+	 * @returns The new base: the task's assignee if GitHub kept it
+	 */
+	const reassignIssue = async (
+		number: number,
+		base: string | undefined,
+		assignee: string | undefined,
+		{ taskId }: { taskId: string }
+	): Promise<string | undefined> => {
+		let issue: RemoteIssue | undefined;
+		if (base && base !== assignee) {
+			await pace();
+			issue = await client.changeAssignees(number, 'remove', [base]);
+		}
+		if (assignee) {
+			await pace();
+			issue = await withAssigneeHint(
+				() => client.changeAssignees(number, 'add', [assignee]),
+				{ assignee, repo, taskId }
+			);
+		}
+		return issue ? heldBy(issue, assignee) : undefined;
+	};
+
 	const pending = plan.steps.filter(
 		(s) => s.action === 'create' || s.action === 'update'
 	);
@@ -157,8 +185,7 @@ export async function executePush(
 					labels: rendered.labels,
 					...(assignee && { assignees: [assignee] })
 				}),
-			assignee,
-			repo
+			{ assignee, repo, taskId: step.taskId }
 		);
 		setNumber(step.tag, step.taskId, issue.number);
 		await saveLink(
@@ -166,7 +193,7 @@ export async function executePush(
 			issue.number,
 			issue.url,
 			hashIssue(asCreated(rendered)),
-			assignee
+			heldBy(issue, assignee)
 		);
 		counts.created++;
 	}
@@ -182,22 +209,23 @@ export async function executePush(
 		const { assignee } = target.task;
 		const reassign = assignee !== link.assignee;
 		if (hash === link.bodyHash && !reassign) continue;
-		await pace();
-		await withAssigneeHint(
-			() =>
-				client.updateIssue(link.issueNumber, {
-					title: rendered.title,
-					body: rendered.body,
-					labels: rendered.labels,
-					state: rendered.state,
-					stateReason: rendered.stateReason,
-					// Only a local change is written, so one made on GitHub stays
-					...(reassign && { assignees: assignee ? [assignee] : [] })
-				}),
-			reassign ? assignee : undefined,
-			repo
-		);
-		await saveLink(target, link.issueNumber, link.url, hash, assignee);
+		let base = link.assignee;
+		if (hash !== link.bodyHash) {
+			await pace();
+			await client.updateIssue(link.issueNumber, {
+				title: rendered.title,
+				body: rendered.body,
+				labels: rendered.labels,
+				state: rendered.state,
+				stateReason: rendered.stateReason
+			});
+		}
+		if (reassign) {
+			base = await reassignIssue(link.issueNumber, link.assignee, assignee, {
+				taskId: step.taskId
+			});
+		}
+		await saveLink(target, link.issueNumber, link.url, hash, base);
 		if (step.action === 'update') counts.updated++;
 	}
 
@@ -215,13 +243,30 @@ export async function executePush(
 }
 
 /**
+ * The assignee GitHub holds after a write that sent `assignee`. Without push
+ * access GitHub drops assignees silently; the base must say so, or the next
+ * pull reads the empty issue as an unassignment and clears the task
+ */
+function heldBy(
+	issue: RemoteIssue,
+	assignee: string | undefined
+): string | undefined {
+	return assignee && issue.assignees.includes(assignee)
+		? assignee
+		: issue.assignees[0];
+}
+
+/**
  * Run a GitHub write that sets `assignee`; GitHub refuses (422) a login that
  * can't be assigned in the repo, so say how to fix that
  */
 async function withAssigneeHint<T>(
 	write: () => Promise<T>,
-	assignee: string | undefined,
-	repo: string
+	{
+		assignee,
+		repo,
+		taskId
+	}: { assignee: string | undefined; repo: string; taskId: string }
 ): Promise<T> {
 	try {
 		return await write();
@@ -234,7 +279,7 @@ async function withAssigneeHint<T>(
 			throw error;
 		}
 		throw Object.assign(error, {
-			hint: `Only collaborators on ${repo} can be assigned. Add ${assignee} as a collaborator, or change the task's assignee with \`taskgraph update-task <id> --assignee <login>\``
+			hint: `Only collaborators on ${repo} can be assigned. Add ${stripTerminalControls(assignee)} as a collaborator, or change it with \`taskgraph update-task ${taskId} --assignee <login>\``
 		});
 	}
 }

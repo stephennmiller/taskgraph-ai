@@ -181,6 +181,7 @@ export class UpdateTaskCommand extends Command {
 			'update-task',
 			options,
 			async (tmCore, tag, hooks, stop) => {
+				// First, so a bad login fails before the AI call is paid for
 				if (assignee !== undefined) {
 					const assigned = await tmCore.tasks.assign(id, assignee, tag);
 					console.log(

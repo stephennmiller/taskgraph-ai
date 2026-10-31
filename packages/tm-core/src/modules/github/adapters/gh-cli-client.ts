@@ -184,6 +184,19 @@ export class GhCliClient implements GitHubClient {
 		return toRemoteIssue(data);
 	}
 
+	async changeAssignees(
+		number: number,
+		change: 'add' | 'remove',
+		logins: string[]
+	): Promise<RemoteIssue> {
+		const { data } = await this.request(
+			change === 'add' ? 'POST' : 'DELETE',
+			`repos/${this.repo}/issues/${number}/assignees`,
+			{ assignees: logins }
+		);
+		return toRemoteIssue(data);
+	}
+
 	async ensureLabels(labels: string[]): Promise<void> {
 		const existing = new Set<string>();
 		for (let page = 1; ; page++) {

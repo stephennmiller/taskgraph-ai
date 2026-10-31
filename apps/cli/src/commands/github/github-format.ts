@@ -100,9 +100,11 @@ export function hasPullChanges(plan: PullPlan): boolean {
 	);
 }
 
-/** True when a pull would change a task's status (worth asking about) */
-export function hasStatusChanges(plan: PullPlan): boolean {
-	return countPullSteps(plan).apply > 0;
+/** True when a pull would change a task's status or assignee (worth asking about) */
+export function hasTaskChanges(plan: PullPlan): boolean {
+	return plan.steps.some(
+		(s) => s.action === 'apply' || s.assignTo !== undefined
+	);
 }
 
 function describePullStep(step: PullStep): string {
@@ -115,6 +117,11 @@ function describePullStep(step: PullStep): string {
 	}
 	if (step.assignTo !== undefined) {
 		changes.push(`assignee -> ${step.assignTo ?? 'nobody'}`);
+	}
+	if (step.githubAssignee !== undefined) {
+		changes.push(
+			`assignee: GitHub ${step.githubAssignee ?? 'nobody'}, local kept`
+		);
 	}
 	const change = changes.join(', ');
 	const target = step.issueNumber ? ` (#${step.issueNumber})` : '';
@@ -130,7 +137,10 @@ export function formatPullPlan(plan: PullPlan): string {
 	];
 	// Skipped tasks are only counted, not listed, unless their assignee changes
 	for (const step of plan.steps.filter(
-		(s) => s.action !== 'skip' || s.assignTo !== undefined
+		(s) =>
+			s.action !== 'skip' ||
+			s.assignTo !== undefined ||
+			s.githubAssignee !== undefined
 	)) {
 		lines.push(describePullStep(step));
 	}
@@ -149,7 +159,8 @@ export function formatPullResult(result: PullResult): string {
 	const prefix = result.dryRun ? 'would be ' : '';
 	return [
 		chalk.bold(result.dryRun ? 'Dry run, nothing written' : 'Pull complete'),
-		`  ${prefix}updated ${result.applied}, ${prefix}marked in sync ${result.synced}, conflicts ${result.conflicts}, skipped ${result.skipped}${result.assigned > 0 ? `, ${prefix}reassigned ${result.assigned}` : ''}`
+		`  ${prefix}updated ${result.applied}, ${prefix}marked in sync ${result.synced}, conflicts ${result.conflicts}, skipped ${result.skipped}`,
+		...(result.assigned > 0 ? [`  ${prefix}reassigned ${result.assigned}`] : [])
 	].join('\n');
 }
 

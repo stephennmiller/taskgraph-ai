@@ -110,6 +110,26 @@ describe('GhCliClient', () => {
 			});
 	});
 
+	it('removes one assignee through the assignees endpoint, leaving the others', () => {
+		respond(200, rawIssue(5, { assignees: [{ login: 'Carol' }] }));
+
+		return client.changeAssignees(5, 'remove', ['alice']).then((issue) => {
+			expect(callArgs(0)).toEqual([
+				'api',
+				'-i',
+				'-X',
+				'DELETE',
+				'repos/acme/app/issues/5/assignees',
+				'--input',
+				'-'
+			]);
+			expect(JSON.parse(stdinEnd.mock.calls[0][0])).toEqual({
+				assignees: ['alice']
+			});
+			expect(issue.assignees).toEqual(['carol']);
+		});
+	});
+
 	it('closes an issue with a state reason', () => {
 		respond(200, rawIssue(5, { state: 'closed', state_reason: 'not_planned' }));
 

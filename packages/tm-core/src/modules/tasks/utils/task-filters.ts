@@ -215,12 +215,19 @@ export function filterByStatus<T extends Task>(
 		: tasks;
 }
 
-/** The tasks assigned to `login` (lowercase, as stored); all of them without one */
+/**
+ * The tasks assigned to `login` (lowercase, as stored), or with a subtask
+ * assigned to it (a claim can take a subtask); all of them without a login
+ */
 export function filterByAssignee<T extends Task>(
 	tasks: T[],
 	login?: string
 ): T[] {
-	return login ? tasks.filter((task) => task.assignee === login) : tasks;
+	if (!login) return tasks;
+	// A hand-edited file may hold `Alice`; logins compare case-insensitively
+	const mine = (item: { assignee?: string }) =>
+		item.assignee?.toLowerCase() === login;
+	return tasks.filter((task) => mine(task) || task.subtasks?.some(mine));
 }
 
 /**

@@ -42,6 +42,19 @@ export class FakeGitHub implements GitHubClient {
 		Object.assign(issue, input);
 		return { ...issue };
 	}
+	async changeAssignees(
+		number: number,
+		change: 'add' | 'remove',
+		logins: string[]
+	) {
+		const issue = this.issues.find((i) => i.number === number);
+		if (!issue) throw new Error(`no issue ${number}`);
+		issue.assignees =
+			change === 'add'
+				? [...new Set([...issue.assignees, ...logins])]
+				: issue.assignees.filter((a) => !logins.includes(a));
+		return { ...issue };
+	}
 	async ensureLabels() {}
 }
 

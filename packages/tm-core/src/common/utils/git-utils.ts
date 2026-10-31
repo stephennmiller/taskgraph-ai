@@ -398,12 +398,17 @@ export function isValidBranchForTag(branchName: string): boolean {
 
 /**
  * The signed-in GitHub user's login, lowercase, from `gh api user`; null when
- * gh is missing or not signed in
+ * gh is missing, signed out or doesn't answer within 10 seconds
  */
 export async function getGitHubLogin(cwd?: string): Promise<string | null> {
-	const { stdout, error } = await runGh(['api', 'user', '--jq', '.login'], {
-		cwd
-	});
-	const login = stdout.trim().toLowerCase();
-	return error || !login ? null : login;
+	try {
+		const { stdout, error } = await runGh(['api', 'user', '--jq', '.login'], {
+			cwd,
+			timeoutMs: 10_000
+		});
+		const login = stdout.trim().toLowerCase();
+		return error || !login ? null : login;
+	} catch {
+		return null;
+	}
 }

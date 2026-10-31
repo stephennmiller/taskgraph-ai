@@ -165,9 +165,7 @@ export class GitHubDomain {
 		for (const step of plan.steps) {
 			const target = byKey.get(`${step.tag}\u0000${step.taskId}`);
 			if (step.assignTo !== undefined && target) {
-				if ((step.assignTo ?? undefined) !== target.task.assignee) {
-					counts.assigned++;
-				}
+				counts.assigned++;
 				if (!options.dryRun) {
 					await this.recordAssignee(plan.repo, step.assignTo, target);
 				}
@@ -229,10 +227,17 @@ export class GitHubDomain {
 			const task = inTag.find((t) => String(t.id) === step.taskId) as Task;
 			await tasksDomain.modifyTask(
 				task.id,
-				// No base yet: the next pull gives the task the issue's assignee
-				(current) => ({
-					metadata: { ...current.metadata, github: linkFor(step) }
-				}),
+				// A task's own assignee stays; the issue's is the base either way
+				(current) => {
+					const assignee = current.assignee ?? assigneeOf(step);
+					return {
+						...(assignee && { assignee }),
+						metadata: {
+							...current.metadata,
+							github: linkFor(step, assigneeOf(step))
+						}
+					};
+				},
 				tag
 			);
 		}
@@ -422,7 +427,8 @@ export class GitHubDomain {
 			task.id,
 			(current) => {
 				const latest = getLink(current as Task, repo);
-				if (!latest) return {};
+				// Assigned again since the pull read it: that change wins
+				if (!latest || current.assignee !== task.assignee) return {};
 				const github: GitHubLink = { ...latest, assignee };
 				return { assignee, metadata: { ...current.metadata, github } };
 			},
