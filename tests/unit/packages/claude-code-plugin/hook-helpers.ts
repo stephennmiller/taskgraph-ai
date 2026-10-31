@@ -41,7 +41,7 @@ export function fakeCli(body: string): string {
 /** Only the system tools the hooks use, so a global taskgraph stays off PATH */
 export const systemBin = (() => {
 	const bin = tempDir('tg-hook-sys-');
-	for (const tool of ['date', 'grep', 'id', 'mkdir', 'sh']) {
+	for (const tool of ['cat', 'date', 'grep', 'id', 'mkdir', 'sh']) {
 		const found = ['/usr/bin', '/bin']
 			.map((dir) => path.join(dir, tool))
 			.find((file) => fs.existsSync(file));

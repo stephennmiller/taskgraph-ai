@@ -1,8 +1,9 @@
 /**
  * The plugin's Stop hook: once per session it reminds Claude to log a note on
  * the task in progress (from the session start time session-start.sh
- * records); otherwise it keeps Claude going once while that task has
- * unchecked acceptance criteria. Never twice in a row.
+ * records); otherwise it keeps Claude going while that task has unchecked
+ * acceptance criteria, once per session for each set of them. Never twice in
+ * a row.
  */
 
 import fs from 'node:fs';
@@ -24,8 +25,7 @@ afterAll(removeTempDirs);
 
 describe('plugin Stop hook', () => {
 	/** A project whose session started at the given time */
-	function session(started: string, extra = '') {
-		const dir = project('tg-stop-');
+	function session(started: string, extra = '', dir = project('tg-stop-')) {
 		const tmp = tempDir('tg-stop-tmp-');
 		fs.mkdirSync(markerDir(tmp), { mode: 0o700 });
 		fs.writeFileSync(
@@ -209,15 +209,24 @@ describe('plugin Stop hook', () => {
 		expect(fs.existsSync(pwned)).toBe(false);
 	});
 
+	/** A project with a task in progress, a session that already had its note reminder, and a CLI that reports unchecked criteria */
+	function gatedSession(prefix: string) {
+		const dir = projectWithTask(prefix, 'in-progress');
+		const { tmp } = session('2026-10-23T09:00:00Z', 'shown\n', dir);
+		return { dir, tmp };
+	}
+
 	it('keeps Claude going once while the task in progress has unchecked criteria', () => {
-		const dir = projectWithTask('tg-gate-', 'in-progress');
+		const { dir, tmp } = gatedSession('tg-gate-');
 		const bin = gatingCli();
 
 		const first = runHook(stop, dir, bin, {
-			input: hookInput({ stop_hook_active: false })
+			input: hookInput({ stop_hook_active: false }),
+			tmp
 		});
 		const again = runHook(stop, dir, bin, {
-			input: hookInput({ stop_hook_active: true })
+			input: hookInput({ stop_hook_active: true }),
+			tmp
 		});
 
 		expect(first.status).toBe(2);
@@ -226,6 +235,47 @@ describe('plugin Stop hook', () => {
 		);
 		expect(again.status).toBe(0);
 		expect(again.stderr).toBe('');
+	});
+
+	it('blocks once per session for a set of unchecked criteria, and again when the set changes', () => {
+		const { dir, tmp } = gatedSession('tg-gate-set-');
+		const criteria = path.join(tmp, 'criteria');
+		fs.writeFileSync(
+			criteria,
+			'  2. Rate limited per IP\n  3. Logs each attempt\n'
+		);
+		const bin = fakeCli(`echo "Task 3 unchecked:"; cat '${criteria}'`);
+		const input = hookInput({ stop_hook_active: false });
+
+		const first = runHook(stop, dir, bin, { input, tmp });
+		const sameSet = runHook(stop, dir, bin, { input, tmp });
+		fs.writeFileSync(criteria, '  3. Logs each attempt\n');
+		const changed = runHook(stop, dir, bin, { input, tmp });
+		const otherSession = runHook(stop, dir, bin, {
+			input: hookInput({ session_id: 'def-456' }),
+			tmp
+		});
+
+		expect(first.status).toBe(2);
+		expect([sameSet.status, sameSet.stderr]).toEqual([0, '']);
+		expect([changed.status, changed.stderr]).toEqual([
+			2,
+			'Task 3 unchecked:\n  3. Logs each attempt\n'
+		]);
+		expect(otherSession.status).toBe(2);
+	});
+
+	it('does not gate without the private session folder to remember it in', () => {
+		const dir = projectWithTask('tg-gate-nostate-', 'in-progress');
+		const tmp = tempDir('tg-gate-nostate-tmp-');
+
+		const result = runHook(stop, dir, gatingCli(), {
+			input: hookInput({}),
+			tmp
+		});
+
+		expect(result.status).toBe(0);
+		expect(result.stderr).toBe('');
 	});
 
 	it('gives the note reminder first, then the criteria on a later stop', () => {
@@ -243,13 +293,13 @@ describe('plugin Stop hook', () => {
 	});
 
 	it('lets Claude stop when the criteria are checked or the CLI predates --unmet-criteria', () => {
-		const dir = projectWithTask('tg-gate-met-', 'in-progress');
+		const { dir, tmp } = gatedSession('tg-gate-met-');
 		const old = fakeCli(
 			`echo "error: unknown option '--unmet-criteria'" >&2; exit 1`
 		);
 
 		for (const bin of [fakeCli('exit 0'), old]) {
-			const result = runHook(stop, dir, bin, { input: hookInput({}) });
+			const result = runHook(stop, dir, bin, { input: hookInput({}), tmp });
 			expect(result.status).toBe(0);
 			expect(result.stdout + result.stderr).toBe('');
 		}
@@ -257,8 +307,12 @@ describe('plugin Stop hook', () => {
 
 	it('does not start the CLI when tasks.json has no task in progress', () => {
 		const dir = projectWithTask('tg-gate-idle-', 'pending');
+		const { tmp } = session('2026-10-23T09:00:00Z', 'shown\n', dir);
 
-		const result = runHook(stop, dir, gatingCli(), { input: hookInput({}) });
+		const result = runHook(stop, dir, gatingCli(), {
+			input: hookInput({}),
+			tmp
+		});
 
 		expect(result.status).toBe(0);
 		expect(result.stderr).toBe('');

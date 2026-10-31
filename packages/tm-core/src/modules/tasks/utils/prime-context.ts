@@ -182,7 +182,7 @@ export interface PrimeUnmetCriteria {
 
 /**
  * The in-progress tasks with an unchecked acceptance criterion. The plugin's
- * Stop hook blocks a stop once while there are any. Only the task's own
+ * Stop hook blocks a stop once per session for each set of them. Only the task's own
  * criteria count: the Definition of Done is gated at `set-status done`.
  */
 export function findUnmetCriteria(
