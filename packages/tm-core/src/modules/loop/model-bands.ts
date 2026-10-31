@@ -6,7 +6,7 @@
  *
  *   "loop": { "bands": [
  *     { "maxScore": 3, "model": "sonnet", "effort": "low" },
- *     { "maxScore": 6, "effort": "medium" },
+ *     { "maxScore": 6 },
  *     { "maxScore": 10, "effort": "high" }
  *   ] }
  *
@@ -36,10 +36,15 @@ export interface ModelChoice {
 	effort?: LoopEffort;
 }
 
-/** Simple tasks on a cheaper model at low effort; harder ones on the default model, with more effort */
+/**
+ * Simple tasks on a cheaper model at low effort; hard ones at high effort.
+ * 4-6 passes nothing: Claude Code's default effort is model-dependent
+ * (high on most, xhigh on Opus 4.7) and `--effort` beats the user's
+ * `effortLevel` setting, so a fixed `medium` would downgrade those tasks.
+ */
 export const DEFAULT_LOOP_BANDS: LoopBand[] = [
 	{ maxScore: 3, model: 'sonnet', effort: 'low' },
-	{ maxScore: 6, effort: 'medium' },
+	{ maxScore: 6 },
 	{ maxScore: 10, effort: 'high' }
 ];
 
@@ -79,14 +84,21 @@ export function resolveLoopBands(loop: unknown): LoopBand[] {
 			'Fix that band, or remove loop.bands to use the default bands'
 		);
 	if (!Array.isArray(bands)) throw bad(' must be a list of bands');
-	return bands
+	const sorted = bands
 		.map((band: unknown, i): LoopBand => {
 			const { maxScore, model, effort } = (band ?? {}) as Record<
 				string,
 				unknown
 			>;
-			if (typeof maxScore !== 'number' || !Number.isFinite(maxScore)) {
-				throw bad(`: band ${i + 1} needs a number for maxScore`);
+			if (
+				typeof maxScore !== 'number' ||
+				!Number.isInteger(maxScore) ||
+				maxScore < 1 ||
+				maxScore > 10
+			) {
+				throw bad(
+					`: band ${i + 1} needs a whole number from 1 to 10 for maxScore`
+				);
 			}
 			if (
 				model !== undefined &&
@@ -109,6 +121,12 @@ export function resolveLoopBands(loop: unknown): LoopBand[] {
 			};
 		})
 		.sort((a, b) => a.maxScore - b.maxScore);
+	// Two bands with one maxScore: the second could never be picked
+	const dup = sorted.find(
+		(b, i) => i > 0 && b.maxScore === sorted[i - 1].maxScore
+	);
+	if (dup) throw bad(`: two bands have maxScore ${dup.maxScore}`);
+	return sorted;
 }
 
 /**

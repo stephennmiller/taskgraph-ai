@@ -16,8 +16,8 @@ describe('pickModelEffort', () => {
 	it.each([
 		[1, { model: 'sonnet', effort: 'low' }],
 		[3, { model: 'sonnet', effort: 'low' }],
-		[4, { effort: 'medium' }],
-		[6, { effort: 'medium' }],
+		[4, {}],
+		[6, {}],
 		[7, { effort: 'high' }],
 		[10, { effort: 'high' }]
 	])('puts score %d in its default band', (score, choice) => {
@@ -85,9 +85,20 @@ describe('resolveLoopBands', () => {
 
 	it.each([
 		[{ bands: 'fast' }, 'must be a list'],
-		[{ bands: [{ model: 'opus' }] }, 'band 1 needs a number for maxScore'],
+		[
+			{ bands: [{ model: 'opus' }] },
+			'band 1 needs a whole number from 1 to 10 for maxScore'
+		],
 		[{ bands: [{ maxScore: 3, model: '--help' }] }, "isn't a model name"],
-		[{ bands: [{ maxScore: 3, effort: 'huge' }] }, 'effort "huge"']
+		[{ bands: [{ maxScore: 3, effort: 'huge' }] }, 'effort "huge"'],
+		[{ bands: [{ maxScore: 0 }] }, 'band 1 needs a whole number from 1 to 10'],
+		[{ bands: [{ maxScore: 3 }, { maxScore: 11 }] }, 'band 2 needs a whole'],
+		[{ bands: [{ maxScore: 3.5 }] }, 'band 1 needs a whole'],
+		[
+			{ bands: [{ maxScore: 6 }, { maxScore: 6, model: 'opus' }] },
+			'two bands have maxScore 6'
+		],
+		[{ bands: [null] }, 'band 1 needs']
 	])('refuses %j', (loop, message) => {
 		expect(() => resolveLoopBands(loop)).toThrow(message);
 	});

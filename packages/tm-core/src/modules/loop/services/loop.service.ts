@@ -295,9 +295,9 @@ export class LoopService {
 		}
 		const id = config.taskId ?? (await this.readyTask(config));
 		const score = id
-			? await this.taskComplexity?.(id, config.tag).catch(() => undefined)
+			? await this.taskComplexity(id, config.tag).catch(() => undefined)
 			: undefined;
-		const choice = pickModelEffort(score, config.bands ?? [], config.model);
+		const choice = pickModelEffort(score, config.bands, config.model);
 		return typeof score === 'number'
 			? { ...choice, complexity: score }
 			: choice;
