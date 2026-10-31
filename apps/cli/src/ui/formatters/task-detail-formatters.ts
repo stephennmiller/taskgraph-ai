@@ -55,6 +55,7 @@ import { complexityLevel } from './complexity-formatters.js';
 import {
 	fit,
 	formatMarkdown,
+	formatRawText,
 	joinFacts,
 	terminalSafe,
 	toMarkdown
@@ -89,6 +90,13 @@ export interface TaskDetailOptions {
 	blocked?: boolean;
 	/** Terminal width */
 	width?: number;
+	/**
+	 * Print the description, details, test strategy and approach as written
+	 * (wrapped, not rendered as markdown). Set when stdout isn't a terminal:
+	 * the reader is an agent or a script, and rendering loads marked,
+	 * marked-terminal and turndown (#836).
+	 */
+	rawText?: boolean;
 }
 
 /** `1`, `1 and 3`, `1, 3 and 4` */
@@ -114,11 +122,17 @@ function wrapIndented(text: string, width: number, indent = INDENT): string[] {
 }
 
 /** Render stored markdown or HTML, indented under a heading */
-function body(content: string, width: number, indent = INDENT): string[] {
+function body(
+	content: string,
+	width: number,
+	rawText: boolean | undefined,
+	indent = INDENT
+): string[] {
 	const columns = Math.max(20, width - indent.length);
-	return formatMarkdown(toMarkdown(content), columns, { breaks: true })
-		.split('\n')
-		.map((line) => (line.trim() ? indent + line : ''));
+	const text = rawText
+		? formatRawText(content, columns)
+		: formatMarkdown(toMarkdown(content), columns, { breaks: true });
+	return text.split('\n').map((line) => (line.trim() ? indent + line : ''));
 }
 
 /**
@@ -368,7 +382,8 @@ export function formatTaskDetail(
 		...(options.prdSection ? [] : sourceLine(task, width))
 	]);
 
-	if (task.description) sections.push(body(task.description, width, ''));
+	if (task.description)
+		sections.push(body(task.description, width, options.rawText, ''));
 
 	if (options.prdSection) {
 		const { source, text } = options.prdSection;
@@ -386,7 +401,8 @@ export function formatTaskDetail(
 		['Approach', task.implementationApproach]
 	];
 	for (const [title, text] of textSections) {
-		if (text?.trim()) sections.push([heading(title), ...body(text, width)]);
+		if (text?.trim())
+			sections.push([heading(title), ...body(text, width, options.rawText)]);
 	}
 
 	if (task.relevantFiles?.length) {

@@ -330,6 +330,7 @@ export class ShowCommand extends Command {
 				prdSection: result.task.prdSection,
 				statusFilter: options.status,
 				blocked: this.blocked,
+				rawText: !process.stdout.isTTY,
 				checklist: this.tmCore?.tasks.getChecklist(
 					result.task,
 					Boolean(result.originalTaskId)
