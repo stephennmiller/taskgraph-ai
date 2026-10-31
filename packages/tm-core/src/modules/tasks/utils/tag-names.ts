@@ -31,13 +31,16 @@ export function assertTagName(name: string): void {
  * Names no new tag can take. JavaScript objects treat a `__proto__` key as
  * their prototype rather than as data, and the legacy scripts/ code that also
  * writes tasks.json uses `tag` and `_rawTaggedData` as fields of its own
- * (#399). A tag with one of these names already in the file (a hand edit) can
- * still be deleted or renamed.
+ * (#399). `tasks` and `metadata` are the keys of an untagged tasks.json, so
+ * a tag with either name is hard to tell from that file shape (#802). A tag
+ * with one of these names already in the file can still be deleted or renamed.
  */
 const NEW_TAG_RESERVED_NAMES: readonly string[] = [
 	'__proto__',
 	'tag',
-	'_rawTaggedData'
+	'_rawTaggedData',
+	'tasks',
+	'metadata'
 ];
 
 /** Whether a tag about to be created may not take this name */

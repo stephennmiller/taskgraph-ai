@@ -437,6 +437,9 @@ describe('moveTasksBetweenTags', () => {
 			moveTasksBetweenTags(tags, ['3'], 'master', 'tag', {}, archived)
 		).toThrow('"tag" is a reserved tag name');
 		expect(() =>
+			moveTasksBetweenTags(tags, ['3'], 'master', 'tasks', {}, archived)
+		).toThrow('"tasks" is a reserved tag name');
+		expect(() =>
 			moveTasksBetweenTags(tags, ['3'], 'master', 'x/../y', {}, archived)
 		).toThrow('"x/../y" isn\'t a valid tag name');
 		expect(tags.has('x/../y')).toBe(false);
