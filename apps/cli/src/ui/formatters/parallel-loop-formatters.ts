@@ -9,9 +9,9 @@
  *
  * and a summary at the end:
  *
- *   ✓ 2 of 3 tasks done · 1 branch to review
- *     1  taskgraph/task-1 · 2 commits
- *     2  no changes; worktree removed
+ *   ✓ 2 of 3 tasks done · 1 branch to review · $1.20
+ *     1  taskgraph/task-1 · 2 commits · $0.70 · 31 turns
+ *     2  no changes; worktree removed · $0.50 · 18 turns
  *     3  failed: exit 1 · .taskgraph/worktrees/task-3.log
  *   Next: review with git log -p HEAD..taskgraph/task-1
  *
@@ -28,6 +28,7 @@ import {
 import chalk from 'chalk';
 import { formatDuration } from '../components/parse-prd-progress.component.js';
 import { theme } from '../theme.js';
+import { formatLoopSpend } from './usage-formatters.js';
 
 const plural = (n: number, word: string, many = `${word}s`) =>
 	`${n} ${n === 1 ? word : many}`;
@@ -156,8 +157,10 @@ export function formatParallelSummary(
 
 	const idWidth = Math.max(...tasks.map((t) => t.id.length));
 	const rows = tasks.map(
-		(t) => `  ${theme.brand(t.id.padEnd(idWidth))}  ${outcome(t, projectRoot)}`
+		(t) =>
+			`  ${theme.brand(t.id.padEnd(idWidth))}  ${outcome(t, projectRoot)}${formatLoopSpend({ costUsd: t.costUsd, turns: t.turns })}`
 	);
+	const spent = formatLoopSpend({ costUsd: result.totalCostUsd });
 	const kept = tasks.filter((t) => t.kept);
 	// Exiting 0 isn't enough: Claude must have marked the task review or done
 	const done = tasks.filter((t) => t.finished).length;
@@ -176,10 +179,10 @@ export function formatParallelSummary(
 			? `Next: ${theme.brand(`taskgraph loop --parallel ${options.parallel}${rerunFlags(options.container)}`)} picks up where they left off`
 			: null;
 	} else if (failed === tasks.length) {
-		lead = `${chalk.red('✗')} ${plural(tasks.length, 'task')} failed${review}`;
+		lead = `${chalk.red('✗')} ${plural(tasks.length, 'task')} failed${review}${spent}`;
 		next = `Next: read the log beside each worktree, e.g. ${theme.brand(rel(projectRoot, tasks[0].logFile))}`;
 	} else {
-		lead = `${done ? chalk.green('✓') : chalk.red('✗')} ${done} of ${plural(tasks.length, 'task')} done${failed ? ` · ${failed} failed` : ''}${review}`;
+		lead = `${done ? chalk.green('✓') : chalk.red('✗')} ${done} of ${plural(tasks.length, 'task')} done${failed ? ` · ${failed} failed` : ''}${review}${spent}`;
 		next = kept.length
 			? `Next: review with ${theme.brand(`git log -p HEAD..${kept[0].branch}`)}`
 			: null;

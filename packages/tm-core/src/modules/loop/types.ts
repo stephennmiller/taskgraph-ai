@@ -76,6 +76,14 @@ export interface LoopConfig {
 	 * Note: NOT compatible with `sandbox=true` (will return error).
 	 */
 	verbose?: boolean;
+	/** Passed to each `claude -p` as `--max-turns` (optional) */
+	maxTurns?: number;
+	/**
+	 * The most the whole run may spend, in US dollars (optional). Each
+	 * iteration gets what's left as `--max-budget-usd`, and the run stops
+	 * before an iteration once nothing is left.
+	 */
+	maxBudgetUsd?: number;
 	/**
 	 * Output callbacks for presentation layer (CLI/MCP).
 	 * If not provided, the service runs silently (no console output).
@@ -97,6 +105,10 @@ export interface LoopIteration {
 	message?: string;
 	/** Duration of this iteration in milliseconds */
 	duration?: number;
+	/** What Claude Code reported spending, in US dollars */
+	costUsd?: number;
+	/** Agentic turns Claude Code took */
+	turns?: number;
 }
 
 /**
@@ -110,7 +122,16 @@ export interface LoopResult {
 	/** Number of tasks completed successfully */
 	tasksCompleted: number;
 	/** Final status of the loop */
-	finalStatus: 'all_complete' | 'max_iterations' | 'blocked' | 'error';
+	finalStatus:
+		| 'all_complete'
+		| 'max_iterations'
+		| 'budget_reached'
+		| 'blocked'
+		| 'error';
+	/** Sum of the iterations' costUsd, when any reported one */
+	totalCostUsd?: number;
+	/** Sum of the iterations' turns, when any reported them */
+	totalTurns?: number;
 	/** Error message when finalStatus is 'error' (optional) */
 	errorMessage?: string;
 }

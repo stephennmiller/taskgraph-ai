@@ -270,7 +270,8 @@ export class ContainerWorkers {
 	async prepare(
 		task: ParallelTask,
 		base: string,
-		prompt: string
+		prompt: string,
+		claudeArgs: string[]
 	): Promise<{ name: string; createdBranch: boolean; args: string[] }> {
 		const clone = this.clone(task);
 		const createdBranch = !(await this.git.branchExists(task.branch));
@@ -313,6 +314,7 @@ export class ContainerWorkers {
 				cwd: await this.git.projectIn(clone),
 				stateDir,
 				prompt,
+				claudeArgs,
 				taskgraphPackage: `taskgraph-ai@${TASKGRAPH_VERSION}`,
 				user:
 					process.getuid && process.getgid

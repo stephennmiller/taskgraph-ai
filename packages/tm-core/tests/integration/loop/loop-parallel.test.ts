@@ -144,6 +144,8 @@ describe('loop --parallel', () => {
 			trusted: true,
 			claimant: 'tester',
 			command: fakeClaude(),
+			maxTurns: 7,
+			maxBudgetUsd: 3,
 			callbacks: {
 				onTaskStart: (t) => {
 					started.push(t);
@@ -163,13 +165,27 @@ describe('loop --parallel', () => {
 		expect(result.aborted).toBe(false);
 		const byId = Object.fromEntries(result.tasks.map((t) => [t.id, t]));
 
-		// Claude got the prompt as one argv entry, with permission prompts off
+		// Claude got the prompt as one argv entry, with permission prompts off,
+		// stream-json for the cost, and a third of the budget each
 		const argv = JSON.parse(
 			fs.readFileSync(byId['1'].logFile, 'utf8').split('\n')[0]
 		);
 		expect(argv[0]).toBe('-p');
 		expect(argv[1]).toContain('TaskGraph task 1');
-		expect(argv.slice(2)).toEqual(['--dangerously-skip-permissions']);
+		expect(argv.slice(2)).toEqual([
+			'--dangerously-skip-permissions',
+			'--output-format',
+			'stream-json',
+			'--verbose',
+			'--max-turns',
+			'7',
+			'--max-budget-usd',
+			'1'
+		]);
+		// The cost comes from the result event at the end of the log
+		expect(byId['1']).toMatchObject({ costUsd: 0.25, turns: 3 });
+		expect(byId['2'].costUsd).toBeUndefined();
+		expect(result.totalCostUsd).toBe(0.25);
 		expect(argv.join(' ')).not.toContain(hostile);
 
 		// Task 1 committed: worktree, branch and claim stay for review

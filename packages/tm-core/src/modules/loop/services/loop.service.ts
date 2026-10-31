@@ -17,14 +17,24 @@ import {
 	stopSandbox
 } from './docker-sandbox.js';
 import { spawnIteration } from './iteration-process.js';
-import { appendFinalSummary, initProgressFile } from './progress-file.js';
+import { completeIteration } from './iteration-result.js';
 import {
+	appendFinalSummary,
+	appendIterationLine,
+	initProgressFile
+} from './progress-file.js';
+import {
+	type ClaudeRunResult,
+	STREAM_JSON_ARGS,
+	findResultEvent,
 	handleStreamEvent,
 	isValidStreamEvent,
-	processBufferedLines
+	processBufferedLines,
+	readResultEvent
 } from './stream-events.js';
 import {
 	CLAUDE_MISSING,
+	capArgs,
 	DOCKER_MISSING,
 	MAX_CONSECUTIVE_ERRORS,
 	MAX_STALLED_ITERATIONS,
@@ -48,9 +58,6 @@ export interface LoopServiceOptions {
 	/** The commit HEAD points at (null if none), so a commit counts as progress on a task that takes several iterations */
 	headCommit?: () => Promise<string | null>;
 }
-
-/** A marker counts only alone on the last non-empty line, so quoting it in a sentence doesn't stop the loop */
-const SIGNAL_LINE = /^<loop-(complete|blocked)>([^<]*)<\/loop-\1>$/i;
 
 /** Appended to every prompt, presets and custom files alike */
 const SIGNAL_RULE =
@@ -112,6 +119,7 @@ export class LoopService {
 		let tasksCompleted = 0;
 		let consecutiveErrors = 0;
 		let stalled = 0;
+		let spent = 0;
 		// Only a run that works on tasks can be stuck on one
 		const watchesTasks = !!config.taskId || isTaskPreset(config.prompt);
 
@@ -128,6 +136,19 @@ export class LoopService {
 				this.reportError(config.callbacks, msg);
 				return this.finalize(config, iterations, tasksCompleted, 'error', msg);
 			}
+			// The run's budget: each iteration gets what's left
+			const left =
+				config.maxBudgetUsd === undefined
+					? undefined
+					: config.maxBudgetUsd - spent;
+			if (left !== undefined && left < 0.0001) {
+				return this.finalize(
+					config,
+					iterations,
+					tasksCompleted,
+					'budget_reached'
+				);
+			}
 			// Notify presentation layer of iteration start
 			config.callbacks?.onIterationStart?.(i, config.iterations);
 
@@ -137,9 +158,11 @@ export class LoopService {
 				i,
 				config.sandbox ?? false,
 				config.verbose ?? false,
+				capArgs({ maxTurns: config.maxTurns, maxBudgetUsd: left }),
 				config.callbacks
 			);
 			iterations.push(iteration);
+			spent += iteration.costUsd ?? 0;
 
 			// Completed means its status moved to done or review, not that Claude exited 0
 			const after = await this.readStatuses(config);
@@ -170,6 +193,7 @@ export class LoopService {
 
 			// Notify presentation layer of iteration completion
 			config.callbacks?.onIterationEnd?.(iteration);
+			await appendIterationLine(config.progressFile, iteration);
 
 			// Check for early exit conditions
 			if (iteration.status === 'complete') {
@@ -273,12 +297,20 @@ export class LoopService {
 		errorMessage?: string
 	): Promise<LoopResult> {
 		this._isRunning = false;
+		const sum = (key: 'costUsd' | 'turns') =>
+			iterations.some((it) => it[key] !== undefined)
+				? iterations.reduce((total, it) => total + (it[key] ?? 0), 0)
+				: undefined;
+		const totalCostUsd = sum('costUsd');
+		const totalTurns = sum('turns');
 		const result: LoopResult = {
 			iterations,
 			totalIterations: iterations.length,
 			tasksCompleted,
 			finalStatus,
-			...(errorMessage ? { errorMessage } : {})
+			...(errorMessage ? { errorMessage } : {}),
+			...(totalCostUsd !== undefined ? { totalCostUsd } : {}),
+			...(totalTurns !== undefined ? { totalTurns } : {})
 		};
 		await appendFinalSummary(config.progressFile, result);
 		return result;
@@ -336,36 +368,21 @@ Loop iteration ${iteration} of ${config.iterations}${tagInfo}${taskInfo}`;
 		return `${this.buildContextHeader(config, iteration)}\n\n${basePrompt}\n\n${TASK_DATA_RULE}\n\n${SIGNAL_RULE}`;
 	}
 
-	private parseCompletion(
-		output: string,
-		exitCode: number
-	): { status: LoopIteration['status']; message?: string } {
-		const lastLine = output.trimEnd().split('\n').pop()?.trim() ?? '';
-		const signal = lastLine.match(SIGNAL_LINE);
-		if (signal) {
-			const status =
-				signal[1].toLowerCase() === 'complete' ? 'complete' : 'blocked';
-			return { status, message: signal[2].trim() };
-		}
-
-		if (exitCode !== 0)
-			return { status: 'error', message: `Exit code ${exitCode}` };
-		return { status: 'success' };
-	}
-
 	private async executeIteration(
 		prompt: string,
 		iterationNum: number,
 		sandbox: boolean,
-		verbose = false,
+		verbose: boolean,
+		caps: string[],
 		callbacks?: LoopOutputCallbacks
 	): Promise<LoopIteration> {
 		const startTime = Date.now();
 		const command = sandbox ? 'docker' : 'claude';
+		const args = this.buildCommandArgs(prompt, sandbox, caps);
 
 		if (verbose) {
 			return this.executeVerboseIteration(
-				prompt,
+				args,
 				iterationNum,
 				command,
 				sandbox,
@@ -374,7 +391,6 @@ Loop iteration ${iteration} of ${config.iterations}${tagInfo}${taskInfo}`;
 			);
 		}
 
-		const args = this.buildCommandArgs(prompt, sandbox, false);
 		const timeout = loopIterationTimeoutMs();
 		return new Promise((resolve) => {
 			let settled = false;
@@ -415,7 +431,10 @@ Loop iteration ${iteration} of ${config.iterations}${tagInfo}${taskInfo}`;
 				settled = true;
 				if (timedOut) return fail(timeoutMessage(timeout));
 
-				const output = stdout + stderr;
+				// No result event (an older Claude Code): the raw output is the reply
+				const run = findResultEvent(stdout);
+				const reply = run ? run.text : stdout;
+				const output = reply + stderr;
 				if (output) {
 					callbacks?.onOutput?.(output);
 				}
@@ -425,13 +444,9 @@ Loop iteration ${iteration} of ${config.iterations}${tagInfo}${taskInfo}`;
 				}
 
 				// Markers come from Claude's reply on stdout; stderr would hide the last line
-				const { status, message } = this.parseCompletion(stdout, exitCode);
-				resolve({
-					iteration: iterationNum,
-					status,
-					duration: Date.now() - startTime,
-					message
-				});
+				resolve(
+					completeIteration(iterationNum, startTime, reply, exitCode, run)
+				);
 			});
 		});
 	}
@@ -439,7 +454,7 @@ Loop iteration ${iteration} of ${config.iterations}${tagInfo}${taskInfo}`;
 	/**
 	 * Execute an iteration with verbose output (shows Claude's work in real-time).
 	 * Uses Claude's stream-json format to display assistant messages as they arrive.
-	 * @param prompt - The prompt to send to Claude
+	 * @param args - The command's arguments, from buildCommandArgs
 	 * @param iterationNum - Current iteration number (1-indexed)
 	 * @param command - The command to execute ('claude' or 'docker')
 	 * @param sandbox - Whether running in Docker sandbox mode
@@ -448,15 +463,13 @@ Loop iteration ${iteration} of ${config.iterations}${tagInfo}${taskInfo}`;
 	 * @returns Promise resolving to the iteration result
 	 */
 	private executeVerboseIteration(
-		prompt: string,
+		args: string[],
 		iterationNum: number,
 		command: string,
 		sandbox: boolean,
 		startTime: number,
 		callbacks?: LoopOutputCallbacks
 	): Promise<LoopIteration> {
-		const args = this.buildCommandArgs(prompt, sandbox, true);
-
 		return new Promise((resolve) => {
 			// Prevent multiple resolutions from race conditions between error/close events
 			let isResolved = false;
@@ -482,7 +495,7 @@ Loop iteration ${iteration} of ${config.iterations}${tagInfo}${taskInfo}`;
 
 			// Track stdout completion to handle race between data and close events
 			let stdoutEnded = false;
-			let finalResult = '';
+			let run: ClaudeRunResult | undefined;
 			let buffer = '';
 
 			const processLine = (line: string): void => {
@@ -498,9 +511,9 @@ Loop iteration ${iteration} of ${config.iterations}${tagInfo}${taskInfo}`;
 
 					handleStreamEvent(event, callbacks);
 
-					// Final result text, checked for completion markers
+					// Final result: its text is checked for completion markers
 					if (event.type === 'result') {
-						finalResult = typeof event.result === 'string' ? event.result : '';
+						run = readResultEvent(event as Record<string, unknown>);
 					}
 				} catch (error) {
 					// Log malformed JSON for debugging (non-JSON lines like system output are expected)
@@ -590,32 +603,41 @@ Loop iteration ${iteration} of ${config.iterations}${tagInfo}${taskInfo}`;
 					return;
 				}
 
-				const { status, message } = this.parseCompletion(finalResult, exitCode);
-				resolveOnce({
-					iteration: iterationNum,
-					status,
-					duration: Date.now() - startTime,
-					message
-				});
+				resolveOnce(
+					completeIteration(
+						iterationNum,
+						startTime,
+						run?.text ?? '',
+						exitCode,
+						run
+					)
+				);
 			});
 		});
 	}
 
+	/** stream-json in every mode: its last event has the iteration's cost and turns */
 	private buildCommandArgs(
 		prompt: string,
 		sandbox: boolean,
-		verbose: boolean
+		caps: string[]
 	): string[] {
 		if (sandbox) {
-			return sandboxRunArgs(this.projectRoot, '-p', prompt);
+			return sandboxRunArgs(
+				this.projectRoot,
+				'-p',
+				prompt,
+				...STREAM_JSON_ARGS,
+				...caps
+			);
 		}
-
-		const args = ['-p', prompt, '--dangerously-skip-permissions'];
-		if (verbose) {
-			// Use stream-json format to show Claude's work in real-time
-			args.push('--output-format', 'stream-json', '--verbose');
-		}
-		return args;
+		return [
+			'-p',
+			prompt,
+			'--dangerously-skip-permissions',
+			...STREAM_JSON_ARGS,
+			...caps
+		];
 	}
 
 	private formatCommandError(

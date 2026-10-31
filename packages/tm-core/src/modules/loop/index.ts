@@ -19,6 +19,9 @@ export type {
 export { LoopError } from './loop-task.js';
 export type { LoopTask } from './loop-task.js';
 
+// --max-turns and --max-budget-usd
+export { parseLoopCaps } from './services/iteration-limits.js';
+
 // Parallel runs (loop --parallel)
 export * from './parallel/index.js';
 

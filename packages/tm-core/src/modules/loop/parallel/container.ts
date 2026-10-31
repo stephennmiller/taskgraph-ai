@@ -186,6 +186,8 @@ export interface ContainerRun {
 	/** Holds the worker's copy of the project's `.taskgraph` files */
 	stateDir: string;
 	prompt: string;
+	/** More `claude -p` arguments: output format and caps */
+	claudeArgs: string[];
 	/** npm spec for taskgraph when the image doesn't have it */
 	taskgraphPackage: string;
 	/** `uid:gid`, so the clone's files stay yours */
@@ -194,14 +196,15 @@ export interface ContainerRun {
 
 // Installs taskgraph unless the image has it, runs Claude, then commits
 // whatever Claude left uncommitted, so the host never needs `git status` in
-// the clone. The prompt and package arrive as $1 and $2, never pasted into
-// the script.
+// the clone. The prompt and package arrive as $1 and $2, and Claude's other
+// arguments after them, never pasted into the script.
 const START_SCRIPT = [
 	'command -v taskgraph >/dev/null 2>&1 || {',
 	'npm install --global --prefix /tmp/taskgraph --no-fund --no-audit --loglevel=error "$2" >&2 ||',
 	'{ echo "Couldn\'t install $2 from npm; use --container-image with an image that has taskgraph" >&2; exit 1; };',
 	'PATH="/tmp/taskgraph/bin:$PATH"; export PATH; };',
-	'claude -p "$1" --dangerously-skip-permissions; code=$?;',
+	'p="$1"; shift 2;',
+	'claude -p "$p" --dangerously-skip-permissions "$@"; code=$?;',
 	'if [ -n "$(git status --porcelain)" ]; then',
 	'git add -A && git commit -q -m "Uncommitted work left at the end of the run"; fi;',
 	'exit $code'
@@ -246,6 +249,7 @@ export function buildContainerArgs(run: ContainerRun): string[] {
 		START_SCRIPT,
 		'sh',
 		run.prompt,
-		run.taskgraphPackage
+		run.taskgraphPackage,
+		...run.claudeArgs
 	];
 }

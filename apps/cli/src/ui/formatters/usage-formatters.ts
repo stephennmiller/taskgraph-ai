@@ -7,7 +7,12 @@
  * here, so a cost line would always read "$0.000000". The cached share is
  * added when it's at least 1%: Claude Code sends a large, mostly cached
  * context with every call, which otherwise makes small commands look huge.
+ *
+ * `loop` adds what each iteration or task spent: ` · $0.42 · 12 turns · 3m 10s`.
  */
+
+import { formatDuration } from '../components/parse-prd-progress.component.js';
+import { theme } from '../theme.js';
 
 /** The telemetry fields this line uses */
 export interface UsageTelemetry {
@@ -76,4 +81,23 @@ export function formatUsageLine(
 		);
 	}
 	return parts.join(' · ');
+}
+
+/**
+ * ` · $0.42 · 12 turns · 3m 10s`, muted, for the end of a `loop` line;
+ * leaves out what Claude Code didn't report, and is empty when it reported nothing
+ */
+export function formatLoopSpend(spend: {
+	costUsd?: number;
+	turns?: number;
+	durationMs?: number;
+}): string {
+	const facts = [
+		spend.costUsd !== undefined ? formatCost(spend.costUsd) : null,
+		spend.turns !== undefined
+			? `${spend.turns} ${spend.turns === 1 ? 'turn' : 'turns'}`
+			: null,
+		spend.durationMs !== undefined ? formatDuration(spend.durationMs) : null
+	].filter(Boolean);
+	return facts.length ? theme.muted(` · ${facts.join(' · ')}`) : '';
 }
