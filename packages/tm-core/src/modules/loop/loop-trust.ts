@@ -2,11 +2,11 @@
  * @fileoverview Per-user record of projects where `loop` may run Claude with
  * permission prompts off. It lives in the home directory, never in the
  * project, so a cloned repo cannot approve itself. Each approval holds a hash
- * of the tasks it was given for, so tasks that changed since (another branch,
- * a pull, a hand edit) need a new one.
+ * of the tasks and project instructions it was given for, so a change to
+ * either since (another branch, a pull, a hand edit) needs a new one.
  */
 
-import { createHash } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -16,6 +16,8 @@ import {
 	TASKGRAPH_CONFIG_FILE,
 	TASKGRAPH_TASKS_FILE
 } from '../../common/constants/paths.js';
+import { readPrdSection } from '../prd/prd-coverage.js';
+import { PRD_SOURCE_KEY } from '../prd/prd-sections.js';
 import { normalizeDefinitionOfDone } from '../tasks/utils/acceptance-criteria.js';
 
 interface TrustEntry {
@@ -90,10 +92,73 @@ function definitionOfDone(root: string): Set<string> {
 }
 
 /**
- * Hash of every tag's tasks, less progress marks and each tag's bookkeeping
- * `metadata`, so set-status or checking off a criterion keeps an approval
+ * Project files outside `.claude` the loop's Claude session loads:
+ * instructions and the MCP servers it starts
  */
-function tasksHash(root: string): string {
+const CLAUDE_FILES = ['CLAUDE.md', '.taskgraph/CLAUDE.md', '.mcp.json'];
+
+const sha256 = (data: string | Buffer) =>
+	createHash('sha256').update(data).digest('hex');
+
+/** Bounds on the `.claude` walk, which runs before every loop iteration */
+const CLAUDE_DIR_MAX_ENTRIES = 5000;
+const CLAUDE_DIR_MAX_BYTES = 8 * 1024 * 1024;
+
+/**
+ * Everything under `.claude` (rules, agents, commands, skills, hooks,
+ * settings) as [path, content] pairs in a fixed order, less the user's own
+ * `settings.local.json` and Claude Code's `worktrees`. A symlink gives its
+ * link text and isn't followed; a file past the byte budget gives its size
+ * and change times, which rewriting it changes. Past the entry cap the walk
+ * stops and a value that never repeats goes in, so loop asks every time.
+ */
+function claudeDir(root: string): unknown {
+	const out: Array<[string, string]> = [];
+	let seen = 0;
+	let bytes = 0;
+	const visit = (rel: string): boolean => {
+		if (++seen > CLAUDE_DIR_MAX_ENTRIES) return false;
+		const full = path.join(root, rel);
+		try {
+			const stat = fs.lstatSync(full);
+			if (stat.isSymbolicLink()) {
+				out.push([rel, `link:${fs.readlinkSync(full)}`]);
+			} else if (stat.isDirectory()) {
+				for (const name of fs.readdirSync(full).sort()) {
+					if (
+						rel === '.claude' &&
+						(name === 'settings.local.json' || name === 'worktrees')
+					)
+						continue;
+					if (!visit(`${rel}/${name}`)) return false;
+				}
+			} else if (!stat.isFile()) {
+				out.push([rel, 'special']); // A FIFO would block a read
+			} else if (bytes + stat.size <= CLAUDE_DIR_MAX_BYTES) {
+				bytes += stat.size;
+				// Bytes, not text: decoding would make different binaries look alike
+				out.push([rel, sha256(fs.readFileSync(full))]);
+			} else {
+				out.push([rel, `${stat.size}:${stat.mtimeMs}:${stat.ctimeMs}`]);
+			}
+		} catch (error) {
+			out.push([rel, `error:${(error as NodeJS.ErrnoException).code}`]);
+		}
+		return true;
+	};
+	return visit('.claude') ? out : randomUUID();
+}
+
+/**
+ * Hash of every tag's tasks, less progress marks and each tag's bookkeeping
+ * `metadata`, so set-status or checking off a criterion keeps an approval;
+ * with the files in `CLAUDE_FILES` (null when missing), `.claude`, the
+ * Definition of Done and the PRD sections tasks cite, which `show` prints
+ * with each task
+ */
+function trustHash(root: string): string {
+	const doneItems = definitionOfDone(root);
+	const sources = new Set<string>();
 	let text: string;
 	try {
 		text = fs.readFileSync(path.join(root, TASKGRAPH_TASKS_FILE), 'utf8');
@@ -106,16 +171,28 @@ function tasksHash(root: string): string {
 		const tags = new Set(
 			data && typeof data === 'object' ? Object.values(data) : []
 		);
-		const marks = progressMarks(definitionOfDone(root));
+		const marks = progressMarks(doneItems);
 		text = JSON.stringify(data, function (key, value) {
 			const skip =
 				(key === 'metadata' && tags.has(this)) || marks.get(key)?.(value);
+			if (!skip && key === PRD_SOURCE_KEY && typeof value === 'string')
+				sources.add(value);
 			return skip ? undefined : value;
 		});
 	} catch {
 		// Not JSON: hash it as it is, so any change still counts
 	}
-	return createHash('sha256').update(text).digest('hex');
+	const files = CLAUDE_FILES.map((file) => {
+		try {
+			return fs.readFileSync(path.join(root, file), 'utf8');
+		} catch {
+			return null;
+		}
+	});
+	const prd = [...sources].map((s) => readPrdSection(s, root) ?? null);
+	return sha256(
+		JSON.stringify([text, files, claudeDir(root), [...doneItems], prd])
+	);
 }
 
 export function isLoopTrusted(
@@ -125,10 +202,10 @@ export function isLoopTrusted(
 	const root = canonical(projectRoot);
 	const entry = findEntry(home, root);
 	// A bare path from an older version holds no hash: ask again once
-	return (entry as TrustEntry | undefined)?.tasks === tasksHash(root);
+	return (entry as TrustEntry | undefined)?.tasks === trustHash(root);
 }
 
-/** Approve this project's tasks as they are now */
+/** Approve this project's tasks and instructions as they are now */
 export function trustLoop(
 	projectRoot: string,
 	home: string = os.homedir()
@@ -140,7 +217,7 @@ export function trustLoop(
 /** The list with this project's entry for its tasks as they are now */
 const withEntry = (trusted: unknown[], root: string) => [
 	...trusted.filter((e) => !entryMatches(e, root)),
-	{ path: root, tasks: tasksHash(root) }
+	{ path: root, tasks: trustHash(root) }
 ];
 
 /** Why an approved run stopped: `keepLoopTrust` found the approval withdrawn */
