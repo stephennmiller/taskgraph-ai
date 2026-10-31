@@ -95,6 +95,49 @@ describe('LoopService progress', () => {
 		});
 	});
 
+	it('counts a parent that finished with its last subtask once', async () => {
+		const taskStatuses = snapshots(
+			{ '3': 'in-progress', '3.1': 'done', '3.2': 'in-progress' },
+			{ '3': 'done', '3.1': 'done', '3.2': 'done' }
+		);
+
+		const result = await new LoopService({
+			projectRoot: '/p',
+			taskStatuses
+		}).run({ ...config, iterations: 1 });
+
+		expect(result.tasksCompleted).toBe(1);
+	});
+
+	it('keeps going while each iteration commits, though no status changes', async () => {
+		const headCommit = vi.fn();
+		for (const sha of ['a', 'b', 'c', 'd'])
+			headCommit.mockResolvedValueOnce(sha);
+		headCommit.mockResolvedValue('e');
+
+		const result = await new LoopService({
+			projectRoot: '/p',
+			taskStatuses: snapshots({ '1': 'in-progress' }),
+			headCommit
+		}).run(config);
+
+		expect(result).toMatchObject({
+			totalIterations: 4,
+			tasksCompleted: 0,
+			finalStatus: 'max_iterations'
+		});
+	});
+
+	it('stops when HEAD stays put and no status changes', async () => {
+		const result = await new LoopService({
+			projectRoot: '/p',
+			taskStatuses: snapshots({ '1': 'in-progress' }),
+			headCommit: vi.fn().mockResolvedValue('a')
+		}).run(config);
+
+		expect(result).toMatchObject({ totalIterations: 2, finalStatus: 'error' });
+	});
+
 	it('resets the count when an iteration changes a status', async () => {
 		const taskStatuses = snapshots(
 			{ '1': 'pending' },

@@ -5,6 +5,7 @@
  * @integration
  */
 
+import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -12,9 +13,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { type TmCore, createTmCore } from '../../../src/index.js';
 import { createTask, createTasksFile } from '../../../src/testing/index.js';
 
-/** Marks the first pending task done when FAKE_CLAUDE_FINISH is set; always exits 0 */
+/** Marks the first pending task done when FAKE_CLAUDE_FINISH is set, commits when FAKE_CLAUDE_COMMIT is; always exits 0 */
 const FAKE_CLAUDE = `#!/usr/bin/env node
 const fs = require('node:fs');
+if (process.env.FAKE_CLAUDE_COMMIT) {
+	require('node:child_process').execFileSync('git', ['commit', '-q', '--allow-empty', '-m', 'wip']);
+}
 if (process.env.FAKE_CLAUDE_FINISH) {
 	const file = '.taskgraph/tasks/tasks.json';
 	const data = JSON.parse(fs.readFileSync(file, 'utf8'));
@@ -84,6 +88,29 @@ describe.skipIf(process.platform === 'win32')('loop progress', () => {
 		expect(result).toMatchObject({
 			totalIterations: 2,
 			tasksCompleted: 2,
+			finalStatus: 'max_iterations'
+		});
+	}, 20_000);
+
+	it('keeps going while Claude commits work on a task that stays in progress', async () => {
+		for (const [key, value] of Object.entries({
+			GIT_AUTHOR_NAME: 't',
+			GIT_AUTHOR_EMAIL: 't@example.com',
+			GIT_COMMITTER_NAME: 't',
+			GIT_COMMITTER_EMAIL: 't@example.com',
+			FAKE_CLAUDE_COMMIT: '1'
+		}))
+			vi.stubEnv(key, value);
+		execFileSync('git', ['init', '-q'], { cwd: dir });
+		execFileSync('git', ['commit', '-q', '--allow-empty', '-m', 'init'], {
+			cwd: dir
+		});
+
+		const result = await run(3);
+
+		expect(result).toMatchObject({
+			totalIterations: 3,
+			tasksCompleted: 0,
 			finalStatus: 'max_iterations'
 		});
 	}, 20_000);

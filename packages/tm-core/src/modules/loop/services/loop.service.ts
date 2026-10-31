@@ -2,8 +2,7 @@
  * @fileoverview Loop Service - Orchestrates running Claude Code iterations (sandbox or CLI mode)
  */
 
-import { appendFile, mkdir, readFile } from 'node:fs/promises';
-import path from 'node:path';
+import { readFile } from 'node:fs/promises';
 import { getLogger } from '../../../common/logger/index.js';
 import type { TaskStatus } from '../../../common/types/index.js';
 import { TASK_DATA_RULE } from '../../../common/utils/prompt-tag.js';
@@ -18,6 +17,7 @@ import {
 	stopSandbox
 } from './docker-sandbox.js';
 import { spawnIteration } from './iteration-process.js';
+import { appendFinalSummary, initProgressFile } from './progress-file.js';
 import {
 	handleStreamEvent,
 	isValidStreamEvent,
@@ -45,6 +45,8 @@ export interface LoopServiceOptions {
 	findReadyTask?: (tag?: string) => Promise<string | undefined>;
 	/** Each task's and subtask's status in a tag, compared around every iteration */
 	taskStatuses?: (tag?: string) => Promise<Map<string, TaskStatus>>;
+	/** The commit HEAD points at (null if none), so a commit counts as progress on a task that takes several iterations */
+	headCommit?: () => Promise<string | null>;
 }
 
 /** A marker counts only alone on the last non-empty line, so quoting it in a sentence doesn't stop the loop */
@@ -60,6 +62,7 @@ export class LoopService {
 		tag?: string
 	) => Promise<string | undefined>;
 	private readonly taskStatuses?: LoopServiceOptions['taskStatuses'];
+	private readonly headCommit?: LoopServiceOptions['headCommit'];
 	private readonly logger = getLogger('LoopService');
 	private _isRunning = false;
 
@@ -67,6 +70,7 @@ export class LoopService {
 		this.projectRoot = options.projectRoot;
 		this.findReadyTask = options.findReadyTask;
 		this.taskStatuses = options.taskStatuses;
+		this.headCommit = options.headCommit;
 	}
 
 	getProjectRoot(): string {
@@ -111,8 +115,9 @@ export class LoopService {
 		// Only a run that works on tasks can be stuck on one
 		const watchesTasks = !!config.taskId || isTaskPreset(config.prompt);
 
-		await this.initProgressFile(config);
+		await initProgressFile(config);
 		let statuses = await this.readStatuses(config);
+		let head = await this.readHead();
 		// Approved through the trust file: parse-prd or github import can withdraw it mid-run
 		const approved = !config.sandbox && isLoopTrusted(this.projectRoot);
 
@@ -144,6 +149,10 @@ export class LoopService {
 					: { finished: 0, changed: true };
 			statuses = after;
 			tasksCompleted += progress.finished;
+			// A task can take several iterations; a new commit is work on it
+			const headAfter = await this.readHead();
+			const committed = !!headAfter && headAfter !== head;
+			head = headAfter;
 
 			// Claude can say all tasks are done while one is still ready; keep going then
 			if (iteration.status === 'complete') {
@@ -188,11 +197,11 @@ export class LoopService {
 					iteration.message
 				);
 			}
-			if (progress.changed) stalled = 0;
+			if (progress.changed || committed) stalled = 0;
 			else if (iteration.status === 'success') stalled++;
 			if (watchesTasks && stalled >= MAX_STALLED_ITERATIONS) {
 				const stuck = config.taskId ?? (await this.readyTask(config));
-				const msg = `${stuck ? `Task ${stuck} is stuck: no` : 'No'} task changed status in ${stalled} iterations in a row. Check the progress file and the task, then run loop again.`;
+				const msg = `${stuck ? `Task ${stuck} is stuck: no` : 'No'} task changed status and nothing was committed in ${stalled} iterations in a row. Check the progress file and the task, then run loop again.`;
 				this.reportError(config.callbacks, msg);
 				return this.finalize(config, iterations, tasksCompleted, 'error', msg);
 			}
@@ -235,6 +244,11 @@ export class LoopService {
 		}
 	}
 
+	/** HEAD's commit, or null when there's no lookup or it fails */
+	private readHead(): Promise<string | null> {
+		return this.headCommit?.().catch(() => null) ?? Promise.resolve(null);
+	}
+
 	/** The tag's task statuses, or undefined when there's no lookup or the file can't be read */
 	private async readStatuses(
 		config: LoopConfig
@@ -266,7 +280,7 @@ export class LoopService {
 			finalStatus,
 			...(errorMessage ? { errorMessage } : {})
 		};
-		await this.appendFinalSummary(config.progressFile, result);
+		await appendFinalSummary(config.progressFile, result);
 		return result;
 	}
 
@@ -286,43 +300,6 @@ export class LoopService {
 		} else {
 			this.logger.error(message);
 		}
-	}
-
-	private async initProgressFile(config: LoopConfig): Promise<void> {
-		await mkdir(path.dirname(config.progressFile), { recursive: true });
-		const lines = [
-			'# TaskGraph Loop Progress',
-			`# Started: ${new Date().toISOString()}`,
-			`# Preset: ${config.prompt}`,
-			`# Max Iterations: ${config.iterations}`,
-			...(config.tag ? [`# Tag: ${config.tag}`] : []),
-			'',
-			'---',
-			''
-		];
-		// Append to existing progress file instead of overwriting
-		await appendFile(
-			config.progressFile,
-			'\n' + lines.join('\n') + '\n',
-			'utf-8'
-		);
-	}
-
-	private async appendFinalSummary(
-		file: string,
-		result: LoopResult
-	): Promise<void> {
-		await appendFile(
-			file,
-			`
----
-# Loop Complete: ${new Date().toISOString()}
-- Total iterations: ${result.totalIterations}
-- Tasks completed: ${result.tasksCompleted}
-- Final status: ${result.finalStatus}
-`,
-			'utf-8'
-		);
 	}
 
 	private isPreset(name: string): name is LoopPreset {

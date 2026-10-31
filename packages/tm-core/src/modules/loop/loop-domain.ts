@@ -5,6 +5,7 @@
 
 import path from 'node:path';
 import { getLogger } from '../../common/logger/index.js';
+import { getHeadCommit } from '../../common/utils/git-utils.js';
 import type { ConfigManager } from '../config/managers/config-manager.js';
 import type { TasksDomain } from '../tasks/tasks-domain.js';
 import {
@@ -121,7 +122,8 @@ export class LoopDomain {
 				: undefined,
 			taskStatuses: tasks
 				? async (tag) => taskStatuses((await tasks.list({ tag })).tasks)
-				: undefined
+				: undefined,
+			headCommit: () => getHeadCommit(this.projectRoot)
 		});
 		return this.loopService.run(fullConfig);
 	}

@@ -23,20 +23,30 @@ export function taskStatuses(tasks: Task[]): Map<string, TaskStatus> {
 
 /**
  * Between two snapshots: how many tasks moved to done or review, and
- * whether any status changed at all
+ * whether any status changed at all. A parent that finished along with its
+ * subtasks (as it does when its last subtask is marked done) isn't counted
+ * again: the subtasks were the work.
  */
 export function statusProgress(
 	before: Map<string, TaskStatus>,
 	after: Map<string, TaskStatus>
 ): { finished: number; changed: boolean } {
-	let finished = 0;
+	const moved: string[] = [];
 	let changed = before.size !== after.size;
 	for (const [id, status] of after) {
 		const was = before.get(id);
 		if (was === status) continue;
 		changed = true;
 		if (was !== undefined && isFinishedStatus(status) && !isFinishedStatus(was))
-			finished++;
+			moved.push(id);
 	}
-	return { finished, changed };
+	const parents = new Set(
+		moved
+			.filter((id) => id.includes('.'))
+			.map((id) => id.slice(0, id.lastIndexOf('.')))
+	);
+	return {
+		finished: moved.filter((id) => !parents.has(id)).length,
+		changed
+	};
 }
