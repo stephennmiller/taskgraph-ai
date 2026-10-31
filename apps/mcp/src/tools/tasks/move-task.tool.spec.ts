@@ -121,6 +121,8 @@ describe('move_task', () => {
 			expect(text).not.toContain('withDependencies');
 			expect(text).toContain('ignoreDependencies: true');
 			expect(text).toContain('archive_tasks');
+			// archive_tasks isn't in the core or standard tier
+			expect(text).toContain('taskgraph archive restore <id> --tag=feat');
 		});
 
 		it('names both fixes when live and archived tasks block it', async () => {

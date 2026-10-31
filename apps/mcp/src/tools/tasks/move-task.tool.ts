@@ -61,7 +61,8 @@ function moveToTagError(error: any): string {
 	}
 	const conflicts: CrossTagConflict[] = details.conflicts;
 	const { moveAlong, restore } = crossTagConflictFixes(conflicts);
-	const restoreStep = `archive_tasks with restore: "<id>", tag: "${details.sourceTag}"`;
+	// archive_tasks is outside the core and standard tiers, so name the CLI too
+	const restoreStep = `archive_tasks with restore: "<id>", tag: "${details.sourceTag}" (if that tool isn't loaded: taskgraph archive restore <id> --tag=${details.sourceTag})`;
 	let hint = `Archived tasks can't move: drop them with ignoreDependencies: true, or restore them first with ${restoreStep}`;
 	if (moveAlong) {
 		hint =
