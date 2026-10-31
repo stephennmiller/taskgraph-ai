@@ -143,6 +143,22 @@ describe('loop trust', () => {
 		expect(isLoopTrusted(project, home)).toBe(true);
 	});
 
+	it('keeps the approval when a Definition of Done item is checked off', () => {
+		fs.mkdirSync(path.join(project, '.taskgraph'), { recursive: true });
+		fs.writeFileSync(
+			path.join(project, '.taskgraph', 'config.json'),
+			JSON.stringify({ global: { definitionOfDone: ['Tests pass'] } })
+		);
+		writeTasks([task]);
+		trustLoop(project, home);
+
+		writeTasks([{ ...task, definitionOfDoneChecked: ['Tests pass'] }]);
+		expect(isLoopTrusted(project, home)).toBe(true);
+
+		writeTasks([{ ...task, definitionOfDoneChecked: ['Tests pass', 'Ship'] }]);
+		expect(isLoopTrusted(project, home)).toBe(false);
+	});
+
 	it('asks again when a status holds text instead of a status', () => {
 		const subtask = { id: '1', title: 'Form', status: 'pending' };
 		writeTasks([{ ...task, subtasks: [subtask] }]);

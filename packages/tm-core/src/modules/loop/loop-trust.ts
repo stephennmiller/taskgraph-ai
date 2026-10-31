@@ -12,7 +12,11 @@ import os from 'node:os';
 import path from 'node:path';
 import lockfile from 'proper-lockfile';
 import { TASK_STATUSES } from '../../common/constants/index.js';
-import { TASKGRAPH_TASKS_FILE } from '../../common/constants/paths.js';
+import {
+	TASKGRAPH_CONFIG_FILE,
+	TASKGRAPH_TASKS_FILE
+} from '../../common/constants/paths.js';
+import { normalizeDefinitionOfDone } from '../tasks/utils/acceptance-criteria.js';
 
 interface TrustEntry {
 	path: string;
@@ -57,12 +61,33 @@ function canonical(projectRoot: string): string {
 /**
  * Progress marks taskgraph rewrites as work moves on, each with the values it
  * takes; any other value (text in a subtask's status, say) is hashed
+ * @param doneItems - The project's Definition of Done, the only text a task's
+ *   checked items can hold
  */
-const PROGRESS_MARKS = new Map<string, (value: unknown) => boolean>([
-	['status', (v) => v === 'completed' || TASK_STATUSES.includes(v as never)],
-	['updatedAt', (v) => typeof v === 'string' && /^[\d:.TZ+-]*$/.test(v)],
-	['checked', (v) => typeof v === 'boolean']
-]);
+const progressMarks = (doneItems: Set<string>) =>
+	new Map<string, (value: unknown) => boolean>([
+		['status', (v) => v === 'completed' || TASK_STATUSES.includes(v as never)],
+		['updatedAt', (v) => typeof v === 'string' && /^[\d:.TZ+-]*$/.test(v)],
+		['checked', (v) => typeof v === 'boolean'],
+		[
+			'definitionOfDoneChecked',
+			(v) =>
+				Array.isArray(v) &&
+				v.every((item) => typeof item === 'string' && doneItems.has(item))
+		]
+	]);
+
+/** The project's Definition of Done, as `ConfigManager` reads it */
+function definitionOfDone(root: string): Set<string> {
+	try {
+		const config = JSON.parse(
+			fs.readFileSync(path.join(root, TASKGRAPH_CONFIG_FILE), 'utf8')
+		);
+		return new Set(normalizeDefinitionOfDone(config?.global?.definitionOfDone));
+	} catch {
+		return new Set();
+	}
+}
 
 /**
  * Hash of every tag's tasks, less progress marks and each tag's bookkeeping
@@ -81,10 +106,10 @@ function tasksHash(root: string): string {
 		const tags = new Set(
 			data && typeof data === 'object' ? Object.values(data) : []
 		);
+		const marks = progressMarks(definitionOfDone(root));
 		text = JSON.stringify(data, function (key, value) {
 			const skip =
-				(key === 'metadata' && tags.has(this)) ||
-				PROGRESS_MARKS.get(key)?.(value);
+				(key === 'metadata' && tags.has(this)) || marks.get(key)?.(value);
 			return skip ? undefined : value;
 		});
 	} catch {
