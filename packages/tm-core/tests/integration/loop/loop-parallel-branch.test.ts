@@ -224,6 +224,23 @@ describe('loop --parallel with an existing task branch', () => {
 		expect(result.error).toContain('changes CLAUDE.md');
 	}, 60_000);
 
+	it('counts a change to the file a loaded symlink points at', async () => {
+		fs.writeFileSync(path.join(root, 'AGENTS.md'), 'Approved\n');
+		// CLAUDE.md -> AGENTS.md, one folder down so the target is resolved from the link's folder
+		fs.mkdirSync(path.join(root, 'docs'));
+		fs.symlinkSync('../AGENTS.md', path.join(root, 'docs', 'CLAUDE.md'));
+		git(root, 'add', '.');
+		git(root, 'commit', '-qm', 'instructions through a symlink');
+		commitFile(root, 'AGENTS.md', 'taskgraph/task-1');
+		writePlan({ 'task-1': 'commit' });
+
+		const [result] = (await tmCore.loop.runParallel(options('a'))).tasks;
+
+		expect(result.state).toBe('failed');
+		expect(result.error).toContain('changes AGENTS.md');
+		expect(fs.existsSync(result.worktree)).toBe(false);
+	}, 60_000);
+
 	it("doesn't pick up a task branch that shares no history with the current commit", async () => {
 		git(root, 'checkout', '-q', '--orphan', 'taskgraph/task-1');
 		git(root, 'commit', '-qm', 'unrelated');

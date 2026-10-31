@@ -384,10 +384,62 @@ export class TaskWorktrees {
 				tip,
 				'--'
 			]);
-			return out.split('\0').filter((f) => f && isLoadedByClaude(f));
+			const targets = await this.loadedLinkTargets(base);
+			return out.split('\0').filter((f) => {
+				const lower = f.toLowerCase();
+				return (
+					f &&
+					(isLoadedByClaude(f) ||
+						targets.some((t) => lower === t || lower.startsWith(`${t}/`)))
+				);
+			});
 		} catch {
 			return undefined;
 		}
+	}
+
+	/**
+	 * Where the symlinks among LOADED_PATHS at `commit` point inside the
+	 * repository, lowercased: Claude Code reads through them (CLAUDE.md to
+	 * AGENTS.md, say). A branch that changes such a link is caught by its own
+	 * name, so `base`'s links are the ones to follow.
+	 * shortcut: one level only, a link to a link isn't followed; follow chains if anyone nests them
+	 */
+	private async loadedLinkTargets(commit: string): Promise<string[]> {
+		const empty = (
+			await this.git(['hash-object', '-t', 'tree', '/dev/null'])
+		).trim();
+		const raw = await this.git([
+			'diff',
+			'--raw',
+			'-z',
+			'--no-abbrev',
+			'--no-renames',
+			'--no-relative',
+			empty,
+			commit,
+			'--',
+			...LOADED_PATHS.flatMap((p) => [
+				`:(glob,icase)**/${p}`,
+				`:(glob,icase)**/${p}/**`
+			])
+		]);
+		// `:000000 <mode> <sha> <sha> A` then the path
+		const fields = raw.split('\0');
+		const targets: string[] = [];
+		for (let i = 0; i + 1 < fields.length; i += 2) {
+			const [, mode, , sha] = fields[i].split(' ');
+			if (mode !== '120000') continue;
+			const target = await this.git(['cat-file', 'blob', sha]);
+			if (target.startsWith('/')) continue;
+			targets.push(
+				path.posix
+					.normalize(path.posix.join(path.posix.dirname(fields[i + 1]), target))
+					.replace(/\/+$/, '')
+					.toLowerCase()
+			);
+		}
+		return targets;
 	}
 
 	/**
