@@ -38,7 +38,7 @@ Check `schemaVersion` before you parse. If it is higher than the version your sc
 | `prime` | `--json` | `tag`, `counts`, `inProgress`, `ready`, `rules`; `tagMissing: true` when the active tag isn't in tasks.json |
 | `prime --unnoted-since <time>` | `--json` | `unnoted` |
 | `generate` | `--json` or `--format json` | `success`, `count`, `directory`, `orphanedFilesRemoved` |
-| `set-status` | `--json` or `--format json` | `success`, `updatedTasks`; on failure `success`, `error`, `taskId`, `timestamp` |
+| `set-status` | `--json` or `--format json` | `success`, `updatedTasks`, `ready` (the tasks marking done made ready: `id`, `title`); on failure `success`, `error`, `taskId`, `timestamp` |
 | `archive` | `--json` or `--format json` | `tasks` (each with `id`, `title`, `status`), `tag`, `olderThanDays`, `dryRun` |
 | `archive restore <id>` | `--json` or `--format json` | `restored`, `tag`, `task` |
 | `github status` | `--json` | `ghAvailable`, `repo`, `linkedTasks`, `unlinkedTasks` |

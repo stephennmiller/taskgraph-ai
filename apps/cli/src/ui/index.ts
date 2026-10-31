@@ -38,6 +38,7 @@ export {
 
 // The one-line confirmation after set-status
 export {
+	formatReadyAfterDone,
 	formatStatusChanges,
 	type StatusChange
 } from './formatters/status-change-formatters.js';

@@ -95,12 +95,14 @@ export function registerSetTaskStatusTool(server: FastMCP) {
 
 					// One write for every id: a missing id or a refused done saves none
 					const results = status
-						? await tmCore.tasks.updateStatuses(
-								taskIds,
-								status as TaskStatus,
-								tag,
-								{ force }
-							)
+						? (
+								await tmCore.tasks.updateStatuses(
+									taskIds,
+									status as TaskStatus,
+									tag,
+									{ force }
+								)
+							).updated
 						: [];
 
 					for (const result of results) {

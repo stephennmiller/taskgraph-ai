@@ -192,7 +192,7 @@ describe('formatListSummary', () => {
 describe('formatListNextStep', () => {
 	it('suggests starting a pending next subtask', () => {
 		expect(plain(formatListNextStep(nextSubtask(), { width: 80 }))).toBe(
-			'Next: taskgraph set-status --id=2.2 --status=in-progress to start working'
+			'Next: taskgraph set-status 2.2 in-progress to start working'
 		);
 	});
 

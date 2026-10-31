@@ -211,7 +211,7 @@ export class UpdateTaskCommand extends Command {
 				if (result.skipped === 'done') {
 					printError(
 						`Task ${terminalSafe(task.id)} is done, so it can't be updated`,
-						`Run \`taskgraph set-status --id=${terminalSafe(task.id)} --status=pending\` first`
+						`Run \`taskgraph set-status ${terminalSafe(task.id)} pending\` first`
 					);
 					process.exitCode = 1;
 					return;

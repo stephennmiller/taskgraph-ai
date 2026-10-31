@@ -667,6 +667,7 @@ describe('--json contract', () => {
 			shapeOf(json(['set-status', '3', 'pending', '--format', 'json']))
 		).toMatchInlineSnapshot(`
 			{
+			  "ready": [],
 			  "schemaVersion": "number",
 			  "success": "boolean",
 			  "updatedTasks": [

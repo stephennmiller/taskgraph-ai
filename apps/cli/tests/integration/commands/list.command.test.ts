@@ -162,9 +162,7 @@ describe('list command', () => {
 				/^Next {6}2\.2 {2}Sessions table and cookie middleware/m
 			);
 			expect(output).not.toContain('No task available');
-			expect(output).toContain(
-				'Next: taskgraph set-status --id=2.2 --status=in-progress'
-			);
+			expect(output).toContain('Next: taskgraph set-status 2.2 in-progress');
 		});
 
 		it('counts subtasks without --with-subtasks (#246)', () => {

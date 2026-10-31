@@ -42,7 +42,7 @@ describe('renderBlockerExplanation', () => {
 
 		expect(lines).toEqual([
 			'○ 7  Task 7',
-			'Not blocked. Start it with: taskgraph set-status --id=7 --status=in-progress'
+			'Not blocked. Start it with: taskgraph set-status 7 in-progress'
 		]);
 	});
 
@@ -151,7 +151,7 @@ describe('renderBlockerExplanation', () => {
 
 		expect(lines).toContain('└─ – 2  Task 2  ← deferred, needs a decision');
 		expect(lines).toContain(
-			'  2 is deferred. Reopen it with: taskgraph set-status --id=2 --status=pending'
+			'  2 is deferred. Reopen it with: taskgraph set-status 2 pending'
 		);
 	});
 
@@ -182,7 +182,7 @@ describe('renderBlockerExplanation', () => {
 		expect(lines).toContain('└─ ? 3  Task 3  ← in review');
 		expect(lines).toContain("  Finish 2 (Task 2): it's in progress.");
 		expect(lines).toContain(
-			'  3 is in review. Close it with: taskgraph set-status --id=3 --status=done'
+			'  3 is in review. Close it with: taskgraph set-status 3 done'
 		);
 		expect(lines.join('\n')).not.toContain('ready');
 	});

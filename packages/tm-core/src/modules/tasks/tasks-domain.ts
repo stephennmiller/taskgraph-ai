@@ -28,6 +28,7 @@ import { TASKGRAPH_TASKS_FILE } from '../../common/constants/paths.js';
 import type { Subtask, Task, TaskStatus } from '../../common/types/index.js';
 import { readPrdSection } from '../prd/prd-coverage.js';
 import { getPrdSource } from '../prd/prd-sections.js';
+import { newlyReadyTasks } from './utils/next-task.js';
 import { subtaskInContext } from './utils/subtask-context.js';
 import { normalizeTaskId } from './validation/task-id.js';
 import {
@@ -404,7 +405,7 @@ export class TasksDomain {
 
 	/**
 	 * `updateStatus` for several ids in one write: a missing id or a refused
-	 * done leaves every id unchanged
+	 * done leaves every id unchanged. `ready`: what a done unblocked, in next order
 	 */
 	async updateStatuses(
 		taskIds: string[],
@@ -412,12 +413,16 @@ export class TasksDomain {
 		tag?: string,
 		options: { force?: boolean } = {}
 	) {
-		return this.taskService.updateTaskStatuses(
+		const view = () => this.taskService.getDependencyView(tag);
+		const before = status === 'done' ? await view() : undefined;
+		const updated = await this.taskService.updateTaskStatuses(
 			taskIds.map(normalizeTaskId),
 			status,
 			tag,
 			this.statusWriteOptions(options.force)
 		);
+		const ready = before ? newlyReadyTasks(before, await view()) : [];
+		return { updated, ready };
 	}
 
 	/** The done gate shared by updateStatus and updateStatuses */

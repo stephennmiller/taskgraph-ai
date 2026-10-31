@@ -104,9 +104,7 @@ describe('ListTasksCommand summary and next step', () => {
 
 		expect(getNext).toHaveBeenCalledWith('dev');
 		expect(printed()).toMatch(/Next {6}2 {2}Task 2/);
-		expect(printed()).toContain(
-			'Next: taskgraph set-status --id=2 --status=in-progress'
-		);
+		expect(printed()).toContain('Next: taskgraph set-status 2 in-progress');
 	});
 
 	it('says nothing is ready and prints no Next: line when tm-core has none', async () => {
@@ -144,9 +142,7 @@ describe('ListTasksCommand summary and next step', () => {
 			expect(output).toMatch(/Next {6}2\.2 {2}Sessions table/);
 			expect(output).not.toContain('No task available');
 			expect(output).not.toContain('nothing is ready');
-			expect(output).toContain(
-				'Next: taskgraph set-status --id=2.2 --status=in-progress'
-			);
+			expect(output).toContain('Next: taskgraph set-status 2.2 in-progress');
 		});
 
 		it('counts subtasks without --with-subtasks', async () => {

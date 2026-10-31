@@ -147,9 +147,7 @@ describe('update-task and update', () => {
 		expect(err.join('\n')).toContain(
 			"✗ Task 3 is done, so it can't be updated"
 		);
-		expect(err.join('\n')).toContain(
-			'taskgraph set-status --id=3 --status=pending'
-		);
+		expect(err.join('\n')).toContain('taskgraph set-status 3 pending');
 	});
 
 	it.each([

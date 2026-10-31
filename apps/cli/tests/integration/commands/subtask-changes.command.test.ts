@@ -94,7 +94,7 @@ describe('add-subtask, remove-subtask and remove-task output', () => {
 		expect(lines(res.stdout)).toEqual([
 			'✓ Added subtask 1.3  Write the migration',
 			'  depends on 1.1',
-			'Next: taskgraph set-status --id=1.3 --status=in-progress'
+			'Next: taskgraph set-status 1.3 in-progress'
 		]);
 		expect(res.stderr).toBe('');
 	});

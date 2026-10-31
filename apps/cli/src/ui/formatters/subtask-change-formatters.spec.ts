@@ -24,7 +24,7 @@ describe('formatSubtaskAdded', () => {
 
 		expect(output.split('\n')).toEqual([
 			'✓ Added subtask 1.3  Write the migration',
-			'Next: taskgraph set-status --id=1.3 --status=in-progress'
+			'Next: taskgraph set-status 1.3 in-progress'
 		]);
 	});
 

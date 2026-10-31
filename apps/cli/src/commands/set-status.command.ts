@@ -4,6 +4,7 @@
  */
 
 import {
+	type ReadyTask,
 	type TaskChecklist,
 	type TaskStatus,
 	type TmCore,
@@ -18,7 +19,10 @@ import {
 	formatChecklistUpdate,
 	formatUncheckedCriteria
 } from '../ui/formatters/checklist-formatters.js';
-import { formatStatusChanges } from '../ui/formatters/status-change-formatters.js';
+import {
+	formatReadyAfterDone,
+	formatStatusChanges
+} from '../ui/formatters/status-change-formatters.js';
 import { displayError, printError } from '../utils/error-handler.js';
 import { jsonOption, printJson } from '../utils/json-output.js';
 import { getProjectRoot } from '../utils/project-root.js';
@@ -82,6 +86,8 @@ export interface SetStatusResult {
 	}>;
 	/** The task's checklist after --check/--uncheck */
 	checklist?: TaskChecklist & { taskId: string };
+	/** Tasks and subtasks that marking done made ready, in `next` order */
+	ready: ReadyTask[];
 }
 
 /**
@@ -154,10 +160,7 @@ export class SetStatusCommand extends Command {
 		try {
 			// Validate required options
 			if (!options.id) {
-				printError(
-					'Missing task ID',
-					'Try `taskgraph set-status --id=3 --status=done`'
-				);
+				printError('Missing task ID', 'Try `taskgraph set-status 3 done`');
 				process.exit(1);
 			}
 
@@ -187,7 +190,7 @@ export class SetStatusCommand extends Command {
 			if (!options.status && !changesChecklist) {
 				printError(
 					'Missing status',
-					`Try \`taskgraph set-status --id=${options.id} --status=done\``
+					`Try \`taskgraph set-status ${options.id} done\``
 				);
 				process.exit(1);
 			}
@@ -259,18 +262,20 @@ export class SetStatusCommand extends Command {
 				oldStatus: TaskStatus;
 				newStatus: TaskStatus;
 			}> = [];
+			let ready: ReadyTask[] = [];
 			let failure: unknown;
 
 			if (options.status) {
 				try {
-					const results = await this.tmCore.tasks.updateStatuses(
+					const result = await this.tmCore.tasks.updateStatuses(
 						taskIds,
 						options.status,
 						options.tag,
 						{ force: options.force }
 					);
+					ready = result.ready;
 					updatedTasks.push(
-						...results.map(({ taskId, oldStatus, newStatus }) => ({
+						...result.updated.map(({ taskId, oldStatus, newStatus }) => ({
 							taskId,
 							oldStatus,
 							newStatus
@@ -309,7 +314,8 @@ export class SetStatusCommand extends Command {
 			this.lastResult = {
 				success: !hasError,
 				updatedTasks,
-				...(checklist && { checklist })
+				...(checklist && { checklist }),
+				ready
 			};
 
 			// A JSON failure is already printed. Text still shows a checklist
@@ -392,6 +398,10 @@ export class SetStatusCommand extends Command {
 			// One line per change: set-status runs many times a day
 			lines.push(formatStatusChanges(result.updatedTasks));
 		}
+		const finished = result.updatedTasks.some(
+			(change) => change.newStatus === 'done' && change.oldStatus !== 'done'
+		);
+		if (finished) lines.push(formatReadyAfterDone(result.ready));
 		// The result is the first line: no leading blank line (#273)
 		if (lines.length > 0) console.log(lines.join('\n'));
 	}

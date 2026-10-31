@@ -334,7 +334,7 @@ function subtaskSection(
 	];
 }
 
-/** `Next: taskgraph set-status --id=2 --status=done when it is finished` */
+/** `Next: taskgraph set-status 2 done when it is finished` */
 export function formatNextStep(
 	action: SuggestedAction | null | undefined,
 	width: number

@@ -10,7 +10,7 @@
  *
  *   ┌────┬───────── (the task table) ─────────┐
  *
- *   Next: taskgraph set-status --id=2.2 --status=in-progress to start working
+ *   Next: taskgraph set-status 2.2 in-progress to start working
  *
  * When stdout isn't a terminal (an agent or a script reading through a pipe),
  * `list` prints `formatPlainTaskList` instead: one line per task, full
