@@ -220,6 +220,30 @@ describe('tags subcommands without JSON output (#811)', () => {
 	});
 });
 
+describe('tags help (#833)', () => {
+	it('tags help use shows the help for tags use', () => {
+		const stdout = vi
+			.spyOn(process.stdout, 'write')
+			.mockImplementation(() => true);
+		const exit = vi.spyOn(process, 'exit').mockImplementation((code) => {
+			throw new Error(`exit ${code}`);
+		});
+		const program = new Command().addCommand(new TagsCommand());
+
+		try {
+			expect(() =>
+				program.parse(['tags', 'help', 'use'], { from: 'user' })
+			).toThrow('exit 0');
+			expect(stdout.mock.calls.flat().join('')).toContain(
+				'tags use [options] <name>'
+			);
+		} finally {
+			stdout.mockRestore();
+			exit.mockRestore();
+		}
+	});
+});
+
 describe('tags remove', () => {
 	const deleteTag = vi.fn();
 

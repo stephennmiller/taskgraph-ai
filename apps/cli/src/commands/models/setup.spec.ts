@@ -159,18 +159,22 @@ describe('runInteractiveSetup', () => {
 		);
 	});
 
-	it('without a terminal, refuses with a hint instead of drawing the picker (#811)', async () => {
-		const prompt = answerWith('opus', 'opus', 'haiku');
-		const error = vi.spyOn(console, 'error').mockImplementation(() => {});
-		process.stdin.isTTY = false;
+	// stdout: `models --setup | tee log` would capture the picker's escapes
+	it.each(['stdin', 'stdout'] as const)(
+		'with %s not a terminal, refuses with a hint instead of drawing the picker (#811)',
+		async (stream) => {
+			const prompt = answerWith('opus', 'opus', 'haiku');
+			const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+			process[stream].isTTY = false;
 
-		const ok = await runInteractiveSetup(settings as never);
+			const ok = await runInteractiveSetup(settings as never);
 
-		expect(ok).toBe(false);
-		expect(process.exitCode).toBe(1);
-		expect(prompt).not.toHaveBeenCalled();
-		const printed = plain(String(error.mock.calls[0]?.[0]));
-		expect(printed).toContain('models --setup needs a terminal');
-		expect(printed).toContain('--set-main');
-	});
+			expect(ok).toBe(false);
+			expect(process.exitCode).toBe(1);
+			expect(prompt).not.toHaveBeenCalled();
+			const printed = plain(String(error.mock.calls[0]?.[0]));
+			expect(printed).toContain('models --setup needs a terminal');
+			expect(printed).toContain('--set-main');
+		}
+	);
 });

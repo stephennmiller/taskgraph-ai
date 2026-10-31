@@ -96,7 +96,9 @@ export class TagsCommand extends Command {
 		this.description('Manage tags for task organization')
 			.option('--show-metadata', 'Show additional tag metadata')
 			.option('--ready', 'Show only tags with ready tasks available')
-			.option('--json', 'Output the tag list as JSON');
+			.option('--json', 'Output the tag list as JSON')
+			// Commander adds no `help` subcommand to a command with a default action
+			.helpCommand(true);
 
 		// Add subcommands
 		this.addListCommand();
