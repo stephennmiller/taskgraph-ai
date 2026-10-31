@@ -66,7 +66,7 @@ export function createTaskTable(
 		showComplexity?: boolean;
 		showDependencies?: boolean;
 		showBlocks?: boolean;
-		/** Never hide the Blocks column to fit, as when the list is filtered on it */
+		/** Hide the Blocks column last, as when the list is filtered on it */
 		keepBlocks?: boolean;
 		showTag?: boolean;
 	}
@@ -105,9 +105,8 @@ export function createTaskTable(
 	const specs = TASK_TABLE_COLUMNS.filter(
 		(col) => requested[col.key] ?? true
 	).map((col) => {
-		if (col.key === 'blocks' && keepBlocks) {
-			return { ...col, dropOrder: undefined };
-		}
+		// Hide Blocks last, not never: below about 47 columns it can't fit
+		if (col.key === 'blocks' && keepBlocks) return { ...col, dropOrder: 5 };
 		const values = fitTo[col.key];
 		if (!values) return col;
 		const widest = Math.max(col.header.length, ...values.map((v) => v.length));

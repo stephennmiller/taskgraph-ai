@@ -142,6 +142,18 @@ describe('createTaskTable - narrow terminals', () => {
 		expect(output).toContain('Hidden to fit width: Dependencies');
 	});
 
+	it('hides Blocks at 40 columns even when asked to keep it, rather than overflow', () => {
+		setColumns(40);
+		const task = { ...makeTask('1', 'master'), blocks: ['2'] };
+
+		const output = stripAnsi(
+			createTaskTable([task], { ...listOptions, keepBlocks: true })
+		);
+
+		expect(widest(output)).toBeLessThanOrEqual(38);
+		expect(output).toContain('Blocks');
+	});
+
 	it('cuts a title only when it is longer than its cell', () => {
 		setColumns(80);
 		const tasks = [
