@@ -1,7 +1,8 @@
 /**
- * @fileoverview `add-dependency`, `remove-dependency`, `validate-dependencies`
- * and `fix-dependencies`: thin layers over tm-core's tasks.addDependency,
- * removeDependency, validateDependencies and fixDependencies.
+ * @fileoverview `depend` and `fix-dependencies [--check]`: thin layers over
+ * tm-core's tasks.addDependency, removeDependency, validateDependencies and
+ * fixDependencies. `add-dependency`, `remove-dependency` and
+ * `validate-dependencies` stay as hidden aliases for scripts (#882).
  */
 
 import { sanitizeForTerminal } from '@tm/core';
@@ -20,6 +21,8 @@ interface DependencyOptions {
 	id?: string;
 	dependsOn?: string;
 	type?: string;
+	remove?: boolean;
+	check?: boolean;
 	tag?: string;
 	project?: string;
 }
@@ -39,6 +42,8 @@ function editCommand(
 ): Command {
 	return new Command(name)
 		.description(description)
+		.argument('[id]', idHelp)
+		.argument('[dependsOn]', dependsOnHelp)
 		.option('-i, --id <id>', idHelp)
 		.option('-d, --depends-on <id>', dependsOnHelp)
 		.option('--tag <tag>', 'Tag to work in (default: the current tag)')
@@ -47,17 +52,67 @@ function editCommand(
 			'Project root directory (auto-detected if not provided)'
 		)
 		.hook('preAction', (command) => {
-			const { id, dependsOn } = command.opts<DependencyOptions>();
+			// `depend 3 1` and `depend --id=3 --depends-on=1` mean the same
+			const [argId, argDependsOn] = command.args;
+			const opts = command.opts<DependencyOptions>();
+			const id = opts.id ?? argId;
+			const dependsOn = opts.dependsOn ?? argDependsOn;
 			if (!id || !dependsOn) {
 				printError(
-					'Both --id and --depends-on are required',
-					`Try \`taskgraph ${name} --id=3 --depends-on=1\``
+					'Say which task depends on which',
+					`Try \`taskgraph ${name} 3 1\` (task 3 depends on task 1)`
 				);
 				process.exit(1);
 			}
+			command.setOptionValue('id', id);
+			command.setOptionValue('dependsOn', dependsOn);
 		});
 }
 
+const TYPE_HELP =
+	'blocks (default), or related / discovered-from to link without blocking';
+
+function addDependency(options: DependencyOptions) {
+	return withTmCore(options, async (tmCore) => {
+		const result = await tmCore.tasks.addDependency(
+			options.id as string,
+			options.dependsOn as string,
+			{ tag: options.tag, type: options.type }
+		);
+		printChange(result.changed, result.message);
+	});
+}
+
+function removeDependency(options: DependencyOptions) {
+	return withTmCore(options, async (tmCore) => {
+		const result = await tmCore.tasks.removeDependency(
+			options.id as string,
+			options.dependsOn as string,
+			{ tag: options.tag }
+		);
+		printChange(result.removed, result.message);
+	});
+}
+
+/** `depend 3 1`: task 3 depends on task 1; `--remove` takes it away */
+export class DependCommand {
+	static register(program: Command): void {
+		const command = editCommand(
+			'depend',
+			'Make a task depend on another, or --remove the dependency',
+			'Task that depends on the other',
+			'Task it depends on'
+		)
+			.option('--remove', 'Remove the dependency or link instead')
+			.option('--type <type>', TYPE_HELP)
+			.action((_id, _dependsOn, options: DependencyOptions) =>
+				options.remove ? removeDependency(options) : addDependency(options)
+			);
+		program.addCommand(command);
+	}
+}
+
+/** Hidden alias of `depend` */
 export class AddDependencyCommand {
 	static register(program: Command): void {
 		const command = editCommand(
@@ -66,24 +121,15 @@ export class AddDependencyCommand {
 			'Task ID to add dependency to',
 			'Task ID that will become a dependency'
 		)
-			.option(
-				'--type <type>',
-				'blocks (default), or related / discovered-from to link without blocking'
-			)
-			.action((options: DependencyOptions) =>
-				withTmCore(options, async (tmCore) => {
-					const result = await tmCore.tasks.addDependency(
-						options.id as string,
-						options.dependsOn as string,
-						{ tag: options.tag, type: options.type }
-					);
-					printChange(result.changed, result.message);
-				})
+			.option('--type <type>', TYPE_HELP)
+			.action((_id, _dependsOn, options: DependencyOptions) =>
+				addDependency(options)
 			);
-		program.addCommand(command);
+		program.addCommand(command, { hidden: true });
 	}
 }
 
+/** Hidden alias of `depend --remove` */
 export class RemoveDependencyCommand {
 	static register(program: Command): void {
 		const command = editCommand(
@@ -91,17 +137,10 @@ export class RemoveDependencyCommand {
 			'Remove a dependency or a non-blocking link from a task',
 			'Task ID to remove dependency from',
 			'Task ID to remove as a dependency'
-		).action((options: DependencyOptions) =>
-			withTmCore(options, async (tmCore) => {
-				const result = await tmCore.tasks.removeDependency(
-					options.id as string,
-					options.dependsOn as string,
-					{ tag: options.tag }
-				);
-				printChange(result.removed, result.message);
-			})
+		).action((_id, _dependsOn, options: DependencyOptions) =>
+			removeDependency(options)
 		);
-		program.addCommand(command);
+		program.addCommand(command, { hidden: true });
 	}
 }
 
@@ -116,25 +155,28 @@ function checkCommand(name: string, description: string): Command {
 		);
 }
 
+function validateDependencies(options: DependencyOptions) {
+	return withTmCore(options, async (tmCore) => {
+		const result = await tmCore.tasks.validateDependencies({
+			tag: options.tag
+		});
+		console.log(formatDependencyCheck(result));
+		// Which PRD sections have tasks, once parse-prd has recorded sources
+		const coverage = formatPrdCoverage(result.prdCoverage);
+		if (coverage) console.log(coverage);
+		// A check that finds problems fails, so scripts and CI can act on it
+		if (!result.valid) process.exitCode = 1;
+	});
+}
+
+/** Hidden alias of `fix-dependencies --check` */
 export class ValidateDependenciesCommand {
 	static register(program: Command): void {
 		const command = checkCommand(
 			'validate-dependencies',
 			'Identify invalid dependencies without fixing them'
-		).action((options: DependencyOptions) =>
-			withTmCore(options, async (tmCore) => {
-				const result = await tmCore.tasks.validateDependencies({
-					tag: options.tag
-				});
-				console.log(formatDependencyCheck(result));
-				// Which PRD sections have tasks, once parse-prd has recorded sources
-				const coverage = formatPrdCoverage(result.prdCoverage);
-				if (coverage) console.log(coverage);
-				// A check that finds problems fails, so scripts and CI can act on it
-				if (!result.valid) process.exitCode = 1;
-			})
-		);
-		program.addCommand(command);
+		).action(validateDependencies);
+		program.addCommand(command, { hidden: true });
 	}
 }
 
@@ -142,15 +184,21 @@ export class FixDependenciesCommand {
 	static register(program: Command): void {
 		const command = checkCommand(
 			'fix-dependencies',
-			'Fix invalid dependencies automatically'
-		).action((options: DependencyOptions) =>
-			withTmCore(options, async (tmCore) => {
-				const result = await tmCore.tasks.fixDependencies({ tag: options.tag });
-				console.log(formatDependencyFixes(result));
-				// Loops between tasks are left for the user; say so in the exit code
-				if (result.remaining.length > 0) process.exitCode = 1;
-			})
-		);
+			'Fix invalid dependencies automatically, or --check to only report them'
+		)
+			.option('--check', 'Report invalid dependencies without fixing them')
+			.action((options: DependencyOptions) =>
+				options.check
+					? validateDependencies(options)
+					: withTmCore(options, async (tmCore) => {
+							const result = await tmCore.tasks.fixDependencies({
+								tag: options.tag
+							});
+							console.log(formatDependencyFixes(result));
+							// Loops between tasks are left for the user; say so in the exit code
+							if (result.remaining.length > 0) process.exitCode = 1;
+						})
+			);
 		program.addCommand(command);
 	}
 }

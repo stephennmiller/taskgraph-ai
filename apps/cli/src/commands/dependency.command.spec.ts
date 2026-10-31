@@ -1,6 +1,6 @@
 /**
- * @fileoverview The four dependency commands: what they print and their exit
- * codes. tm-core is faked at createTmCore; Commander and chalk are real.
+ * @fileoverview `depend`, `fix-dependencies [--check]` and their hidden
+ * aliases: what they print and their exit codes. tm-core is faked at createTmCore; Commander and chalk are real.
  */
 
 import { Command } from 'commander';
@@ -14,6 +14,7 @@ vi.mock('@tm/core', async (importOriginal) => ({
 import { createTmCore } from '@tm/core';
 import {
 	AddDependencyCommand,
+	DependCommand,
 	FixDependenciesCommand,
 	RemoveDependencyCommand,
 	ValidateDependenciesCommand
@@ -30,6 +31,7 @@ const counts = { taskCount: 2, subtaskCount: 0, dependencyCount: 1 };
 function run(...args: string[]): Promise<unknown> {
 	const program = new Command().exitOverride();
 	for (const command of [
+		DependCommand,
 		AddDependencyCommand,
 		RemoveDependencyCommand,
 		ValidateDependenciesCommand,
@@ -104,7 +106,85 @@ describe('add-dependency and remove-dependency', () => {
 	});
 });
 
-describe('validate-dependencies and fix-dependencies', () => {
+describe('depend (#882)', () => {
+	it('takes the two IDs as arguments', async () => {
+		tasks.addDependency.mockResolvedValue({ changed: true, message: 'ok' });
+
+		await run('depend', '3', '1', '--type=related');
+
+		expect(tasks.addDependency).toHaveBeenCalledWith('3', '1', {
+			tag: undefined,
+			type: 'related'
+		});
+	});
+
+	it('removes with --remove, and still takes --id and --depends-on', async () => {
+		tasks.removeDependency.mockResolvedValue({ removed: true, message: 'ok' });
+
+		await run('depend', '--id=3', '--depends-on=1', '--remove');
+
+		expect(tasks.removeDependency).toHaveBeenCalledWith('3', '1', {
+			tag: undefined
+		});
+		expect(tasks.addDependency).not.toHaveBeenCalled();
+	});
+
+	it('exits 1 before tm-core when an ID is missing', async () => {
+		vi.spyOn(process, 'exit').mockImplementation(() => {
+			throw new Error('exit');
+		});
+
+		await expect(run('depend', '3')).rejects.toThrow('exit');
+
+		expect(tasks.addDependency).not.toHaveBeenCalled();
+	});
+
+	it('hides the old names from help, which still run', () => {
+		const program = new Command();
+		for (const command of [
+			DependCommand,
+			AddDependencyCommand,
+			RemoveDependencyCommand,
+			ValidateDependenciesCommand,
+			FixDependenciesCommand
+		]) {
+			command.register(program);
+		}
+
+		expect(
+			program
+				.createHelp()
+				.visibleCommands(program)
+				.map((c) => c.name())
+		).toEqual(['depend', 'fix-dependencies', 'help']);
+	});
+});
+
+const problem = {
+	valid: false,
+	issues: [
+		{
+			type: 'missing',
+			taskId: 2,
+			dependencyId: 99,
+			message: 'Task 2 depends on task 99, which does not exist'
+		}
+	],
+	...counts,
+	prdCoverage: null,
+	tasksPath: '/p/.taskgraph/tasks/tasks.json'
+};
+
+describe('fix-dependencies [--check] and validate-dependencies', () => {
+	it('--check reports without fixing, and exits 1 on a problem', async () => {
+		tasks.validateDependencies.mockResolvedValue(problem);
+
+		await run('fix-dependencies', '--check');
+
+		expect(tasks.fixDependencies).not.toHaveBeenCalled();
+		expect(process.exitCode).toBe(1);
+	});
+
 	it('validate exits 1 when it finds a problem', async () => {
 		tasks.validateDependencies.mockResolvedValue({
 			valid: false,

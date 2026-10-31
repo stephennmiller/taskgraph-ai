@@ -161,12 +161,12 @@ function unblockSteps(causes: BlockerRootCause[]): string[] {
 			);
 		} else if (c.kind === 'missing') {
 			const fixes = (c.listedBy ?? []).map((by) =>
-				cmd(`taskgraph remove-dependency --id=${by} --depends-on=${c.id}`)
+				cmd(`taskgraph depend ${by} ${c.id} --remove`)
 			);
 			steps.push(`${c.id} is not a task. Remove it with: ${joinAnd(fixes)}`);
 		} else if (c.kind === 'cycle') {
 			const fixes = (c.edges ?? []).map((e) =>
-				cmd(`taskgraph remove-dependency --id=${e.from} --depends-on=${e.to}`)
+				cmd(`taskgraph depend ${e.from} ${e.to} --remove`)
 			);
 			const members = c.cycle ?? [c.id];
 			steps.push(

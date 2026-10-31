@@ -347,8 +347,8 @@ taskgraph update --from=5 --prompt='...'     # change task 5 onward
 taskgraph note 3.2 'chose argon2'            # log progress, as written
 taskgraph analyze-complexity --research
 taskgraph complexity-report
-taskgraph add-dependency --id=5 --depends-on=3
-taskgraph validate-dependencies
+taskgraph depend 5 3
+taskgraph fix-dependencies --check
 taskgraph move --from=5 --from-tag=backlog --to-tag=in-progress
 taskgraph research "latest JWT best practices"
 taskgraph models --setup                     # choose models

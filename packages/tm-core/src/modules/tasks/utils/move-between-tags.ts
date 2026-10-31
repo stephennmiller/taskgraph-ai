@@ -105,7 +105,7 @@ export function moveTasksBetweenTags(
 				`Cannot move subtask ${taskId} directly between tags.
 
 First promote it to a full task using:
-  taskgraph remove-subtask --id=${taskId} --convert`,
+  taskgraph remove-task ${taskId} --convert`,
 				ERROR_CODES.VALIDATION_ERROR,
 				{ moveCode: MOVE_ERROR_CODES.CANNOT_MOVE_SUBTASK, taskId }
 			);
@@ -280,7 +280,7 @@ First promote it to a full task using:
 	};
 	if (ignored) {
 		result.tips = [
-			'Run "taskgraph validate-dependencies" to check for dependency issues.',
+			'Run "taskgraph fix-dependencies --check" to check for dependency issues.',
 			'Run "taskgraph fix-dependencies" to automatically repair dangling dependencies.'
 		];
 	}

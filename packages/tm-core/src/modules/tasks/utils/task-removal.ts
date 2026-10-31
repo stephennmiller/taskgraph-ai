@@ -332,7 +332,7 @@ function resolveTasks(tasks: Task[], ids: string): Task[] {
 			throw errorWithHint(
 				ERROR_CODES.INVALID_INPUT,
 				`${id} is a subtask, not a task`,
-				`Use \`taskgraph remove-subtask --id=${id}\` for one subtask, or \`--id=${id.split('.')[0]}\` for all`
+				`Use \`taskgraph remove-task ${id}\` for one subtask, or \`--id=${id.split('.')[0]}\` for all`
 			);
 		}
 		if (!/^\d+$/.test(id)) {

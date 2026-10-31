@@ -1,7 +1,8 @@
 /**
- * @fileoverview `remove-task`, `remove-subtask` and `clear-subtasks`: thin
- * layers over tm-core's tasks.previewTaskRemoval, removeTasks,
- * removeSubtasks and clearSubtasks.
+ * @fileoverview `remove-task` (with `--convert` for subtasks) and
+ * `clear-subtasks`: thin layers over tm-core's tasks.previewTaskRemoval,
+ * removeTasks, removeSubtasks and clearSubtasks. `remove-subtask` stays as a
+ * hidden alias for scripts (#882).
  */
 
 import { splitIds, type TaskRemovalPreview, type TmCore } from '@tm/core';
@@ -47,7 +48,7 @@ function removalCommand(name: string, description: string): Command {
 			const { file, project } = cmd.opts<RemovalOptions>();
 			const fileError = otherTasksFileError(
 				file,
-				'remove-task, remove-subtask and clear-subtasks',
+				'remove-task and clear-subtasks',
 				project
 			);
 			if (fileError) displayError(fileError);
@@ -160,38 +161,91 @@ async function removeTasks(
 	console.log(formatTasksRemoved(ids, result.danglingDependents, options.tag));
 }
 
+/** Remove subtasks, or with --convert make them tasks; no prompt, as before */
+function removeSubtasks(name: string, options: RemovalOptions) {
+	const ids = splitIds(options.id ?? '');
+	// A task ID gets a pointer to remove-task; tm-core checks the rest
+	const taskId = ids.find((id) => !id.includes('.'));
+	if (taskId) {
+		printError(
+			`"${terminalSafe(taskId)}" isn't a subtask ID`,
+			options.convert
+				? 'Only subtasks (like 5.2) can be converted to tasks'
+				: `Subtask IDs look like 5.2; for a task, run \`taskgraph remove-task ${terminalSafe(taskId)}\``
+		);
+		process.exit(1);
+	}
+	if (ids.length === 0) {
+		printError(
+			`${name} needs the subtask to remove`,
+			`Try \`taskgraph ${name} 5.2\``
+		);
+		process.exit(1);
+	}
+	return withTmCore(options, async (tmCore) => {
+		// One call checks every ID, then removes them all in one save
+		const { converted } = await tmCore.tasks.removeSubtasks(ids, {
+			tag: options.tag,
+			convert: options.convert
+		});
+		ids.forEach((id, i) => {
+			console.log(formatSubtaskRemoved(id, converted[i]));
+		});
+	});
+}
+
+/** `remove-task 5` and `remove-task --id=5` mean the same */
+function idArgument(command: Command): Command {
+	return command
+		.argument('[ids]', 'The same as --id')
+		.hook('preAction', (cmd) => {
+			const [ids] = cmd.args;
+			if (ids && cmd.opts<RemovalOptions>().id === undefined) {
+				cmd.setOptionValue('id', ids);
+			}
+		});
+}
+
 export class RemoveTaskCommand {
 	static register(program: Command): void {
-		const command = removalCommand(
-			'remove-task',
-			'Remove one or more tasks or subtasks permanently'
+		const command = idArgument(
+			removalCommand(
+				'remove-task',
+				'Remove one or more tasks or subtasks permanently'
+			)
 		)
 			.option(
 				'-i, --id <ids>',
 				'ID(s) of the task(s) or subtask(s) to remove (e.g., "5", "5.2", or "5,6.1,7")'
 			)
+			.option(
+				'-c, --convert',
+				'Make the subtasks standalone tasks instead of deleting them'
+			)
 			.option('-y, --yes', 'Skip confirmation prompt', false)
 			.hook('preAction', (cmd) => {
 				if (splitIds(cmd.opts<RemovalOptions>().id ?? '').length === 0) {
 					printError(
-						'remove-task needs --id, the task to remove',
-						'Try `taskgraph remove-task --id=5`'
+						'remove-task needs the task to remove',
+						'Try `taskgraph remove-task 5`'
 					);
 					process.exit(1);
 				}
 			})
-			.action((options: RemovalOptions) =>
-				withTmCore(options, (tmCore) => removeTasks(tmCore, options))
+			.action((_ids, options: RemovalOptions) =>
+				options.convert
+					? removeSubtasks('remove-task', options)
+					: withTmCore(options, (tmCore) => removeTasks(tmCore, options))
 			);
 		program.addCommand(command);
 	}
 }
 
+/** Hidden alias of `remove-task <subtask>` and `remove-task --convert` */
 export class RemoveSubtaskCommand {
 	static register(program: Command): void {
-		const command = removalCommand(
-			'remove-subtask',
-			'Remove a subtask from its parent task'
+		const command = idArgument(
+			removalCommand('remove-subtask', 'Remove a subtask from its parent task')
 		)
 			.option(
 				'-i, --id <id>',
@@ -203,36 +257,10 @@ export class RemoveSubtaskCommand {
 			)
 			// Task files are written by `generate`; the old flag already did nothing
 			.addOption(new Option('--generate').hideHelp())
-			.action((options: RemovalOptions) => {
-				const ids = splitIds(options.id ?? '');
-				if (ids.length === 0) {
-					printError(
-						'remove-subtask needs --id, the subtask to remove',
-						'Try `taskgraph remove-subtask --id=5.2`'
-					);
-					process.exit(1);
-				}
-				// A task ID gets a pointer to remove-task; tm-core checks the rest
-				const taskId = ids.find((id) => !id.includes('.'));
-				if (taskId) {
-					printError(
-						`"${terminalSafe(taskId)}" isn't a subtask ID`,
-						`Subtask IDs look like 5.2; for a task, run \`taskgraph remove-task --id=${terminalSafe(taskId)}\``
-					);
-					process.exit(1);
-				}
-				return withTmCore(options, async (tmCore) => {
-					// One call checks every ID, then removes them all in one save
-					const { converted } = await tmCore.tasks.removeSubtasks(ids, {
-						tag: options.tag,
-						convert: options.convert
-					});
-					ids.forEach((id, i) => {
-						console.log(formatSubtaskRemoved(id, converted[i]));
-					});
-				});
-			});
-		program.addCommand(command);
+			.action((_ids, options: RemovalOptions) =>
+				removeSubtasks('remove-subtask', options)
+			);
+		program.addCommand(command, { hidden: true });
 	}
 }
 

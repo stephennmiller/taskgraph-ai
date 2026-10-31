@@ -86,7 +86,7 @@ describe('formatDependencyCheck', () => {
 		});
 
 		expect(lines(output).at(-1)).toBe(
-			'Break the loop with taskgraph remove-dependency --id=<id> --depends-on=<id>'
+			'Break the loop with taskgraph depend <id> <id> --remove'
 		);
 	});
 
@@ -109,7 +109,7 @@ describe('formatDependencyCheck', () => {
 			]
 		});
 		expect(lines(output).at(-1)).toBe(
-			'Break the loop with taskgraph remove-dependency --id=<id> --depends-on=<id>'
+			'Break the loop with taskgraph depend <id> <id> --remove'
 		);
 	});
 
@@ -201,7 +201,7 @@ describe('formatDependencyFixes', () => {
 			'✗ 2 problems left',
 			'  2  is part of a dependency loop',
 			'  3  is part of a dependency loop',
-			'Break the loop with taskgraph remove-dependency --id=<id> --depends-on=<id>'
+			'Break the loop with taskgraph depend <id> <id> --remove'
 		]);
 	});
 
@@ -217,7 +217,7 @@ describe('formatDependencyFixes', () => {
 			]
 		});
 		expect(lines(output).at(-1)).toBe(
-			'Break the loop with taskgraph remove-dependency --id=<id> --depends-on=<id>'
+			'Break the loop with taskgraph depend <id> <id> --remove'
 		);
 		expect(plain(output)).not.toContain('fix-dependencies');
 	});
@@ -274,7 +274,7 @@ describe('IDs read from tasks.json (#398)', () => {
 			"  5  removed its link to task 7 fake line, which doesn't exist",
 			'✗ 1 problem left',
 			'  2  is part of a dependency loop',
-			'Break the loop with taskgraph remove-dependency --id=<id> --depends-on=<id>'
+			'Break the loop with taskgraph depend <id> <id> --remove'
 		]);
 	});
 

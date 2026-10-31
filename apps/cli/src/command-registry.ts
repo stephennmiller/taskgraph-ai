@@ -21,6 +21,7 @@ import { ScopeDownCommand, ScopeUpCommand } from './commands/scope.command.js';
 import { ParsePrdCommand } from './commands/parse-prd.command.js';
 import {
 	AddDependencyCommand,
+	DependCommand,
 	FixDependenciesCommand,
 	RemoveDependencyCommand,
 	ValidateDependenciesCommand
@@ -204,28 +205,38 @@ export class CommandRegistry {
 			category: 'task'
 		},
 		{
-			name: 'add-dependency',
-			description: 'Add a dependency to a task',
-			commandClass: AddDependencyCommand as any,
-			category: 'task'
-		},
-		{
-			name: 'remove-dependency',
-			description: 'Remove a dependency or a non-blocking link from a task',
-			commandClass: RemoveDependencyCommand as any,
-			category: 'task'
-		},
-		{
-			name: 'validate-dependencies',
-			description: 'Identify invalid dependencies without fixing them',
-			commandClass: ValidateDependenciesCommand as any,
+			name: 'depend',
+			description: 'Make a task depend on another, or --remove the dependency',
+			commandClass: DependCommand as any,
 			category: 'task'
 		},
 		{
 			name: 'fix-dependencies',
-			description: 'Fix invalid dependencies automatically',
+			description: 'Fix invalid dependencies, or --check to only report them',
 			commandClass: FixDependenciesCommand as any,
 			category: 'task'
+		},
+		// Hidden aliases kept so scripts keep working (#882)
+		{
+			name: 'add-dependency',
+			description: 'Alias of depend',
+			commandClass: AddDependencyCommand as any,
+			category: 'task',
+			hidden: true
+		},
+		{
+			name: 'remove-dependency',
+			description: 'Alias of depend --remove',
+			commandClass: RemoveDependencyCommand as any,
+			category: 'task',
+			hidden: true
+		},
+		{
+			name: 'validate-dependencies',
+			description: 'Alias of fix-dependencies --check',
+			commandClass: ValidateDependenciesCommand as any,
+			category: 'task',
+			hidden: true
 		},
 		{
 			name: 'remove-task',
@@ -235,9 +246,10 @@ export class CommandRegistry {
 		},
 		{
 			name: 'remove-subtask',
-			description: 'Remove a subtask from its parent task',
+			description: 'Alias of remove-task <subtask>',
 			commandClass: RemoveSubtaskCommand as any,
-			category: 'task'
+			category: 'task',
+			hidden: true
 		},
 		{
 			name: 'clear-subtasks',

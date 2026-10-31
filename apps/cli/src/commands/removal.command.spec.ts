@@ -147,6 +147,45 @@ describe('remove-task', () => {
 	});
 });
 
+describe('remove-task with a subtask (#882)', () => {
+	it('takes IDs as an argument', async () => {
+		tasks.previewTaskRemoval.mockResolvedValue(preview(['5', '6']));
+
+		await run('remove-task', '5,6', '--yes');
+
+		expect(tasks.previewTaskRemoval).toHaveBeenCalledWith('5,6', {
+			tag: undefined
+		});
+	});
+
+	it('--convert makes subtasks tasks, as remove-subtask did', async () => {
+		tasks.removeSubtasks.mockResolvedValue({
+			converted: [{ id: 7, title: 'Promoted' }],
+			tag: 'master'
+		});
+
+		await run('remove-task', '2.1', '--convert');
+
+		expect(tasks.removeSubtasks).toHaveBeenCalledWith(['2.1'], {
+			tag: undefined,
+			convert: true
+		});
+		expect(tasks.removeTasks).not.toHaveBeenCalled();
+		expect(output('log')).toContain('Subtask 2.1 is now task 7');
+	});
+
+	it('--convert refuses a task ID before changing anything', async () => {
+		vi.spyOn(process, 'exit').mockImplementation(() => {
+			throw new Error('exit');
+		});
+
+		await expect(run('remove-task', '2', '--convert')).rejects.toThrow('exit');
+
+		expect(output('error')).toContain('Only subtasks');
+		expect(tasks.removeSubtasks).not.toHaveBeenCalled();
+	});
+});
+
 describe('remove-subtask', () => {
 	it('removes each subtask and says which became a task', async () => {
 		tasks.removeSubtasks.mockResolvedValue({

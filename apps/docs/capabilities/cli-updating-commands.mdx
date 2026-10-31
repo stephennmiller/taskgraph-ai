@@ -105,24 +105,24 @@ taskgraph generate
 
 ```bash
 # Add a dependency to a task
-taskgraph add-dependency --id=<id> --depends-on=<id>
+taskgraph depend <id> <id>
 
 # Link two tasks without making one wait for the other
-taskgraph add-dependency --id=<id> --depends-on=<id> --type=related
+taskgraph depend <id> <id> --type=related
 
 # Remove a dependency (or a related / discovered-from link) from a task
-taskgraph remove-dependency --id=<id> --depends-on=<id>
+taskgraph depend <id> <id> --remove
 
 # Validate dependencies without fixing them
-taskgraph validate-dependencies
+taskgraph fix-dependencies --check
 
 # Find and fix invalid dependencies automatically
 taskgraph fix-dependencies
 ```
 
-Commands read `01` as task 1 and `1.01` as subtask 1.1, and `add-dependency` stores the plain form. Older versions stored `1.01` as typed, which `validate-dependencies` and `why` report as missing; `fix-dependencies` rewrites it as `1.1` rather than removing it.
+Commands read `01` as task 1 and `1.01` as subtask 1.1, and `depend` stores the plain form. Older versions stored `1.01` as typed, which `fix-dependencies --check` and `why` report as missing; `fix-dependencies` rewrites it as `1.1` rather than removing it.
 
-Once `parse-prd` has recorded where tasks came from, `validate-dependencies` also checks the PRD: it lists sections no task covers, tasks that cite a heading the PRD no longer has (renamed or removed), and tasks with no section. A task covers its section and the sections inside it. These are warnings: only dependency problems make the command exit 1.
+Once `parse-prd` has recorded where tasks came from, `fix-dependencies --check` also checks the PRD: it lists sections no task covers, tasks that cite a heading the PRD no longer has (renamed or removed), and tasks with no section. A task covers its section and the sections inside it. These are warnings: only dependency problems make the command exit 1.
 
 ```
 ✓ No dependency problems · 6 tasks, 4 dependencies

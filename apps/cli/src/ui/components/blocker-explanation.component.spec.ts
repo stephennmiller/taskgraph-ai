@@ -134,7 +134,7 @@ describe('renderBlockerExplanation', () => {
 		expect(lines).toContain('└─ ○ 5  Task 5');
 		expect(lines).toContain('   └─ ⚠ 99  no such task  ← missing');
 		expect(lines).toContain(
-			'  99 is not a task. Remove it with: taskgraph remove-dependency --id=5 --depends-on=99'
+			'  99 is not a task. Remove it with: taskgraph depend 5 99 --remove'
 		);
 	});
 
@@ -234,7 +234,7 @@ describe('renderBlockerExplanation', () => {
 
 		expect(lines).toContain('      └─ ○ 1  Task 1  ← loops back');
 		expect(lines).toContain(
-			'  1, 2 depend on each other. Break the loop with: taskgraph remove-dependency --id=2 --depends-on=1'
+			'  1, 2 depend on each other. Break the loop with: taskgraph depend 2 1 --remove'
 		);
 	});
 
@@ -255,7 +255,7 @@ describe('renderBlockerExplanation', () => {
 		);
 
 		expect(lines).toContain(
-			'  99 is not a task. Remove it with: taskgraph remove-dependency --id=1 --depends-on=99 and taskgraph remove-dependency --id=2 --depends-on=99'
+			'  99 is not a task. Remove it with: taskgraph depend 1 99 --remove and taskgraph depend 2 99 --remove'
 		);
 	});
 
@@ -278,7 +278,7 @@ describe('renderBlockerExplanation', () => {
 		);
 
 		expect(lines).toContain(
-			'  7 depends on itself. Remove it with: taskgraph remove-dependency --id=7 --depends-on=7'
+			'  7 depends on itself. Remove it with: taskgraph depend 7 7 --remove'
 		);
 	});
 
@@ -306,7 +306,7 @@ describe('renderBlockerExplanation', () => {
 		);
 
 		expect(lines.at(-1)).toBe(
-			'  1, 2, 3 depend on each other. Break the loop with: taskgraph remove-dependency --id=2 --depends-on=1 and taskgraph remove-dependency --id=3 --depends-on=1'
+			'  1, 2, 3 depend on each other. Break the loop with: taskgraph depend 2 1 --remove and taskgraph depend 3 1 --remove'
 		);
 	});
 
@@ -347,20 +347,21 @@ describe('renderBlockerExplanation', () => {
 		});
 
 	it('moves a command to the next line whole instead of splitting it', () => {
-		const lines = plain(renderBlockerExplanation(missingStep(), { width: 76 }));
+		const lines = plain(renderBlockerExplanation(missingStep(), { width: 60 }));
 
 		expect(lines.slice(lines.indexOf('To unblock:') + 1)).toEqual([
 			'  99 is not a task. Remove it with:',
-			'    taskgraph remove-dependency --id=5 --depends-on=99'
+			'    taskgraph depend 5 99 --remove'
 		]);
 	});
 
 	it('splits a command at its spaces when it is wider than the line', () => {
-		const lines = plain(renderBlockerExplanation(missingStep(), { width: 40 }));
+		const lines = plain(renderBlockerExplanation(missingStep(), { width: 30 }));
+		const steps = lines.slice(lines.indexOf('To unblock:') + 1);
 
-		expect(Math.max(...lines.map((l) => l.length))).toBeLessThanOrEqual(40);
-		expect(lines.join(' ').replace(/ +/g, ' ')).toContain(
-			'taskgraph remove-dependency --id=5 --depends-on=99'
+		expect(Math.max(...steps.map((l) => l.length))).toBeLessThanOrEqual(30);
+		expect(steps.join(' ').replace(/ +/g, ' ')).toContain(
+			'taskgraph depend 5 99 --remove'
 		);
 	});
 
