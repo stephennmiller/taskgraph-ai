@@ -55,6 +55,14 @@ function editCommand(
 			// `depend 3 1` and `depend --id=3 --depends-on=1` mean the same
 			const [argId, argDependsOn] = command.args;
 			const opts = command.opts<DependencyOptions>();
+			// Mixing the forms would silently drop one of the IDs typed
+			if (argId !== undefined && (opts.id ?? opts.dependsOn) !== undefined) {
+				printError(
+					'Give the IDs as arguments or as --id and --depends-on, not both',
+					`Try \`taskgraph ${name} 3 1\` (task 3 depends on task 1)`
+				);
+				process.exit(1);
+			}
 			const id = opts.id ?? argId;
 			const dependsOn = opts.dependsOn ?? argDependsOn;
 			if (!id || !dependsOn) {

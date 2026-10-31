@@ -139,6 +139,22 @@ describe('depend (#882)', () => {
 		expect(tasks.addDependency).not.toHaveBeenCalled();
 	});
 
+	it.each([[['3', '--depends-on=1']], [['--id=3', '1']]])(
+		'refuses IDs given both ways (%j), changing nothing',
+		async (args) => {
+			vi.spyOn(process, 'exit').mockImplementation(() => {
+				throw new Error('exit');
+			});
+
+			await expect(run('depend', ...args)).rejects.toThrow('exit');
+
+			expect(vi.mocked(console.error).mock.calls.join('\n')).toContain(
+				'not both'
+			);
+			expect(tasks.addDependency).not.toHaveBeenCalled();
+		}
+	);
+
 	it('hides the old names from help, which still run', () => {
 		const program = new Command();
 		for (const command of [

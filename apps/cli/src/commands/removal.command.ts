@@ -200,9 +200,16 @@ function idArgument(command: Command): Command {
 		.argument('[ids]', 'The same as --id')
 		.hook('preAction', (cmd) => {
 			const [ids] = cmd.args;
-			if (ids && cmd.opts<RemovalOptions>().id === undefined) {
-				cmd.setOptionValue('id', ids);
+			if (ids === undefined) return;
+			// Both would silently drop the IDs given as the argument
+			if (cmd.opts<RemovalOptions>().id !== undefined) {
+				printError(
+					'Give the IDs as an argument or as --id, not both',
+					`Try \`taskgraph ${cmd.name()} ${terminalSafe(ids)}\``
+				);
+				process.exit(1);
 			}
+			cmd.setOptionValue('id', ids);
 		});
 }
 

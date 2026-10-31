@@ -323,7 +323,11 @@ describe('clearSubtasksIn', () => {
 	});
 
 	it.each([
-		['2.1', '2.1 is a subtask, not a task', /remove-task 2.1/],
+		[
+			'2.1',
+			'2.1 is a subtask, not a task',
+			/remove-task 2\.1` for one subtask, or `taskgraph clear-subtasks --id=2` for all/
+		],
 		['x', '"x" isn\'t a task ID', /--id=3,5/],
 		['9', 'Task 9 not found', undefined]
 	])('refuses %s, changing nothing', (id, message, hint) => {

@@ -186,6 +186,33 @@ describe('remove-task with a subtask (#882)', () => {
 	});
 });
 
+describe('remove-task argument checks (#882)', () => {
+	beforeEach(() => {
+		vi.spyOn(process, 'exit').mockImplementation(() => {
+			throw new Error('exit');
+		});
+	});
+
+	it('--convert refuses a list with a task ID in it, changing nothing', async () => {
+		await expect(run('remove-task', '2.1,6', '--convert')).rejects.toThrow(
+			'exit'
+		);
+
+		expect(output('error')).toContain('"6" isn\'t a subtask ID');
+		expect(tasks.removeSubtasks).not.toHaveBeenCalled();
+	});
+
+	it('refuses IDs given both as the argument and --id', async () => {
+		await expect(run('remove-task', '5', '--id=6', '--yes')).rejects.toThrow(
+			'exit'
+		);
+
+		expect(output('error')).toContain('not both');
+		expect(tasks.previewTaskRemoval).not.toHaveBeenCalled();
+		expect(tasks.removeTasks).not.toHaveBeenCalled();
+	});
+});
+
 describe('remove-subtask', () => {
 	it('removes each subtask and says which became a task', async () => {
 		tasks.removeSubtasks.mockResolvedValue({
@@ -263,7 +290,7 @@ describe('clear-subtasks', () => {
 	it('says nothing was cleared, with the hint tm-core gives', async () => {
 		tasks.clearSubtasks.mockRejectedValue(
 			Object.assign(new Error('4.1 is a subtask, not a task'), {
-				hint: 'Use `taskgraph remove-subtask --id=4.1` for one subtask'
+				hint: 'Use `taskgraph remove-task 4.1` for one subtask'
 			})
 		);
 
@@ -272,7 +299,7 @@ describe('clear-subtasks', () => {
 		expect(output('error')).toContain(
 			'4.1 is a subtask, not a task; nothing was cleared'
 		);
-		expect(output('error')).toContain('remove-subtask --id=4.1');
+		expect(output('error')).toContain('remove-task 4.1');
 		expect(process.exitCode).toBe(1);
 	});
 });
