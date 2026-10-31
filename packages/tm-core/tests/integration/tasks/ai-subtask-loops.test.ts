@@ -360,6 +360,45 @@ describe('AI-written subtask dependencies that loop through the parent', () => {
 	);
 
 	it.each(['update-task', 'update --from'])(
+		'%s keeps the IDs of a retitled reply that sorts stored IDs without gaps and adds one (#863)',
+		async (via) => {
+			// 4 was inserted after 1 earlier: out of order, but no gaps
+			write(
+				task('1', [], [
+					stored('1', 'A'),
+					stored('4', 'N'),
+					stored('2', 'B'),
+					stored('3', 'C')
+				] as never),
+				task('2', ['1.2', '1.4'])
+			);
+
+			const warnings = await rewrite(via, {
+				...task('1'),
+				subtasks: [
+					{ ...aiSubtask(1, []), title: 'A v2' },
+					{ ...aiSubtask(2, []), title: 'B v2' },
+					{ ...aiSubtask(3, []), title: 'C v2' },
+					{ ...aiSubtask(4, []), title: 'N v2' },
+					{ ...aiSubtask(5, []), title: 'New' }
+				]
+			});
+
+			expect(
+				savedTask('1').subtasks.map((st: any) => [st.id, st.title])
+			).toEqual([
+				['1', 'A v2'],
+				['2', 'B v2'],
+				['3', 'C v2'],
+				['4', 'N v2'],
+				['5', 'New']
+			]);
+			expect(savedTask('2').dependencies).toEqual(['1.2', '1.4']);
+			expect(warnings.join('\n')).not.toContain('removed');
+		}
+	);
+
+	it.each(['update-task', 'update --from'])(
 		'%s warns about a subtask the AI left out and the dependency that went with it (#863)',
 		async (via) => {
 			write(

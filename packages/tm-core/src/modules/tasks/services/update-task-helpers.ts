@@ -152,12 +152,12 @@ function matchSubtasks(
 		String(st.id) === String(subtask.id);
 	const sameTitle = (st: Subtask, subtask: { title?: unknown }) =>
 		Boolean(subtask.title) && st.title === subtask.title;
-	const counts = (items: Array<{ id?: unknown }>) =>
-		items.every((item, i) => String(item.id) === String(i + 1));
 	const storedIds = new Set(original.map((st) => String(st.id)));
+	// Gaps in the set, not the order: stored 1, 4, 2, 3 sent back as 1..5 kept its IDs
+	const gapped = original.some((_, i) => !storedIds.has(String(i + 1)));
 	const renumbered =
-		counts(subtasks) &&
-		!counts(original) &&
+		gapped &&
+		subtasks.every((subtask, i) => String(subtask.id) === String(i + 1)) &&
 		subtasks.some((subtask) => !storedIds.has(String(subtask.id)));
 	const matched: (Subtask | undefined)[] = [];
 	const taken = new Set<Subtask>();
