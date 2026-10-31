@@ -118,19 +118,20 @@ export function mergeRewrite(
 	).merged.tasks[0];
 }
 
-/** The stored status, unless the prompt mentions status */
+/** The stored status of `what` (a task or a subtask), unless the prompt mentions status */
 export function keepStatus(
-	stored: Task,
+	stored: { status?: unknown },
 	updated: { status?: unknown },
 	prompt: string,
-	warn: (message: string) => void
+	warn: (message: string) => void,
+	what = 'task'
 ) {
 	if (
 		updated.status !== stored.status &&
 		!prompt.toLowerCase().includes('status')
 	) {
 		warn(
-			`AI changed task status. Restoring original status '${stored.status}'.`
+			`AI changed ${what} status. Restoring original status '${stored.status}'.`
 		);
 		updated.status = stored.status;
 	}
@@ -243,12 +244,15 @@ function siblingsAsSaved(
 /**
  * The AI's `subtasks` of `stored`, each under the ID of the stored subtask it
  * matches (#576, #804) or the next free one (`newIds`), with its sibling
- * dependencies named by saved ID (#827), the stored fields it left out kept
- * and the dependencies it added marked inferred
+ * dependencies named by saved ID (#827), its status kept as keepStatus keeps
+ * the task's (#872), the stored fields it left out kept and the dependencies
+ * it added marked inferred
  */
 export function rewriteSubtasks(
 	stored: Task,
-	subtasks: any[]
+	subtasks: any[],
+	prompt: string,
+	warn: (message: string) => void
 ): { subtasks: Subtask[]; newIds: Set<string> } {
 	const original = stored.subtasks ?? [];
 	const matched = matchSubtasks(original, subtasks);
@@ -263,9 +267,20 @@ export function rewriteSubtasks(
 				// A number is a sibling; a string is a task or subtask
 				dependencies: cleanGeneratedSubtaskDependencies(deps[i], stored.id),
 				// A new subtask isn't done yet: a done one renumbered would be saved twice (#869)
-				status: (before && subtask.status) || 'pending',
+				status: before ? (subtask.status ?? before.status) : 'pending',
 				testStrategy: subtask.testStrategy ?? null
 			};
+			// The AI can only write pending or done, so in-progress, review and blocked would be lost (#872);
+			// a done one is keepDoneSubtasks' to restore
+			if (before && before.status !== 'done') {
+				keepStatus(
+					before,
+					corrected,
+					prompt,
+					warn,
+					`subtask ${fullSubtaskId(stored.id, before.id)}`
+				);
+			}
 			keepStoredFields(corrected, before);
 			assignMetadata(
 				corrected,
