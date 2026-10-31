@@ -134,7 +134,7 @@ describe('tasks removal commands', () => {
 			convert: true
 		});
 
-		expect(converted[0]).toMatchObject({ id: 8, dependencies: ['2'] });
+		expect(converted[0]).toMatchObject({ id: 8, dependencies: [] });
 		const tasks = read().master.tasks;
 		// Storage saves top-level IDs as strings
 		expect(tasks[2].dependencies).toEqual(['8']);

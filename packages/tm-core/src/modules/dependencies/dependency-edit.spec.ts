@@ -184,6 +184,17 @@ describe('addDependencyIn', () => {
 		expect(tasks).toEqual(before);
 	});
 
+	it("refuses a loop through a subtask's own parent (#803)", () => {
+		// 4 waits on 3, which can't finish before its subtask 3.1
+		const tasks = [task('3', [], { subtasks: [subtask(1)] }), task('4', ['3'])];
+		const before = structuredClone(tasks);
+
+		expect(() => add(tasks, '3.1', '4')).toThrow(
+			'That would make a loop: task 4 already depends on task 3.1'
+		);
+		expect(tasks).toEqual(before);
+	});
+
 	it('allows a task to depend on its own subtask', () => {
 		const tasks = [task('1', [], { subtasks: [subtask(1)] })];
 

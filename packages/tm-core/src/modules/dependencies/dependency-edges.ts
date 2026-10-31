@@ -1,8 +1,9 @@
 /**
  * @fileoverview The dependency edges loop checks walk, as full IDs ("3",
  * "3.2"), and whether a new dependency would close a loop. A subtask also
- * waits on its parent's dependencies, and those edges count. A parent's
- * dependency on one of its own subtasks is not passed down.
+ * waits on its parent's dependencies, and a parent can't finish before its
+ * subtasks, so both edges count. A parent's dependency on one of its own
+ * subtasks is not passed down.
  */
 
 import type { Task } from '../../common/types/index.js';
@@ -10,11 +11,11 @@ import { resolveSubtaskDependency } from './subtask-dependency.js';
 
 /**
  * Every task and subtask's dependencies as full IDs ("3", "3.2"), without
- * self-dependencies, which are reported on their own. A subtask also gets an
- * edge to each of its parent's dependencies, except the parent's own subtasks
- * and dependencies the subtask already lists. `subtasksOnly` leaves those
- * inherited edges out: they are stored on the parent, so fixDependencies
- * can't break them.
+ * self-dependencies, which are reported on their own. A task also gets an
+ * edge to each of its subtasks that doesn't list it (#803), and a subtask one
+ * to each of its parent's dependencies, except the parent's own subtasks and
+ * dependencies the subtask already lists. `subtasksOnly` leaves those implied edges out:
+ * they aren't stored on the subtask, so fixDependencies can't break them.
  * @param subtasksOnly - Keep only edges between subtasks, the ones
  *   fixDependencies can break
  */
@@ -32,21 +33,29 @@ export function dependencyEdges(
 	for (const task of tasks) {
 		const taskId = String(task.id);
 		const parentDeps = (task.dependencies || []).map(String);
-		if (!subtasksOnly) add(taskId, parentDeps);
-		const ownSubtasks = new Set(
-			(task.subtasks || []).map((subtask) => `${taskId}.${subtask.id}`)
-		);
-		for (const subtask of task.subtasks || []) {
-			const own = (subtask.dependencies || []).map((dep) =>
+		const subtasks = (task.subtasks || []).map((subtask) => ({
+			id: `${taskId}.${subtask.id}`,
+			own: (subtask.dependencies || []).map((dep) =>
 				resolveSubtaskDependency(taskId, dep)
+			)
+		}));
+		const ownSubtasks = new Set(subtasks.map((subtask) => subtask.id));
+		if (!subtasksOnly) {
+			// It can't finish before a subtask, unless that subtask lists it (as
+			// criticalPath orders them)
+			const waitsOn = subtasks.filter(
+				(subtask) => !subtask.own.includes(taskId)
 			);
+			add(taskId, [...parentDeps, ...waitsOn.map((subtask) => subtask.id)]);
+		}
+		for (const { id, own } of subtasks) {
 			const inherited = subtasksOnly
 				? []
 				: parentDeps.filter(
 						(dep) =>
 							dep !== taskId && !ownSubtasks.has(dep) && !own.includes(dep)
 					);
-			add(`${taskId}.${subtask.id}`, [...own, ...inherited]);
+			add(id, [...own, ...inherited]);
 		}
 	}
 	return graph;
@@ -68,16 +77,16 @@ function directSubtaskIds(
 }
 
 /**
- * The first id in `targets` that `from` reaches along dependency edges.
- * Iterative, so a long chain can't overflow the stack. `from` itself counts.
+ * The first id in `targets` that any of `from` reaches along dependency
+ * edges. Iterative, so a long chain can't overflow the stack. `from` counts.
  */
 function reachesAny(
 	graph: Map<string, string[]>,
-	from: string,
+	from: string[],
 	targets: ReadonlySet<string>
 ): string | undefined {
-	const seen = new Set<string>([from]);
-	const queue = [from];
+	const seen = new Set<string>(from);
+	const queue = [...from];
 	while (queue.length > 0) {
 		const id = queue.pop() as string;
 		if (targets.has(id)) return id;
@@ -116,5 +125,31 @@ export function wouldCloseDependencyLoop(
 			}
 		}
 	}
-	return reachesAny(graph, dependencyId, closes);
+	return reachesAny(graph, [dependencyId], closes);
+}
+
+/**
+ * Whether a new subtask of `parentId` would close a loop. The parent can't
+ * finish before it unless it lists the parent, so it loops when what it
+ * depends on reaches the parent: `dependencies` (full IDs) for a new subtask,
+ * or those of the task `fromTaskId` being moved under the parent. The moved
+ * task also starts waiting on the parent's dependencies (not on itself or the
+ * parent's subtasks), which loops when one of them reaches it.
+ */
+export function wouldSubtaskCloseLoop(
+	tasks: Task[],
+	parentId: string,
+	source: { fromTaskId: string } | { dependencies: string[] }
+): boolean {
+	const graph = dependencyEdges(tasks);
+	const reaches = (from: string[], to: string) =>
+		reachesAny(graph, from, new Set([to])) !== undefined;
+	const waitsOnParent = (deps: string[]) =>
+		!deps.includes(parentId) && reaches(deps, parentId);
+	if (!('fromTaskId' in source)) return waitsOnParent(source.dependencies);
+	const taskId = source.fromTaskId;
+	const inherited = (graph.get(parentId) ?? []).filter(
+		(dep) => dep !== taskId && !dep.startsWith(`${parentId}.`)
+	);
+	return waitsOnParent(graph.get(taskId) ?? []) || reaches(inherited, taskId);
 }

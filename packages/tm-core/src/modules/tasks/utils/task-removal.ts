@@ -279,11 +279,9 @@ function removeSubtaskIn(
 		dependencies: moved.dependencies,
 		priority: parent.priority || 'medium'
 	} as Task;
-	// Keep metadata (and its dependency marks, re-keyed for top level)
+	// Keep metadata (and its dependency marks, re-keyed for top level). No
+	// dependency on the old parent: a sibling waiting on it would loop (#803)
 	assignMetadata(converted, moved.metadata);
-	if (!converted.dependencies.includes(String(parentId))) {
-		converted.dependencies.push(String(parentId));
-	}
 	// Whatever depended on the subtask now depends on the task
 	retargetDependents(tasks, fullId, converted.id);
 	tasks.push(converted);

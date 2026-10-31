@@ -161,6 +161,23 @@ describe('validateTaskDependencies', () => {
 		expect(issues).toEqual([]);
 	});
 
+	it("reports a loop through a subtask's own parent (#803)", () => {
+		// 3.1 waits on 4, 4 on 3, and 3 can't finish before 3.1. 3.2 lists
+		// its parent, so 3 doesn't wait on it: 3.2 only waits on the loop.
+		const { issues } = validate([
+			task('3', [], [subtask(1, ['4']), subtask(2, ['3'])]),
+			task('4', ['3'])
+		]);
+
+		expect(
+			issues.map((issue) => [issue.type, issue.taskId, issue.fixable])
+		).toEqual([
+			['circular', '3', false],
+			['circular', '3.1', false],
+			['circular', '4', false]
+		]);
+	});
+
 	it('reports a link to a missing task, not the healthy links', () => {
 		const { issues } = validate([
 			task(1),
@@ -390,14 +407,24 @@ function edges(tasks: Raw[], subtasksOnly = false): Map<string, string[]> {
 	for (const t of tasks) {
 		const taskId = String(t.id);
 		const parentDeps = (t.dependencies ?? []).map(String);
-		if (!subtasksOnly) add(taskId, parentDeps);
 		const ownSubtasks = new Set(
 			(t.subtasks ?? []).map((s: Raw) => `${taskId}.${s.id}`)
 		);
-		for (const s of t.subtasks ?? []) {
-			const own = (s.dependencies ?? []).map((d: Id) =>
+		const ownOf = (s: Raw): string[] =>
+			(s.dependencies ?? []).map((d: Id) =>
 				resolveSubtaskDependency(taskId, d)
 			);
+		// A task waits on its subtasks, except one that lists it (#803)
+		if (!subtasksOnly) {
+			add(taskId, [
+				...parentDeps,
+				...(t.subtasks ?? [])
+					.filter((s: Raw) => !ownOf(s).includes(taskId))
+					.map((s: Raw) => `${taskId}.${s.id}`)
+			]);
+		}
+		for (const s of t.subtasks ?? []) {
+			const own = ownOf(s);
 			const inherited = subtasksOnly
 				? []
 				: parentDeps.filter(
