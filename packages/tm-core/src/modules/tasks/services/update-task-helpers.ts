@@ -286,9 +286,11 @@ export function settleRewrites(
 				.map((st) => fullSubtaskId(saved.id, st.id));
 		})
 	);
-	for (const { now, saved } of rewrites) {
-		withoutNewLoops(current, now, saved, debug);
-	}
+	withoutNewLoops(
+		current,
+		rewrites.map(({ now, saved }) => ({ before: now, task: saved })),
+		debug
+	);
 }
 
 /** `subtasks` with each done one of `original` restored as it was, no ID twice */

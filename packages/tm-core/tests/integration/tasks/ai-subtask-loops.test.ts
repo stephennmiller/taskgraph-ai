@@ -200,4 +200,40 @@ describe('AI-written subtask dependencies that loop through the parent', () => {
 			});
 		}
 	);
+
+	it.each(['update-task', 'update --from'])(
+		'%s keeps a new dependency that loops only through one it drops (#832)',
+		async (via) => {
+			// 1.2 → 2 loops on its own (2 waits on 1.2). 1.1 → 3 is fine without
+			// it, though 3 → 1.2 → 2 → 1.1 would loop with it
+			write(
+				task('1', [], [aiSubtask(1, []), aiSubtask(2, [])] as never),
+				task('2', ['1.1', '1.2']),
+				task('3', ['1.2'])
+			);
+
+			await rewrite(via, {
+				...task('1'),
+				subtasks: [aiSubtask(1, ['3']), aiSubtask(2, ['2'])]
+			});
+
+			expect(savedTask('1').subtasks.map((st: any) => st.dependencies)).toEqual(
+				[['3'], []]
+			);
+		}
+	);
+
+	it('update --from drops one of two new dependencies of different tasks that loop together (#832)', async () => {
+		write(task('1'), task('2'));
+		generateObject.mockResolvedValue(
+			reply({ tasks: [task('1', ['2']), task('2', ['1'])] }) as any
+		);
+
+		await tmCore.tasks.updateFrom({ prompt: 'Rewrite them', from: 1 });
+
+		// The first task's is checked first, so it stays
+		expect(savedTask('1').dependencies).toEqual(['2']);
+		expect(savedTask('2')).toMatchObject({ dependencies: [] });
+		expect(savedTask('2').metadata).toBeUndefined();
+	});
 });
