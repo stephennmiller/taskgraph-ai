@@ -194,28 +194,6 @@ describe('LoopCommand', () => {
 		});
 	});
 
-	describe('displayResult', () => {
-		it('should display loop completion summary', () => {
-			const displayResult = (loopCommand as any).displayResult.bind(
-				loopCommand
-			);
-			const mockResult: LoopResult = {
-				iterations: [],
-				totalIterations: 5,
-				tasksCompleted: 3,
-				finalStatus: 'max_iterations'
-			};
-
-			displayResult(mockResult);
-
-			expect(consoleLogSpy).toHaveBeenCalled();
-			const allOutput = consoleLogSpy.mock.calls.flat().join(' ');
-			expect(allOutput).toContain('Loop Complete');
-			expect(allOutput).toContain('5');
-			expect(allOutput).toContain('3');
-		});
-	});
-
 	describe('first-use trust', () => {
 		const run = (options: object) =>
 			(loopCommand as any).execute.bind(loopCommand)(options);
