@@ -77,6 +77,14 @@ export class RuntimeStateManager {
 		try {
 			const stateData = await fs.readFile(this.stateFilePath, 'utf-8');
 			const rawState = JSON.parse(stateData);
+			// [] or null would otherwise mean master, and no tag change could be saved
+			if (
+				typeof rawState !== 'object' ||
+				rawState === null ||
+				Array.isArray(rawState)
+			) {
+				throw new Error('state.json does not hold a JSON object');
+			}
 
 			// Map legacy field names to current interface
 			const state: RuntimeState = {

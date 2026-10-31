@@ -93,6 +93,17 @@ describe('RuntimeStateManager', () => {
 			expect(error.message).toContain(statePath);
 			expect(error.hint).toMatch(/delete it/);
 		});
+
+		it.each(['[]', 'null'])(
+			'fails on %s, which no tag change could be saved over',
+			async (raw) => {
+				writeState(raw);
+
+				await expect(stateManager.loadState()).rejects.toThrow(
+					'does not hold a JSON object'
+				);
+			}
+		);
 	});
 
 	describe('saveState', () => {

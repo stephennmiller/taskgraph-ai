@@ -140,7 +140,7 @@ describe('tags command', () => {
 	});
 
 	// #807: these printed "Switched to" / "Added task" on master and exited 0
-	it('use fails when state.json cannot be saved, naming the file', () => {
+	it('use fails on a state.json it could not save over, naming the file', () => {
 		const statePath = path.join(dir, '.taskgraph', 'state.json');
 		run(['tags', 'add', 'feat']);
 		fs.writeFileSync(statePath, '[]');
@@ -148,7 +148,7 @@ describe('tags command', () => {
 		const result = run(['tags', 'use', 'feat']);
 
 		expect(result.status).toBe(1);
-		expect(result.stderr).toContain(`Couldn't save ${statePath}`);
+		expect(result.stderr).toContain(`${statePath}: state.json does not hold`);
 		expect(result.stderr).toContain('delete it');
 		expect(result.stdout).not.toContain('Switched');
 	});
