@@ -1,6 +1,8 @@
 import { EventEmitter } from 'node:events';
 import fs from 'node:fs';
+import http from 'node:http';
 import https from 'node:https';
+import type { AddressInfo } from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -127,5 +129,38 @@ describe('update cache', () => {
 
 		expect(request).toHaveBeenCalledTimes(1);
 		expect(info).toMatchObject({ needsUpdate: false, failed: true });
+	});
+
+	it('gives up when the registry sends headers and then stalls the body', async () => {
+		const server = http.createServer((_req, res) => {
+			res.writeHead(200);
+			res.write('{"dist-tags":');
+		});
+		await new Promise<void>((resolve) =>
+			server.listen(0, '127.0.0.1', resolve)
+		);
+		const { port } = server.address() as AddressInfo;
+		// A real socket on localhost, with a short deadline in place of 3 seconds
+		vi.spyOn(https, 'request').mockImplementation(((
+			options: http.RequestOptions,
+			onResponse: (res: http.IncomingMessage) => void
+		) =>
+			http.request(
+				{
+					...options,
+					hostname: '127.0.0.1',
+					port,
+					signal: AbortSignal.timeout(100)
+				},
+				onResponse
+			)) as never);
+
+		try {
+			const info = await checkForUpdate('1.0.0', { fresh: true });
+			expect(info).toMatchObject({ needsUpdate: false, failed: true });
+		} finally {
+			server.closeAllConnections();
+			server.close();
+		}
 	});
 });
