@@ -68,11 +68,21 @@ function saveChanges(
 /**
  * Ask for a model for each role and save the ones that changed.
  *
- * @returns false if the user cancelled or a model couldn't be saved
+ * @returns false without a terminal, if the user cancelled, or if a model
+ *   couldn't be saved
  */
 export async function runInteractiveSetup(
 	settings: ModelSettings
 ): Promise<boolean> {
+	// Without a terminal the picker writes escapes into the pipe and never gets an answer
+	if (!(process.stdin.isTTY && process.stdout.isTTY)) {
+		printError(
+			'models --setup needs a terminal to ask its questions',
+			'Set a role directly: `taskgraph models --set-main <model>`, `--set-research` or `--set-fallback`'
+		);
+		process.exitCode = 1;
+		return false;
+	}
 	const current = currentModels(settings);
 	const models = (getAvailableModels() as ModelInfo[]).filter(
 		(model) => model.allowed_roles

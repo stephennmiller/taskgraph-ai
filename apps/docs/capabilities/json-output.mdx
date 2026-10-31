@@ -48,6 +48,8 @@ Check `schemaVersion` before you parse. If it is higher than the version your sc
 | `github unlink <id>` | `--json` | `tag`, `taskId`, `issueNumber`, `url` |
 | `parse-prd --clarify` | `--json` | `prd`, `questions` |
 
+A command not in this table, such as `tags use` or `tags add`, has no JSON output and fails with "Unknown option '--json'".
+
 In `list` JSON, each task's `blocks` lists the IDs of the tasks that depend on it, whatever their status. `--status` filters the rows, not `blocks`.
 
 `set-status` prints its JSON on one line, including when it fails. Other commands print an error as text on stderr and exit with a non-zero code, leaving stdout empty.
