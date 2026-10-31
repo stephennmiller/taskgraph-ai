@@ -26,6 +26,9 @@ class FakeGitHub implements GitHubClient {
 	async getRepo() {
 		return { fullName: REPO, url: `https://github.com/${REPO}` };
 	}
+	async getViewer() {
+		return 'octocat';
+	}
 	async listIssues(label: string) {
 		return this.issues.filter((i) => i.labels.includes(label));
 	}

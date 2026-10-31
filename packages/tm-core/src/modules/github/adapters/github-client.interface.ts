@@ -26,6 +26,8 @@ export interface UpdateIssueInput
 
 export interface GitHubClient {
 	getRepo(): Promise<RepoInfo>;
+	/** Login of the account the client acts as */
+	getViewer(): Promise<string>;
 	/** Issues carrying the label (any label when omitted), open and closed by default */
 	listIssues(label?: string, state?: 'open' | 'all'): Promise<RemoteIssue[]>;
 	createIssue(input: CreateIssueInput): Promise<RemoteIssue>;

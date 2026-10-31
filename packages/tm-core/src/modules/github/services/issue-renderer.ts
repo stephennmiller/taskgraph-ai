@@ -7,7 +7,8 @@ import type { Task } from '../../../common/types/index.js';
 import type { RenderedIssue } from '../types.js';
 
 export const BASE_LABEL = 'taskgraph';
-const MARKER_PATTERN = /<!-- taskgraph:v1 tag=(\S*) id=(\S*) -->/;
+/** Only the first line counts: that is where renderIssue writes the marker */
+const MARKER_PATTERN = /^<!-- taskgraph:v1 tag=(\S*) id=(\S*) -->(?:\r?\n|$)/;
 
 export interface RenderContext {
 	tag: string;

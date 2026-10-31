@@ -5,6 +5,7 @@ import { hashIssue, markerFor, renderIssue } from './issue-renderer.js';
 import { getLink, planSync } from './sync-planner.js';
 
 const REPO = 'acme/app';
+const VIEWER = 'octocat';
 
 function makeTask(id: string, overrides: Partial<Task> = {}): Task {
 	return {
@@ -51,6 +52,7 @@ function remoteIssue(
 		body,
 		labels: ['taskgraph'],
 		state: 'open',
+		author: VIEWER,
 		assignees: [],
 		...overrides
 	};
@@ -60,7 +62,7 @@ const plan = (
 	tasks: SyncTask[],
 	remote: RemoteIssue[] = [],
 	extra: Partial<Parameters<typeof planSync>[0]> = {}
-) => planSync({ repo: REPO, tasks, remote, ...extra });
+) => planSync({ repo: REPO, tasks, remote, viewer: VIEWER, ...extra });
 
 describe('getLink', () => {
 	it('ignores links that point at another repo', () => {
@@ -106,6 +108,34 @@ describe('planSync', () => {
 			issueNumber: 9,
 			recovered: true
 		});
+	});
+
+	it('does not relink to an issue with the marker below the first line', () => {
+		const result = plan(
+			[{ tag: 'master', task: makeTask('1') }],
+			[remoteIssue(9, `Notes\n\n${markerFor('master', '1')}`)]
+		);
+
+		expect(result.steps[0]).toMatchObject({ action: 'create' });
+	});
+
+	it('does not relink to an issue opened by another account', () => {
+		const result = plan(
+			[{ tag: 'master', task: makeTask('1') }],
+			[remoteIssue(9, markerFor('master', '1'), { author: 'someone-else' })]
+		);
+
+		expect(result.steps[0]).toMatchObject({ action: 'create' });
+	});
+
+	it('does not relink when the pushing account is unknown', () => {
+		const result = plan(
+			[{ tag: 'master', task: makeTask('1') }],
+			[remoteIssue(9, markerFor('master', '1'))],
+			{ viewer: undefined }
+		);
+
+		expect(result.steps[0]).toMatchObject({ action: 'create' });
 	});
 
 	it('keys links by tag, so the same id in two tags stays separate', () => {
