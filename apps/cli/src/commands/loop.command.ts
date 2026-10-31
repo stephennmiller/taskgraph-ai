@@ -39,6 +39,7 @@ import {
 	formatParallelTaskLines
 } from '../ui/formatters/parallel-loop-formatters.js';
 import { terminalWidth } from '../ui/layout/helpers.js';
+import { terminalSafe } from '../ui/formatters/markdown-formatters.js';
 import { getProjectRoot } from '../utils/project-root.js';
 
 export interface LoopCommandOptions {
@@ -424,10 +425,11 @@ export class LoopCommand extends Command {
 			},
 			// --no-output: Claude's text and tool calls aren't printed
 			...(showOutput && {
-				onText: (text: string) => console.log(text),
+				// Claude's text can carry escape codes from files or pages it read (#890)
+				onText: (text: string) => console.log(terminalSafe(text)),
 				onToolUse: (toolName: string) =>
-					console.log(chalk.dim(`  → ${toolName}`)),
-				onOutput: (output: string) => console.log(output)
+					console.log(chalk.dim(`  → ${terminalSafe(toolName)}`)),
+				onOutput: (output: string) => console.log(terminalSafe(output))
 			}),
 			onError: (message: string, severity?: 'warning' | 'error') => {
 				if (severity !== 'warning') {
@@ -437,7 +439,9 @@ export class LoopCommand extends Command {
 				console.error(formatLoopMessage(message, severity, terminalWidth()));
 			},
 			onStderr: (iteration: number, text: string) => {
-				process.stderr.write(chalk.dim(`[Iteration ${iteration}] `) + text);
+				process.stderr.write(
+					chalk.dim(`[Iteration ${iteration}] `) + terminalSafe(text)
+				);
 			},
 			onIterationEnd: (iteration: LoopIteration) => {
 				if (iteration.message) shown.add(iteration.message);
