@@ -129,6 +129,12 @@ describe('merged plugin commands', () => {
 		expect(body('loop')).not.toMatch(/^\s*taskgraph loop .*--trust/m);
 	});
 
+	it('loop keeps parallel apart from the flags the CLI refuses with it', () => {
+		expect(body('loop')).toContain(
+			'`loop` refuses it with a number, a task ID, a preset or `sandbox`'
+		);
+	});
+
 	it('note passes the text in single quotes after --', () => {
 		expect(body('note')).toContain("taskgraph note <id> -- '<note>'");
 	});

@@ -13,7 +13,7 @@ Arguments: $ARGUMENTS
    - a number on its own → `--iterations=<n>`, the most tasks to work
    - a task ID (`5`, `5.2`) → `--id=<id>`, work that task instead of the next one
    - a preset name (`default`, `tdd`, `test-coverage`, `linting`, `duplication`, `entropy`) → `--prompt=<preset>`
-   - `parallel <n>` → `--parallel=<n>` (1-16), each ready task in its own git worktree and branch
+   - `parallel <n>` → `--parallel=<n>` (1-16), each ready task in its own git worktree and branch. It runs alone: `loop` refuses it with a number, a task ID, a preset or `sandbox`, so if the arguments mix them, ask which the user wants
    - `sandbox` → `--sandbox`, each run in Docker
 
    ```bash
