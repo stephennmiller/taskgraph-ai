@@ -90,16 +90,16 @@ taskgraph add-task --prompt="describe the task"
 
 | Slash command | CLI |
 |---|---|
-| `/taskgraph:next-task` | `taskgraph next` |
-| `/taskgraph:show-task <id>` | `taskgraph show <id>` |
-| `/taskgraph:to-in-progress <id>` | `taskgraph set-status --id=<id> --status=in-progress` |
+| `/taskgraph:next` | `taskgraph next` |
+| `/taskgraph:show <id>` | `taskgraph show <id>` |
+| `/taskgraph:set-status <id> in-progress` | `taskgraph set-status --id=<id> --status=in-progress` |
 | `/taskgraph:to-done <id>` | `taskgraph set-status --id=<id> --status=done` |
 
 ### Task Management
 
 | Slash command | CLI |
 |---|---|
-| `/taskgraph:expand-task <id>` | `taskgraph expand --id=<id>` |
+| `/taskgraph:expand <id>` | `taskgraph expand --id=<id>` |
 | `/taskgraph:add-task <description>` | `taskgraph add-task --prompt='...'` |
 | `/taskgraph:analyze-complexity` | `taskgraph analyze-complexity` |
 | `/taskgraph:update-task <id> <changes>` | `taskgraph update-task --id=<id> --prompt='...'` |

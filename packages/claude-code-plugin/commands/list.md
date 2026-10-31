@@ -5,7 +5,7 @@ argument-hint: "[status] [--subtasks]"
 
 List the project's tasks.
 
-Usage: `/taskgraph:list-tasks [status] [--subtasks]`
+Usage: `/taskgraph:list [status] [--subtasks]`
 
 Arguments: $ARGUMENTS
 

@@ -32,12 +32,12 @@ plan and progress stored in your repo.
 - **Always know what's next:** ask "What should I work on next?" and get the
   first unblocked task.
 - **Just ask Claude:** with the plugin installed, say what you want in plain
-  language. Slash commands (`/taskgraph:next-task`) and the `taskgraph` CLI do
+  language. Slash commands (`/taskgraph:next`) and the `taskgraph` CLI do
   the same things when you'd rather type them.
 - **No API keys:** every AI call runs through your signed-in Claude Code.
 
 <p align="center">
-  <a href="images/demo/03-pick-up-where-you-left-off.mp4"><img src="images/demo/03-pick-up-where-you-left-off.svg" alt="A new Claude Code session running /taskgraph:next-task and resuming from the notes logged last time" width="820"></a>
+  <a href="images/demo/03-pick-up-where-you-left-off.mp4"><img src="images/demo/03-pick-up-where-you-left-off.svg" alt="A new Claude Code session running /taskgraph:next and resuming from the notes logged last time" width="820"></a>
   <br>
   <sub>3. Pick up where you left off · <a href="images/demo/03-pick-up-where-you-left-off.mp4">MP4</a></sub>
 </p>
@@ -58,7 +58,7 @@ plan and progress stored in your repo.
 </p>
 
 <p align="center">
-  <a href="images/demo/03-pick-up-where-you-left-off.mp4"><img src="images/demo/03-pick-up-where-you-left-off.svg" alt="A new Claude Code session running /taskgraph:next-task and resuming from the notes logged last time" width="820"></a>
+  <a href="images/demo/03-pick-up-where-you-left-off.mp4"><img src="images/demo/03-pick-up-where-you-left-off.svg" alt="A new Claude Code session running /taskgraph:next and resuming from the notes logged last time" width="820"></a>
   <br>
   <sub>3. Pick up where you left off · <a href="images/demo/03-pick-up-where-you-left-off.mp4">MP4</a></sub>
 </p>
@@ -267,13 +267,13 @@ The same actions as slash commands and CLI commands:
 
 | You say | Slash command | CLI |
 |---|---|---|
-| What should I work on next? | `/taskgraph:next-task` | `taskgraph next` |
+| What should I work on next? | `/taskgraph:next` | `taskgraph next` |
 | Show me the task graph | `/taskgraph:graph` | `taskgraph graph` |
 | Why is task 7 blocked? | `/taskgraph:why 7` | `taskgraph why 7` |
-| Show task 1 | `/taskgraph:show-task 1` | `taskgraph show 1` |
-| Start task 3 | `/taskgraph:to-in-progress 3` | `taskgraph set-status --id=3 --status=in-progress` |
+| Show task 1 | `/taskgraph:show 1` | `taskgraph show 1` |
+| Start task 3 | `/taskgraph:set-status 3 in-progress` | `taskgraph set-status --id=3 --status=in-progress` |
 | Mark task 3 done | `/taskgraph:to-done 3` | `taskgraph set-status --id=3 --status=done` |
-| Break task 4 into subtasks | `/taskgraph:expand-task 4` | `taskgraph expand --id=4` |
+| Break task 4 into subtasks | `/taskgraph:expand 4` | `taskgraph expand --id=4` |
 | Add a task for ... | `/taskgraph:add-task <what you want>` | `taskgraph add-task --prompt='...'` |
 | Update task 5: ... | `/taskgraph:update-task 5 <change>` | `taskgraph update-task --id=5 --prompt='...'` |
 | Research ... | (research skill) | `taskgraph research "JWT best practices"` |
@@ -320,14 +320,12 @@ Claude Code:
 
 | Purpose | Commands |
 |---|---|
-| Set up | `init-project`, `install-taskgraph`, `setup-models`, `view-models` |
-| Plan | `parse-prd`, `parse-prd-with-research`, `analyze-complexity`, `complexity-report` |
-| See | `list-tasks`, `next-task`, `show-task`, `project-status` |
-| Change status | `set-status`, `to-in-progress`, `to-done` |
-| Edit | `add-task`, `update-task`, `update-tasks-from-id`, `remove-task`, `convert-task-to-subtask` |
-| Subtasks | `expand-task`, `expand-all-tasks`, `add-subtask`, `remove-subtask`, `clear-subtasks` |
-| Dependencies | `graph`, `why`, `add-dependency`, `remove-dependency`, `validate-dependencies`, `fix-dependencies` |
-| Other | `sync-readme`, `help` |
+| Daily workflow | `next`, `show`, `list`, `project-status`, `set-status`, `to-done`, `add-task`, `loop` |
+| Set up | `init`, `models` |
+| Create & update | `parse-prd`, `update`, `update-task`, `note`, `add-subtask`, `remove-task`, `remove-subtask`, `clear-subtasks`, `sync-readme` |
+| Analyze & expand | `analyze-complexity`, `complexity-report`, `expand` |
+| Organize | `graph`, `why`, `add-dependency`, `remove-dependency`, `validate-dependencies`, `fix-dependencies` |
+| Other | `help` |
 
 ### CLI cheat sheet
 

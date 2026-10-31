@@ -19,4 +19,4 @@ Arguments: $ARGUMENTS (what the work is, in plain words)
    - a priority: `--priority=high`, `medium` or `low`
    - "research" or unfamiliar tech: `--research`
 2. Show the output unchanged in a code block.
-3. Then, in one sentence, point out the new task's ID and its acceptance criteria, which say what "done" means. If it looks too big for one sitting, suggest `/taskgraph:expand-task <id>`.
+3. Then, in one sentence, point out the new task's ID and its acceptance criteria, which say what "done" means. If it looks too big for one sitting, suggest `/taskgraph:expand <id>`.

@@ -53,9 +53,9 @@ describe('plugin command descriptions', () => {
 	});
 
 	it.each([
-		['next-task', /what to do next/],
-		['list-tasks', /what tasks there are/],
-		['show-task', /task ID/]
+		['next', /what to do next/],
+		['list', /what tasks there are/],
+		['show', /task ID/]
 	])('%s says when to use it', (name, trigger) => {
 		expect(description(path.join(pluginDir, 'commands', `${name}.md`))).toMatch(
 			trigger

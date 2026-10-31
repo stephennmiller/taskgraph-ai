@@ -15,4 +15,4 @@ Arguments: $ARGUMENTS
 
    Add flags from the arguments: task IDs → `--id=<ids>` (digits and commas only); `research` → `--research`; a threshold → `--threshold=<n>`, a whole number from 1 to 10 (default 5).
 2. Show the result lines it printed. The full report is saved under `.taskgraph/reports/`; `/taskgraph:complexity-report` shows it.
-3. Then, in one sentence, name the tasks scored above the threshold and suggest `/taskgraph:expand-task <id>` for one, or `/taskgraph:expand-all-tasks` for all.
+3. Then, in one sentence, name the tasks scored above the threshold and suggest `/taskgraph:expand <id>` for one, or `/taskgraph:expand all` for all.
