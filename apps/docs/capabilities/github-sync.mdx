@@ -107,7 +107,7 @@ The result has the plan (one step per task: `create`, `update`, `skip` or `close
 ## What an issue looks like
 
 - **Title:** `[<id>] <task title>`
-- **Body:** a hidden marker, the description, `Blocked by #N` lines for dependencies that already have issues, and a `### Subtasks` checklist. Subtasks are part of the parent's issue, not separate issues.
+- **Body:** a hidden marker on the first line, the description, `Blocked by #N` lines for dependencies that already have issues, and a `### Subtasks` checklist. Subtasks are part of the parent's issue, not separate issues.
 - **Labels:** `taskgraph`, `taskgraph:priority/<priority>`, `taskgraph:status/<status>` while the task is open, and `taskgraph:tag/<tag>`. TaskGraph creates missing labels.
 - **State:** `done` closes the issue as completed, `cancelled` closes it as not planned, anything else is open.
 
@@ -115,7 +115,7 @@ An unchanged task is skipped, so running `push` again is cheap and safe.
 
 ## How tasks stay linked
 
-After the first push, each task stores its issue in its `metadata.github` field. If that is lost, the next push finds the issue again through the hidden marker in its body and relinks it, so a task is not duplicated.
+After the first push, each task stores its issue in its `metadata.github` field. If that is lost, the next push finds the issue again through the hidden marker on the first line of its body and relinks it, so a task is not duplicated. It relinks only issues opened by the GitHub account `gh` is signed in as; for an issue opened by another account, or when `gh` cannot tell which account it is (such as with the `GITHUB_TOKEN` of a GitHub Actions run), push creates a new issue instead.
 
 `unlink` removes the stored link and leaves the issue alone. The marker is still in the issue body, so the next push relinks it. Remove the marker from the issue if you want the task to get a new one.
 

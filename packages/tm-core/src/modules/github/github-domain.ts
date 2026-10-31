@@ -296,13 +296,16 @@ export class GitHubDomain {
 	private async prepare(options: PushOptions) {
 		const { repo, client, tag, tasks, remote, wanted } =
 			await this.scope(options);
+		// A token that cannot read its own user (Actions' GITHUB_TOKEN) only turns off link recovery
+		const viewer = await client.getViewer().catch(() => undefined);
 		const full = planSync({
 			repo,
 			tasks,
 			remote,
 			includeDetails: options.includeDetails,
 			closeOrphans: options.closeOrphans,
-			scopeTags: tag ? [tag] : undefined
+			scopeTags: tag ? [tag] : undefined,
+			viewer
 		});
 		// Plan against every task so unselected ones are not mistaken for
 		// orphans, then keep only the selected steps

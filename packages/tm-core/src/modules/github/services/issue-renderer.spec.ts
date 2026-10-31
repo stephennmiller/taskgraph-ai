@@ -102,9 +102,15 @@ describe('renderIssue', () => {
 
 describe('marker', () => {
 	it('round-trips tag and id, including odd characters', () => {
-		const body = `intro\n${markerFor('my tag', '1.2')}\n`;
+		const body = `${markerFor('my tag', '1.2')}\n\nintro`;
 
 		expect(parseMarker(body)).toEqual({ tag: 'my tag', id: '1.2' });
+	});
+
+	it('reads the marker only from the first line, where render writes it', () => {
+		const body = `intro\n${markerFor('master', '1')}\n`;
+
+		expect(parseMarker(body)).toBeNull();
 	});
 
 	it('returns null when there is no marker', () => {

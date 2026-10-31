@@ -42,6 +42,8 @@ export interface RemoteIssue {
 	labels: string[];
 	state: IssueState;
 	stateReason?: IssueStateReason;
+	/** Login of the account that opened the issue */
+	author?: string;
 }
 
 export interface RepoInfo {
