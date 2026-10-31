@@ -94,6 +94,22 @@ function definitionOfDone(root: string): Set<string> {
 }
 
 /**
+ * `loop.bands` and `loop.resumeMaxContextTokens`, which pick each iteration's
+ * model, effort and resume; undefined when neither is set
+ */
+function loopModelSettings(root: string): unknown {
+	try {
+		const loop = JSON.parse(
+			fs.readFileSync(path.join(root, TASKGRAPH_CONFIG_FILE), 'utf8')
+		)?.loop;
+		const settings = [loop?.bands, loop?.resumeMaxContextTokens];
+		return settings.some((v) => v !== undefined) ? settings : undefined;
+	} catch {
+		return undefined;
+	}
+}
+
+/**
  * Project files outside `.claude` the loop's Claude session loads:
  * instructions and the MCP servers it starts
  */
@@ -212,8 +228,8 @@ function claudeDir(root: string, tracked: Set<string>): unknown {
  * Hash of every tag's tasks, less progress marks and each tag's bookkeeping
  * `metadata`, so set-status or checking off a criterion keeps an approval;
  * with the files in `CLAUDE_FILES` (null when missing), the tracked
- * `LOCAL_FILES`, `.claude`, the Definition of Done and the PRD sections
- * tasks cite, which `show` prints with each task
+ * `LOCAL_FILES`, `.claude`, the Definition of Done, the loop's model
+ * settings and the PRD sections tasks cite, which `show` prints with each task
  */
 function trustHash(root: string): string {
 	const doneItems = definitionOfDone(root);
@@ -252,8 +268,17 @@ function trustHash(root: string): string {
 		}
 	});
 	const prd = [...sources].map((s) => readPrdSection(s, root) ?? null);
+	// Unset, the model settings add nothing, so approvals from before stay valid
+	const models = loopModelSettings(root);
 	return sha256(
-		JSON.stringify([text, files, claudeDir(root, tracked), [...doneItems], prd])
+		JSON.stringify([
+			text,
+			files,
+			claudeDir(root, tracked),
+			[...doneItems],
+			prd,
+			...(models === undefined ? [] : [models])
+		])
 	);
 }
 
