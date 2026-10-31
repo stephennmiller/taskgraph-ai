@@ -405,6 +405,26 @@ describe('loop trust', () => {
 		expect(isLoopTrusted(project, home)).toBe(false);
 	});
 
+	it('asks again when loop.bands or loop.resumeMaxContextTokens changed', () => {
+		writeTasks([task]);
+		trustLoop(project, home);
+		writeFile('.taskgraph/config.json', '{"global": {}}');
+		expect(isLoopTrusted(project, home)).toBe(true);
+
+		writeFile(
+			'.taskgraph/config.json',
+			'{"loop": {"bands": [{"maxScore": 10, "model": "opus", "effort": "max"}]}}'
+		);
+		expect(isLoopTrusted(project, home)).toBe(false);
+
+		trustLoop(project, home);
+		writeFile(
+			'.taskgraph/config.json',
+			'{"loop": {"bands": [{"maxScore": 10, "model": "opus", "effort": "max"}], "resumeMaxContextTokens": 1}}'
+		);
+		expect(isLoopTrusted(project, home)).toBe(false);
+	});
+
 	it('asks again when the PRD section a task cites changed', () => {
 		writeFile('docs/prd.md', '# Login\nA form.\n\n# Other\nSame.\n');
 		writeTasks([{ ...task, metadata: { source: 'docs/prd.md#login' } }]);

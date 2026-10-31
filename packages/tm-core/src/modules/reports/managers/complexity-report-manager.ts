@@ -43,7 +43,12 @@ export function withoutPlaceholders<T extends { placeholder?: boolean }>(
 
 export class ComplexityReportManager {
 	private projectRoot: string;
-	private reportCache: Map<string, ComplexityReport> = new Map();
+	// By tag, with the file's mtime, size and inode: another process (a loop's
+	// Claude re-scoring tasks) can rewrite the report while this one runs
+	private reportCache = new Map<
+		string,
+		{ report: ComplexityReport; stamp: string }
+	>();
 
 	constructor(projectRoot: string) {
 		this.projectRoot = projectRoot;
@@ -58,22 +63,19 @@ export class ComplexityReportManager {
 
 	/**
 	 * Load complexity report for a given tag
-	 * Results are cached to avoid repeated file reads
+	 * Cached until the file changes on disk
 	 */
 	async loadReport(tag?: string): Promise<ComplexityReport | null> {
 		const resolvedTag = tag || 'master';
 		const cacheKey = resolvedTag;
 
-		// Check cache first
-		if (this.reportCache.has(cacheKey)) {
-			return this.reportCache.get(cacheKey)!;
-		}
-
 		try {
 			// Inside the try: a tag that can't name a file (a hand edit) has no report
 			const reportPath = this.getReportPath(tag);
-			// Check if file exists
-			await fs.access(reportPath);
+			const stat = await fs.stat(reportPath);
+			const stamp = `${stat.mtimeMs}:${stat.size}:${stat.ino}`;
+			const cached = this.reportCache.get(cacheKey);
+			if (cached?.stamp === stamp) return cached.report;
 
 			// Read and parse the report
 			const content = await fs.readFile(reportPath, 'utf-8');
@@ -91,8 +93,7 @@ export class ComplexityReportManager {
 				report.complexityAnalysis
 			);
 
-			// Cache the report
-			this.reportCache.set(cacheKey, report);
+			this.reportCache.set(cacheKey, { report, stamp });
 
 			logger.debug(
 				`Loaded complexity report for tag '${resolvedTag}' with ${report.complexityAnalysis.length} analyses`
