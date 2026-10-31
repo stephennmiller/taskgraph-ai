@@ -1,24 +1,47 @@
 /**
  * @fileoverview Per-user record of projects where `loop` may run Claude with
  * permission prompts off. It lives in the home directory, never in the
- * project, so a cloned repo cannot approve itself.
+ * project, so a cloned repo cannot approve itself. Each approval holds a hash
+ * of the tasks it was given for, so tasks that changed since (another branch,
+ * a pull, a hand edit) need a new one.
  */
 
+import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { TASKGRAPH_TASKS_FILE } from '../../common/constants/paths.js';
+
+interface TrustEntry {
+	path: string;
+	tasks: string;
+}
 
 const trustFile = (home: string) =>
 	path.join(home, '.taskgraph', 'loop-trusted.json');
 
-function readTrusted(home: string): string[] {
+/** Entries for other projects, and older bare-path entries, are kept as they are */
+function readTrusted(home: string): unknown[] {
 	try {
 		const list = JSON.parse(fs.readFileSync(trustFile(home), 'utf8'));
-		return Array.isArray(list) ? list.filter((p) => typeof p === 'string') : [];
+		return Array.isArray(list) ? list : [];
 	} catch {
 		return [];
 	}
 }
+
+/** The entry for this project, or a bare path from before entries held a hash */
+function isEntryFor(entry: unknown, root: string): boolean {
+	return (
+		entry === root ||
+		(typeof entry === 'object' &&
+			entry !== null &&
+			(entry as TrustEntry).path === root)
+	);
+}
+
+const findEntry = (home: string, root: string) =>
+	readTrusted(home).find((e) => isEntryFor(e, root));
 
 /** Symlinks and `..` must not make one path look like another */
 function canonical(projectRoot: string): string {
@@ -29,21 +52,75 @@ function canonical(projectRoot: string): string {
 	}
 }
 
+/** Progress marks taskgraph rewrites as work moves on; what Claude is asked to do stays the same */
+const PROGRESS_KEYS = new Set([
+	'status',
+	'updatedAt',
+	'checked',
+	'definitionOfDoneChecked'
+]);
+
+/**
+ * Hash of every tag's tasks, less progress marks and each tag's bookkeeping
+ * `metadata`, so set-status or checking off a criterion keeps an approval
+ */
+function tasksHash(root: string): string {
+	let text: string;
+	try {
+		text = fs.readFileSync(path.join(root, TASKGRAPH_TASKS_FILE), 'utf8');
+	} catch {
+		text = '';
+	}
+	try {
+		text = JSON.stringify(
+			JSON.parse(text),
+			function (this: { tasks?: unknown }, key, value) {
+				const tagMetadata = key === 'metadata' && Array.isArray(this.tasks);
+				return PROGRESS_KEYS.has(key) || tagMetadata ? undefined : value;
+			}
+		);
+	} catch {
+		// Not JSON: hash it as it is, so any change still counts
+	}
+	return createHash('sha256').update(text).digest('hex');
+}
+
 export function isLoopTrusted(
 	projectRoot: string,
 	home: string = os.homedir()
 ): boolean {
-	return readTrusted(home).includes(canonical(projectRoot));
+	const root = canonical(projectRoot);
+	const entry = findEntry(home, root);
+	// A bare path from an older version holds no hash: ask again once
+	return (entry as TrustEntry | undefined)?.tasks === tasksHash(root);
 }
 
+/** Approve this project's tasks as they are now */
 export function trustLoop(
 	projectRoot: string,
 	home: string = os.homedir()
 ): void {
 	const root = canonical(projectRoot);
-	const trusted = readTrusted(home);
-	if (trusted.includes(root)) return;
-	writeTrusted(home, [...trusted, root]);
+	writeTrusted(home, [
+		...readTrusted(home).filter((e) => !isEntryFor(e, root)),
+		{ path: root, tasks: tasksHash(root) }
+	]);
+}
+
+/**
+ * Between iterations of an approved run: carry the approval over to the
+ * tasks as the run left them (statuses, notes, subtasks Claude added).
+ * @returns false when the approval was withdrawn during the run
+ */
+export function keepLoopTrust(
+	projectRoot: string,
+	home: string = os.homedir()
+): boolean {
+	const root = canonical(projectRoot);
+	const entry = findEntry(home, root);
+	if (typeof entry !== 'object') return false;
+	trustLoop(root, home);
+	return true;
 }
 
 /**
@@ -56,14 +133,14 @@ export function untrustLoop(
 ): void {
 	const root = canonical(projectRoot);
 	const trusted = readTrusted(home);
-	if (!trusted.includes(root)) return;
+	if (!trusted.some((e) => isEntryFor(e, root))) return;
 	writeTrusted(
 		home,
-		trusted.filter((p) => p !== root)
+		trusted.filter((e) => !isEntryFor(e, root))
 	);
 }
 
-function writeTrusted(home: string, trusted: string[]): void {
+function writeTrusted(home: string, trusted: unknown[]): void {
 	fs.mkdirSync(path.dirname(trustFile(home)), { recursive: true });
 	// Write beside, then rename, so a crash cannot leave half a file
 	const tmp = `${trustFile(home)}.${process.pid}.tmp`;

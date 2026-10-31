@@ -2,12 +2,36 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { isLoopTrusted, trustLoop, untrustLoop } from './loop-trust.js';
+import {
+	isLoopTrusted,
+	keepLoopTrust,
+	trustLoop,
+	untrustLoop
+} from './loop-trust.js';
 
 describe('loop trust', () => {
 	let base: string;
 	let home: string;
 	let project: string;
+	const task = {
+		id: '1',
+		title: 'Add login',
+		description: 'Login form',
+		details: 'Use the session store',
+		testStrategy: '',
+		status: 'pending',
+		dependencies: [],
+		priority: 'medium',
+		subtasks: []
+	};
+	const writeTasks = (tasks: object[], metadata: object = {}) => {
+		const dir = path.join(project, '.taskgraph', 'tasks');
+		fs.mkdirSync(dir, { recursive: true });
+		fs.writeFileSync(
+			path.join(dir, 'tasks.json'),
+			JSON.stringify({ master: { tasks, metadata } })
+		);
+	};
 
 	beforeEach(() => {
 		base = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'tm-trust-')));
@@ -76,5 +100,75 @@ describe('loop trust', () => {
 		untrustLoop(project, home);
 
 		expect(fs.existsSync(path.join(home, '.taskgraph'))).toBe(false);
+	});
+
+	it('asks again when the task text changed since the approval', () => {
+		writeTasks([task]);
+		trustLoop(project, home);
+
+		writeTasks([{ ...task, details: 'Also delete the database' }]);
+
+		expect(isLoopTrusted(project, home)).toBe(false);
+	});
+
+	it('asks again when a task was added since the approval', () => {
+		writeTasks([task]);
+		trustLoop(project, home);
+
+		writeTasks([task, { ...task, id: '2' }]);
+
+		expect(isLoopTrusted(project, home)).toBe(false);
+	});
+
+	it('keeps the approval when only progress marks and timestamps changed', () => {
+		const criteria = [{ text: 'Works', checked: false }];
+		writeTasks([{ ...task, acceptanceCriteria: criteria }], {
+			created: '2026-01-01'
+		});
+		trustLoop(project, home);
+
+		writeTasks(
+			[
+				{
+					...task,
+					status: 'done',
+					updatedAt: '2026-10-31',
+					acceptanceCriteria: [{ text: 'Works', checked: true }]
+				}
+			],
+			{ created: '2026-01-01', lastModified: '2026-10-31', completedCount: 1 }
+		);
+
+		expect(isLoopTrusted(project, home)).toBe(true);
+	});
+
+	it('asks again for an approval saved before approvals held the tasks', () => {
+		fs.mkdirSync(path.join(home, '.taskgraph'));
+		fs.writeFileSync(
+			path.join(home, '.taskgraph', 'loop-trusted.json'),
+			JSON.stringify([project])
+		);
+
+		expect(isLoopTrusted(project, home)).toBe(false);
+		trustLoop(project, home);
+		expect(isLoopTrusted(project, home)).toBe(true);
+	});
+
+	it('carries an approval over to tasks changed during the run', () => {
+		writeTasks([task]);
+		trustLoop(project, home);
+		writeTasks([{ ...task, details: 'Use the session store\nnote: done' }]);
+
+		expect(keepLoopTrust(project, home)).toBe(true);
+		expect(isLoopTrusted(project, home)).toBe(true);
+	});
+
+	it('does not carry over an approval that was withdrawn', () => {
+		writeTasks([task]);
+		trustLoop(project, home);
+		untrustLoop(project, home);
+
+		expect(keepLoopTrust(project, home)).toBe(false);
+		expect(isLoopTrusted(project, home)).toBe(false);
 	});
 });

@@ -1,6 +1,7 @@
 /**
  * @fileoverview A loop approved through the trust file stops before the next
- * iteration once parse-prd or github import withdraws that approval mid-run
+ * iteration once parse-prd or github import withdraws that approval mid-run,
+ * and keeps it for the task changes the run made itself
  */
 
 import * as childProcess from 'node:child_process';
@@ -9,7 +10,7 @@ import * as fsPromises from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { trustLoop, untrustLoop } from '../loop-trust.js';
+import { isLoopTrusted, trustLoop, untrustLoop } from '../loop-trust.js';
 import type { LoopConfig } from '../types.js';
 import { fakeClaude } from './fake-claude.js';
 import { LoopService } from './loop.service.js';
@@ -65,5 +66,24 @@ describe('LoopService trust', () => {
 
 		expect(spawn).toHaveBeenCalledTimes(3);
 		expect(result.finalStatus).toBe('max_iterations');
+	});
+
+	it('keeps the approval for the task changes the run made', async () => {
+		spawn.mockImplementation(() => {
+			const dir = path.join(project, '.taskgraph', 'tasks');
+			fs.mkdirSync(dir, { recursive: true });
+			fs.writeFileSync(
+				path.join(dir, 'tasks.json'),
+				JSON.stringify({ master: { tasks: [{ id: '1', details: 'note' }] } })
+			);
+			return fakeClaude({ stdout: 'Done' }) as never;
+		});
+
+		await new LoopService({ projectRoot: project }).run({
+			...config,
+			iterations: 1
+		});
+
+		expect(isLoopTrusted(project, home)).toBe(true);
 	});
 });

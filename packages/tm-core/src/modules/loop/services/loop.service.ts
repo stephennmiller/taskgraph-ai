@@ -7,7 +7,7 @@ import { getLogger } from '../../../common/logger/index.js';
 import type { TaskStatus } from '../../../common/types/index.js';
 import { TASK_DATA_RULE } from '../../../common/utils/prompt-tag.js';
 import { isTaskPreset } from '../loop-task.js';
-import { isLoopTrusted } from '../loop-trust.js';
+import { isLoopTrusted, keepLoopTrust } from '../loop-trust.js';
 import { PRESETS, isPreset as checkIsPreset } from '../presets/index.js';
 import { statusProgress } from '../task-progress.js';
 import {
@@ -65,6 +65,8 @@ export class LoopService {
 	private readonly headCommit?: LoopServiceOptions['headCommit'];
 	private readonly logger = getLogger('LoopService');
 	private _isRunning = false;
+	/** Approved through the trust file, which parse-prd or github import can withdraw mid-run */
+	private approved = false;
 
 	constructor(options: LoopServiceOptions) {
 		this.projectRoot = options.projectRoot;
@@ -118,11 +120,10 @@ export class LoopService {
 		await initProgressFile(config);
 		let statuses = await this.readStatuses(config);
 		let head = await this.readHead();
-		// Approved through the trust file: parse-prd or github import can withdraw it mid-run
-		const approved = !config.sandbox && isLoopTrusted(this.projectRoot);
+		this.approved = !config.sandbox && isLoopTrusted(this.projectRoot);
 
 		for (let i = 1; i <= config.iterations && this._isRunning; i++) {
-			if (approved && !isLoopTrusted(this.projectRoot)) {
+			if (this.approved && !keepLoopTrust(this.projectRoot)) {
 				const msg =
 					'Tasks were added since loop was approved. Run loop again to approve them.';
 				this.reportError(config.callbacks, msg);
@@ -273,6 +274,8 @@ export class LoopService {
 		errorMessage?: string
 	): Promise<LoopResult> {
 		this._isRunning = false;
+		// The run's own task changes (notes, statuses, new subtasks) stay approved for the next run
+		if (this.approved) keepLoopTrust(this.projectRoot);
 		const result: LoopResult = {
 			iterations,
 			totalIterations: iterations.length,
