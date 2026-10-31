@@ -159,6 +159,8 @@ The MCP tools can be categorized in the same way as the core functionalities:
 -   **`expand_task`**: Expands a task into subtasks.
 -   **`expand_all`**: Expands all eligible tasks.
 
+The replies of `expand_task`, `expand_all`, `update_task` and `update` list any `warnings`, such as a dependency the AI wrote that would make a loop and was left out, or a subtask a rewrite removed along with the dependencies on it.
+
 Tasks from `parse_prd` and subtasks from `expand_task`/`expand_all` come with unchecked acceptance criteria. `set_task_status` won't mark one done until its criteria are checked off (its `check` parameter), unless `force` is set.
 -   **`analyze_project_complexity`**: Analyzes task complexity.
 -   **`complexity_report`**: Displays the complexity analysis report.

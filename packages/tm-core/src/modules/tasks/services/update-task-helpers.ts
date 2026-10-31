@@ -139,9 +139,10 @@ export function keepStatus(
  * The stored subtask each of the AI's `subtasks` is, by index. Each stored
  * one matches once, across the whole list: ID and title first, then title
  * (the AI may renumber a reorder or an insert itself), then ID (the AI may
- * send strings). A reply numbered 1, 2, 3... over stored IDs with gaps was
- * renumbered, so its IDs name no stored subtask and that last pass is skipped
- * (#863)
+ * send strings). A reply numbered 1, 2, 3... over stored IDs with gaps, using
+ * a number no stored subtask has, was renumbered, so its IDs name no stored
+ * subtask and that last pass is skipped (#863). One that only drops subtasks
+ * ([1, 2] of 1, 2, 4) kept its IDs, as the prompt asks
  */
 function matchSubtasks(
 	original: Subtask[],
@@ -153,7 +154,11 @@ function matchSubtasks(
 		Boolean(subtask.title) && st.title === subtask.title;
 	const counts = (items: Array<{ id?: unknown }>) =>
 		items.every((item, i) => String(item.id) === String(i + 1));
-	const renumbered = counts(subtasks) && !counts(original);
+	const storedIds = new Set(original.map((st) => String(st.id)));
+	const renumbered =
+		counts(subtasks) &&
+		!counts(original) &&
+		subtasks.some((subtask) => !storedIds.has(String(subtask.id)));
 	const matched: (Subtask | undefined)[] = [];
 	const taken = new Set<Subtask>();
 	for (const same of [

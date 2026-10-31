@@ -254,6 +254,7 @@ describe('AI-written subtask dependencies that loop through the parent', () => {
 		expect(savedTask('2')).toMatchObject({ dependencies: [] });
 		expect(savedTask('2').metadata).toBeUndefined();
 	});
+
 	/** A pending subtask of task 1 as stored */
 	const stored = (id: string, title: string) => ({
 		...aiSubtask(1, []),
@@ -324,6 +325,37 @@ describe('AI-written subtask dependencies that loop through the parent', () => {
 			]);
 			expect(savedTask('2').dependencies).toEqual(['1.3']);
 			expect(warnings.join('\n')).not.toContain('removed');
+		}
+	);
+
+	it.each(['update-task', 'update --from'])(
+		'%s keeps the IDs of a retitled reply that only drops a gapped subtask (#863)',
+		async (via) => {
+			write(
+				task('1', [], [
+					stored('1', 'A'),
+					stored('2', 'B'),
+					stored('4', 'D')
+				] as never),
+				task('2', ['1.2'])
+			);
+
+			// 1 and 2 are IDs the stored subtasks have: kept, as the prompt asks
+			await rewrite(via, {
+				...task('1'),
+				subtasks: [
+					{ ...aiSubtask(1, []), title: 'A v2' },
+					{ ...aiSubtask(2, []), title: 'B v2' }
+				]
+			});
+
+			expect(
+				savedTask('1').subtasks.map((st: any) => [st.id, st.title])
+			).toEqual([
+				['1', 'A v2'],
+				['2', 'B v2']
+			]);
+			expect(savedTask('2').dependencies).toEqual(['1.2']);
 		}
 	);
 
