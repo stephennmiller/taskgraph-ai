@@ -105,6 +105,18 @@ describe('addSubtaskIn', () => {
 		);
 	});
 
+	it('refuses a task that also lists its new parent, which the move drops (#803)', () => {
+		// 5 needs 2 and 4; as 2.3 it drops 2 but still needs 4, which needs 2
+		const tasks = sample();
+		(tasks[4] as unknown as { dependencies: number[] }).dependencies = [2, 4];
+		const before = structuredClone(tasks);
+
+		expect(() => addSubtaskIn(tasks, '2', { fromTaskId: '5' })).toThrow(
+			'Cannot make task 5 a subtask of task 2: that would make a dependency loop'
+		);
+		expect(tasks).toEqual(before);
+	});
+
 	it('takes a task its new parent depends on directly (#803)', () => {
 		const tasks = sample();
 

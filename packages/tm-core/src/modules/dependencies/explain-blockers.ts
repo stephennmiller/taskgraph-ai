@@ -5,6 +5,10 @@
  * dependency is reported as a one-task cycle. Walks iteratively, so long
  * chains don't overflow the stack.
  *
+ * A parent can't finish before its subtasks, but they are only walked when
+ * one is in a loop with it (#803): with 4 needing 3 and 3.1 needing 4,
+ * `why 3.1` reports the loop 3, 3.1, 4 rather than "do 3".
+ *
  * A subtask also waits on what its parent waits on. Those blockers are drawn
  * under the parent (a node with `parentOf` set), so the tree says where they
  * come from:
@@ -118,13 +122,18 @@ export function explainBlockers(tasks: Task[], id: string): BlockerExplanation {
 		throw new Error(`Task ${id} not found`);
 	}
 
-	const cycles = findCycles(tasks, graph);
+	/** The loop each task is in */
+	const loopOf = new Map<string, string[]>();
+	for (const cycle of findCycles(tasks, graph)) {
+		for (const member of cycle) loopOf.set(member, cycle);
+	}
 	const rootCauses = new Map<string, BlockerRootCause>();
 	const expanded = new Set<string>();
 	const kinds = new Map<string, BlockerKind | undefined>();
 
 	const addCause = (cause: BlockerRootCause) => {
-		const key = cause.kind === 'cycle' ? `cycle:${cause.cycle}` : cause.id;
+		// Loops are disjoint, so the first member names one; joining is slow
+		const key = cause.kind === 'cycle' ? `cycle:${cause.cycle?.[0]}` : cause.id;
 		const known = rootCauses.get(key);
 		if (!known) {
 			rootCauses.set(key, cause);
@@ -141,7 +150,7 @@ export function explainBlockers(tasks: Task[], id: string): BlockerExplanation {
 	};
 
 	const addLoopEdge = (from: DependencyGraphNode, to: DependencyGraphNode) => {
-		const cycle = cycles.find((c) => c.includes(to.id)) ?? [to.id];
+		const cycle = loopOf.get(to.id) ?? [to.id];
 		addCause({
 			id: to.id,
 			title: to.title,
@@ -157,6 +166,24 @@ export function explainBlockers(tasks: Task[], id: string): BlockerExplanation {
 			kind: 'cycle' as const,
 			blockers: []
 		};
+	};
+
+	/**
+	 * Open subtasks of `parent` that don't list it and close a loop through
+	 * it with a dependency of their own (one through what they inherit is the
+	 * parent's own loop)
+	 */
+	const loopingSubtasks = (parent: DependencyGraphNode) => {
+		const loop = loopOf.get(parent.id);
+		if (!loop) return [];
+		return parent.subtasks
+			.map((id) => nodes.get(id) as DependencyGraphNode)
+			.filter(
+				(sub) =>
+					!isTaskComplete(sub.status) &&
+					!sub.dependencies.includes(parent.id) &&
+					sub.dependencies.some((dep) => loopOf.get(dep) === loop)
+			);
 	};
 
 	const dependencyState = createDependencyState(tasks);
@@ -197,6 +224,11 @@ export function explainBlockers(tasks: Task[], id: string): BlockerExplanation {
 		}
 		for (const dep of unfinished(node.id, node.dependencies)) {
 			deps.push({ node: dep, inherited: false });
+		}
+		// A parent can't finish before its subtasks; only one in a loop with it
+		// is news (#803)
+		for (const sub of loopingSubtasks(node)) {
+			if (!onPath.has(sub.id)) deps.push({ node: sub, inherited: false });
 		}
 		return { node, deps, at: 0, out, inheritedOut };
 	};
@@ -254,7 +286,11 @@ export function explainBlockers(tasks: Task[], id: string): BlockerExplanation {
 		if (frame.at < frame.deps.length) {
 			const { node: dep, inherited } = frame.deps[frame.at++];
 			const out = inherited ? frame.inheritedOut : frame.out;
-			if (onPath.has(dep.id)) {
+			if (
+				onPath.has(dep.id) ||
+				// A parent waiting on a subtask above: remove the edge into the parent
+				loopingSubtasks(dep).some((sub) => onPath.has(sub.id))
+			) {
 				// An inherited edge is the parent's dependency; that's what to remove
 				const from = inherited
 					? (nodes.get(frame.node.parent as string) as DependencyGraphNode)

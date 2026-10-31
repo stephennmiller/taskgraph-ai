@@ -114,6 +114,17 @@ export function wouldCloseDependencyLoop(
 	dependencyId: string
 ): string | undefined {
 	const graph = dependencyEdges(tasks);
+	// A subtask that lists its own parent stops the parent waiting on it,
+	// unless the parent lists the subtask itself
+	const parent = taskId.startsWith(`${dependencyId}.`)
+		? tasks.find((task) => String(task.id) === dependencyId)
+		: undefined;
+	if (parent && !(parent.dependencies || []).map(String).includes(taskId)) {
+		graph.set(
+			dependencyId,
+			(graph.get(dependencyId) ?? []).filter((id) => id !== taskId)
+		);
+	}
 	const closes = new Set<string>([taskId]);
 	if (!taskId.includes('.')) {
 		const ownSubtasks = directSubtaskIds(graph, taskId);
@@ -132,7 +143,8 @@ export function wouldCloseDependencyLoop(
  * Whether a new subtask of `parentId` would close a loop. The parent can't
  * finish before it unless it lists the parent, so it loops when what it
  * depends on reaches the parent: `dependencies` (full IDs) for a new subtask,
- * or those of the task `fromTaskId` being moved under the parent. The moved
+ * or those of the task `fromTaskId` being moved under the parent (which drops
+ * its dependency on the parent, see `dependenciesForMovedItem`). The moved
  * task also starts waiting on the parent's dependencies (not on itself or the
  * parent's subtasks), which loops when one of them reaches it.
  */
@@ -144,12 +156,17 @@ export function wouldSubtaskCloseLoop(
 	const graph = dependencyEdges(tasks);
 	const reaches = (from: string[], to: string) =>
 		reachesAny(graph, from, new Set([to])) !== undefined;
-	const waitsOnParent = (deps: string[]) =>
-		!deps.includes(parentId) && reaches(deps, parentId);
-	if (!('fromTaskId' in source)) return waitsOnParent(source.dependencies);
+	if (!('fromTaskId' in source)) {
+		const deps = source.dependencies;
+		return !deps.includes(parentId) && reaches(deps, parentId);
+	}
 	const taskId = source.fromTaskId;
+	const task = tasks.find((t) => String(t.id) === taskId);
+	const own = (task?.dependencies ?? [])
+		.map(String)
+		.filter((dep) => dep !== parentId);
 	const inherited = (graph.get(parentId) ?? []).filter(
 		(dep) => dep !== taskId && !dep.startsWith(`${parentId}.`)
 	);
-	return waitsOnParent(graph.get(taskId) ?? []) || reaches(inherited, taskId);
+	return reaches(own, parentId) || reaches(inherited, taskId);
 }

@@ -206,7 +206,7 @@ interface RemoveSubtaskOptions {
 
 /**
  * Remove subtasks ("5.2"), or with `convert` turn each into a top-level task
- * that depends on its old parent. Throws, changing nothing, when an ID isn't
+ * with the subtask's own dependencies (not its old parent). Throws, changing nothing, when an ID isn't
  * a subtask that exists.
  * @returns For each ID, the task it became, or null when it was deleted
  */
