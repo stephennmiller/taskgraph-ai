@@ -131,8 +131,14 @@ function getTurndownService(): TurndownService {
 	return turndownService;
 }
 
-/** Undo escaped newlines, tabs and quotes in stored task text */
+/**
+ * Undo escaped newlines, tabs and quotes in task text stored escaped: a
+ * whole field on one line with literal `\n` for its line breaks (the removed
+ * cloud storage sent text like this). Text with a real newline is left as
+ * written, so `"a\nb"` and `/\\d+/` in its code print as typed (#909).
+ */
 function unescapeStored(content: string): string {
+	if (content.includes('\n') || !content.includes('\\n')) return content;
 	// Order matters: handle escaped backslashes first
 	return content
 		.replace(/\\\\/g, '\\')
