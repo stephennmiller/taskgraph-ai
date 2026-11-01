@@ -137,7 +137,21 @@ This applies to every project set up before this change. Earlier `init` runs did
 
 Each person keeps their own `state.json` and current tag. Until you upgrade, `pathToClaudeCodeExecutable` in `config.json` keeps working. See [Shared and per-machine settings](/configuration#shared-and-per-machine-settings).
 
-## 9. `-p` means `--project`
+## 9. Merged commands
+
+Some commands were merged so `taskgraph --help` is shorter. The old names still work, with their old flags, but no longer show in help or Tab completion, and will be removed in a later release. Update scripts to the new form:
+
+| Before | Now |
+| --- | --- |
+| `remove-subtask --id=5.2` | `remove-task 5.2` |
+| `remove-subtask --id=5.2 --convert` | `remove-task 5.2 --convert` |
+| `add-dependency --id=3 --depends-on=1` | `depend 3 1` |
+| `remove-dependency --id=3 --depends-on=1` | `depend 3 1 --remove` |
+| `validate-dependencies` | `fix-dependencies --check` |
+
+`remove-task` still takes `--id`, and `depend` still takes `--id` and `--depends-on`.
+
+## 10. `-p` means `--project`
 
 `-p` used to mean `--prompt` in `add-task`, `expand`, `update`, `update-task`, `update-subtask`, `scope-up`, `scope-down` and `loop`, `--parent` in `add-subtask`, and `--project` everywhere else. It now means `--project` only. Write the others in full:
 

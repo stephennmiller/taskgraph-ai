@@ -2,8 +2,14 @@
  * @fileoverview Format handler for task storage files
  */
 
+import {
+	ERROR_CODES,
+	TaskGraphError
+} from '../../../../common/errors/taskgraph-error.js';
+import { isStoredTaskId } from '../../../../common/schemas/index.js';
 import type { Task, TaskMetadata } from '../../../../common/types/index.js';
 import { normalizeTaskStatuses } from '../../../tasks/utils/legacy-status.js';
+import { STORED_TAG_PATTERN } from '../../../tasks/utils/tag-names.js';
 import { isTagObject } from './schema-version.js';
 import { buildTagMetadata } from './tag-update.js';
 
@@ -21,6 +27,35 @@ export type FileFormat = 'legacy' | 'standard';
  */
 function isTagKey(data: any, key: string): boolean {
 	return (key !== 'tasks' && key !== 'metadata') || isTagObject(data[key]);
+}
+
+/**
+ * The tags to show or fall back to. A key that isn't safe to print stays in
+ * the file but is never listed.
+ */
+function listableTags(data: any): string[] {
+	return Object.keys(data).filter(
+		(key) => isTagKey(data, key) && STORED_TAG_PATTERN.test(key)
+	);
+}
+
+/**
+ * Refuse a file whose task or subtask IDs aren't numbers: commands put them in
+ * command text outside any data fence. Dropping the task instead would lose
+ * it on the next save. The message says where, not what, because the
+ * session-start hook hands error text to the agent.
+ * @throws {TaskGraphError} VALIDATION_ERROR
+ */
+function assertStoredIds(tasks: Task[]): void {
+	tasks.forEach((task, index) => {
+		const ids = [task, ...(task.subtasks ?? [])].map((item) => item.id);
+		if (!ids.every(isStoredTaskId)) {
+			throw new TaskGraphError(
+				`tasks.json: task ${index + 1} of ${tasks.length} in this tag has an ID that isn't a number`,
+				ERROR_CODES.VALIDATION_ERROR
+			);
+		}
+	});
 }
 
 /**
@@ -56,7 +91,9 @@ export class FormatHandler {
 				? this.extractTasksFromLegacy(data, tag)
 				: this.extractTasksFromStandard(data);
 
-		return Array.isArray(tasks) ? normalizeTaskStatuses(tasks) : tasks;
+		if (!Array.isArray(tasks)) return tasks;
+		assertStoredIds(tasks);
+		return normalizeTaskStatuses(tasks);
 	}
 
 	/**
@@ -70,9 +107,7 @@ export class FormatHandler {
 		}
 
 		// If we're looking for 'master' tag but it doesn't exist, try the first available tag
-		const availableKeys = Object.keys(data).filter((key) =>
-			isTagKey(data, key)
-		);
+		const availableKeys = listableTags(data);
 		if (tag === 'master' && availableKeys.length > 0) {
 			const firstTag = availableKeys[0];
 			const tagData = data[firstTag];
@@ -123,9 +158,7 @@ export class FormatHandler {
 		}
 
 		// If we're looking for 'master' tag but it doesn't exist, try the first available tag
-		const availableKeys = Object.keys(data).filter((key) =>
-			isTagKey(data, key)
-		);
+		const availableKeys = listableTags(data);
 		if (tag === 'master' && availableKeys.length > 0) {
 			const firstTag = availableKeys[0];
 			const tagData = data[firstTag];
@@ -156,7 +189,7 @@ export class FormatHandler {
 		const format = this.detectFormat(data);
 
 		if (format === 'legacy') {
-			return Object.keys(data).filter((key) => isTagKey(data, key));
+			return listableTags(data);
 		}
 
 		// Standard format - just has 'master' tag

@@ -343,21 +343,6 @@ export async function isOnDefaultBranch(projectRoot: string): Promise<boolean> {
 }
 
 /**
- * Check if the current working directory is inside a Git work-tree
- */
-export function insideGitWorkTree(): boolean {
-	try {
-		execSync('git rev-parse --is-inside-work-tree', {
-			stdio: 'ignore',
-			cwd: process.cwd()
-		});
-		return true;
-	} catch {
-		return false;
-	}
-}
-
-/**
  * Sanitize branch name to be a valid tag name
  */
 export function sanitizeBranchNameForTag(branchName: string): string {

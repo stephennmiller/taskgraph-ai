@@ -154,7 +154,7 @@ describe('add-subtask, remove-subtask and remove-task output', () => {
 		expect(res.status).toBe(1);
 		expect(res.stdout).toBe('');
 		expect(res.stderr).toContain(`✗ "2" isn't a subtask ID`);
-		expect(res.stderr).toContain('taskgraph remove-task --id=2');
+		expect(res.stderr).toContain('taskgraph remove-task 2');
 		expect(res.stderr).not.toMatch(BOX);
 		expect(readTasks()[0].subtasks).toHaveLength(2);
 		for (const line of lines(res.stderr)) {

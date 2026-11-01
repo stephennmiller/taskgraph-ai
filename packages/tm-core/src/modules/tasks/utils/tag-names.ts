@@ -2,6 +2,7 @@ import {
 	ERROR_CODES,
 	TaskGraphError
 } from '../../../common/errors/taskgraph-error.js';
+import { DEFAULT_CONFIG_VALUES } from '../../../common/interfaces/configuration.interface.js';
 
 /**
  * The characters a tag name may use: letters, numbers, hyphens and
@@ -25,6 +26,24 @@ export function assertTagName(name: string): void {
 	throw Object.assign(error, {
 		hint: 'Use letters, numbers, - and _, like `feature-auth`'
 	});
+}
+
+/**
+ * What a tag already in a project may hold to be listed or printed. A checkout
+ * can put anything there, and commands print tags outside any data fence, so
+ * no spaces, line breaks or shell characters. Wider than TAG_NAME_PATTERN:
+ * tags like `a/b` from before names were checked still work.
+ */
+export const STORED_TAG_PATTERN = /^[a-zA-Z0-9_./-]+$/;
+
+/**
+ * A tag read from a project's files (or its .env), or the default tag when it
+ * isn't safe to print
+ */
+export function storedTagOrDefault(tag: unknown): string {
+	return typeof tag === 'string' && STORED_TAG_PATTERN.test(tag)
+		? tag
+		: DEFAULT_CONFIG_VALUES.TAGS.DEFAULT_TAG;
 }
 
 /**

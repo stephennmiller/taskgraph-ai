@@ -9,6 +9,7 @@ import {
 	namedProjectRoot,
 	realpathOfExistingPrefix,
 	resolvePathInsideRoot,
+	storedTagOrDefault,
 	stringifyJson
 } from '@tm/core';
 import type { ContentResult, Context } from 'fastmcp';
@@ -96,7 +97,7 @@ export function getCurrentTag(projectRoot: string): string | null {
 
 		if (fs.existsSync(stateJsonPath)) {
 			const stateData = JSON.parse(fs.readFileSync(stateJsonPath, 'utf-8'));
-			return stateData.currentTag || 'master';
+			return storedTagOrDefault(stateData.currentTag);
 		}
 
 		return 'master';

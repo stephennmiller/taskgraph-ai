@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+	BUDGETS,
 	buildFixtureTasks,
 	findHeavyImports,
 	median
@@ -21,6 +22,17 @@ describe('check-startup-time', () => {
 		expect(master.tasks).toHaveLength(40);
 		expect(master.tasks[0].dependencies).toEqual([]);
 		expect(master.tasks[39]).toMatchObject({ id: 40, dependencies: [39] });
+	});
+
+	it('times next and show on task text with markdown and HTML, which would load a renderer (#836)', () => {
+		const [task] = buildFixtureTasks(1).master.tasks;
+
+		expect(BUDGETS.map(({ args }) => args.join(' '))).toEqual(
+			expect.arrayContaining(['next', 'show 1'])
+		);
+		expect(task.description).toContain('`');
+		expect(task.details).toMatch(/^- /m);
+		expect(task.details).toMatch(/<p>/);
 	});
 
 	it('names the heavy packages and MCP server code a command loaded', () => {

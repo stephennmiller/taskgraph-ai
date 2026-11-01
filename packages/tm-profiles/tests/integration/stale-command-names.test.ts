@@ -53,7 +53,7 @@ const ALLOWED_FILES = new Set([
 	'packages/tm-profiles/tests/integration/stale-command-names.test.ts'
 ]);
 
-const TEXT_FILE = /\.(ts|tsx|js|mjs|cjs|md|json|mdx|yml|yaml|txt|sh)$/;
+const TEXT_FILE = /\.(ts|tsx|js|mjs|cjs|md|json|mdx|yml|yaml|txt|sh|svg)$/;
 
 // Tracked files only, so untracked local files and worktrees cannot trip it
 function listTrackedFiles(): string[] {

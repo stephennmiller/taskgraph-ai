@@ -30,6 +30,7 @@
 import {
 	fenceAsData,
 	findUnmetCriteria,
+	isStoredTaskId,
 	type PluginCliCheck,
 	type PrimeContext,
 	type PrimeInProgressTask,
@@ -241,19 +242,20 @@ function formatReady(context: PrimeContext, width: number): string[] {
  *
  *   Task 3.2 is still in progress with no note from this session.
  *   If you worked on it, log what you did (write ' as '\''):
- *     taskgraph note 3.2 '<what you did or decided>'
+ *     taskgraph note '3.2' '<what you did or decided>'
  *   If it's finished, check its criteria and close it:
- *     taskgraph set-status --id=3.2 --status=done
+ *     taskgraph set-status --id='3.2' --status=done
  *   If you didn't work on it, say so in one line and stop.
  *
  * IDs only, no titles: Claude already has them from prime, and it keeps the
- * reminder to a fixed shape.
+ * reminder to a fixed shape. The commands are ready to run, so only an ID that
+ * is one goes in them; with none left there is no reminder.
  */
 export function formatUnnotedReminder(tasks: PrimeTask[]): string {
-	tasks = sanitizeForTerminal(tasks);
-	const ids = tasks.map((t) => t.id);
+	const ids = tasks.map((t) => t.id).filter(isStoredTaskId);
+	if (ids.length === 0) return '';
 	const one = ids.length === 1;
-	const id = one ? ids[0] : '<id>';
+	const id = one ? `'${ids[0]}'` : '<id>';
 	const list = one
 		? `Task ${ids[0]} is`
 		: `Tasks ${ids.slice(0, -1).join(', ')} and ${ids[ids.length - 1]} are`;

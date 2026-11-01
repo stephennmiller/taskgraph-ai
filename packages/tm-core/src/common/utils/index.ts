@@ -16,7 +16,6 @@ export {
 	getGitRepositoryRoot,
 	getDefaultBranch,
 	isOnDefaultBranch,
-	insideGitWorkTree,
 	sanitizeBranchNameForTag,
 	isValidBranchForTag,
 	type GitHubRepoInfo

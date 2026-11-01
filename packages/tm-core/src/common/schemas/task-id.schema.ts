@@ -31,6 +31,15 @@ function isValidTaskIdFormat(id: string): boolean {
 }
 
 /**
+ * Whether an ID read from a file, a number or text, is a task ID as it stands.
+ * No trimming: text around it would be printed with it.
+ */
+export function isStoredTaskId(id: unknown): boolean {
+	const text = String(id);
+	return MAIN_PATTERN.test(text) || SUBTASK_PATTERN.test(text);
+}
+
+/**
  * Check if a task ID is a main task (not a subtask)
  * Main tasks: "1", "2"
  * Subtasks: "1.1", "2.3"

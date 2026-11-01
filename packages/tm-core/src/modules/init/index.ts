@@ -19,4 +19,3 @@ export {
 	findInvalidRulesProfiles
 } from './claude-code.js';
 export { GITATTRIBUTES_FILE, type InitChange } from './init-changes.js';
-export { aliasMissingFile } from './shell-aliases.js';

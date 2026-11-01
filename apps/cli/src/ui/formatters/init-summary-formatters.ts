@@ -5,14 +5,17 @@
  *     .taskgraph/    tasks, settings and PRD templates
  *     .gitignore     added TaskGraph entries
  *
- *   Next steps
- *     1. Write a PRD in .taskgraph/docs/prd.md
- *        Templates are in .taskgraph/templates/
- *     2. Turn it into tasks: taskgraph parse-prd
- *     3. Start the first task: taskgraph next
+ *   Next: taskgraph add-task --prompt='<what to do>', or taskgraph parse-prd <file>
+ *   Add the slash commands in Claude Code:
+ *     /plugin marketplace add stephennmiller/taskgraph-ai
+ *     /plugin install taskgraph@taskgraph
+ *
+ *   AI runs through Claude Code; run `claude` once to sign in
+ *   Change the models or language with taskgraph models --setup or taskgraph lang
  *
  * It replaces a line per directory and file created (with absolute paths),
- * a "Success!" banner and a seven-step workflow box.
+ * a "Success!" banner, a seven-step workflow box and a numbered Next steps
+ * list that started with writing a PRD (#883).
  */
 
 import chalk from 'chalk';
@@ -41,16 +44,11 @@ export interface InitSummary {
 	alreadySetUp: boolean;
 	/** The Claude Code integration was installed in this run */
 	claudeCode: boolean;
-	/** Model setup was skipped, so the defaults are in use */
-	defaultModels: boolean;
 }
 
 /** The marketplace and plugin names from .claude-plugin/marketplace.json */
 export const PLUGIN_MARKETPLACE = 'stephennmiller/taskgraph-ai';
 export const PLUGIN_NAME = 'taskgraph@taskgraph';
-
-const PRD_PATH = '.taskgraph/docs/prd.md';
-const TEMPLATES_DIR = '.taskgraph/templates/';
 
 function formatChanges(changes: InitChange[]): string[] {
 	const width = Math.max(0, ...changes.map((change) => change.path.length));
@@ -58,28 +56,6 @@ function formatChanges(changes: InitChange[]): string[] {
 		(change) =>
 			`  ${change.path.padEnd(width)}  ${theme.muted(withCode(change.note))}`
 	);
-}
-
-function nextSteps(summary: InitSummary): string[][] {
-	const steps: string[][] = [];
-	if (summary.claudeCode) {
-		steps.push([
-			'Add the slash commands in Claude Code:',
-			theme.brand(`/plugin marketplace add ${PLUGIN_MARKETPLACE}`),
-			theme.brand(`/plugin install ${PLUGIN_NAME}`)
-		]);
-	}
-	if (!summary.alreadySetUp) {
-		steps.push(
-			[
-				`Write a PRD in ${PRD_PATH}`,
-				theme.muted(`Templates are in ${TEMPLATES_DIR}`)
-			],
-			[`Turn it into tasks: ${theme.brand('taskgraph parse-prd')}`],
-			[`Start the first task: ${theme.brand('taskgraph next')}`]
-		);
-	}
-	return steps;
 }
 
 /**
@@ -104,34 +80,31 @@ export function formatInitSummary(summary: InitSummary): string {
 	}
 	lines.push(...formatChanges([...summary.changes, ...(summary.hints ?? [])]));
 
-	const steps = nextSteps(summary);
-	if (steps.length > 0) {
-		lines.push('', theme.heading('Next steps'));
-		steps.forEach(([first, ...rest], index) => {
-			const number = `${index + 1}. `;
-			lines.push(`  ${number}${first}`);
-			for (const line of rest) {
-				lines.push(`  ${' '.repeat(number.length)}${line}`);
-			}
-		});
+	if (!summary.alreadySetUp || summary.claudeCode) lines.push('');
+	if (!summary.alreadySetUp) {
+		lines.push(
+			`Next: ${theme.brand("taskgraph add-task --prompt='<what to do>'")}, or ${theme.brand('taskgraph parse-prd <file>')}`
+		);
 	}
-
+	if (summary.claudeCode) {
+		lines.push(
+			theme.muted('Add the slash commands in Claude Code:'),
+			`  ${theme.brand(`/plugin marketplace add ${PLUGIN_MARKETPLACE}`)}`,
+			`  ${theme.brand(`/plugin install ${PLUGIN_NAME}`)}`
+		);
+	}
 	if (!summary.alreadySetUp) {
 		lines.push(
 			'',
 			theme.muted(
 				withCode('AI runs through Claude Code; run `claude` once to sign in')
+			),
+			theme.muted(
+				withCode(
+					'Change the models or language with `taskgraph models --setup` or `taskgraph lang`'
+				)
 			)
 		);
-		if (summary.defaultModels) {
-			lines.push(
-				theme.muted(
-					withCode(
-						'Using the default models; change them with `taskgraph models --setup`'
-					)
-				)
-			);
-		}
 	}
 
 	return lines.join('\n');
