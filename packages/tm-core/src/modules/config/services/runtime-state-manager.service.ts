@@ -12,6 +12,7 @@ import {
 import { DEFAULT_CONFIG_VALUES } from '../../../common/interfaces/configuration.interface.js';
 import { getLogger } from '../../../common/logger/index.js';
 import { FileOperations } from '../../storage/adapters/file-storage/file-operations.js';
+import { storedTagOrDefault } from '../../tasks/utils/tag-names.js';
 import type { EnvMap } from './project-env.js';
 
 /**
@@ -86,20 +87,15 @@ export class RuntimeStateManager {
 				throw new Error('state.json does not hold a JSON object');
 			}
 
-			// Map legacy field names to current interface
+			// Map legacy field names to current interface. TASKGRAPH_TAG overrides
+			// the file; it can come from the project's .env, so it's checked too.
 			const state: RuntimeState = {
-				currentTag:
-					rawState.currentTag ||
-					rawState.activeTag ||
-					DEFAULT_CONFIG_VALUES.TAGS.DEFAULT_TAG,
+				currentTag: storedTagOrDefault(
+					this.env.TASKGRAPH_TAG || rawState.currentTag || rawState.activeTag
+				),
 				lastUpdated: rawState.lastUpdated,
 				metadata: rawState.metadata
 			};
-
-			// Apply environment variable override for current tag
-			if (this.env.TASKGRAPH_TAG) {
-				state.currentTag = this.env.TASKGRAPH_TAG;
-			}
 
 			this.currentState = state;
 			return state;
@@ -110,7 +106,9 @@ export class RuntimeStateManager {
 
 				// Check environment variable
 				if (this.env.TASKGRAPH_TAG) {
-					this.currentState.currentTag = this.env.TASKGRAPH_TAG;
+					this.currentState.currentTag = storedTagOrDefault(
+						this.env.TASKGRAPH_TAG
+					);
 				}
 
 				return this.currentState;

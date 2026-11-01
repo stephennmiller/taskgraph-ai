@@ -384,8 +384,8 @@ describe('tasks.parsePrd', () => {
 		});
 	});
 
-	it('fails instead of replacing tasks added to the empty tag during the AI call, naming the tag without escape codes', async () => {
-		const name = 'evil\u001b[31m';
+	it('fails instead of replacing tasks added to the empty tag during the AI call', async () => {
+		const name = 'evil';
 		p.write({ [name]: { tasks: [], metadata: {} } });
 		p.generateObject.mockImplementation(async () => {
 			p.write({ [name]: { tasks: [existing(1, 'Meanwhile')], metadata: {} } });
@@ -398,6 +398,16 @@ describe('tasks.parsePrd', () => {
 		expect(p.read()[name].tasks.map((t: any) => t.title)).toEqual([
 			'Meanwhile'
 		]);
+	});
+
+	it('refuses a stored tag with escape codes', async () => {
+		const name = 'evil\u001b[31m';
+		p.write({ [name]: { tasks: [], metadata: {} } });
+
+		await expect(parse({ tag: name })).rejects.toThrow(
+			"isn't a valid tag name"
+		);
+		expect(p.generateObject).not.toHaveBeenCalled();
 	});
 
 	it('fences the PRD in <prd> tags that its own text cannot close (#669)', async () => {
