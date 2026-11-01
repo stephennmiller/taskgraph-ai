@@ -1,26 +1,38 @@
 import { stringifyJson } from './stringify-json.js';
 
-/** `<` and characters a model may read as `<` */
+/** `<`, characters a model may read as `<`, and `<` as an HTML entity (`&lt;`, `&#60;`, `&#x3c;`, `;` optional) */
 const OPEN =
-	'[<\\uFE64\\uFF1C\\u2039\\u27E8\\u3008\\u2329\\u276C\\u276E\\u2770]';
+	'(?:[<\\uFE64\\uFF1C\\u2039\\u27E8\\u3008\\u2329\\u276C\\u276E\\u2770]|&(?:lt|#0*60|#x0*3c);?)';
 /** Invisible characters: format characters (zero-width, bidi marks), combining marks, U+180E */
 const HIDDEN = '\\p{Cf}\\p{Mn}\\u180E';
-/** Whitespace, `/` and slash lookalikes, and invisible characters, in one class so the match stays linear */
-const GAP = `[\\s/\\u2044\\u2215\\uFF0F\\u29F8${HIDDEN}]*`;
+/**
+ * Whitespace, `/` and slash lookalikes, `/` as an HTML entity, and invisible
+ * characters. No class character is `&` or `;`, so the match stays linear.
+ */
+const GAP = `(?:[\\s/\\u2044\\u2215\\uFF0F\\u29F8${HIDDEN}]|&(?:sol|#0*47|#x0*2f);?)*`;
 const INVISIBLE = `[${HIDDEN}]*`;
 
 /**
  * What may stand between the words of a tag name: `-`, `_`, a dash
- * lookalike, `.`, `~`, whitespace, a Hangul filler or nothing. One class with
- * the invisible characters, so the match stays linear.
+ * lookalike, `.`, `~`, whitespace, a Hangul filler, `-` or `_` as a numeric
+ * HTML entity, or nothing. No class character is `&` or `;`, so the match
+ * stays linear.
  */
-const SEPARATOR = `[-_\\u2010-\\u2015\\u2212\\uFE63\\uFF0D\\uFF3F.~\\s\\u1160\\u3164${HIDDEN}]*`;
+const SEPARATOR = `(?:[-_\\u2010-\\u2015\\u2212\\uFE63\\uFF0D\\uFF3F.~\\s\\u1160\\u3164${HIDDEN}]|&#(?:0*(?:45|95)|x0*(?:2d|5f));?)*`;
+
+/** `c`, or `c` in either case as a numeric HTML entity (`t` as `&#116;` or `&#x54;`) */
+function letter(c: string): string {
+	const entities = [...new Set([c.toLowerCase(), c.toUpperCase()])]
+		.map((x) => x.codePointAt(0) ?? 0)
+		.map((n) => `0*${n}|x0*${n.toString(16)}`);
+	return `(?:[${c}]|&#(?:${entities.join('|')});?)`;
+}
 
 /** The tag name with invisible characters allowed between letters and any separator between words */
 function tagName(tag: string): string {
 	return tag
 		.split(/[-_]/)
-		.map((word) => [...word].map((c) => `[${c}]`).join(INVISIBLE))
+		.map((word) => [...word].map(letter).join(INVISIBLE))
 		.join(SEPARATOR);
 }
 
