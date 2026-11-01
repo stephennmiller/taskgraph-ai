@@ -50,12 +50,14 @@ Or in the project's `.mcp.json`:
   "mcpServers": {
     "taskgraph-ai": {
       "command": "npx",
-      "args": ["-y", "taskgraph-ai"],
+      "args": ["-y", "taskgraph-ai@<version>"],
       "env": { "TASKGRAPH_TOOLS": "standard" }
     }
   }
 }
 ```
+
+Replace `<version>` with the one `taskgraph --version` prints. A pinned version means everyone who opens the project runs the same server, not whatever npm tags `latest` that day. `taskgraph init --mcp` writes a pinned entry for you, and running it again after an upgrade moves the pin.
 
 `TASKGRAPH_TOOLS` controls how many tools are loaded: `core` (7, the default), `standard` (16) or `all`. `all` registers every tool and gives the MCP host full project control. Prefer `core` or `standard` unless the user needs a tool only `all` includes. Ask the user to restart Claude Code and run `/mcp` to confirm `taskgraph-ai` is connected.
 

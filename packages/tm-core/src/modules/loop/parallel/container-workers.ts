@@ -20,7 +20,7 @@ import { randomBytes } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { promisify } from 'node:util';
-import { TASKGRAPH_VERSION } from '../../../common/constants/index.js';
+import { TASKGRAPH_PACKAGE } from '../../../common/constants/index.js';
 import type { TaskStatus } from '../../../common/types/index.js';
 import {
 	CONTAINER_RUNTIME,
@@ -315,7 +315,7 @@ export class ContainerWorkers {
 				stateDir,
 				prompt,
 				claudeArgs,
-				taskgraphPackage: `taskgraph-ai@${TASKGRAPH_VERSION}`,
+				taskgraphPackage: TASKGRAPH_PACKAGE,
 				user:
 					process.getuid && process.getgid
 						? `${process.getuid()}:${process.getgid()}`

@@ -179,7 +179,7 @@ Add `TASKGRAPH_ALLOW_METADATA_UPDATES=true` to your MCP server environment confi
   "mcpServers": {
     "taskgraph-ai": {
       "command": "npx",
-      "args": ["-y", "taskgraph-ai"],
+      "args": ["-y", "taskgraph-ai@<version>"],
       "env": {
         "TASKGRAPH_ALLOW_METADATA_UPDATES": "true"
       }
@@ -187,6 +187,8 @@ Add `TASKGRAPH_ALLOW_METADATA_UPDATES=true` to your MCP server environment confi
   }
 }
 ```
+
+Replace `<version>` with the one `taskgraph --version` prints, or let `taskgraph init --mcp` write the entry.
 
 **Usage example:**
 

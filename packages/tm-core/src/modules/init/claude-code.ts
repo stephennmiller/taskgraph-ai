@@ -8,6 +8,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { pruneLegacySlashCommands } from '@tm/profiles';
+import { TASKGRAPH_PACKAGE } from '../../common/constants/index.js';
 import { getLogger } from '../../common/logger/index.js';
 import {
 	MCP_SERVER_KEY,
@@ -145,13 +146,29 @@ function formatJSONWithTabs(obj: unknown): string {
 	);
 }
 
+/** `taskgraph-ai` or `taskgraph-ai@1.2.3`; a dist-tag, range or path is the user's choice */
+const PINNABLE_SPEC = /^taskgraph-ai(@\d+\.\d+\.\d+(-[\w.]+)?)?$/;
+/** Commands that read the args after them as npm package specs */
+const PACKAGE_RUNNER = /(^|[\\/])(npx|bunx|pnpx|pnpm|npm|yarn)(\.cmd|\.exe)?$/i;
+
+/** Pin a bare or version-pinned spec, only after a package runner (not e.g. `docker run taskgraph-ai`) */
+function pinArgs(server: { command?: unknown; args: unknown[] }): unknown[] {
+	let afterRunner = PACKAGE_RUNNER.test(String(server.command ?? ''));
+	return server.args.map((arg) => {
+		if (typeof arg !== 'string') return arg;
+		if (afterRunner && PINNABLE_SPEC.test(arg)) return TASKGRAPH_PACKAGE;
+		if (PACKAGE_RUNNER.test(arg)) afterRunner = true;
+		return arg;
+	});
+}
+
 /** Add the TaskGraph server to `.mcp.json`, creating the file if needed */
 function setUpMcpConfig(projectRoot: string, report: InitReport): void {
 	const mcpPath = path.join(projectRoot, '.mcp.json');
 	// "core" loads the 7 essential daily workflow tools (see tool tiers)
 	const server = {
 		command: 'npx',
-		args: ['-y', MCP_SERVER_KEY],
+		args: ['-y', TASKGRAPH_PACKAGE],
 		env: { TASKGRAPH_TOOLS: 'core' }
 	};
 	const fresh = () =>
@@ -167,11 +184,13 @@ function setUpMcpConfig(projectRoot: string, report: InitReport): void {
 	try {
 		const config = JSON.parse(fs.readFileSync(mcpPath, 'utf8'));
 		if (!config.mcpServers) config.mcpServers = {};
-		// Leave the config alone if any server already launches this package
-		if (Object.values(config.mcpServers).some(launchesTaskGraphPackage)) {
-			return;
-		}
-		if (!config.mcpServers[MCP_SERVER_KEY]) {
+		// A server that already launches this package is kept, with a bare or
+		// version-pinned spec moved to this version
+		const existing = Object.values(config.mcpServers).filter(
+			launchesTaskGraphPackage
+		) as { command?: unknown; args: unknown[] }[];
+		for (const found of existing) found.args = pinArgs(found);
+		if (existing.length === 0 && !config.mcpServers[MCP_SERVER_KEY]) {
 			config.mcpServers[MCP_SERVER_KEY] = server;
 		}
 		fs.writeFileSync(mcpPath, `${formatJSONWithTabs(config)}\n`);

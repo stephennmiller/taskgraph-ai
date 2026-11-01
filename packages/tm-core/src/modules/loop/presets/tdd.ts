@@ -3,6 +3,9 @@
  * test-first: a failing test, the code that passes it, then a commit,
  * for each subtask in turn. Replaces the old `autopilot` state machine.
  */
+
+import { TASKGRAPH_PACKAGE } from '../../../common/constants/index.js';
+
 export const TDD_PRESET = `# TaskGraph Loop - Test-Driven Development
 
 Implement ONE task from the TaskGraph backlog, test-first. Work through its subtasks in order, with a RED, GREEN, COMMIT cycle for each.
@@ -15,7 +18,7 @@ Implement ONE task from the TaskGraph backlog, test-first. Work through its subt
 
 ### Setup
 
-1. If the taskgraph command is not found, run: npm i -g taskgraph-ai
+1. If the taskgraph command is not found, run: npm i -g ${TASKGRAPH_PACKAGE}
 2. Run taskgraph next to get the next available task, and taskgraph show <id> to read it.
 3. Check git status. Changes under .taskgraph/ are fine; if anything else is uncommitted, stop and output <loop-blocked>TASK <id>: uncommitted changes</loop-blocked>.
 4. Work on a branch named task-<id>; create it if it does not exist, or continue on it if it does.

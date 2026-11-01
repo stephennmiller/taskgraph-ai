@@ -18,6 +18,8 @@ To optimize LLM context usage, you can control which TaskGraph MCP tools are loa
 
 ### Configuration Modes
 
+The examples pin the package to one version: replace `<version>` with the one `taskgraph --version` prints, or let `taskgraph init --mcp` write the entry.
+
 #### Core Tools (Default, Lean Mode)
 Loads only 7 essential tools for daily development. Ideal for minimal context usage.
 
@@ -35,7 +37,7 @@ Loads only 7 essential tools for daily development. Ideal for minimal context us
   "mcpServers": {
     "taskgraph-ai": {
       "command": "npx",
-      "args": ["-y", "taskgraph-ai"],
+      "args": ["-y", "taskgraph-ai@<version>"],
       "env": {
         "TASKGRAPH_TOOLS": "core"
       }
@@ -65,7 +67,7 @@ Loads 16 commonly used tools. Balances functionality with context efficiency.
   "mcpServers": {
     "taskgraph-ai": {
       "command": "npx",
-      "args": ["-y", "taskgraph-ai"],
+      "args": ["-y", "taskgraph-ai@<version>"],
       "env": {
         "TASKGRAPH_TOOLS": "standard"
       }
@@ -82,7 +84,7 @@ Specify exactly which tools to load using a comma-separated list. Tool names are
   "mcpServers": {
     "taskgraph-ai": {
       "command": "npx",
-      "args": ["-y", "taskgraph-ai"],
+      "args": ["-y", "taskgraph-ai@<version>"],
       "env": {
         "TASKGRAPH_TOOLS": "get_tasks,next_task,set_task_status,add_note"
       }
@@ -99,7 +101,7 @@ Loads every tool, including `github_status` and `github_push` (see [GitHub Sync]
   "mcpServers": {
     "taskgraph-ai": {
       "command": "npx",
-      "args": ["-y", "taskgraph-ai"],
+      "args": ["-y", "taskgraph-ai@<version>"],
       "env": {
         "TASKGRAPH_TOOLS": "all"
       }

@@ -22,12 +22,14 @@ Set it in the `env` block of `.mcp.json` (recommended):
   "mcpServers": {
     "taskgraph-ai": {
       "command": "npx",
-      "args": ["-y", "taskgraph-ai"],
+      "args": ["-y", "taskgraph-ai@<version>"],
       "env": { "TASKGRAPH_TOOLS": "standard" }
     }
   }
 }
 ```
+
+Replace `<version>` with the one `taskgraph --version` prints, or let `taskgraph init --mcp` write the entry.
 
 Or when registering the server with Claude Code:
 
@@ -53,12 +55,14 @@ Long-running AI operations such as `parse_prd`, `expand_task`, `research` and `a
   "mcpServers": {
     "taskgraph-ai": {
       "command": "npx",
-      "args": ["-y", "taskgraph-ai"],
+      "args": ["-y", "taskgraph-ai@<version>"],
       "timeout": 300
     }
   }
 }
 ```
+
+Replace `<version>` with the one `taskgraph --version` prints, or let `taskgraph init --mcp` write the entry.
 
 If you still see `MCP request timed out after 60000ms`, check that `timeout` is present, restart Claude Code, and try `600` for very large operations.
 
