@@ -67,6 +67,17 @@ describe('first run', () => {
 		expect(result.stderr).toContain(`No TaskGraph project at ${dir}`);
 	});
 
+	it('points an old `loop -p tdd` at --prompt, and `list -p` at init (#882)', () => {
+		const loop = run(['loop', '-ptdd', '-n', '1']);
+		const list = run(['list', '-p', dir]);
+
+		expect(loop.status).toBe(1);
+		expect(loop.stderr).toContain('-p means --project');
+		expect(list.status).toBe(1);
+		expect(list.stderr).toContain('taskgraph init');
+		expect(list.stderr).not.toContain('--prompt');
+	});
+
 	it('works on the project TASKGRAPH_PROJECT_ROOT names, from any folder', {
 		timeout: spawnTimeout(3)
 	}, () => {

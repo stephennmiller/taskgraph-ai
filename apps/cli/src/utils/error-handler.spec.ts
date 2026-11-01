@@ -156,6 +156,12 @@ describe('formatCommanderError', () => {
 		);
 	});
 
+	it('keeps the usual hint where -p never meant --prompt', () => {
+		const text = formatCommanderError("error: unknown option '-p'", 'models');
+
+		expect(plain(text)).toContain('taskgraph models --help');
+	});
+
 	it('turns Commander suggestions for commands into a runnable hint', () => {
 		const text = formatCommanderError(
 			"error: unknown command 'shwo'\n(Did you mean show?)\n"

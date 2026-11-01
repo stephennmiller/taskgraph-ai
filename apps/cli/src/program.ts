@@ -85,7 +85,8 @@ function requireProject(_hookedCommand: Command, actionCommand: Command) {
 		printError(
 			`No TaskGraph project at ${explicitRoot}`,
 			// An old script's `loop -p tdd` or `add-subtask -p 5` lands here (#882)
-			process.argv.includes('-p')
+			['loop', 'add-subtask'].includes(topLevel.name()) &&
+				process.argv.some((arg) => /^-p/.test(arg))
 				? '-p means --project; write --prompt or --parent in full'
 				: 'Run `taskgraph init` in that folder to set one up'
 		);
