@@ -54,10 +54,7 @@ export class MoveCommand extends Command {
 			.option('--tag <tag>', 'Specify tag context for task operations')
 			.option('--from-tag <tag>', 'Source tag for cross-tag moves')
 			.option('--to-tag <tag>', 'Target tag for cross-tag moves')
-			.option(
-				'--with-dependencies',
-				'Move dependent tasks along with main task'
-			)
+			.option('--with-dependencies', 'Also move the tasks they depend on')
 			.option(
 				'--ignore-dependencies',
 				'Break cross-tag dependencies during move'

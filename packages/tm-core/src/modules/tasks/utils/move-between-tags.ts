@@ -39,28 +39,34 @@ function dependencyTaskId(dep: unknown): number | null {
 }
 
 /**
- * IDs the tasks depend on, directly or through each other, in the order
- * found (depth first). "5" reads as 5; a subtask ID such as "5.2" stays a
- * string and isn't followed further.
+ * Task IDs the tasks or their subtasks depend on, directly or through each
+ * other, in the order found (depth first). A subtask ID such as "5.2" brings
+ * its parent, 5, since subtasks move with their parent.
  */
-function forwardDependencies(sources: Item[], tasks: Item[]): DependencyId[] {
-	const found = new Set<DependencyId>();
-	const seen = new Set<DependencyId>();
-	const visit = (taskId: DependencyId, depth: number) => {
-		if (depth >= 100 || seen.has(taskId)) return;
+function forwardDependencies(sources: Item[], tasks: Item[]): number[] {
+	const found = new Set<number>();
+	const seen = new Set<number>();
+	const visit = (taskId: number | null, depth: number) => {
+		if (taskId === null || depth >= 100 || seen.has(taskId)) return;
 		seen.add(taskId);
 		const task = findTask(tasks, taskId);
-		for (const dep of task?.dependencies ?? []) {
-			const canonical =
-				typeof dep === 'string' ? canonicalTaskId(dep) : undefined;
-			const id =
-				canonical && !canonical.includes('.') ? Number(canonical) : dep;
-			if (id == null || id === taskId) continue;
+		if (!task) return;
+		const deps: unknown[] = [
+			...(task.dependencies ?? []),
+			...(task.subtasks ?? []).flatMap((st: Item) =>
+				(st.dependencies ?? [])
+					.filter((dep: unknown) => dep != null)
+					.map((dep: string | number) => resolveSubtaskDependency(task.id, dep))
+			)
+		];
+		for (const dep of deps) {
+			const id = dependencyTaskId(dep);
+			if (id === null || id === taskId) continue;
 			found.add(id);
 			visit(id, depth + 1);
 		}
 	};
-	for (const source of sources) visit(source.id, 0);
+	for (const source of sources) visit(dependencyTaskId(source.id), 0);
 	return [...found];
 }
 
@@ -116,16 +122,16 @@ First promote it to a full task using:
 	let ignored = false;
 	if (options.withDependencies) {
 		const sourceIds = new Set(source.map((t) => String(parseInt(t.id, 10))));
-		const dependencies = forwardDependencies(sourceTasks, source)
-			.map(dependencyTaskId)
-			.filter((id): id is number => id !== null && sourceIds.has(String(id)));
+		const dependencies = forwardDependencies(sourceTasks, source).filter((id) =>
+			sourceIds.has(String(id))
+		);
 		toMove = [...taskIds];
 		for (const id of dependencies) {
 			if (!toMove.some((m) => String(m) === String(id))) toMove.push(id);
 		}
 	}
 	// withDependencies brings only what the tasks depend on, so dependents
-	// left behind and subtask-held dependencies are still checked
+	// left behind and archived dependencies are still checked
 	{
 		const movedIds = new Set(toMove.map((id) => String(dependencyTaskId(id))));
 		const isMoved = (id: DependencyId) => {

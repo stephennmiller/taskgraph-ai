@@ -81,6 +81,66 @@ describe('moveTasksBetweenTags', () => {
 		expect(ids(tags.get('master') ?? [])).toEqual([]);
 	});
 
+	it("brings what a moved task's subtasks depend on with withDependencies (#917)", () => {
+		const tags = new Map<string, Task[]>([
+			[
+				'master',
+				[
+					{ id: 1, title: 'Set up', dependencies: [], subtasks: [] },
+					{
+						id: 2,
+						title: 'Parser',
+						dependencies: [],
+						subtasks: [{ id: 1, title: 'Read', dependencies: ['1'] }]
+					}
+				] as any
+			],
+			['feature', []]
+		]);
+
+		const result = moveTasksBetweenTags(
+			tags,
+			['2'],
+			'master',
+			'feature',
+			{ withDependencies: true },
+			archived
+		);
+
+		expect(result.movedTasks.map((m) => String(m.id))).toEqual(['2', '1']);
+		expect(ids(tags.get('master') ?? [])).toEqual([]);
+	});
+
+	it("follows a subtask dependency to its parent task's dependencies (#917)", () => {
+		const tags = new Map<string, Task[]>([
+			[
+				'master',
+				[
+					{
+						id: 1,
+						title: 'Set up',
+						dependencies: ['4'],
+						subtasks: [{ id: 1, title: 'Read', dependencies: [] }]
+					},
+					{ id: 3, title: 'Plugins', dependencies: ['1.1'], subtasks: [] },
+					{ id: 4, title: 'Config', dependencies: [], subtasks: [] }
+				] as any
+			],
+			['feature', []]
+		]);
+
+		const result = moveTasksBetweenTags(
+			tags,
+			['3'],
+			'master',
+			'feature',
+			{ withDependencies: true },
+			archived
+		);
+
+		expect(result.movedTasks.map((m) => String(m.id))).toEqual(['3', '1', '4']);
+	});
+
 	it('reads a dependency stored as "01" as task 1, which stays behind (#864)', () => {
 		const tags = tagsWith();
 		tags.set('empty', []);

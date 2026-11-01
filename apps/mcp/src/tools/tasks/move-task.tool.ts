@@ -41,7 +41,7 @@ const MoveTaskSchema = z.object({
 	withDependencies: z
 		.boolean()
 		.optional()
-		.describe('Move dependent tasks along with main task'),
+		.describe('Also move the tasks they depend on'),
 	ignoreDependencies: z
 		.boolean()
 		.optional()
