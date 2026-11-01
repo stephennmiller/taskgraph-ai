@@ -24,6 +24,8 @@ npm run evals:review              # real-model review-bot evals on past reverts 
 
 Changing a parse-prd, expand or analyze-complexity prompt, or the default model: run `npm run evals` before and after, and update `evals/baseline.json` (`-- --update-baseline`) when the plans got better. See CONTRIBUTING.md.
 
+Agents: use `bin/agent-cli` first for worktrees (`wt`, `wt-prune`), merge readiness (`ready <pr>`), rebasing after a merge (`conflicts`, `rebase`) and attribution checks (`attribution <pr>`). `bin/agent-cli --help` lists them; each takes `--json`.
+
 `npm install` points git at `.githooks/`. The pre-push hook runs `biome format` on files changed since `origin/main`. Fix with `npm run format`; `git push --no-verify` skips it once.
 
 ## Test Guidelines
