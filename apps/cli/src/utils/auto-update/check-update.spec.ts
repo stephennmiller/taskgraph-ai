@@ -161,6 +161,10 @@ describe('update cache', () => {
 
 	it.each([
 		['a non-semver string', 'latest; rm -rf /'],
+		['a version with an install spec after it', '99.0.0@git+https://x.test/y'],
+		['a version with a trailing newline', '2.0.0\n'],
+		['a version with an escape sequence', '2.0.0-\u001b[2J'],
+		['a v-prefixed version', 'v2.0.0'],
 		['a number', 2],
 		['an object', { version: '2.0.0' }]
 	])(

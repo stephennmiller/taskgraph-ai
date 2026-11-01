@@ -19,11 +19,14 @@ vi.mock('../../ui/spinner.js', () => ({
 
 import { performAutoUpdate } from './install.js';
 
-function fakeNpm(exitCode: number) {
+function fakeNpm(exitCode: number, stderr?: string) {
 	const child: any = new EventEmitter();
 	child.stdout = new EventEmitter();
 	child.stderr = new EventEmitter();
-	setImmediate(() => child.emit('close', exitCode));
+	setImmediate(() => {
+		if (stderr) child.stderr.emit('data', stderr);
+		child.emit('close', exitCode);
+	});
 	return child;
 }
 
@@ -95,6 +98,19 @@ describe('performAutoUpdate', () => {
 		spawn.mockReturnValue(fakeNpm(1));
 
 		await expect(performAutoUpdate('1.2.3', { home })).resolves.toBe(false);
+	});
+
+	it('strips escape sequences from the npm error output it prints', async () => {
+		spawn.mockReturnValue(
+			fakeNpm(1, 'npm warn deprecated x@1: \u001b]0;t\u0007hi\u001b[2J')
+		);
+
+		await expect(performAutoUpdate('1.2.3', { home })).resolves.toBe(false);
+
+		const printed = vi.mocked(console.log).mock.calls.flat().join('\n');
+		expect(printed).toContain('deprecated x@1: hi');
+		expect(printed).not.toContain('\u001b]0;');
+		expect(printed).not.toContain('\u001b[2J');
 	});
 
 	it('does nothing in CI', async () => {

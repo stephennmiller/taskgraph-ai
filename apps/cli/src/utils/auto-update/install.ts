@@ -12,6 +12,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
+import { stripTerminalControls } from '@tm/core';
 import chalk from 'chalk';
 
 import { SEMVER_RE } from './changelog.js';
@@ -99,7 +100,10 @@ async function installFromNpm(latestVersion: string): Promise<boolean> {
 					)
 				);
 				if (errorOutput) {
-					console.log(chalk.dim(`Error: ${errorOutput.trim()}`));
+					// npm's warnings quote registry text, such as a package's deprecation message
+					console.log(
+						chalk.dim(`Error: ${stripTerminalControls(errorOutput).trim()}`)
+					);
 				}
 				resolve(false);
 			}
