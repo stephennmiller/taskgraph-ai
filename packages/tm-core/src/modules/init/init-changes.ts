@@ -111,7 +111,7 @@ export function describeInitChanges(
 		[
 			'.mcp.json',
 			'TaskGraph MCP server for Claude Code',
-			'added the TaskGraph MCP server'
+			'added or updated the TaskGraph MCP server'
 		]
 	];
 	for (const [relative, createdNote, changedNote] of projectFiles) {

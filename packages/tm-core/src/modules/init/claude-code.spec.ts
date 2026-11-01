@@ -166,6 +166,33 @@ describe('setUpClaudeCode', () => {
 		}
 	);
 
+	it.each([
+		[
+			'a Docker image named taskgraph-ai',
+			{ command: 'docker', args: ['run', '-i', '--rm', 'taskgraph-ai'] },
+			['run', '-i', '--rm', 'taskgraph-ai']
+		],
+		[
+			'npx behind cmd /c on Windows',
+			{ command: 'cmd', args: ['/c', 'npx', '-y', 'taskgraph-ai@0.1.0'] },
+			['/c', 'npx', '-y', TASKGRAPH_PACKAGE]
+		]
+	])(
+		'on a re-run, pins only an arg npm will read as a package: %s',
+		(_, server, expected) => {
+			fs.writeFileSync(
+				path.join(projectDir, '.mcp.json'),
+				JSON.stringify({ mcpServers: { tm: server } })
+			);
+
+			setUpClaudeCode(projectDir, { mcp: true }, report);
+
+			expect(JSON.parse(read('.mcp.json')).mcpServers.tm.args).toEqual(
+				expected
+			);
+		}
+	);
+
 	it('backs up an .mcp.json that is not valid JSON, replaces it and warns once', () => {
 		fs.writeFileSync(path.join(projectDir, '.mcp.json'), '{ broken');
 

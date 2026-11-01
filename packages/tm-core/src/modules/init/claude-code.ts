@@ -148,6 +148,19 @@ function formatJSONWithTabs(obj: unknown): string {
 
 /** `taskgraph-ai` or `taskgraph-ai@1.2.3`; a dist-tag, range or path is the user's choice */
 const PINNABLE_SPEC = /^taskgraph-ai(@\d+\.\d+\.\d+(-[\w.]+)?)?$/;
+/** Commands that read the args after them as npm package specs */
+const PACKAGE_RUNNER = /(^|[\\/])(npx|bunx|pnpx|pnpm|npm|yarn)(\.cmd|\.exe)?$/i;
+
+/** Pin a bare or version-pinned spec, only after a package runner (not e.g. `docker run taskgraph-ai`) */
+function pinArgs(server: { command?: unknown; args: unknown[] }): unknown[] {
+	let afterRunner = PACKAGE_RUNNER.test(String(server.command ?? ''));
+	return server.args.map((arg) => {
+		if (typeof arg !== 'string') return arg;
+		if (afterRunner && PINNABLE_SPEC.test(arg)) return TASKGRAPH_PACKAGE;
+		if (PACKAGE_RUNNER.test(arg)) afterRunner = true;
+		return arg;
+	});
+}
 
 /** Add the TaskGraph server to `.mcp.json`, creating the file if needed */
 function setUpMcpConfig(projectRoot: string, report: InitReport): void {
@@ -175,14 +188,8 @@ function setUpMcpConfig(projectRoot: string, report: InitReport): void {
 		// version-pinned spec moved to this version
 		const existing = Object.values(config.mcpServers).filter(
 			launchesTaskGraphPackage
-		) as { args: unknown[] }[];
-		for (const found of existing) {
-			found.args = found.args.map((arg) =>
-				typeof arg === 'string' && PINNABLE_SPEC.test(arg)
-					? TASKGRAPH_PACKAGE
-					: arg
-			);
-		}
+		) as { command?: unknown; args: unknown[] }[];
+		for (const found of existing) found.args = pinArgs(found);
 		if (existing.length === 0 && !config.mcpServers[MCP_SERVER_KEY]) {
 			config.mcpServers[MCP_SERVER_KEY] = server;
 		}
