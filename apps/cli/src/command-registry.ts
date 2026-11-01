@@ -17,7 +17,11 @@ import { LangCommand } from './commands/lang.command.js';
 import { ModelsCommand } from './commands/models/models.command.js';
 import { SyncReadmeCommand } from './commands/sync-readme.command.js';
 import { ExpandCommand } from './commands/expand.command.js';
-import { ScopeDownCommand, ScopeUpCommand } from './commands/scope.command.js';
+import {
+	ScopeCommand,
+	ScopeDownCommand,
+	ScopeUpCommand
+} from './commands/scope.command.js';
 import { ParsePrdCommand } from './commands/parse-prd.command.js';
 import {
 	AddDependencyCommand,
@@ -149,16 +153,25 @@ export class CommandRegistry {
 			category: 'task'
 		},
 		{
-			name: 'scope-up',
-			description: 'Increase task complexity with AI assistance',
-			commandClass: ScopeUpCommand as any,
+			name: 'scope',
+			description: 'Make tasks more (up) or less (down) complex with AI',
+			commandClass: ScopeCommand as any,
 			category: 'task'
+		},
+		// Hidden aliases kept so scripts keep working (#882)
+		{
+			name: 'scope-up',
+			description: 'Alias of scope <ids> up',
+			commandClass: ScopeUpCommand as any,
+			category: 'task',
+			hidden: true
 		},
 		{
 			name: 'scope-down',
-			description: 'Decrease task complexity with AI assistance',
+			description: 'Alias of scope <ids> down',
 			commandClass: ScopeDownCommand as any,
-			category: 'task'
+			category: 'task',
+			hidden: true
 		},
 		{
 			name: 'research',
@@ -174,17 +187,18 @@ export class CommandRegistry {
 			category: 'task'
 		},
 		{
-			name: 'update-task',
-			description: 'Update a single specific task by ID with new information',
-			commandClass: UpdateTaskCommand as any,
+			name: 'update',
+			description:
+				'Update one task with the AI, or every unfinished task --from an ID on',
+			commandClass: UpdateCommand as any,
 			category: 'task'
 		},
 		{
-			name: 'update',
-			description:
-				'Update multiple tasks with ID >= "from" based on new information',
-			commandClass: UpdateCommand as any,
-			category: 'task'
+			name: 'update-task',
+			description: 'Alias of update <id>',
+			commandClass: UpdateTaskCommand as any,
+			category: 'task',
+			hidden: true
 		},
 		{
 			name: 'note',
@@ -200,9 +214,10 @@ export class CommandRegistry {
 		},
 		{
 			name: 'complexity-report',
-			description: 'Display the complexity analysis report',
+			description: 'Alias of analyze-complexity --report',
 			commandClass: ComplexityReportCommand as any,
-			category: 'task'
+			category: 'task',
+			hidden: true
 		},
 		{
 			name: 'depend',

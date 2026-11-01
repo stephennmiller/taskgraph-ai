@@ -1,13 +1,14 @@
 /**
- * @fileoverview `taskgraph scope-up` and `scope-down`: make tasks more or
- * less complex with the AI, and rewrite their pending subtasks to match.
+ * @fileoverview `taskgraph scope <ids> up|down`: make tasks more or less
+ * complex with the AI, and rewrite their pending subtasks to match.
+ * `scope-up` and `scope-down` stay as hidden aliases for scripts (#882).
  * Thin layer over tm-core's tasks.scope(), which checks the strength and
  * every ID before any AI call and saves each task under the tasks.json lock.
  */
 
 import { createTmCore } from '@tm/core';
 import chalk from 'chalk';
-import { Command } from 'commander';
+import { Argument, Command } from 'commander';
 import type { Ora } from 'ora';
 import { terminalSafe } from '../ui/formatters/markdown-formatters.js';
 import { formatScopeResult } from '../ui/formatters/scope-formatters.js';
@@ -35,9 +36,13 @@ interface ScopeCommandOptions {
 	tag?: string;
 }
 
-class ScopeCommand extends Command {
+type Direction = 'up' | 'down';
+
+export class ScopeCommand extends Command {
 	private spinner?: Ora;
-	private readonly direction: 'up' | 'down';
+	/** Set by scope-up / scope-down; `scope` takes it as an argument */
+	private readonly fixedDirection?: Direction;
+	private direction: Direction = 'up';
 
 	/** Print a line; one printed while the spinner runs would be drawn over */
 	private print(line: string) {
@@ -46,19 +51,25 @@ class ScopeCommand extends Command {
 		this.spinner?.render();
 	}
 
-	constructor(name: 'scope-up' | 'scope-down') {
+	constructor(name: 'scope' | 'scope-up' | 'scope-down' = 'scope') {
 		super(name);
-		this.direction = name === 'scope-down' ? 'down' : 'up';
-		const more = this.direction === 'up' ? 'Increase' : 'Decrease';
+		if (name !== 'scope') {
+			this.fixedDirection = name === 'scope-down' ? 'down' : 'up';
+			this.description(
+				`${this.fixedDirection === 'up' ? 'Increase' : 'Decrease'} task complexity with AI assistance`
+			);
+		} else {
+			this.description('Make tasks more (up) or less (down) complex with AI')
+				.argument('[ids]', 'Comma-separated task IDs (or use --id)')
+				.addArgument(
+					new Argument('[direction]', 'up or down').choices(['up', 'down'])
+				);
+		}
 
-		this.description(`${more} task complexity with AI assistance`)
-			.option(
-				'-i, --id <ids>',
-				`Comma-separated task IDs to scope ${this.direction} (required)`
-			)
+		this.option('-i, --id <ids>', 'Comma-separated task IDs to scope')
 			.option(
 				'-s, --strength <level>',
-				`Complexity ${this.direction === 'up' ? 'increase' : 'decrease'} strength: light, regular, heavy`,
+				'How far to change it: light, regular, heavy',
 				'regular'
 			)
 			.option(
@@ -68,20 +79,49 @@ class ScopeCommand extends Command {
 			.option('-r, --research', 'Use research AI for more informed adjustments')
 			.addOption(legacyFileOption())
 			.option('--tag <tag>', 'Specify tag context for task operations')
-			.action(async (options: ScopeCommandOptions) => {
-				await this.executeCommand(options);
+			.action(async () => {
+				let [ids, direction]: (string | undefined)[] = this.args;
+				const options = this.opts<ScopeCommandOptions>();
+				// With --id, a lone argument is the direction: scope --id=3 up
+				if (options.id !== undefined && ids !== undefined) {
+					if (direction !== undefined) {
+						printError(
+							'Give task IDs as an argument or --id, not both',
+							`Try \`taskgraph scope ${terminalSafe(options.id)} ${terminalSafe(direction)}\``
+						);
+						process.exit(1);
+					}
+					[ids, direction] = [undefined, ids];
+					if (direction !== 'up' && direction !== 'down') {
+						printError(
+							`"${terminalSafe(direction)}" isn't up or down`,
+							`Try \`taskgraph scope ${terminalSafe(options.id)} up\` (or down)`
+						);
+						process.exit(1);
+					}
+				}
+				await this.executeCommand(
+					{ ...options, id: options.id ?? ids },
+					this.fixedDirection ?? (direction as Direction | undefined)
+				);
 			});
 	}
 
-	private async executeCommand(options: ScopeCommandOptions): Promise<void> {
-		const name = `scope-${this.direction}`;
-		if (!options.id) {
+	private async executeCommand(
+		options: ScopeCommandOptions,
+		direction: Direction | undefined
+	): Promise<void> {
+		const name = this.name();
+		if (!options.id || !direction) {
 			printError(
-				'Missing task ID',
-				`Try \`taskgraph ${name} --id=1,2,3 --strength=regular\``
+				options.id ? 'Say up or down' : 'Missing task ID',
+				name === 'scope'
+					? `Try \`taskgraph scope ${terminalSafe(options.id ?? '3')} up\` (or down)`
+					: `Try \`taskgraph ${name} --id=1,2,3 --strength=regular\``
 			);
 			process.exit(1);
 		}
+		this.direction = direction;
 		const fileError = otherTasksFileError(options.file, name);
 		if (fileError) displayError(fileError);
 		const projectRoot = getProjectRoot();

@@ -1,5 +1,6 @@
 /**
- * @fileoverview Unit tests for `analyze-complexity` and `complexity-report`:
+ * @fileoverview Unit tests for `analyze-complexity [--report]` and its hidden
+ * alias `complexity-report`:
  * what they hand tm-core, what they print, and how they fail.
  */
 
@@ -166,6 +167,34 @@ describe('analyze-complexity and complexity-report', () => {
 			[{ tag: 'master', file: 'custom.json' }]
 		]);
 		expect(out.join('\n')).toContain('Sign-in flow');
+	});
+
+	it('analyze-complexity --report shows the report without analyzing (#882)', async () => {
+		getComplexityReport.mockReturnValue({
+			report: {
+				meta: { generatedAt: '2026-10-01T00:00:00Z', thresholdScore: 5 },
+				complexityAnalysis: [entry(3, 'Sign-in flow', 7)]
+			},
+			reportPath: 'r.json'
+		});
+
+		await analyze('--report', '--tag=feat');
+		await analyze('--report', 'custom.json');
+
+		expect(getComplexityReport.mock.calls).toEqual([
+			[{ tag: 'feat', file: undefined }],
+			[{ tag: 'master', file: 'custom.json' }]
+		]);
+		expect(analyzeComplexity).not.toHaveBeenCalled();
+		expect(out.join('\n')).toContain('Sign-in flow');
+	});
+
+	it('analyze-complexity --report refuses analysis options it would ignore', async () => {
+		await expect(analyze('--report', '--research')).rejects.toThrow('exit 1');
+
+		expect(err.join('\n')).toContain('--research does nothing');
+		expect(getComplexityReport).not.toHaveBeenCalled();
+		expect(analyzeComplexity).not.toHaveBeenCalled();
 	});
 
 	it('complexity-report exits 1 with how to make one when there is none', async () => {

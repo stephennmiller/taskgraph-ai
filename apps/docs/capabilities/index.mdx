@@ -40,12 +40,10 @@ The CLI is organized into a series of commands, each with its own set of options
 -   **`remove-task`**: Removes one or more tasks or subtasks.
     -   `<ids>` or `--id <ids>`: A comma-separated list of task or subtask IDs to remove.
     -   `--convert`: Keeps the subtasks as standalone tasks, with each subtask's own dependencies (not its old parent). A subtask with no description takes its title as the description.
--   **`update`**: Updates multiple tasks starting from a specific ID.
-    -   `--from <fromId>`: The ID of the task to start updating from.
-    -   `--prompt <prompt>`: The new context to apply to the tasks.
--   **`update-task`**: Updates a single task.
-    -   `--id <taskId>`: The ID of the task to update.
-    -   `--prompt <prompt>`: The new context to apply to the task.
+-   **`update`**: Updates one task, or every unfinished task from an ID on.
+    -   `<id>` or `--id <taskId>`: The ID of the one task to update.
+    -   `--from <fromId>`: The ID of the task to start updating from, instead of one task.
+    -   `--prompt <prompt>`: The new context to apply.
 -   **`note`**: Appends a progress note to a task or subtask as written, with a timestamp. No AI call.
     -   `<id> "<text>"`: The task or subtask ID and the note.
     -   `--file <path>`: Read the note from a file, or `-` for stdin.
@@ -80,8 +78,7 @@ The CLI is organized into a series of commands, each with its own set of options
     -   `--num <number>`: The number of subtasks to generate (the complexity report's count, or `global.defaultSubtasks`, when left out).
     -   `--all`: Expands every pending or in-progress task without subtasks (with `--force`, those with subtasks too).
 -   **`analyze-complexity`**: Analyzes task complexity.
-    -   `--file <file>`: The path to the tasks file.
--   **`complexity-report`**: Displays the complexity analysis report.
+    -   `--report [file]`: Displays the saved complexity report instead.
 
 ### 4. Project and Configuration
 

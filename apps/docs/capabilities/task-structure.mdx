@@ -160,7 +160,7 @@ The AI is given the PRD's headings and picks one per task; an answer that matche
 | Operation        | Metadata Behavior                                            |
 | ---------------- | ------------------------------------------------------------ |
 | `parse-prd`      | New tasks get `source` and `sourceHash`, the PRD section they came from |
-| `update-task`    | Existing metadata is preserved unless explicitly changed     |
+| `update <id>`    | Existing metadata is preserved unless explicitly changed     |
 | `expand`         | Parent task metadata is preserved; subtasks inherit `source` only |
 | `update-subtask` | Subtask metadata is preserved                                |
 | Manual edit      | You can add/modify metadata directly in tasks.json           |
@@ -231,7 +231,7 @@ The generated report contains:
 </Accordion>
 
 <Accordion title="Viewing Complexity Report">
-The `complexity-report` command:
+`analyze-complexity --report`:
 
 - Displays a formatted, easy-to-read version of the complexity analysis report
 - Shows tasks organized by complexity score (highest to lowest)
@@ -258,7 +258,7 @@ Example workflow:
 taskgraph analyze-complexity --research
 
 # Review the report in a readable format
-taskgraph complexity-report
+taskgraph analyze-complexity --report
 
 # Expand tasks using the optimized recommendations
 taskgraph expand --id=8

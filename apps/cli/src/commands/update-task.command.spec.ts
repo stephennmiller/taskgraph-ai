@@ -1,5 +1,5 @@
 /**
- * @fileoverview Unit tests for `update-task` and `update`: what they hand
+ * @fileoverview Unit tests for `update` and its hidden alias `update-task`: what they hand
  * tm-core, what they print, and their exit codes.
  */
 
@@ -219,11 +219,61 @@ describe('update-task and update', () => {
 		expect(process.exitCode).toBeUndefined();
 	});
 
+	it('update <id> rewrites one task, as update-task did (#882)', async () => {
+		await update('3', 'add', 'rate', 'limits');
+
+		expect(updateWithPrompt).toHaveBeenCalledWith(
+			expect.objectContaining({ id: '3', prompt: 'add rate limits' }),
+			expect.anything()
+		);
+		expect(updateFrom).not.toHaveBeenCalled();
+	});
+
+	it('update --id and --assignee work on one task', async () => {
+		assign.mockResolvedValue({ ...task, assignee: 'octocat' });
+
+		await update('--id=3', '--assignee=octocat');
+
+		expect(assign).toHaveBeenCalledWith('3', 'octocat', 'master');
+		expect(updateWithPrompt).not.toHaveBeenCalled();
+	});
+
 	it.each([
-		[
-			['--id=3', '--prompt=x'],
-			'The update command uses --from=<id>, not --id=<id>'
-		],
+		['update', update],
+		['update-task', updateTask]
+	])('%s --id takes every argument as the prompt', async (_name, run) => {
+		await run('--id=3', 'add', 'rate', 'limits');
+
+		expect(updateWithPrompt).toHaveBeenCalledWith(
+			expect.objectContaining({ id: '3', prompt: 'add rate limits' }),
+			expect.anything()
+		);
+	});
+
+	it.each([
+		['update', update],
+		['update-task', updateTask]
+	])('%s refuses prompt words and --prompt together', async (_name, run) => {
+		await expect(run('3', 'add', 'limits', '--prompt=other')).rejects.toThrow(
+			'exit 1'
+		);
+
+		expect(err.join('\n')).toContain('words or --prompt, not both');
+		expect(createTmCore).not.toHaveBeenCalled();
+	});
+
+	it('update without an ID or --from starts at task 1', async () => {
+		await update('--prompt=x');
+
+		expect(updateFrom).toHaveBeenCalledWith(
+			expect.objectContaining({ from: '1', prompt: 'x' }),
+			expect.anything()
+		);
+	});
+
+	it.each([
+		[['3', '--from=3', '--prompt=x'], 'Give a task ID or --from, not both'],
+		[['--from=3', '--append', '--prompt=x'], '--append works on one task'],
 		[['--from=3'], 'Missing prompt']
 	])('update %o exits 1 before tm-core', async (args, message) => {
 		await expect(update(...args)).rejects.toThrow('exit 1');
