@@ -49,13 +49,13 @@ When moving tasks between tags, you may encounter cross-tag dependencies. TaskGr
 
 ### Move with Dependencies
 
-Move the main task along with all its dependent tasks:
+Move the main task along with the tasks it depends on:
 
 ```bash
 taskgraph move --from=5 --from-tag=backlog --to-tag=in-progress --with-dependencies
 ```
 
-This ensures that all dependent tasks are moved together, maintaining the task relationships.
+This brings along everything the task and its subtasks depend on, so no dependency points back into the source tag. Tasks that depend on the moved task are not moved; if any stay behind, the move is refused.
 
 ### Break Dependencies
 
