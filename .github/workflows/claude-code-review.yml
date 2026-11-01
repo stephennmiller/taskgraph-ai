@@ -100,7 +100,10 @@ jobs:
                everything already reported. If nothing changed in code since
                the last round, stop without posting.
 
-            5. Report only real, verified findings, as REVIEW.md describes.
+            5. Report only real, verified findings, as REVIEW.md describes:
+               something that would break in real use, lose data, open a
+               security hole, or code the change left unused. Nothing else.
+               Finding nothing is a fine result; post "No issues".
                Never raise a finding that an earlier round reported or the
                author answered. Name the bug class in each finding. Mark code
                the PR did not introduce as pre-existing; it does not block.
