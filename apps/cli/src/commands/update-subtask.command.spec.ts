@@ -82,6 +82,15 @@ describe('update-subtask', () => {
 		);
 	});
 
+	it('takes the ID as an argument (#882)', async () => {
+		await run('5.2', '--prompt=Aliases');
+
+		expect(updateSubtask).toHaveBeenCalledWith(
+			expect.objectContaining({ id: '5.2', prompt: 'Aliases' }),
+			expect.any(Object)
+		);
+	});
+
 	it('shows the notes it added, without escape codes', async () => {
 		await run('--id=5.2', '--prompt=Aliases');
 

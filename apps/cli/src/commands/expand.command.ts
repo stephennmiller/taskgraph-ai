@@ -30,6 +30,7 @@ import {
 	displayError,
 	printError
 } from '../utils/error-handler.js';
+import { pickId } from '../utils/id-argument.js';
 import { getProjectRoot } from '../utils/project-root.js';
 import { otherTasksFileError } from '../utils/tasks-file-option.js';
 
@@ -72,6 +73,7 @@ export class ExpandCommand extends Command {
 		super(name || 'expand');
 
 		this.description('Expand a task into subtasks using AI')
+			.argument('[id]', 'ID of the task to expand (or use --id)')
 			.option('-i, --id <id>', 'ID of the task to expand')
 			.option(
 				'-a, --all',
@@ -85,10 +87,7 @@ export class ExpandCommand extends Command {
 				'-r, --research',
 				'Enable research-backed generation (web research via Claude Code)'
 			)
-			.option(
-				'-p, --prompt <text>',
-				'Additional context for subtask generation'
-			)
+			.option('--prompt <text>', 'Additional context for subtask generation')
 			.option('-f, --force', 'Force expansion even if subtasks exist')
 			// -f is --force here, so the legacy flag is --file only
 			.addOption(new Option('--file <file>').hideHelp())
@@ -97,8 +96,11 @@ export class ExpandCommand extends Command {
 				'Path to the complexity report file (use this to specify the complexity report, not --file)'
 			)
 			.option('--tag <tag>', 'Specify tag context for task operations')
-			.action(async (options: ExpandCommandOptions) => {
-				await this.executeCommand(options);
+			.action(async (id: string | undefined, options: ExpandCommandOptions) => {
+				await this.executeCommand({
+					...options,
+					id: pickId(id, options.id, 'expand')
+				});
 			});
 	}
 
@@ -106,7 +108,7 @@ export class ExpandCommand extends Command {
 		if (!options.all && !options.id) {
 			printError(
 				'Missing task ID',
-				'Try `taskgraph expand --id=3`, or `--all` for every pending task'
+				'Try `taskgraph expand 3`, or `--all` for every pending task'
 			);
 			process.exit(1);
 		}

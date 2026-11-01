@@ -73,7 +73,7 @@ export class ScopeCommand extends Command {
 				'regular'
 			)
 			.option(
-				'-p, --prompt <text>',
+				'--prompt <text>',
 				'Custom instructions for targeted scope adjustments'
 			)
 			.option('-r, --research', 'Use research AI for more informed adjustments')

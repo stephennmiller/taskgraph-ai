@@ -156,6 +156,18 @@ Some commands were merged so `taskgraph --help` is shorter. The old names still 
 
 `remove-task`, `update` and `scope` still take `--id`, and `depend` still takes `--id` and `--depends-on`.
 
+## 10. `-p` means `--project`
+
+`-p` used to mean `--prompt` in `add-task`, `expand`, `update`, `update-task`, `update-subtask`, `scope`, `scope-up`, `scope-down` and `loop`, `--parent` in `add-subtask`, and `--project` everywhere else. It now means `--project` only. Write the others in full:
+
+| Before | Now |
+| --- | --- |
+| `add-task -p 'Add a login page'` | `add-task --prompt 'Add a login page'` |
+| `loop -p tdd` | `loop --prompt tdd` |
+| `add-subtask -p 5 --title='…'` | `add-subtask --parent=5 --title='…'` |
+
+`loop`, `add-subtask` and `move` gain `-p` for `--project`. Running an old `-p` form fails with a hint that names the long flag. `expand` and `update-subtask` now also take the ID as an argument (`expand 3`, `update-subtask 5.2 --prompt='…'`), as `show` and `set-status` do.
+
 ## Credit
 
 TaskGraph is based on [Task Master](https://github.com/eyaltoledano/claude-task-master) by Eyal Toledano and Ralph Khreish, and keeps the original license and copyright notices. See [Licensing](/licensing).

@@ -56,6 +56,7 @@ See `commands-removal.md` for commands that delete or remove data, like `remove-
 - **Option Names**:
   - ✅ DO: Use kebab-case for long-form option names, like `--output-format`
   - ✅ DO: Provide single-letter shortcuts when appropriate, like `-f, --file`
+  - ❌ DON'T: Give a short flag a second meaning: `-p` is `--project` in every command (#882), so `--prompt` and `--parent` have no short form
   - ✅ DO: Use consistent option names across similar commands
   - ❌ DON'T: Use different names for the same concept, such as `--file` in one command and `--path` in another
 
@@ -305,7 +306,7 @@ For AI-powered commands that benefit from project context, follow the research c
     .command('add-subtask')
     .description('Add a new subtask to a parent task or convert an existing task to a subtask')
     .option('-f, --file <path>', 'Path to the tasks file', 'tasks/tasks.json')
-    .option('-p, --parent <id>', 'ID of the parent task (required)')
+    .option('--parent <id>', 'ID of the parent task (required)')
     .option('-i, --task-id <id>', 'Existing task ID to convert to subtask')
     .option('-t, --title <title>', 'Title for the new subtask, required if not converting')
     .option('-d, --description <description>', 'Description for the new subtask, optional')

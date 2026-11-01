@@ -6,6 +6,7 @@
  * scripts/dev.js answers them before this module loads (#248).
  */
 
+import fs from 'node:fs';
 import path from 'node:path';
 import {
 	PROJECT_ROOT_ENV,
@@ -84,7 +85,13 @@ function requireProject(_hookedCommand: Command, actionCommand: Command) {
 	if (explicitRoot === root) {
 		printError(
 			`No TaskGraph project at ${explicitRoot}`,
-			'Run `taskgraph init` in that folder to set one up'
+			// An old script's `loop -p tdd` or `add-subtask -p 5` lands here (#882);
+			// a real folder means the caller meant --project
+			['loop', 'add-subtask'].includes(topLevel.name()) &&
+				process.argv.some((arg) => /^-p/.test(arg)) &&
+				!fs.existsSync(explicitRoot)
+				? '-p means --project; write --prompt or --parent in full'
+				: 'Run `taskgraph init` in that folder to set one up'
 		);
 	} else if (process.env[PROJECT_ROOT_ENV]?.trim()) {
 		printError(

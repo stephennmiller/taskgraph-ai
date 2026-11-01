@@ -75,7 +75,7 @@ export class LoopCommand extends Command {
 				'Work on this task or subtask instead of the next one (1 iteration unless -n is given)'
 			)
 			.option(
-				'-p, --prompt <preset|path>',
+				'--prompt <preset|path>',
 				`Preset name (${PRESET_NAMES.join(', ')}) or path to custom prompt file`,
 				'default'
 			)
@@ -86,7 +86,7 @@ export class LoopCommand extends Command {
 			)
 			.option('-t, --tag <tag>', 'Only work on tasks with this tag')
 			.option(
-				'--project <path>',
+				'-p, --project <path>',
 				'Project root directory (auto-detected if not provided)'
 			)
 			.option('--sandbox', 'Run Claude in Docker sandbox mode')

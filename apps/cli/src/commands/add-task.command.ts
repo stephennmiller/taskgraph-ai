@@ -62,7 +62,7 @@ export class AddTaskCommand extends Command {
 		)
 			.addOption(legacyFileOption())
 			.option(
-				'-p, --prompt <prompt>',
+				'--prompt <prompt>',
 				'Description of the task to add (required if not using manual fields)'
 			)
 			.option('-t, --title <title>', 'Task title (for manual task creation)')

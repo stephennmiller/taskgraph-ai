@@ -106,10 +106,10 @@ It then prints one line: why it stopped (`✓ All tasks complete`, `Iteration li
 | ------------------------ | ------ | ------------------------------- | ------------------------------------------------------------------------------------------------------------- |
 | `-n, --iterations`       | number | see description                 | Maximum number of iterations to run. Without it: 1 with `--id`; the number of pending tasks and subtasks with the `default` and `tdd` presets (10 when none are pending); otherwise 10. |
 | `-i, --id`               | string | -                               | Work on this task or subtask (`3`, `3.2`) instead of the next one. Runs 1 iteration unless `-n` is given. Works with the `default` and `tdd` presets and custom prompt files. |
-| `-p, --prompt`           | string | `default`                       | Preset name or path to a custom prompt file. Accepts: `default`, `tdd`, `test-coverage`, `linting`, `duplication`, `entropy`, or a file path like `./my-prompt.md`. |
+| `--prompt`               | string | `default`                       | Preset name or path to a custom prompt file. Accepts: `default`, `tdd`, `test-coverage`, `linting`, `duplication`, `entropy`, or a file path like `./my-prompt.md`. |
 | `--progress-file`        | string | `.taskgraph/progress.txt`       | Path to the progress log file, attached to every iteration's prompt. A relative path is relative to the project root. |
 | `-t, --tag`              | string | -                               | Filter to only work on tasks with this tag.                                                                   |
-| `--project`              | string | -                               | Project root directory. Auto-detected if not provided.                                                        |
+| `-p, --project`          | string | -                               | Project root directory. Auto-detected if not provided.                                                        |
 | `--sandbox`              | flag   | -                               | Run each iteration in a Docker sandbox (`docker sandbox run claude`) instead of on this machine.              |
 | `--trust`                | flag   | -                               | Run Claude with permission prompts off without asking first. For scripts and CI.                              |
 | `--no-output`            | flag   | -                               | Hide Claude's output, including with `--verbose`; show only each iteration's status line and the summary.     |

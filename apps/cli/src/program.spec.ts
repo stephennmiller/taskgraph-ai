@@ -66,6 +66,34 @@ describe('--help rows', () => {
 	});
 });
 
+describe('short flags (#882)', () => {
+	type Cmd = typeof program;
+	const all = (c: Cmd, path: string): [string, Cmd][] => [
+		[path, c],
+		...c.commands.flatMap((s) => all(s, `${path} ${s.name()}`.trim()))
+	];
+	const commands = all(program, '');
+
+	it('no command gives one short flag to two options', () => {
+		const clashes = commands.flatMap(([path, c]) => {
+			const shorts = c.options.map((o) => o.short).filter(Boolean);
+			return shorts
+				.filter((s, i) => shorts.indexOf(s) !== i)
+				.map((s) => `${path}: ${s}`);
+		});
+		expect(clashes).toEqual([]);
+	});
+
+	it('-p and --project always go together', () => {
+		const other = commands.flatMap(([path, c]) =>
+			c.options
+				.filter((o) => (o.short === '-p') !== (o.long === '--project'))
+				.map((o) => `${path}: ${o.long}`)
+		);
+		expect(other).toEqual([]);
+	});
+});
+
 describe('setupCLI', () => {
 	const originalVersion = process.env.TM_PUBLIC_VERSION;
 

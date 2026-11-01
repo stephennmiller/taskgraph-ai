@@ -145,6 +145,18 @@ const REMOVED_COMMANDS: Record<string, string> = {
 	autopilot: ' --prompt tdd'
 };
 
+// Where -p was --prompt before it meant --project everywhere (#882)
+const OLD_PROMPT_COMMANDS = new Set([
+	'add-task',
+	'expand',
+	'update',
+	'update-task',
+	'update-subtask',
+	'scope',
+	'scope-up',
+	'scope-down'
+]);
+
 /**
  * Restyle an error Commander raised while parsing arguments ("error: unknown
  * command 'shwo'\n(Did you mean show?)") into the same two lines as every
@@ -195,7 +207,13 @@ export function formatCommanderError(
 	}
 
 	let hint: string | undefined;
-	if (/^unknown command/i.test(reason)) {
+	if (
+		/^unknown option '-p'$/i.test(reason) &&
+		OLD_PROMPT_COMMANDS.has(commandPath ?? '')
+	) {
+		// -p was --prompt in some commands and --parent in add-subtask (#882)
+		hint = '-p means --project; write --prompt or --parent in full';
+	} else if (/^unknown command/i.test(reason)) {
 		hint = suggestion
 			? `Did you mean \`taskgraph ${suggestion}\`?`
 			: 'Run `taskgraph --help` to see all commands';

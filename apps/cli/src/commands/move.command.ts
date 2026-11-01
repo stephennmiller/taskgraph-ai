@@ -63,7 +63,7 @@ export class MoveCommand extends Command {
 				'Break cross-tag dependencies during move'
 			)
 			.option(
-				'--project <path>',
+				'-p, --project <path>',
 				'Project root directory (auto-detected if not provided)'
 			)
 			.addOption(legacyFileOption())

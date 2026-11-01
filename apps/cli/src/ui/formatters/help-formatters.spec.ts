@@ -131,6 +131,13 @@ describe('formatHelp', () => {
 		}
 	});
 
+	it('leads with taskgraph init outside a project (#882)', () => {
+		const lines = stripAnsi(formatHelp(80, false)).split('\n');
+
+		expect(lines[2]).toBe('No project here yet. Start with taskgraph init');
+		expect(stripAnsi(formatHelp(80))).not.toContain('No project here');
+	});
+
 	it('cuts no description at 80 columns', () => {
 		expect(stripAnsi(formatHelp(80))).not.toContain('…');
 	});
