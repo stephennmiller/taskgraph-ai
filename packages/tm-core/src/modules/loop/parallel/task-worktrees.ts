@@ -360,7 +360,7 @@ export class TaskWorktrees {
 			);
 		if (recorded === tip) return;
 		throw new ParallelLoopError(
-			`${branch} already exists with commits no earlier run left there, so its files weren't approved. Review it with \`git diff ${base} ${branch}\`, then rename it (\`git branch -m ${branch} <new-name>\`) or delete it (\`git branch -D ${branch}\`, after \`git worktree remove\` if a worktree has it), and run again`
+			`${branch} already exists with commits the loop didn't record (made outside a run, or by a --container run), so its files weren't approved. Review it with \`git diff ${base} ${branch}\`, then rename it (\`git branch -m ${branch} <new-name>\`) or delete it (\`git branch -D ${branch}\`, after \`git worktree remove\` if a worktree has it), and run again`
 		);
 	}
 

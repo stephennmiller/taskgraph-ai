@@ -318,7 +318,7 @@ describe('loop --parallel --container', () => {
 
 		expect(second.tasks[0]).toMatchObject({
 			state: 'failed',
-			error: expect.stringContaining('taskgraph/task-1 already exists')
+			error: expect.stringContaining('or by a --container run')
 		});
 	});
 
