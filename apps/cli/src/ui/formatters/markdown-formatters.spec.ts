@@ -3,8 +3,28 @@ import { describe, expect, it } from 'vitest';
 import {
 	formatMarkdown,
 	formatRawText,
-	renderMarkdown
+	renderMarkdown,
+	toMarkdown
 } from './markdown-formatters.js';
+
+// #909: unescaping turned "a\nb" in code into a real line break. Both the
+// terminal and the piped path must apply the same rule.
+describe.each([
+	['toMarkdown', toMarkdown],
+	['formatRawText', (text: string) => formatRawText(text, 80)]
+])('%s and stored escapes', (_, format) => {
+	it('leaves escapes as written in text with real newlines', () => {
+		const text = 'Log it:\n```js\nconsole.log("a\\nb", "q\\"x")\n/\\\\d+/\n```';
+
+		expect(format(text)).toBe(text);
+	});
+
+	it('undoes escapes in a field stored on one line', () => {
+		expect(format('Run:\\n```sh\\necho \\"hi\\"\\n```')).toBe(
+			'Run:\n```sh\necho "hi"\n```'
+		);
+	});
+});
 
 describe('formatMarkdown', () => {
 	// Plain prose skips marked-terminal (#248), so it must come out exactly
