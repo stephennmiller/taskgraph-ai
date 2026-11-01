@@ -80,6 +80,20 @@ describe('initialize_project', () => {
 		expect(fs.readdirSync(home)).toEqual([]);
 	});
 
+	it('keeps the response language on a re-run', async () => {
+		await run({ projectRoot });
+		const configPath = path.join(projectRoot, '.taskgraph/config.json');
+		const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+		config.global.responseLanguage = 'Español';
+		fs.writeFileSync(configPath, JSON.stringify(config));
+
+		await run({ projectRoot });
+
+		expect(
+			JSON.parse(fs.readFileSync(configPath, 'utf8')).global.responseLanguage
+		).toBe('Español');
+	});
+
 	it('takes the project root from the session when none is passed', async () => {
 		await run({}, { roots: [{ uri: `file://${projectRoot}` }] });
 
