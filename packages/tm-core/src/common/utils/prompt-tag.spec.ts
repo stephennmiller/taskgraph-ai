@@ -74,7 +74,11 @@ describe('neutralizeTag', () => {
 		'&lt;&#x2F;task-data>',
 		'&lt;&sol;task-data>',
 		'&lt; / task​-data>',
-		'＜&#47;task-data>'
+		'＜&#47;task-data>',
+		'&lt;/&#116;ask-data&gt;',
+		'&lt;/task&#45;data>',
+		'&lt;/TASK&#x5F;&#X44;ata>',
+		'&#60;&#47;&#116;&#97;&#115;&#107;&#45;&#100;&#97;&#116;&#97;&#62;'
 	])('neutralizes the tag spelled with HTML entities in %j', (input) => {
 		expect(neutralizeTag(input, 'task-data')).toMatch(/^-task-data/);
 	});
@@ -103,6 +107,7 @@ describe('neutralizeTag', () => {
 		['a long zero-width run inside the name', `</task${'​'.repeat(200_000)}x`],
 		['a long entity slash run', `&lt;${'&#47;'.repeat(100_000)}x`],
 		['many entity openings', '&lt;&#x3c;&#60;'.repeat(100_000)],
+		['long zero runs in entities', `&lt;/&#${'0'.repeat(200_000)}x`],
 		[
 			'a long separator run on the NFKD path',
 			`café </task${'-­'.repeat(100_000)}x`
