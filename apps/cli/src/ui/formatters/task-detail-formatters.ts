@@ -21,7 +21,7 @@
  *     2.2  ▶ in-progress  Sessions table and cookie middleware  after 2.1
  *     2.3  ○ pending      Sign-in rate limiting                 after 2.2
  *
- *   Next: taskgraph update-task --id=2 --prompt='...' to update details
+ *   Next: taskgraph update 2 --prompt='...' to update details
  *
  * It replaces a boxed title, a bordered two-column table whose labels
  * slipped out of line with their values when a value wrapped, a box for each

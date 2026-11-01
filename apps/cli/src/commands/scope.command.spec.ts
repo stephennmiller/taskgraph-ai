@@ -1,5 +1,6 @@
 /**
- * @fileoverview Unit tests for `scope-up` / `scope-down`: what they hand
+ * @fileoverview Unit tests for `scope <ids> up|down` and its hidden aliases
+ * `scope-up` / `scope-down`: what they hand
  * tm-core, what they print, and their exit codes.
  */
 
@@ -19,7 +20,11 @@ vi.mock('../utils/display-helpers.js', () => ({
 }));
 
 import { createTmCore } from '@tm/core';
-import { ScopeDownCommand, ScopeUpCommand } from './scope.command.js';
+import {
+	ScopeCommand,
+	ScopeDownCommand,
+	ScopeUpCommand
+} from './scope.command.js';
 
 const scope = vi.fn();
 const strip = (text: string) => text.replace(/\x1b\[[0-9;]*m/g, '');
@@ -98,6 +103,60 @@ describe('scope-up / scope-down', () => {
 			}),
 			expect.any(Object)
 		);
+	});
+
+	it('scope <ids> down scopes down (#882)', async () => {
+		await new ScopeCommand().parseAsync(['1,2', 'down', '-s', 'light'], {
+			from: 'user'
+		});
+
+		expect(scope).toHaveBeenCalledWith(
+			expect.objectContaining({
+				ids: '1,2',
+				direction: 'down',
+				strength: 'light'
+			}),
+			expect.any(Object)
+		);
+	});
+
+	it('scope --id takes the lone argument as the direction', async () => {
+		await new ScopeCommand().parseAsync(['--id=3', 'down'], { from: 'user' });
+
+		expect(scope).toHaveBeenCalledWith(
+			expect.objectContaining({ ids: '3', direction: 'down' }),
+			expect.any(Object)
+		);
+	});
+
+	it.each([
+		[['--id=3', '4', 'up'], 'not both'],
+		[['--id=3', 'sideways'], `"sideways" isn't up or down`]
+	])('scope %o exits 1 before tm-core', async (args, message) => {
+		await expect(
+			new ScopeCommand().parseAsync(args, { from: 'user' })
+		).rejects.toThrow('exit 1');
+		expect(err.join('\n')).toContain(message);
+		expect(createTmCore).not.toHaveBeenCalled();
+	});
+
+	it('scope without up or down exits 1 before tm-core', async () => {
+		await expect(
+			new ScopeCommand().parseAsync(['3'], { from: 'user' })
+		).rejects.toThrow('exit 1');
+		expect(err.join('\n')).toContain('taskgraph scope 3 up');
+		expect(createTmCore).not.toHaveBeenCalled();
+	});
+
+	it('scope rejects a direction other than up or down', async () => {
+		const command = new ScopeCommand()
+			.exitOverride()
+			.configureOutput({ writeErr: () => {} });
+
+		await expect(
+			command.parseAsync(['3', 'sideways'], { from: 'user' })
+		).rejects.toThrow(/sideways/);
+		expect(scope).not.toHaveBeenCalled();
 	});
 
 	it('exits 1 without --id, before tm-core', async () => {

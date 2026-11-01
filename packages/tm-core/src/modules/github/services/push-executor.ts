@@ -299,5 +299,5 @@ async function withAssigneeHint<T>(
 }
 
 function assigneeHint(assignee: string, repo: string, taskId: string) {
-	return `Only collaborators on ${repo} can be assigned. Add ${stripTerminalControls(assignee)} as a collaborator, or change it with \`taskgraph update-task ${taskId} --assignee <login>\``;
+	return `Only collaborators on ${repo} can be assigned. Add ${stripTerminalControls(assignee)} as a collaborator, or change it with \`taskgraph update ${taskId} --assignee <login>\``;
 }

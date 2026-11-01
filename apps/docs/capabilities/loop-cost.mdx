@@ -40,7 +40,7 @@ When the task an iteration works on has a complexity score from [`analyze-comple
 | 4-6   | Claude Code's default | Claude Code's default |
 | 7-10  | Claude Code's default | `high` |
 
-Each iteration reads the score from the report as it is then, so a task re-scored during the run (by `scope-up`, `scope-down` or `analyze-complexity`) runs at its new band from the next iteration.
+Each iteration reads the score from the report as it is then, so a task re-scored during the run (by `scope` or `analyze-complexity`) runs at its new band from the next iteration.
 
 A task without a score (a subtask, a task `analyze-complexity` hasn't scored, or a preset that picks its own work such as `linting`) runs as before, with Claude Code's own model and effort. The status line and the progress file show what each iteration ran at, next to its cost:
 

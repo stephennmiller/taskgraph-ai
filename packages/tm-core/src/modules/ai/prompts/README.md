@@ -142,7 +142,7 @@ All prompt templates are validated against JSON schemas located in `packages/tm-
 - `currentDetails` (string): Current task details for context (default: "(No existing details)")
 - `gatheredContext` (string): Additional project context
 
-**Usage**: Used by `taskgraph update-task` command to modify existing tasks.
+**Usage**: Used by `taskgraph update <id>` to modify existing tasks.
 
 ### 5. update-tasks.json
 **Purpose**: Update multiple tasks based on new context or changes  

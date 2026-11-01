@@ -1,5 +1,5 @@
 /**
- * @fileoverview What `analyze-complexity` found and what `complexity-report`
+ * @fileoverview What `analyze-complexity` found and what `analyze-complexity --report`
  * shows, e.g.
  *
  *   ✓ Analyzed 5 tasks · skipped 1 done
@@ -7,7 +7,7 @@
  *     4  Bookmark CRUD endpoints                    ● 6  5 subtasks
  *     6  Write the README                           ● 2
  *   Saved to .taskgraph/reports/task-complexity-report.json
- *   Next: taskgraph expand --all, or taskgraph complexity-report to see why
+ *   Next: taskgraph expand --all, or analyze-complexity --report to see why
  *
  * They replace progress logs with absolute paths (two of them printed twice),
  * a dashed summary, a boxed next-steps list, and a report table that put each
@@ -177,7 +177,7 @@ export function formatComplexityRun(
 		theme.muted('Next: ') +
 			theme.brand('taskgraph expand --all') +
 			theme.muted(', or ') +
-			theme.brand('taskgraph complexity-report') +
+			theme.brand('analyze-complexity --report') +
 			theme.muted(' to see why')
 	);
 	return lines.join('\n');

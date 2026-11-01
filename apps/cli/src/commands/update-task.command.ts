@@ -1,14 +1,15 @@
 /**
- * @fileoverview `taskgraph update-task` (rewrite one task with the AI, or
+ * @fileoverview `taskgraph update <id>` (rewrite one task with the AI, or
  * with --append add the AI's notes to it) and `taskgraph update --from`
- * (rewrite every unfinished task from an ID on). Thin layer over tm-core's
+ * (rewrite every unfinished task from an ID on). `update-task` stays as a
+ * hidden alias for scripts (#882). Thin layer over tm-core's
  * tasks.updateWithPrompt() and tasks.updateFrom(), which save under the
  * tasks.json lock without dropping changes made while the AI was writing.
  */
 
 import { type UpdateHooks, createTmCore } from '@tm/core';
 import chalk from 'chalk';
-import { Command, Option } from 'commander';
+import { Command } from 'commander';
 import type { Ora } from 'ora';
 import { truncate } from '../ui/layout/helpers.js';
 import { terminalSafe } from '../ui/formatters/markdown-formatters.js';
@@ -41,16 +42,14 @@ interface CommonOptions {
 	tag?: string;
 }
 
-export interface UpdateTaskCommandOptions extends CommonOptions {
+interface UpdateTaskCommandOptions extends CommonOptions {
 	id?: string;
 	append?: boolean;
 	assignee?: string;
 }
 
-export interface UpdateCommandOptions extends CommonOptions {
-	from: string;
-	/** A common mistake: update takes --from */
-	id?: string;
+export interface UpdateCommandOptions extends UpdateTaskCommandOptions {
+	from?: string;
 }
 
 /** The muted usage line, or nothing without usage */
@@ -110,6 +109,106 @@ async function runUpdate(
 	}
 }
 
+/**
+ * The task ID and prompt from `[id] [prompt...]`, --id and --prompt. With
+ * --id every argument is prompt words; words and --prompt together exit 1.
+ */
+function idAndPrompt(
+	command: string,
+	idArg: string | undefined,
+	promptWords: string[],
+	options: UpdateTaskCommandOptions
+): { id: string | undefined; prompt: string | undefined } {
+	const words =
+		options.id !== undefined && idArg !== undefined
+			? [idArg, ...promptWords]
+			: promptWords;
+	const id = options.id ?? idArg;
+	if (words.length > 0 && options.prompt !== undefined) {
+		printError(
+			'Give the prompt as words or --prompt, not both',
+			`Try \`taskgraph ${command} ${terminalSafe(id ?? '3')} --prompt="what changed"\``
+		);
+		process.exit(1);
+	}
+	return {
+		id,
+		prompt: words.length > 0 ? words.join(' ') : options.prompt
+	};
+}
+
+/** Rewrite one task with the AI, add notes with --append, or --assignee */
+async function updateOne(
+	command: string,
+	id: string | undefined,
+	prompt: string | undefined,
+	options: UpdateTaskCommandOptions
+): Promise<void> {
+	if (!id) {
+		printError(
+			'Missing task ID',
+			`Try \`taskgraph ${command} 3 --prompt="what changed"\``
+		);
+		process.exit(1);
+	}
+	const { assignee } = options;
+	if (!prompt && assignee === undefined) {
+		printError(
+			'Missing prompt',
+			`Try \`taskgraph ${command} ${terminalSafe(id)} --prompt="what changed"\``
+		);
+		process.exit(1);
+	}
+
+	await runUpdate(command, options, async (tmCore, tag, hooks, stop) => {
+		// First, so a bad login fails before the AI call is paid for
+		if (assignee !== undefined) {
+			const assigned = await tmCore.tasks.assign(id, assignee, tag);
+			console.log(
+				formatAssigned({ id, title: assigned.title }, assigned.assignee)
+			);
+		}
+		if (!prompt) return;
+		const result = await tmCore.tasks.updateWithPrompt(
+			{
+				id,
+				prompt,
+				research: options.research,
+				append: options.append,
+				tag,
+				outputType: 'cli'
+			},
+			{
+				...hooks,
+				onAiCall: ([task]) =>
+					hooks.startSpinner(
+						`Updating task ${terminalSafe(task.id)}: ${truncate(terminalSafe(task.title), 50)}${options.research ? ' (with research)' : ''}`
+					)
+			}
+		);
+		stop();
+		const { task } = result;
+		if (result.skipped === 'done') {
+			printError(
+				`Task ${terminalSafe(task.id)} is done, so it can't be updated`,
+				`Run \`taskgraph set-status ${terminalSafe(task.id)} pending\` first`
+			);
+			process.exitCode = 1;
+			return;
+		}
+		console.log(
+			options.append
+				? formatNotesAdded(
+						{ kind: 'task', id: task.id, title: task.title },
+						result.appended ?? ''
+					)
+				: formatTaskUpdated(task)
+		);
+		printUsage(result.telemetryData);
+	});
+}
+
+/** Hidden alias of `update <id>` */
 export class UpdateTaskCommand extends Command {
 	constructor(name?: string) {
 		super(name || 'update-task');
@@ -148,90 +247,20 @@ export class UpdateTaskCommand extends Command {
 					promptWords: string[],
 					options: UpdateTaskCommandOptions
 				) => {
-					const id = idArg || options.id;
-					const prompt =
-						promptWords.length > 0 ? promptWords.join(' ') : options.prompt;
-					await this.executeCommand(id, prompt, options);
-				}
-			);
-	}
-
-	private async executeCommand(
-		id: string | undefined,
-		prompt: string | undefined,
-		options: UpdateTaskCommandOptions
-	): Promise<void> {
-		if (!id) {
-			printError(
-				'Missing task ID',
-				'Try `taskgraph update-task --id=3 --prompt="what changed"`'
-			);
-			process.exit(1);
-		}
-		const { assignee } = options;
-		if (!prompt && assignee === undefined) {
-			printError(
-				'Missing prompt',
-				`Try \`taskgraph update-task --id=${terminalSafe(id)} --prompt="what changed"\``
-			);
-			process.exit(1);
-		}
-
-		await runUpdate(
-			'update-task',
-			options,
-			async (tmCore, tag, hooks, stop) => {
-				// First, so a bad login fails before the AI call is paid for
-				if (assignee !== undefined) {
-					const assigned = await tmCore.tasks.assign(id, assignee, tag);
-					console.log(
-						formatAssigned({ id, title: assigned.title }, assigned.assignee)
+					const { id, prompt } = idAndPrompt(
+						'update-task',
+						idArg,
+						promptWords,
+						options
 					);
+					await updateOne('update-task', id, prompt, options);
 				}
-				if (!prompt) return;
-				const result = await tmCore.tasks.updateWithPrompt(
-					{
-						id,
-						prompt,
-						research: options.research,
-						append: options.append,
-						tag,
-						outputType: 'cli'
-					},
-					{
-						...hooks,
-						onAiCall: ([task]) =>
-							hooks.startSpinner(
-								`Updating task ${terminalSafe(task.id)}: ${truncate(terminalSafe(task.title), 50)}${options.research ? ' (with research)' : ''}`
-							)
-					}
-				);
-				stop();
-				const { task } = result;
-				if (result.skipped === 'done') {
-					printError(
-						`Task ${terminalSafe(task.id)} is done, so it can't be updated`,
-						`Run \`taskgraph set-status ${terminalSafe(task.id)} pending\` first`
-					);
-					process.exitCode = 1;
-					return;
-				}
-				console.log(
-					options.append
-						? formatNotesAdded(
-								{ kind: 'task', id: task.id, title: task.title },
-								result.appended ?? ''
-							)
-						: formatTaskUpdated(task)
-				);
-				printUsage(result.telemetryData);
-			}
-		);
+			);
 	}
 
 	static register(program: Command, name?: string): UpdateTaskCommand {
 		const command = new UpdateTaskCommand(name);
-		program.addCommand(command);
+		program.addCommand(command, { hidden: true });
 		return command;
 	}
 }
@@ -241,41 +270,77 @@ export class UpdateCommand extends Command {
 		super(name || 'update');
 
 		this.description(
-			'Update multiple tasks with ID >= "from" based on new information or implementation changes'
+			'Update one task with the AI, or every unfinished task --from an ID on'
 		)
+			.argument('[id]', 'Task ID to update (e.g., 1, 1.1); or use --from')
+			.argument(
+				'[prompt...]',
+				'Update prompt - multiple words, no quotes needed'
+			)
 			.addOption(legacyFileOption())
+			.option('-i, --id <id>', 'The same as the [id] argument')
 			.option(
 				'--from <id>',
-				'Task ID to start updating from (tasks with ID >= this value will be updated)',
-				'1'
+				'Update every unfinished task with ID >= this one (default: 1)'
 			)
 			.option(
 				'-p, --prompt <text>',
-				'Prompt explaining the changes or new context (required)'
+				'Prompt explaining the changes or new context'
 			)
 			.option(
 				'-r, --research',
 				'Use Claude Code web research for research-backed task updates'
 			)
+			.option(
+				'--append',
+				'One task: append timestamped notes to its details instead of rewriting it'
+			)
+			.option(
+				'--assignee <login>',
+				"One task: GitHub login of who it is for ('' clears it); no prompt needed"
+			)
 			.option('--tag <tag>', 'Specify tag context for task operations')
-			.addOption(new Option('-i, --id <id>').hideHelp())
-			.action(async (options: UpdateCommandOptions) => {
-				await this.executeCommand(options);
-			});
+			.action(
+				async (
+					idArg: string | undefined,
+					promptWords: string[],
+					options: UpdateCommandOptions
+				) => {
+					const { id, prompt } = idAndPrompt(
+						'update',
+						idArg,
+						promptWords,
+						options
+					);
+					if (id !== undefined && options.from !== undefined) {
+						printError(
+							'Give a task ID or --from, not both',
+							`\`taskgraph update ${terminalSafe(id)}\` updates one task; \`--from=${terminalSafe(options.from)}\` updates it and every later one`
+						);
+						process.exit(1);
+					}
+					if (id !== undefined) {
+						await updateOne('update', id, prompt, options);
+						return;
+					}
+					await this.executeCommand({ ...options, prompt });
+				}
+			);
 	}
 
 	private async executeCommand(options: UpdateCommandOptions): Promise<void> {
-		if (options.id !== undefined) {
+		const from = options.from ?? '1';
+		if (options.append || options.assignee !== undefined) {
 			printError(
-				'The update command uses --from=<id>, not --id=<id>',
-				"To update one task, run `taskgraph update-task --id=<id> --prompt='...'`"
+				`${options.append ? '--append' : '--assignee'} works on one task`,
+				`Try \`taskgraph update ${terminalSafe(from)} ${options.append ? '--append ' : ''}--prompt="what changed"\``
 			);
 			process.exit(1);
 		}
 		if (!options.prompt) {
 			printError(
 				'Missing prompt',
-				`Try \`taskgraph update --from=${terminalSafe(options.from)} --prompt="what changed"\``
+				`Try \`taskgraph update --from=${terminalSafe(from)} --prompt="what changed"\``
 			);
 			process.exit(1);
 		}
@@ -283,7 +348,7 @@ export class UpdateCommand extends Command {
 		await runUpdate('update', options, async (tmCore, tag, hooks, stop) => {
 			const result = await tmCore.tasks.updateFrom(
 				{
-					from: options.from,
+					from,
 					prompt: options.prompt as string,
 					research: options.research,
 					tag,
@@ -293,13 +358,13 @@ export class UpdateCommand extends Command {
 					...hooks,
 					onAiCall: (tasks) =>
 						hooks.startSpinner(
-							`Updating ${tasks.length} ${tasks.length === 1 ? 'task' : 'tasks'} from ID ${terminalSafe(options.from)}${options.research ? ' (with research)' : ''}…`
+							`Updating ${tasks.length} ${tasks.length === 1 ? 'task' : 'tasks'} from ID ${terminalSafe(from)}${options.research ? ' (with research)' : ''}…`
 						)
 				}
 			);
 			stop();
 			if (result.sentCount === 0) {
-				console.log(formatNothingToUpdate(terminalSafe(options.from)));
+				console.log(formatNothingToUpdate(terminalSafe(from)));
 				return;
 			}
 			console.log(formatTasksUpdated(result.updatedTasks));

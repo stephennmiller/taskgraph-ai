@@ -148,8 +148,13 @@ Some commands were merged so `taskgraph --help` is shorter. The old names still 
 | `add-dependency --id=3 --depends-on=1` | `depend 3 1` |
 | `remove-dependency --id=3 --depends-on=1` | `depend 3 1 --remove` |
 | `validate-dependencies` | `fix-dependencies --check` |
+| `update-task --id=5 --prompt='...'` | `update 5 --prompt='...'` |
+| `update --prompt='...'` | unchanged: with no ID, `update` still starts at task 1 (`--from=1`) |
+| `scope-up --id=3` / `scope-down --id=3` | `scope 3 up` / `scope 3 down` |
+| `complexity-report` | `analyze-complexity --report` |
+| `complexity-report --file=r.json` | `analyze-complexity --report r.json` |
 
-`remove-task` still takes `--id`, and `depend` still takes `--id` and `--depends-on`.
+`remove-task`, `update` and `scope` still take `--id`, and `depend` still takes `--id` and `--depends-on`.
 
 ## Credit
 
