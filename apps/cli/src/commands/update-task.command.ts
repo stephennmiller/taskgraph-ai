@@ -280,10 +280,7 @@ export class UpdateCommand extends Command {
 				'--from <id>',
 				'Update every unfinished task with ID >= this one (default: 1)'
 			)
-			.option(
-				'--prompt <text>',
-				'Prompt explaining the changes or new context'
-			)
+			.option('--prompt <text>', 'Prompt explaining the changes or new context')
 			.option(
 				'-r, --research',
 				'Use Claude Code web research for research-backed task updates'
