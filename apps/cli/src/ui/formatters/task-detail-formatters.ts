@@ -91,7 +91,7 @@ export interface TaskDetailOptions {
 	width?: number;
 	/**
 	 * Print the description, details, test strategy and approach as written
-	 * (wrapped, not rendered as markdown). Set when stdout isn't a terminal:
+	 * (not wrapped or rendered as markdown). Set when stdout isn't a terminal:
 	 * the reader is an agent or a script, and rendering loads marked,
 	 * marked-terminal and turndown (#836).
 	 */
@@ -131,7 +131,7 @@ function body(
 ): string[] {
 	const columns = Math.max(20, width - indent.length);
 	const text = rawText
-		? formatRawText(content, columns)
+		? formatRawText(content)
 		: formatMarkdown(toMarkdown(content), columns, { breaks: true });
 	return text.split('\n').map((line) => (line.trim() ? indent + line : ''));
 }

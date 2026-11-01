@@ -160,31 +160,14 @@ export function toMarkdown(content: string): string {
 /**
  * Stored task text as written, for a reader on the other end of a pipe:
  * markdown and HTML left as they are, so marked, marked-terminal and
- * turndown never load (#836). Long lines wrap to `columns` under their own
- * indent; lines in a fenced code block don't. HTML entities stay encoded,
- * so unlike turndown's output they can't turn into escape sequences.
+ * turndown never load (#836). Lines aren't wrapped: an agent copying a
+ * command or a table row needs it on one line (#906). HTML entities stay
+ * encoded, so unlike turndown's output they can't turn into escape sequences.
  */
-export function formatRawText(content: string, columns: number): string {
-	// The open fence's marker: only the same character, as long or longer,
-	// closes it, so a ~~~ line inside a ``` block is code
-	let fence = '';
+export function formatRawText(content: string): string {
 	return terminalSafe(unescapeStored(content))
 		.replace(/^\s*\n/, '')
-		.trimEnd()
-		.split('\n')
-		.flatMap((line) => {
-			const marker = line.match(/^\s*(`{3,}|~{3,})/)?.[1];
-			if (
-				marker &&
-				(!fence || (marker[0] === fence[0] && marker.length >= fence.length))
-			) {
-				fence = fence ? '' : marker;
-				return [line];
-			}
-			if (fence) return [line];
-			return wrapLine(line, columns, line.match(/^ */)?.[0] ?? '');
-		})
-		.join('\n');
+		.trimEnd();
 }
 
 /**
