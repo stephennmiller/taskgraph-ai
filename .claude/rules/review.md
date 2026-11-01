@@ -19,14 +19,14 @@ Drop the finding, or lower its severity, unless you can answer yes to all four:
 3. Have you read the callers, imports and tests? Many issues are already handled one frame up or ruled out by a type.
 4. Is the severity defensible? A missing comment is never HIGH.
 
-A HIGH or CRITICAL finding includes the snippet, the failure scenario, and why existing guards (types, validation, tests) don't catch it. A review with zero findings is a valid review; don't invent nits to fill it.
+A finding includes the snippet, the failure scenario, and why existing guards (types, validation, tests) don't catch it. A review with zero findings is a valid review; don't invent nits to fill it.
 
 | Severity | Meaning | Merge |
 |---|---|---|
 | CRITICAL | Security hole or data loss | Blocks |
-| HIGH | A bug a user can hit | Fix before merge |
-| MEDIUM | Maintainability | Fix if cheap, else file an issue |
-| LOW | Style | Mention once or skip |
+| HIGH | A bug a user can hit, or dead code the change left | Fix before merge |
+
+Report nothing below HIGH. Maintainability, style and "consider" ideas are not findings.
 
 ## Common false positives
 
