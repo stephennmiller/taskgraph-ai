@@ -65,6 +65,32 @@ describe('performAutoUpdate', () => {
 		expect(args.slice(0, 3)).toEqual(['install', '-g', 'taskgraph-ai@1.2.3']);
 	});
 
+	it('starts npm.cmd through the shell on Windows, as one fixed command', async () => {
+		const platform = process.platform;
+		Object.defineProperty(process, 'platform', { value: 'win32' });
+		spawn.mockReturnValue(fakeNpm(0));
+
+		try {
+			await expect(performAutoUpdate('1.2.3', { home })).resolves.toBe(true);
+		} finally {
+			Object.defineProperty(process, 'platform', { value: platform });
+		}
+
+		const [cmd, args, options] = spawn.mock.calls[0];
+		expect(cmd).toBe(
+			'npm install -g taskgraph-ai@1.2.3 --no-fund --no-audit --loglevel=warn'
+		);
+		expect(args).toEqual([]);
+		expect(options.shell).toBe(true);
+	});
+
+	it('refuses a version that is not semver, so no shell sees it', async () => {
+		await expect(performAutoUpdate('1.2.3 & calc', { home })).resolves.toBe(
+			false
+		);
+		expect(spawn).not.toHaveBeenCalled();
+	});
+
 	it('reports failure when npm exits non-zero', async () => {
 		spawn.mockReturnValue(fakeNpm(1));
 
