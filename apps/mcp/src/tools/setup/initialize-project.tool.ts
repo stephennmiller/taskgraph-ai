@@ -100,15 +100,15 @@ export function registerInitializeProjectTool(server: FastMCP) {
 					}
 					let result: ReturnType<typeof initializeProject>;
 					try {
-						// rules allows only claude, so Claude Code is always set up;
-						// English, as `init --yes` sets it
+						// rules allows only claude, so Claude Code is always set up.
+						// No responseLanguage: config.json starts in English, and a
+						// re-run keeps what `taskgraph lang` set
 						result = initializeProject({
 							projectRoot,
 							initGit: args.initGit,
 							storeTasksInGit: args.storeTasksInGit,
 							claudeCode: true,
 							aliases: args.addAliases === true,
-							responseLanguage: 'English',
 							mergeDriverScript: cliScriptPath(),
 							// Logged as they happen, so they show even when a later step throws
 							onProblem: (problem) =>
