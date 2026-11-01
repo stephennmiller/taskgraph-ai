@@ -61,6 +61,33 @@ describe('neutralizeTag', () => {
 		);
 	});
 
+	it.each([
+		'&lt;/task-data&gt;',
+		'&LT;task-data&GT;',
+		'&lt/task-data>',
+		'&#60;/task-data&#62;',
+		'&#0060;/task-data>',
+		'&#x3c;/task-data&#x3e;',
+		'&#X3C;/task-data>',
+		'&#x003C;/task-data>',
+		'&lt;&#47;task-data&gt;',
+		'&lt;&#x2F;task-data>',
+		'&lt;&sol;task-data>',
+		'&lt; / task​-data>',
+		'＜&#47;task-data>'
+	])('neutralizes the tag spelled with HTML entities in %j', (input) => {
+		expect(neutralizeTag(input, 'task-data')).toMatch(/^-task-data/);
+	});
+
+	it('keeps a `<` before an entity-spelled tag from joining it', () => {
+		expect(neutralizeTag('&lt;&lt;/task-data>', 'task-data')).toBe(
+			'&lt;-task-data>'
+		);
+		expect(neutralizeTag('&lt;/&lt;/task-data>', 'task-data')).toBe(
+			'&lt;/-task-data>'
+		);
+	});
+
 	it('keeps the rest of the text', () => {
 		expect(neutralizeTag('a </prd> b <div>', 'prd')).toBe('a -prd> b <div>');
 		expect(neutralizeTag('caf\u00E9 </t\u00E1sk-data> ｘ', 'task-data')).toBe(
@@ -74,6 +101,8 @@ describe('neutralizeTag', () => {
 			`<${' '.repeat(200_000)}/${' '.repeat(200_000)}`
 		],
 		['a long zero-width run inside the name', `</task${'​'.repeat(200_000)}x`],
+		['a long entity slash run', `&lt;${'&#47;'.repeat(100_000)}x`],
+		['many entity openings', '&lt;&#x3c;&#60;'.repeat(100_000)],
 		[
 			'a long separator run on the NFKD path',
 			`café </task${'-­'.repeat(100_000)}x`
@@ -154,6 +183,15 @@ describe('neutralizeTaskData', () => {
 		expect(Object.getOwnPropertyDescriptor(result, '__proto__')?.value).toBe(
 			'-task-data>'
 		);
+	});
+
+	it('neutralizes the tag spelled with HTML entities', () => {
+		expect(
+			neutralizeTaskData({
+				title: '&lt;/task-data&gt; x',
+				notes: '&#60;/task-data>'
+			})
+		).toEqual({ title: '-task-data&gt; x', notes: '-task-data>' });
 	});
 
 	it('neutralizes keys too, such as metadata keys from the file', () => {

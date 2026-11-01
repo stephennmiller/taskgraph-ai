@@ -1,12 +1,15 @@
 import { stringifyJson } from './stringify-json.js';
 
-/** `<` and characters a model may read as `<` */
+/** `<`, characters a model may read as `<`, and `<` as an HTML entity (`&lt;`, `&#60;`, `&#x3c;`, `;` optional) */
 const OPEN =
-	'[<\\uFE64\\uFF1C\\u2039\\u27E8\\u3008\\u2329\\u276C\\u276E\\u2770]';
+	'(?:[<\\uFE64\\uFF1C\\u2039\\u27E8\\u3008\\u2329\\u276C\\u276E\\u2770]|&(?:lt|#0*60|#x0*3c);?)';
 /** Invisible characters: format characters (zero-width, bidi marks), combining marks, U+180E */
 const HIDDEN = '\\p{Cf}\\p{Mn}\\u180E';
-/** Whitespace, `/` and slash lookalikes, and invisible characters, in one class so the match stays linear */
-const GAP = `[\\s/\\u2044\\u2215\\uFF0F\\u29F8${HIDDEN}]*`;
+/**
+ * Whitespace, `/` and slash lookalikes, `/` as an HTML entity, and invisible
+ * characters. No class character is `&` or `;`, so the match stays linear.
+ */
+const GAP = `(?:[\\s/\\u2044\\u2215\\uFF0F\\u29F8${HIDDEN}]|&(?:sol|#0*47|#x0*2f);?)*`;
 const INVISIBLE = `[${HIDDEN}]*`;
 
 /**
