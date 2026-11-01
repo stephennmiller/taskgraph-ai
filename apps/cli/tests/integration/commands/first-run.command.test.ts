@@ -78,6 +78,14 @@ describe('first run', () => {
 		expect(list.stderr).not.toContain('--prompt');
 	});
 
+	it('gives `loop -p <existing folder>` the init hint', () => {
+		const result = run(['loop', '-p', dir, '-n', '1']);
+
+		expect(result.status).toBe(1);
+		expect(result.stderr).toContain('taskgraph init');
+		expect(result.stderr).not.toContain('--prompt');
+	});
+
 	it('works on the project TASKGRAPH_PROJECT_ROOT names, from any folder', {
 		timeout: spawnTimeout(3)
 	}, () => {
