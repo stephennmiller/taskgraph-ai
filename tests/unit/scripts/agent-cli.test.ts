@@ -61,6 +61,7 @@ describe('codeownersMatcher', () => {
 
 describe('evaluateReadiness', () => {
 	const pr = {
+		head: { sha: 'abc123' },
 		number: 7,
 		title: 't',
 		state: 'open',
@@ -69,7 +70,8 @@ describe('evaluateReadiness', () => {
 		body: 'x'
 	};
 	const passed = [{ name: 'Test', status: 'completed', conclusion: 'success' }];
-	const reviewed = [{ body: 'No issues. Round 2.' }];
+	const marker = (sha: string) => `\n\n<!-- claude-review sha=${sha} -->`;
+	const reviewed = [{ body: `No issues. Round 2.${marker('abc123')}` }];
 	const base = {
 		pr,
 		checks: passed,
@@ -89,7 +91,10 @@ describe('evaluateReadiness', () => {
 				...passed,
 				{ name: 'Smoke', status: 'completed', conclusion: 'failure' }
 			],
-			botComments: [{ body: 'No issues.' }, { body: '2 issues. Round 2.' }],
+			botComments: [
+				{ body: `No issues.${marker('abc123')}` },
+				{ body: `2 issues. Round 2.${marker('abc123')}` }
+			],
 			files: ['package.json'],
 			isOwned: (f: string) => f === 'package.json'
 		});
@@ -108,5 +113,19 @@ describe('evaluateReadiness', () => {
 		expect(
 			evaluateReadiness({ ...base, checks: [], botComments: [] }).reasons
 		).toEqual(['no checks have run', 'no review bot comment yet']);
+	});
+
+	it('ignores a review of an older commit and non-review bot comments (#913)', () => {
+		const result = evaluateReadiness({
+			...base,
+			botComments: [
+				{ body: `No issues. Round 1.${marker('def456')}` },
+				{ body: 'Stopping reviews on this PR.' }
+			]
+		});
+
+		expect(result.reasons).toEqual([
+			'review bot has not reviewed the latest commit'
+		]);
 	});
 });

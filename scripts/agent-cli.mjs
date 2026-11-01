@@ -33,7 +33,7 @@ the disk from filling. Leaves the worktrees themselves.`,
 	ready: `Usage: agent-cli ready <pr>... [--json]
 
 Ready means: no merge conflict, every check passed, the review bot's
-latest comment says "No issues", no CODEOWNERS path touched, and no
+review of the head commit says "No issues", no CODEOWNERS path touched, and no
 attribution in the PR body. Exits 1 if any PR is not ready.`,
 	conflicts: `Usage: agent-cli conflicts [--json]
 
@@ -129,8 +129,12 @@ export function evaluateReadiness({ pr, checks, botComments, files, isOwned }) {
 	if (pending.length) reasons.push(`checks running: ${pending.join(', ')}`);
 	if (failed.length) reasons.push(`checks failed: ${failed.join(', ')}`);
 
-	const review = botComments.at(-1)?.body.split('\n')[0] ?? null;
-	if (!review) reasons.push('no review bot comment yet');
+	// The bot marks each review with the commit it read; other bot comments don't count.
+	const last = botComments.findLast((c) => /claude-review sha=/.test(c.body));
+	const review = last?.body.split('\n')[0] ?? null;
+	if (!last) reasons.push('no review bot comment yet');
+	else if (last.body.match(/claude-review sha=([0-9a-f]+)/)[1] !== pr.head.sha)
+		reasons.push('review bot has not reviewed the latest commit');
 	else if (!/^No issues/i.test(review)) reasons.push(`review: ${review}`);
 
 	const owned = files.filter(isOwned);
@@ -200,7 +204,8 @@ const commands = {
 		if (existsSync(dir)) throw new Error(`${dir} exists`);
 		run('git', ['fetch', '-q', 'origin', 'main']);
 		const onOrigin =
-			run('git', ['ls-remote', '--heads', 'origin', branch]) !== '';
+			run('git', ['ls-remote', '--heads', 'origin', `refs/heads/${branch}`]) !==
+			'';
 		if (onOrigin) {
 			run('git', ['fetch', '-q', 'origin', branch]);
 			run('git', [
