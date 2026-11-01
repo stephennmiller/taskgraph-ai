@@ -2,7 +2,10 @@
  * Default preset for TaskGraph loop - general task completion
  * Matches the structure of scripts/loop.sh prompt
  */
-export const DEFAULT_PRESET = `SETUP: If taskgraph command not found, run: npm i -g taskgraph-ai
+
+import { TASKGRAPH_PACKAGE } from '../../../common/constants/index.js';
+
+export const DEFAULT_PRESET = `SETUP: If taskgraph command not found, run: npm i -g ${TASKGRAPH_PACKAGE}
 
 TASK: Implement ONE task/subtask from the TaskGraph backlog.
 

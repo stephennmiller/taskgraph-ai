@@ -26,7 +26,7 @@ taskgraph init --merge-driver
 
 `init` sets up the Claude Code integration by default: it copies TaskGraph's agent guide to `.taskgraph/CLAUDE.md` and imports it from your `CLAUDE.md`. `--no-claude` skips it. Slash commands and session hooks come from the plugin.
 
-`init` writes no `.mcp.json` unless you pass `--mcp`, because the CLI and the plugin need no MCP server. `--mcp` needs the Claude Code integration, so it can't be combined with `--no-claude`. `--rules claude` still works; `claude` is the only rule profile.
+`init` writes no `.mcp.json` unless you pass `--mcp`, because the CLI and the plugin need no MCP server. `--mcp` needs the Claude Code integration, so it can't be combined with `--no-claude`. The server it adds runs `npx -y taskgraph-ai@<version>`, pinned to the CLI you ran, so a committed `.mcp.json` doesn't pick up whatever npm tags `latest`. Run `taskgraph init --mcp` again after an upgrade to move the pin; a dist-tag (`@next`), range or local path you wrote yourself is left as it is. `--rules claude` still works; `claude` is the only rule profile.
 
 Inside a Git repository, `init` also sets up the [tasks.json merge driver](/capabilities/merge-driver), so two branches that both add or archive tasks merge without an ID clash.
 

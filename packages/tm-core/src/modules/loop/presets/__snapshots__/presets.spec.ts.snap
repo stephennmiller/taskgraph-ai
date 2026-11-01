@@ -1,7 +1,7 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
 exports[`Preset Snapshots > default preset matches snapshot 1`] = `
-"SETUP: If taskgraph command not found, run: npm i -g taskgraph-ai
+"SETUP: If taskgraph command not found, run: npm i -g taskgraph-ai@<version>
 
 TASK: Implement ONE task/subtask from the TaskGraph backlog.
 
@@ -149,7 +149,7 @@ Implement ONE task from the TaskGraph backlog, test-first. Work through its subt
 
 ### Setup
 
-1. If the taskgraph command is not found, run: npm i -g taskgraph-ai
+1. If the taskgraph command is not found, run: npm i -g taskgraph-ai@<version>
 2. Run taskgraph next to get the next available task, and taskgraph show <id> to read it.
 3. Check git status. Changes under .taskgraph/ are fine; if anything else is uncommitted, stop and output <loop-blocked>TASK <id>: uncommitted changes</loop-blocked>.
 4. Work on a branch named task-<id>; create it if it does not exist, or continue on it if it does.

@@ -182,12 +182,15 @@ To share the setup with your team instead, put it in the project's `.mcp.json`:
   "mcpServers": {
     "taskgraph-ai": {
       "command": "npx",
-      "args": ["-y", "taskgraph-ai"],
+      "args": ["-y", "taskgraph-ai@<version>"],
       "env": { "TASKGRAPH_TOOLS": "standard" }
     }
   }
 }
 ```
+
+Use the version `taskgraph --version` prints, so the team runs the same server.
+`taskgraph init --mcp` writes this pin, and a re-run after upgrading moves it.
 
 ## How to use it
 

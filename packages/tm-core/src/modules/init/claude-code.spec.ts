@@ -2,6 +2,10 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import {
+	TASKGRAPH_PACKAGE,
+	TASKGRAPH_VERSION
+} from '../../common/constants/index.js';
 import { getAssetsDir } from './assets.js';
 import {
 	RULE_PROFILES,
@@ -99,7 +103,7 @@ describe('setUpClaudeCode', () => {
 						'taskgraph-ai': {
 							type: 'stdio',
 							command: 'npx',
-							args: ['-y', 'taskgraph-ai'],
+							args: ['-y', `taskgraph-ai@${TASKGRAPH_VERSION}`],
 							env: { TASKGRAPH_TOOLS: 'core' }
 						}
 					}
@@ -129,9 +133,38 @@ describe('setUpClaudeCode', () => {
 		);
 		setUpClaudeCode(projectDir, { mcp: true }, report);
 		expect(JSON.parse(read('.mcp.json')).mcpServers).toEqual({
-			tm: { type: 'stdio', command: 'npx', args: ['x', 'taskgraph-ai'] }
+			tm: { type: 'stdio', command: 'npx', args: ['x', TASKGRAPH_PACKAGE] }
 		});
 	});
+
+	it.each([
+		['an older pin', 'taskgraph-ai@0.1.0', TASKGRAPH_PACKAGE],
+		['a prerelease pin', 'taskgraph-ai@0.1.0-rc.1', TASKGRAPH_PACKAGE],
+		['a bare package name', 'taskgraph-ai', TASKGRAPH_PACKAGE],
+		['a dist-tag', 'taskgraph-ai@next', 'taskgraph-ai@next'],
+		['a range', 'taskgraph-ai@^0.1.0', 'taskgraph-ai@^0.1.0'],
+		[
+			'a local build',
+			'/src/taskgraph-ai/dist/mcp-server.js',
+			'/src/taskgraph-ai/dist/mcp-server.js'
+		]
+	])(
+		'on a re-run, moves %s to this version only when it is a version',
+		(_, arg, expected) => {
+			fs.writeFileSync(
+				path.join(projectDir, '.mcp.json'),
+				JSON.stringify({
+					mcpServers: { 'taskgraph-ai': { command: 'npx', args: ['-y', arg] } }
+				})
+			);
+
+			setUpClaudeCode(projectDir, { mcp: true }, report);
+
+			expect(
+				JSON.parse(read('.mcp.json')).mcpServers['taskgraph-ai'].args
+			).toEqual(['-y', expected]);
+		}
+	);
 
 	it('backs up an .mcp.json that is not valid JSON, replaces it and warns once', () => {
 		fs.writeFileSync(path.join(projectDir, '.mcp.json'), '{ broken');

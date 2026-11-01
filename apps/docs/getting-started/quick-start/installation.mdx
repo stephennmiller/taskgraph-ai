@@ -70,12 +70,14 @@ The equivalent `.mcp.json` entry is:
   "mcpServers": {
     "taskgraph-ai": {
       "command": "npx",
-      "args": ["-y", "taskgraph-ai"],
+      "args": ["-y", "taskgraph-ai@<version>"],
       "env": { "TASKGRAPH_TOOLS": "standard" }
     }
   }
 }
 ```
+
+Replace `<version>` with the one `taskgraph --version` prints. A pinned version means everyone who opens the project runs the same server, not whatever npm tags `latest` that day. `taskgraph init --mcp` writes a pinned entry for you, and running it again after an upgrade moves the pin.
 
 ## Staying up to date
 

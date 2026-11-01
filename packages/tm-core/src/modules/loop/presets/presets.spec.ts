@@ -16,8 +16,16 @@ import {
 	TASK_PRESETS,
 	TDD_PRESET
 } from './index.js';
+import { TASKGRAPH_PACKAGE } from '../../../common/constants/index.js';
 
 describe('Preset Exports', () => {
+	it.each([
+		['default', DEFAULT_PRESET],
+		['tdd', TDD_PRESET]
+	])('the %s preset installs this exact version', (_, preset) => {
+		expect(preset).toContain(`npm i -g ${TASKGRAPH_PACKAGE}\n`);
+	});
+
 	describe('PRESET_NAMES', () => {
 		it('contains all 6 preset names', () => {
 			expect(PRESET_NAMES).toHaveLength(6);
@@ -202,8 +210,12 @@ describe('tdd preset', () => {
 });
 
 describe('Preset Snapshots', () => {
+	// The pinned version changes every release; the snapshot shouldn't
+	const unversioned = (preset: string) =>
+		preset.replaceAll(TASKGRAPH_PACKAGE, 'taskgraph-ai@<version>');
+
 	it('default preset matches snapshot', () => {
-		expect(DEFAULT_PRESET).toMatchSnapshot();
+		expect(unversioned(DEFAULT_PRESET)).toMatchSnapshot();
 	});
 
 	it('test-coverage preset matches snapshot', () => {
@@ -223,7 +235,7 @@ describe('Preset Snapshots', () => {
 	});
 
 	it('tdd preset matches snapshot', () => {
-		expect(TDD_PRESET).toMatchSnapshot();
+		expect(unversioned(TDD_PRESET)).toMatchSnapshot();
 	});
 });
 

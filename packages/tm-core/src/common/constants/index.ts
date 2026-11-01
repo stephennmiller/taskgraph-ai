@@ -24,6 +24,9 @@ export const TASKGRAPH_VERSION = packageJson.version || 'unknown';
  */
 export const PACKAGE_NAME = packageJson.name || 'taskgraph-ai';
 
+/** npm spec pinned to this version, so a committed config can't drift to `latest` */
+export const TASKGRAPH_PACKAGE = `${PACKAGE_NAME}@${TASKGRAPH_VERSION}`;
+
 /**
  * Node versions the package supports, from root package.json's `engines`
  */
