@@ -131,6 +131,62 @@ describe('update cache', () => {
 		expect(info).toMatchObject({ needsUpdate: false, failed: true });
 	});
 
+	it('keeps a good cached version when a fresh check fails', async () => {
+		write({ timestamp: Date.now(), latestVersion: '2.0.0' });
+		failEveryRequest();
+
+		const info = await checkForUpdate('1.0.0', { fresh: true });
+
+		expect(info).toMatchObject({ needsUpdate: false, failed: true });
+		expect(readCache()).toMatchObject({ latestVersion: '2.0.0' });
+		expect((await checkForUpdate('1.0.0')).needsUpdate).toBe(true);
+	});
+
+	/** The registry answers 200 with this body */
+	const replyWith = (body: unknown) =>
+		vi.spyOn(https, 'request').mockImplementation(((
+			_options: unknown,
+			onResponse: (res: EventEmitter & { statusCode: number }) => void
+		) => {
+			const req = new EventEmitter() as EventEmitter & { end: () => void };
+			req.end = () =>
+				setImmediate(() => {
+					const res = Object.assign(new EventEmitter(), { statusCode: 200 });
+					onResponse(res);
+					res.emit('data', JSON.stringify(body));
+					res.emit('end');
+				});
+			return req;
+		}) as never);
+
+	it.each([
+		['a non-semver string', 'latest; rm -rf /'],
+		['a number', 2],
+		['an object', { version: '2.0.0' }]
+	])(
+		'counts a dist-tags.latest that is %s as a failed check',
+		async (_, latest) => {
+			replyWith({ 'dist-tags': { latest } });
+
+			const info = await checkForUpdate('1.0.0', { fresh: true });
+
+			expect(info).toMatchObject({
+				latestVersion: '1.0.0',
+				needsUpdate: false,
+				failed: true
+			});
+		}
+	);
+
+	it('takes a semver dist-tags.latest from the registry', async () => {
+		replyWith({ 'dist-tags': { latest: '1.0.1' } });
+
+		const info = await checkForUpdate('1.0.1', { fresh: true });
+
+		expect(info).toMatchObject({ latestVersion: '1.0.1', needsUpdate: false });
+		expect(info.failed).toBeUndefined();
+	});
+
 	it('gives up when the registry sends headers and then stalls the body', async () => {
 		const server = http.createServer((_req, res) => {
 			res.writeHead(200);

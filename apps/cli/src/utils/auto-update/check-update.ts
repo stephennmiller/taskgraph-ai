@@ -76,7 +76,8 @@ export function readCache(): UpdateCache | null {
 			latestVersion: data.latestVersion,
 			highlights: Array.isArray(data.highlights)
 				? data.highlights.filter((h) => typeof h === 'string')
-				: undefined
+				: undefined,
+			failed: data.failed === true || undefined
 		};
 	} catch {
 		return null;
@@ -122,7 +123,7 @@ const NPM_TIMEOUT_MS = 3000;
 
 /**
  * Fetch latest version from npm registry
- * @returns Latest version string or null on failure
+ * @returns Latest version string, or null on failure or a non-semver reply
  */
 function fetchLatestVersion(currentVersion: string): Promise<string | null> {
 	return new Promise((resolve) => {
@@ -147,8 +148,12 @@ function fetchLatestVersion(currentVersion: string): Promise<string | null> {
 							resolve(null);
 							return;
 						}
-						const npmData = JSON.parse(data);
-						resolve(npmData['dist-tags']?.latest || null);
+						const latest = JSON.parse(data)['dist-tags']?.latest;
+						resolve(
+							typeof latest === 'string' && SEMVER_RE.test(latest)
+								? latest
+								: null
+						);
 					} catch {
 						resolve(null);
 					}
@@ -206,7 +211,9 @@ export async function checkForUpdate(
 	// Fetch from npm registry
 	const latestVersion = await fetchLatestVersion(currentVersion);
 	if (!latestVersion) {
-		writeCache(currentVersion, undefined, true);
+		// A fresh check that fails keeps a good entry, so later commands still see its version
+		const kept = fresh ? readCache() : null;
+		if (!kept || kept.failed) writeCache(currentVersion, undefined, true);
 		return { ...buildUpdateInfo(currentVersion, currentVersion), failed: true };
 	}
 
