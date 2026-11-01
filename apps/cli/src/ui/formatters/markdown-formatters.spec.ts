@@ -164,6 +164,28 @@ describe('formatRawText', () => {
 		]);
 	});
 
+	// #906: a wrapped command or table row reached an agent as two lines
+	it.each([
+		[
+			'an indented code block',
+			'Run:\n\n    npm run build -- --filter=@tm/cli --with-a-very-long-flag=value --another=2'
+		],
+		[
+			'a tab-indented code block',
+			'Run:\n\n\tnpm run build -- --filter=@tm/cli --with-a-very-long-flag=value'
+		],
+		[
+			'a fence after a line with an info string, which does not close it',
+			`\`\`\`\ncode\n\`\`\`js\n${'word '.repeat(30).trim()}\n\`\`\``
+		],
+		[
+			'a table row',
+			'| Column one | Column two | Column three | Column four | Column five |'
+		]
+	])('leaves long lines in %s unwrapped', (_, text) => {
+		expect(formatRawText(text, 40)).toBe(text);
+	});
+
 	it('undoes escaped newlines and keeps HTML and its entities as written', () => {
 		expect(formatRawText('<p>Clear &#27;[2J</p>\\nnext', 80)).toBe(
 			'<p>Clear &#27;[2J</p>\nnext'

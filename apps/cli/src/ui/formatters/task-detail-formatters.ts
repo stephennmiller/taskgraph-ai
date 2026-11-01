@@ -91,7 +91,7 @@ export interface TaskDetailOptions {
 	width?: number;
 	/**
 	 * Print the description, details, test strategy and approach as written
-	 * (wrapped, not rendered as markdown). Set when stdout isn't a terminal:
+	 * (prose wrapped, not rendered as markdown). Set when stdout isn't a terminal:
 	 * the reader is an agent or a script, and rendering loads marked,
 	 * marked-terminal and turndown (#836).
 	 */
