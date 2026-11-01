@@ -38,7 +38,7 @@ describe('formatTagMove', () => {
 			plain(formatTagMove(2, 'backlog', 'sprint', true)).split('\n')
 		).toEqual([
 			'✓ Moved 2 tasks from "backlog" to "sprint"',
-			'Next: taskgraph validate-dependencies, then taskgraph fix-dependencies'
+			'Next: taskgraph fix-dependencies --check, then taskgraph fix-dependencies'
 		]);
 	});
 

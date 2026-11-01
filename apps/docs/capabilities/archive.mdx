@@ -29,8 +29,8 @@ The age is the task's last update (`updatedAt`, or a subtask's when later). A fi
 
 ## IDs and dependencies
 
-- Archived tasks keep their IDs: `add-task`, `parse-prd`, `move` and `remove-subtask --convert` never hand an archived ID to a new task, even after a restore. The [merge driver](/capabilities/merge-driver) doesn't either: a task another branch added under an ID archived here gets the next free ID, and `archive.json` merges as data when both branches archived.
-- A dependency on an archived task counts as done, so `next` (CLI and MCP), `why`, `graph`, `list` and `list --ready`, `tags --ready` and `validate-dependencies` treat it as finished and `fix-dependencies` leaves it alone. `add-dependency` on an archived task tells you to restore it first. Related and discovered-from links to an archived task are kept: `fix-dependencies`, `remove-task` and `move` don't treat them as dangling.
+- Archived tasks keep their IDs: `add-task`, `parse-prd`, `move` and `remove-task --convert` never hand an archived ID to a new task, even after a restore. The [merge driver](/capabilities/merge-driver) doesn't either: a task another branch added under an ID archived here gets the next free ID, and `archive.json` merges as data when both branches archived.
+- A dependency on an archived task counts as done, so `next` (CLI and MCP), `why`, `graph`, `list` and `list --ready`, `tags --ready` and `fix-dependencies --check` treat it as finished and `fix-dependencies` leaves it alone. `depend` on an archived task tells you to restore it first. Related and discovered-from links to an archived task are kept: `fix-dependencies`, `remove-task` and `move` don't treat them as dangling.
 
 ## Tags and safety
 

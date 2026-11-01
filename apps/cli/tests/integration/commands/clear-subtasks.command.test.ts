@@ -92,7 +92,7 @@ describe('clear-subtasks command', () => {
 
 		expect(result.status).toBe(1);
 		expect(result.stderr).toContain('1.2 is a subtask, not a task');
-		expect(result.stderr).toContain('remove-subtask --id=1.2');
+		expect(result.stderr).toContain('remove-task 1.2');
 		expect(subtaskCounts()).toEqual([3, 1, 0]);
 	});
 
