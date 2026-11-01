@@ -156,6 +156,12 @@ describe('formatCommanderError', () => {
 		);
 	});
 
+	it('gives scope the -p hint too', () => {
+		const text = formatCommanderError("error: unknown option '-p'", 'scope');
+
+		expect(plain(text)).toContain('-p means --project');
+	});
+
 	it('keeps the usual hint where -p never meant --prompt', () => {
 		const text = formatCommanderError("error: unknown option '-p'", 'models');
 

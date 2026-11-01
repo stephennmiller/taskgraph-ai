@@ -152,6 +152,7 @@ const OLD_PROMPT_COMMANDS = new Set([
 	'update',
 	'update-task',
 	'update-subtask',
+	'scope',
 	'scope-up',
 	'scope-down'
 ]);
