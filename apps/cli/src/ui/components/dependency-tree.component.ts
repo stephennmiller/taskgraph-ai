@@ -159,9 +159,7 @@ export function renderDependencyTree(
 		if (edge) {
 			lines.push(
 				theme.muted('  Break it with ') +
-					theme.brand(
-						`taskgraph remove-dependency --id=${first.id} --depends-on=${edge}`
-					)
+					theme.brand(`taskgraph depend ${first.id} ${edge} --remove`)
 			);
 		}
 	}

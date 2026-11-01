@@ -6,7 +6,7 @@
  *   Skipped 8 → 8 (same ID)
  *
  *   ✓ Moved 2 tasks from "backlog" to "sprint"
- *   Next: taskgraph validate-dependencies, then fix-dependencies
+ *   Next: taskgraph fix-dependencies --check, then fix-dependencies
  *
  *   ✗ Can't move tasks from "backlog" to "sprint": 1 dependency conflict
  *     Task 5 depends on 4 (in backlog)
@@ -47,7 +47,7 @@ export function formatTagMove(
 	if (droppedDependencies) {
 		lines.push(
 			theme.muted('Next: ') +
-				theme.brand('taskgraph validate-dependencies') +
+				theme.brand('taskgraph fix-dependencies --check') +
 				theme.muted(', then ') +
 				theme.brand('taskgraph fix-dependencies')
 		);

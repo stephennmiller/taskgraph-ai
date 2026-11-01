@@ -3,6 +3,7 @@
  */
 
 export {
+	isStoredTaskId,
 	TaskIdSchema,
 	MainTaskIdSchema,
 	type TaskId,

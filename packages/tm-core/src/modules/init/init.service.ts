@@ -21,10 +21,13 @@ import {
 	TASKGRAPH_REPORTS_DIR,
 	TASKGRAPH_STATE_FILE,
 	TASKGRAPH_TASKS_DIR,
+	TASKGRAPH_TASKS_FILE,
 	TASKGRAPH_TEMPLATES_DIR
 } from '../../common/constants/paths.js';
+import { TaskGraphError } from '../../common/errors/taskgraph-error.js';
 import { getLogger } from '../../common/logger/index.js';
 import { setResponseLanguage } from '../config/services/project-settings.js';
+import { resolvesWithin } from '../migration/import-paths.js';
 import {
 	findOnPath,
 	installMergeDriver,
@@ -36,10 +39,12 @@ import {
 	type UpstreamImportResult,
 	importUpstreamProject
 } from '../migration/upstream-import.js';
+import { refuseSymlinkSync } from '../storage/adapters/file-storage/file-operations.js';
 import { readAsset } from './assets.js';
 import { type InitReport, setUpClaudeCode } from './claude-code.js';
 import { manageGitignoreFile, readStoreTasksInGit } from './gitignore.js';
 import {
+	GITATTRIBUTES_FILE,
 	type InitChange,
 	describeInitChanges,
 	isTrackedInGit,
@@ -115,6 +120,48 @@ export interface InitPlan {
 	aliasFile: string | null;
 }
 
+/** What init writes under .taskgraph/, folders before what they hold */
+const TASKGRAPH_PATHS = [
+	TASKGRAPH_DIR,
+	TASKGRAPH_TASKS_DIR,
+	TASKGRAPH_DOCS_DIR,
+	TASKGRAPH_REPORTS_DIR,
+	TASKGRAPH_TEMPLATES_DIR,
+	TASKGRAPH_STATE_FILE,
+	TASKGRAPH_TASKS_FILE,
+	TASKGRAPH_CONFIG_FILE,
+	TASKGRAPH_LOCAL_CONFIG_FILE,
+	EXAMPLE_PRD_FILE,
+	path.join(TASKGRAPH_TEMPLATES_DIR, 'example_prd_rpg.txt'),
+	path.join(TASKGRAPH_DIR, 'CLAUDE.md')
+];
+
+/** What init writes in the project root */
+const ROOT_FILES = [ENV_EXAMPLE_FILE, GITIGNORE_FILE, 'CLAUDE.md', '.mcp.json'];
+
+/**
+ * Refuse a link leading out of the project; `file` is directly in the root.
+ * A link to another project file is fine: CLAUDE.md -> AGENTS.md is common.
+ * @throws {TaskGraphError} FILE_WRITE_ERROR
+ */
+function refuseLinkOutOfProject(projectRoot: string, file: string): void {
+	const full = path.join(projectRoot, file);
+	if (!resolvesWithin(projectRoot, full)) refuseSymlinkSync(full);
+}
+
+/**
+ * Refuse every link init would write through, before it writes anything. The
+ * project may be a checkout of someone else's repository, and a link there
+ * could send a write anywhere the user can reach.
+ * @throws {TaskGraphError} FILE_WRITE_ERROR
+ */
+function refuseUnsafeLinks(projectRoot: string): void {
+	for (const file of TASKGRAPH_PATHS) {
+		refuseSymlinkSync(path.join(projectRoot, file));
+	}
+	for (const file of ROOT_FILES) refuseLinkOutOfProject(projectRoot, file);
+}
+
 /** Commit tasks.json: the choice given, else an earlier init's, else yes */
 export function resolveStoreTasksInGit(
 	projectRoot: string,
@@ -145,11 +192,13 @@ export function planInit(
  * .gitattributes line and this clone's git config. Git runs `taskgraph`
  * when it's on PATH, otherwise this process's script by its path.
  * @throws {NotAGitRepositoryError} Outside a Git work tree
+ * @throws {TaskGraphError} When .gitattributes is a link out of the project
  */
 export function setUpMergeDriver(
 	targetDir: string,
 	scriptPath = path.resolve(process.argv[1] ?? '')
 ): MergeDriverInstallResult {
+	refuseLinkOutOfProject(targetDir, GITATTRIBUTES_FILE);
 	const command = mergeDriverCommand({
 		onPath: findOnPath('taskgraph') !== null,
 		execPath: process.execPath,
@@ -172,6 +221,20 @@ export function initializeProject(
 		problems.push({ level, message });
 		options.onProblem?.({ level, message });
 	};
+	try {
+		refuseUnsafeLinks(targetDir);
+	} catch (error) {
+		if (!(error instanceof TaskGraphError)) throw error;
+		report('error', error.message);
+		return {
+			alreadySetUp: false,
+			changes: [],
+			hints: [],
+			problems,
+			failed: true
+		};
+	}
+
 	const initGit = options.initGit ?? true;
 	const storeTasksInGit = resolveStoreTasksInGit(
 		targetDir,

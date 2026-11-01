@@ -76,7 +76,6 @@ export const HELP_GROUPS: readonly HelpGroup[] = [
 			{ name: 'note', desc: 'Log a progress note on a task, as written' },
 			{ name: 'add-subtask', desc: 'Add a subtask, or make a task one' },
 			{ name: 'remove-task', desc: 'Remove a task or subtask' },
-			{ name: 'remove-subtask', desc: 'Remove a subtask' },
 			{ name: 'clear-subtasks', desc: 'Remove all subtasks from tasks' },
 			{ name: 'sync-readme', desc: 'Export tasks to README.md' },
 			{
@@ -114,10 +113,8 @@ export const HELP_GROUPS: readonly HelpGroup[] = [
 				name: 'archive <restore>',
 				desc: 'Move finished tasks out, or restore one'
 			},
-			{ name: 'add-dependency', desc: 'Make a task depend on another' },
-			{ name: 'remove-dependency', desc: 'Remove a dependency' },
-			{ name: 'validate-dependencies', desc: 'Report invalid dependencies' },
-			{ name: 'fix-dependencies', desc: 'Fix invalid dependencies' }
+			{ name: 'depend', desc: 'Add or --remove a dependency' },
+			{ name: 'fix-dependencies', desc: 'Fix invalid dependencies, or --check' }
 		]
 	}
 ];

@@ -4,7 +4,7 @@
  * channel now, so those copies only go stale and double the commands shown.
  */
 
-import { existsSync, readdirSync, rmdirSync, rmSync, statSync } from 'node:fs';
+import { lstatSync, readdirSync, rmdirSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 
 // Built from a fragment so the package-identity spec, which forbids the old
@@ -81,14 +81,14 @@ export interface PruneResult {
 	removed: string[];
 }
 
+/** Readdir entries aren't followed: a link here is removed or left, never walked */
 function pruneDir(dir: string, prefix: string, removed: string[]): void {
 	for (const entry of readdirSync(dir, { withFileTypes: true })) {
 		const full = join(dir, entry.name);
 		const relative = prefix ? `${prefix}/${entry.name}` : entry.name;
 		if (entry.isDirectory()) {
 			// The old layout nested commands in one folder per category
-			pruneDir(full, relative, removed);
-			if (readdirSync(full).length === 0) rmdirSync(full);
+			pruneEmptiedDir(full, relative, removed);
 		} else if (LEGACY_FILES.has(entry.name)) {
 			rmSync(full);
 			removed.push(relative);
@@ -96,17 +96,29 @@ function pruneDir(dir: string, prefix: string, removed: string[]): void {
 	}
 }
 
+/** Prune `dir`, then remove it if that emptied it */
+function pruneEmptiedDir(dir: string, prefix: string, removed: string[]): void {
+	const before = removed.length;
+	pruneDir(dir, prefix, removed);
+	if (removed.length > before && readdirSync(dir).length === 0) rmdirSync(dir);
+}
+
 /**
  * Delete the files in `<projectRoot>/.claude/commands/tm/` whose names match a
  * command `init` used to write. Files with any other name are kept, and the
- * directory is removed only if nothing is left.
+ * directory is removed only if this emptied it. A link on the way there is
+ * skipped: a committed one could point anywhere, and only real folders hold
+ * what an older init wrote.
  */
 export function pruneLegacySlashCommands(projectRoot: string): PruneResult {
-	const tmDir = join(projectRoot, '.claude', 'commands', 'tm');
 	const removed: string[] = [];
-	if (!existsSync(tmDir) || !statSync(tmDir).isDirectory()) return { removed };
+	let tmDir = projectRoot;
+	for (const part of ['.claude', 'commands', 'tm']) {
+		tmDir = join(tmDir, part);
+		const info = lstatSync(tmDir, { throwIfNoEntry: false });
+		if (!info?.isDirectory()) return { removed };
+	}
 
-	pruneDir(tmDir, '', removed);
-	if (readdirSync(tmDir).length === 0) rmdirSync(tmDir);
+	pruneEmptiedDir(tmDir, '', removed);
 	return { removed };
 }

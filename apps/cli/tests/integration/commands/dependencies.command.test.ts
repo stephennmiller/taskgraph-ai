@@ -130,10 +130,10 @@ describe('dependency commands', () => {
 
 		expect(result.status).toBe(1);
 		expect(result.stdout).toContain('✗ 2 dependency problems');
-		expect(result.stdout).toContain('taskgraph remove-dependency');
+		expect(result.stdout).toContain('taskgraph depend <id> <id> --remove');
 	});
 
-	it("fix: for a loop it can't break, points at remove-dependency every time", () => {
+	it("fix: for a loop it can't break, points at depend --remove every time", () => {
 		// Task 1 waits on its own subtask 1.1, which waits on task 1
 		const data = JSON.parse(fs.readFileSync(tasksFile(), 'utf8'));
 		data.master.tasks[0].dependencies = ['1.1'];
@@ -147,7 +147,7 @@ describe('dependency commands', () => {
 			run(['fix-dependencies'])
 		]) {
 			expect(result.status).toBe(1);
-			expect(result.stdout).toContain('taskgraph remove-dependency');
+			expect(result.stdout).toContain('taskgraph depend <id> <id> --remove');
 			expect(result.stdout).not.toContain('Run taskgraph fix-dependencies');
 		}
 	});
@@ -163,7 +163,7 @@ describe('dependency commands', () => {
 		expect(result.status).toBe(1);
 		expect(result.stdout).toContain('✗ 2 dependency problems');
 		expect(result.stdout).not.toMatch(/^\s+1\s/m);
-		expect(result.stdout).toContain('taskgraph remove-dependency');
+		expect(result.stdout).toContain('taskgraph depend <id> <id> --remove');
 		expect(result.stdout).not.toContain('Run taskgraph fix-dependencies');
 	});
 

@@ -9,8 +9,8 @@ Arguments: $ARGUMENTS (task ID, then what changed: "5 add rate limiting")
 
 This changes one task's content only. For other requests, say so and use the right command:
 
-- several tasks at once, or "all tasks that ...": `/taskgraph:update-tasks-from-id`
-- a status ("mark 23 as done", "defer 7"): `/taskgraph:set-status <id> <status>`, or the shortcuts `/taskgraph:to-in-progress` and `/taskgraph:to-done`
+- several tasks at once, or "all tasks that ...": `/taskgraph:update`
+- a status ("mark 23 as done", "defer 7"): `/taskgraph:set-status <id> <status>`, or `/taskgraph:to-done <id>`, which checks the acceptance criteria first
 - dependencies: `/taskgraph:add-dependency` and `/taskgraph:remove-dependency`
 - a progress note, kept as written with no AI: `taskgraph note <id> -- '<text>'`
 

@@ -19,6 +19,7 @@ import type { FileOperations } from './file-operations.js';
 import type { FormatHandler } from './format-handler.js';
 import { getOwnKey, setOwnKey } from '../../../../common/utils/own-key.js';
 import type { PathResolver } from './path-resolver.js';
+import { storedTagOrDefault } from '../../../tasks/utils/tag-names.js';
 import { filterReadyTasks } from '../../../tasks/utils/task-filters.js';
 import { stampTasksFileSchemaVersion } from './schema-version.js';
 
@@ -354,7 +355,7 @@ export class TagOperations {
 				'state.json'
 			);
 			const stateData = await this.fileOps.readJson(statePath);
-			return stateData?.currentTag || 'master';
+			return storedTagOrDefault(stateData?.currentTag);
 		} catch (error) {
 			// If state.json doesn't exist or can't be read, default to 'master'
 			return 'master';

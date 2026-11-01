@@ -109,9 +109,7 @@ describe('renderDependencyTree', () => {
 		);
 
 		expect(lines).toContain('⚠ These tasks depend on each other in a loop:');
-		expect(lines).toContain(
-			'  Break it with taskgraph remove-dependency --id=2 --depends-on=3'
-		);
+		expect(lines).toContain('  Break it with taskgraph depend 2 3 --remove');
 	});
 
 	it('shows a legend for only the statuses on screen', () => {

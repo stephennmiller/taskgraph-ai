@@ -4,7 +4,11 @@ import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { CURRENT_SCHEMA_VERSION } from '../storage/adapters/file-storage/schema-version.js';
-import { initializeProject, planInit } from './init.service.js';
+import {
+	initializeProject,
+	planInit,
+	setUpMergeDriver
+} from './init.service.js';
 import { ALIAS_LINE } from './shell-aliases.js';
 
 const git = (cwd: string, ...args: string[]) =>
@@ -358,5 +362,138 @@ describe('planInit', () => {
 				aliases: false
 			})
 		).toEqual({ startGit: false, mergeDriver: true, aliasFile: null });
+	});
+});
+
+describe.skipIf(process.platform === 'win32')('links in the project', () => {
+	let projectDir: string;
+	let outside: string;
+	const link = (file: string, target: string) => {
+		const full = path.join(projectDir, file);
+		fs.mkdirSync(path.dirname(full), { recursive: true });
+		fs.symlinkSync(target, full);
+	};
+	const init = () =>
+		initializeProject({
+			projectRoot: projectDir,
+			initGit: false,
+			claudeCode: true,
+			mcp: true,
+			responseLanguage: 'English'
+		});
+
+	beforeEach(() => {
+		projectDir = fs.mkdtempSync(path.join(os.tmpdir(), 'tm-init-'));
+		outside = fs.mkdtempSync(path.join(os.tmpdir(), 'tm-outside-'));
+	});
+
+	afterEach(() => {
+		fs.rmSync(projectDir, { recursive: true, force: true });
+		fs.rmSync(outside, { recursive: true, force: true });
+	});
+
+	const files = [
+		'.taskgraph/config.json',
+		'.taskgraph/config.local.json',
+		'.taskgraph/state.json',
+		'.taskgraph/CLAUDE.md',
+		'.taskgraph/tasks/tasks.json',
+		'.taskgraph/templates/example_prd.txt',
+		'.taskgraph/templates/example_prd_rpg.txt',
+		'.env.example',
+		'.gitignore',
+		'.mcp.json',
+		'CLAUDE.md'
+	];
+
+	it.each(files)('leaves the target of a link at %s alone', (file) => {
+		const target = path.join(outside, 'victim');
+		fs.writeFileSync(target, '{"keep":"me"}');
+		link(file, target);
+
+		const result = init();
+
+		expect(result.failed).toBe(true);
+		expect(fs.readFileSync(target, 'utf8')).toBe('{"keep":"me"}');
+	});
+
+	it.each(files)('writes nothing through a dangling link at %s', (file) => {
+		link(file, path.join(outside, 'victim'));
+
+		expect(init().failed).toBe(true);
+		expect(fs.readdirSync(outside)).toEqual([]);
+	});
+
+	it.each([
+		'.taskgraph',
+		'.taskgraph/tasks',
+		'.taskgraph/docs',
+		'.taskgraph/reports',
+		'.taskgraph/templates'
+	])('writes nothing into a folder link at %s', (dir) => {
+		link(dir, outside);
+
+		expect(init().failed).toBe(true);
+		expect(fs.readdirSync(outside)).toEqual([]);
+	});
+
+	it('stops before writing anything', () => {
+		link('.gitignore', path.join(outside, 'victim'));
+
+		init();
+
+		expect(fs.readdirSync(projectDir)).toEqual(['.gitignore']);
+	});
+
+	it('still follows a link to another file in the project', () => {
+		fs.writeFileSync(path.join(projectDir, 'AGENTS.md'), '# Mine\n');
+		link('CLAUDE.md', 'AGENTS.md');
+
+		expect(init().failed).toBe(false);
+		expect(
+			fs.lstatSync(path.join(projectDir, 'CLAUDE.md')).isSymbolicLink()
+		).toBe(true);
+		expect(
+			fs.readFileSync(path.join(projectDir, 'AGENTS.md'), 'utf8')
+		).toContain('@./.taskgraph/CLAUDE.md');
+	});
+
+	it('works in a project reached through a link', () => {
+		const viaLink = path.join(outside, 'project');
+		fs.symlinkSync(projectDir, viaLink);
+
+		const result = initializeProject({
+			projectRoot: viaLink,
+			initGit: false,
+			claudeCode: true
+		});
+
+		expect(result.failed).toBe(false);
+		expect(fs.existsSync(path.join(projectDir, 'CLAUDE.md'))).toBe(true);
+	});
+
+	describe('.gitattributes', () => {
+		const target = () => path.join(outside, 'victim');
+
+		beforeEach(() => {
+			git(projectDir, 'init', '-q');
+			fs.writeFileSync(target(), 'keep\n');
+			link('.gitattributes', target());
+		});
+
+		it('init --merge-driver leaves the target of a link alone', () => {
+			expect(() => setUpMergeDriver(projectDir, '/cli.js')).toThrow(/symlink/);
+			expect(fs.readFileSync(target(), 'utf8')).toBe('keep\n');
+		});
+
+		it('init warns and leaves the target of a link alone', () => {
+			const result = initializeProject({
+				projectRoot: projectDir,
+				claudeCode: false
+			});
+
+			expect(result.problems.map((p) => p.message).join()).toMatch(/symlink/);
+			expect(fs.readFileSync(target(), 'utf8')).toBe('keep\n');
+		});
 	});
 });

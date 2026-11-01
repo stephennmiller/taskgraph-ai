@@ -140,7 +140,7 @@ export class MoveCommand extends Command {
 			if (details.moveCode === MOVE_ERROR_CODES.CANNOT_MOVE_SUBTASK) {
 				printError(
 					`Subtask ${details.taskId} can't move to another tag on its own`,
-					`Make it a task first: \`taskgraph remove-subtask --id=${terminalSafe(details.taskId)} --convert\``
+					`Make it a task first: \`taskgraph remove-task ${terminalSafe(details.taskId)} --convert\``
 				);
 				process.exit(1);
 			}

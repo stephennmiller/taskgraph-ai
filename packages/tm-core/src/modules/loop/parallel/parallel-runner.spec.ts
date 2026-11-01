@@ -33,6 +33,12 @@ vi.mock('./task-worktrees.js', () => ({
 		remove() {
 			return Promise.resolve(true);
 		}
+		assertBranchReusable() {
+			return Promise.resolve();
+		}
+		recordBranch() {
+			return Promise.resolve();
+		}
 	}
 }));
 

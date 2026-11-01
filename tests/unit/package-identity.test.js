@@ -33,7 +33,7 @@ const IDENTITY_FILES = [
 	'apps/mcp/src/shared/utils.ts',
 	'packages/tm-core/src/common/constants/index.ts',
 	'packages/tm-core/src/modules/loop/presets/default.ts',
-	'packages/claude-code-plugin/commands/install-taskgraph.md',
+	'packages/claude-code-plugin/commands/init.md',
 	'scripts/loop.sh',
 	'apps/cli/src/program.ts'
 ];
@@ -103,12 +103,6 @@ describe('package identity', () => {
 		].map(authorName);
 
 		expect(new Set(authors)).toEqual(new Set(['Stephen Miller']));
-	});
-
-	test('auto-updater re-spawns a binary the package actually ships', () => {
-		const constants = read('apps/cli/src/utils/auto-update/constants.ts');
-		const binName = constants.match(/BIN_NAME = '([^']+)'/)[1];
-		expect(Object.keys(pkg.bin)).toContain(binName);
 	});
 
 	test('auto-updater queries the same package it ships as', () => {

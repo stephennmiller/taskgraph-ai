@@ -67,19 +67,25 @@ This applies to every project where `taskgraph init --rules claude` ran before t
 
 ### Renamed and merged commands
 
-There are no aliases. If you used one of the old names in a script, a note or a prompt, switch to the new form:
+The slash commands are named after the CLI commands they run (`/taskgraph:next` runs `taskgraph next`). There are no aliases. If you used one of the old names in a script, a note or a prompt, switch to the new form:
 
 | Old command | New command |
 | --- | --- |
-| `list-tasks-by-status` | `list-tasks <status>` |
-| `list-tasks-with-subtasks` | `list-tasks --subtasks` |
-| `init-project-quick` | `init-project --quick` |
-| `quick-install-taskgraph` | `install-taskgraph --quick` |
-| `update-single-task` | `update-task` (it now edits one task only: use `update-tasks-from-id` for bulk edits and `set-status` for status) |
-| `to-pending`, `to-review`, `to-deferred`, `to-cancelled` | `set-status <id> <status>` (`to-done` and `to-in-progress` stay) |
+| `next-task` | `next` |
+| `list-tasks`, `list-tasks-by-status`, `list-tasks-with-subtasks` | `list [status] [--subtasks]` |
+| `show-task` | `show` |
+| `init-project`, `init-project-quick`, `install-taskgraph`, `quick-install-taskgraph` | `init [--quick]` (it installs the CLI first if it's missing) |
+| `view-models`, `setup-models` | `models` to see them, `models setup` to change them |
+| `update-tasks-from-id` | `update` |
+| `update-single-task` | `update-task` (it edits one task only: use `update` for bulk edits and `set-status` for status) |
+| `expand-task`, `expand-all-tasks` | `expand <id>`, `expand all` |
+| `parse-prd-with-research` | `parse-prd <file> research` |
+| `to-in-progress` | `set-status <id> in-progress` |
+| `to-pending`, `to-review`, `to-deferred`, `to-cancelled` | `set-status <id> <status>` (`to-done` stays) |
+| `convert-task-to-subtask` | `add-subtask <parent ID> <task ID>` |
+| `tm-main`, `learn` | `help` |
 | `remove-subtasks` | `clear-subtasks <id>` |
 | `remove-all-subtasks` | `clear-subtasks --all` |
-| `learn` | `help` |
 | `analyze-project` | `project-status` (progress, work in hand and bottlenecks, from `taskgraph list` and `taskgraph graph`) |
 
 Updating the plugin itself leaves nothing behind. Claude Code installs each plugin version into its own directory (`~/.claude/plugins/cache/<marketplace>/<plugin>/<version>`) and points the install path at the active one. On a real update of `superpowers` from 6.4.2 to 7.0.0, the old directory kept a file the new version dropped and got an `.orphaned_at` marker, while 7.0.0 did not have the file. The plugin's `version` is the TaskGraph release it came with, so `/plugin` shows which one you have; before 0.58.1 it had none and Claude Code keyed it by commit SHA. Whether the update arrives automatically or needs `/plugin marketplace update taskgraph` is not verified, so run it. Then run `taskgraph doctor`: it says if the CLI is older than the plugin needs.
@@ -137,13 +143,18 @@ Some commands were merged so `taskgraph --help` is shorter. The old names still 
 
 | Before | Now |
 | --- | --- |
+| `remove-subtask --id=5.2` | `remove-task 5.2` |
+| `remove-subtask --id=5.2 --convert` | `remove-task 5.2 --convert` |
+| `add-dependency --id=3 --depends-on=1` | `depend 3 1` |
+| `remove-dependency --id=3 --depends-on=1` | `depend 3 1 --remove` |
+| `validate-dependencies` | `fix-dependencies --check` |
 | `update-task --id=5 --prompt='...'` | `update 5 --prompt='...'` |
 | `update --prompt='...'` | unchanged: with no ID, `update` still starts at task 1 (`--from=1`) |
 | `scope-up --id=3` / `scope-down --id=3` | `scope 3 up` / `scope 3 down` |
 | `complexity-report` | `analyze-complexity --report` |
 | `complexity-report --file=r.json` | `analyze-complexity --report r.json` |
 
-`update` and `scope` still take `--id`.
+`remove-task`, `update` and `scope` still take `--id`, and `depend` still takes `--id` and `--depends-on`.
 
 ## Credit
 

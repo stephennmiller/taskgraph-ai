@@ -93,6 +93,10 @@ if (mode === 'hang' || env.FAKE_DOCKER_STUCK || env.FAKE_DOCKER_LOST) {
 	return;
 }
 fs.writeFileSync(path.join(cwd, 'work.txt'), 'done\\n');
+if (mode === 'claude-files') {
+	fs.mkdirSync(path.join(cwd, '.claude'), { recursive: true });
+	fs.writeFileSync(path.join(cwd, '.claude', 'settings.json'), '{"hooks":{}}\\n');
+}
 sh('add', '-A');
 sh('commit', '-q', '-m', 'work on ' + id);
 const file = path.join(state, '.taskgraph', 'tasks', 'tasks.json');
@@ -279,6 +283,48 @@ describe('loop --parallel --container', () => {
 		expect(fs.existsSync(path.join(clone, 'work.txt'))).toBe(true);
 		expect(fs.readFileSync(file('outside'), 'utf8')).toBe('host file\n');
 		expect(readTask().status).toBe('in-progress');
+	});
+
+	it('starts no container on a task branch that was already here with other commits', async () => {
+		git(root, 'checkout', '-q', '-b', 'taskgraph/task-1');
+		fs.writeFileSync(path.join(root, 'CLAUDE.md'), 'Other instructions\n');
+		git(root, 'add', 'CLAUDE.md');
+		git(root, 'commit', '-qm', 'from a pull request');
+		git(root, 'checkout', '-q', 'main');
+
+		const result = await runParallel();
+
+		expect(result.tasks[0]).toMatchObject({
+			state: 'failed',
+			error: expect.stringContaining('git branch -m taskgraph/task-1')
+		});
+		expect(dockerCalls().some(([command]) => command === 'run')).toBe(false);
+		expect(fs.existsSync(clone)).toBe(false);
+		expect(readTask().status).toBe('pending');
+	});
+
+	it("doesn't count a container's commits as where the last run left the branch", async () => {
+		vi.stubEnv('FAKE_DOCKER_MODE', 'claude-files');
+		const first = await runParallel();
+		expect(first.tasks[0]).toMatchObject({ state: 'done', kept: true });
+		const data = JSON.parse(
+			fs.readFileSync(
+				path.join(root, '.taskgraph', 'tasks', 'tasks.json'),
+				'utf8'
+			)
+		);
+		data.master.tasks[0].status = 'pending';
+		fs.writeFileSync(
+			path.join(root, '.taskgraph', 'tasks', 'tasks.json'),
+			JSON.stringify(data)
+		);
+
+		const second = await runParallel();
+
+		expect(second.tasks[0]).toMatchObject({
+			state: 'failed',
+			error: expect.stringContaining('changes .claude/settings.json')
+		});
 	});
 
 	it('on abort removes the container by name, keeps the clone, releases the claim; a rerun reuses the clone', async () => {

@@ -4,6 +4,7 @@ import {
 	mkdtempSync,
 	readdirSync,
 	rmSync,
+	symlinkSync,
 	writeFileSync
 } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -72,6 +73,67 @@ describe('pruneLegacySlashCommands', () => {
 		pruneLegacySlashCommands(projectRoot);
 
 		expect(existsSync(tmDir)).toBe(false);
+	});
+
+	it('keeps an empty folder it removed nothing from', () => {
+		mkdirSync(join(tmDir, 'mine'));
+
+		pruneLegacySlashCommands(projectRoot);
+
+		expect(existsSync(join(tmDir, 'mine'))).toBe(true);
+	});
+
+	describe.skipIf(process.platform === 'win32')('links', () => {
+		let outside: string;
+
+		beforeEach(() => {
+			outside = mkdtempSync(join(tmpdir(), 'tm-outside-'));
+			mkdirSync(join(outside, 'empty'));
+			writeFileSync(join(outside, 'index.md'), '# mine');
+			rmSync(join(projectRoot, '.claude'), { recursive: true });
+		});
+
+		afterEach(() => {
+			rmSync(outside, { recursive: true, force: true });
+		});
+
+		it.each([
+			['.claude/commands/tm', ''],
+			['.claude/commands', 'tm'],
+			['.claude', 'commands/tm']
+		])('does not follow a link at %s', (linkPath, below) => {
+			// The link leads to a folder whose tm/ is the outside folder's copy
+			const target = below ? mkdtempSync(join(outside, 'link-')) : outside;
+			if (below) {
+				mkdirSync(join(target, below, '..'), { recursive: true });
+				symlinkSync(outside, join(target, below));
+			}
+			mkdirSync(join(projectRoot, linkPath, '..'), { recursive: true });
+			symlinkSync(target, join(projectRoot, linkPath));
+
+			expect(pruneLegacySlashCommands(projectRoot).removed).toEqual([]);
+			expect(existsSync(join(outside, 'index.md'))).toBe(true);
+			expect(existsSync(join(outside, 'empty'))).toBe(true);
+		});
+
+		it('removes a link with a legacy name, not what it points at', () => {
+			mkdirSync(tmDir, { recursive: true });
+			symlinkSync(join(outside, 'index.md'), join(tmDir, 'help.md'));
+
+			pruneLegacySlashCommands(projectRoot);
+
+			expect(existsSync(join(tmDir, 'help.md'))).toBe(false);
+			expect(existsSync(join(outside, 'index.md'))).toBe(true);
+		});
+
+		it('does not walk a linked folder inside tm/', () => {
+			mkdirSync(tmDir, { recursive: true });
+			symlinkSync(outside, join(tmDir, 'category'));
+
+			pruneLegacySlashCommands(projectRoot);
+
+			expect(existsSync(join(outside, 'index.md'))).toBe(true);
+		});
 	});
 
 	it('leaves the other .claude/commands entries alone', () => {

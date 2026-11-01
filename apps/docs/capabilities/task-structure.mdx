@@ -153,7 +153,7 @@ The `metadata` field allows you to store arbitrary custom data on tasks without 
 
 `sourceHash` is a hash of that section's text when the task was made. The tag's own metadata keeps the hash of every section of the PRD (`prdSections`), so `parse-prd --append` can tell which sections are new, changed or removed since the last parse.
 
-The AI is given the PRD's headings and picks one per task; an answer that matches no heading is dropped rather than stored. `expand` copies the source to each new subtask. `taskgraph show` prints it under the status line, and `taskgraph validate-dependencies` uses it to list PRD sections that have no task (see [Managing Task Dependencies](/capabilities/cli-updating-commands#managing-task-dependencies)).
+The AI is given the PRD's headings and picks one per task; an answer that matches no heading is dropped rather than stored. `expand` copies the source to each new subtask. `taskgraph show` prints it under the status line, and `taskgraph fix-dependencies --check` uses it to list PRD sections that have no task (see [Managing Task Dependencies](/capabilities/cli-updating-commands#managing-task-dependencies)).
 
 ### Metadata Behavior
 
@@ -336,7 +336,7 @@ The `show` command:
   </Card>
 
   <Card title="✅ Validate Dependencies" icon="circle-check">
-    Periodically run the validate-dependencies command to check for invalid or
+    Periodically run `fix-dependencies --check` to check for invalid or
     circular dependencies.
   </Card>
 </CardGroup>

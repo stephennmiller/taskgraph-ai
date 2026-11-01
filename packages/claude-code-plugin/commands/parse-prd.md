@@ -8,7 +8,7 @@ Generate tasks from a PRD, after asking the user about the gaps that would chang
 Arguments: $ARGUMENTS (PRD file path, then optional modifiers). In the commands below, put the file path in single quotes and write any `'` in it as `'\''`. Modifiers:
 
 - a number → `--num-tasks=<n>`
-- `research` → `--research`
+- `research` → `--research`, for a PRD with unfamiliar tech: the research model runs Claude Code with web search and fetch on the tech the PRD names
 
 ## 1. Find the gaps
 
@@ -77,4 +77,4 @@ Show the user the task lines `parse-prd` printed, then suggest the next step:
 taskgraph next
 ```
 
-For large tasks, `/taskgraph:expand-task <id>` splits one into subtasks; `/taskgraph:analyze-complexity` finds which ones need it.
+For large tasks, `/taskgraph:expand <id>` splits one into subtasks; `/taskgraph:analyze-complexity` finds which ones need it.

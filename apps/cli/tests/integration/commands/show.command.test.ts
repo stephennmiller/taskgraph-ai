@@ -205,6 +205,27 @@ describe('show command', () => {
 		expect(output).toContain('pending');
 	});
 
+	it('prints task text as written when output is piped (#836)', () => {
+		writeTasks(
+			createTasksFile({
+				tasks: [
+					createTask({
+						id: 1,
+						title: 'Markdown task',
+						details: 'Run `npm test`:\n- **unit**\n- <em>integration</em>'
+					})
+				]
+			})
+		);
+
+		const { output, exitCode } = runShow('1');
+
+		expect(exitCode).toBe(0);
+		expect(output).toContain(
+			'Details\n  Run `npm test`:\n  - **unit**\n  - <em>integration</em>'
+		);
+	});
+
 	it.each([
 		['1', 'Done Task'],
 		['2', 'Pending Task'],

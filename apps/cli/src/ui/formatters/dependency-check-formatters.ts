@@ -1,5 +1,5 @@
 /**
- * @fileoverview What `validate-dependencies` and `fix-dependencies` found, e.g.
+ * @fileoverview What `fix-dependencies --check` and `fix-dependencies` found, e.g.
  *
  *   ✓ No dependency problems · 4 tasks, 1 dependency
  *
@@ -14,7 +14,7 @@
  *   ✗ 2 problems left
  *     2  is part of a dependency loop
  *     3  is part of a dependency loop
- *   Break the loop with taskgraph remove-dependency --id=<id> --depends-on=<id>
+ *   Break the loop with taskgraph depend <id> <id> --remove
  *
  * They replace boxed summaries, a log line per problem with the task ID
  * printed twice, and a self-dependency reported a second time as a loop.
@@ -213,7 +213,7 @@ function problems(
 					theme.brand('taskgraph fix-dependencies') +
 					theme.muted(' to fix them')
 			: theme.muted('Break the loop with ') +
-					theme.brand('taskgraph remove-dependency --id=<id> --depends-on=<id>')
+					theme.brand('taskgraph depend <id> <id> --remove')
 	);
 
 	return lines.join('\n');

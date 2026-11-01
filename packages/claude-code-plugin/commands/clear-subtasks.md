@@ -20,4 +20,4 @@ To remove a single subtask, use `/taskgraph:remove-subtask` instead.
    ```
 
    `--all` is never implied: run it only when the arguments say `--all`, and only after the user types `CLEAR ALL SUBTASKS` to confirm. Before asking, run `taskgraph list --with-subtasks` and say how many subtasks across how many tasks will go.
-3. Show the output unchanged in a code block. To break the task down again, suggest `/taskgraph:expand-task <id>`.
+3. Show the output unchanged in a code block. To break the task down again, suggest `/taskgraph:expand <id>`.

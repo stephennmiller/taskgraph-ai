@@ -206,7 +206,7 @@ const idCommands = fs
 describe('commands that take a task ID from the arguments', () => {
 	it('finds them', () => {
 		expect(idCommands).toEqual(
-			expect.arrayContaining(['expand-task.md', 'set-status.md', 'why.md'])
+			expect.arrayContaining(['expand.md', 'set-status.md', 'why.md'])
 		);
 	});
 

@@ -25,7 +25,6 @@ const ALLOWED_COMMANDS = new Set([
 	'note',
 	'remove-task',
 	'add-subtask',
-	'remove-subtask',
 	'clear-subtasks',
 	'sync-readme',
 	'github',
@@ -38,9 +37,7 @@ const ALLOWED_COMMANDS = new Set([
 	'move',
 	'archive',
 	'tags',
-	'add-dependency',
-	'remove-dependency',
-	'validate-dependencies',
+	'depend',
 	'fix-dependencies'
 ]);
 
@@ -66,12 +63,13 @@ describe('formatHelp', () => {
 	// 30 rows left out loop, move, lang, scope-up, scope-down and github
 	// (#219). Each command a user runs now has one row, so the cap is the
 	// command count; raise it only for a new command, not a second row.
-	// 37 with doctor (#256). 38 with upgrade (#696). 35 once update-task,
+	// 37 with doctor (#256). 38 with upgrade (#696). 35 once remove-subtask
+	// and the dependency commands merged, 32 once update-task,
 	// complexity-report and scope-up / scope-down merged (#882).
-	it('lists at most 35 rows with no repeated command', () => {
+	it('lists at most 32 rows with no repeated command', () => {
 		const names = rowNames();
 
-		expect(names.length).toBeLessThanOrEqual(35);
+		expect(names.length).toBeLessThanOrEqual(32);
 		expect(new Set(names).size).toBe(names.length);
 	});
 
@@ -104,7 +102,11 @@ describe('formatHelp', () => {
 		'update-task',
 		'complexity-report',
 		'scope-up',
-		'scope-down'
+		'scope-down',
+		'remove-subtask',
+		'add-dependency',
+		'remove-dependency',
+		'validate-dependencies'
 	])('gives %s no row', (command) => {
 		expect(rowNames()).not.toContain(command);
 	});
