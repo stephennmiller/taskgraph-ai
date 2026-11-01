@@ -125,10 +125,7 @@ export class UpdateTaskCommand extends Command {
 				'-i, --id <id>',
 				'Task ID to update (fallback if not using positional)'
 			)
-			.option(
-				'-p, --prompt <text>',
-				'Prompt (fallback if not using positional)'
-			)
+			.option('--prompt <text>', 'Prompt (fallback if not using positional)')
 			.option(
 				'-r, --research',
 				'Use Claude Code web research for research-backed task updates'
@@ -250,7 +247,7 @@ export class UpdateCommand extends Command {
 				'1'
 			)
 			.option(
-				'-p, --prompt <text>',
+				'--prompt <text>',
 				'Prompt explaining the changes or new context (required)'
 			)
 			.option(

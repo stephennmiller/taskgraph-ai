@@ -171,9 +171,11 @@ describe('LoopCommand', () => {
 			expect(option?.short).toBe('-n');
 		});
 
-		it('should have -p as short flag for prompt', () => {
-			const option = loopCommand.options.find((o) => o.long === '--prompt');
-			expect(option?.short).toBe('-p');
+		it('gives -p to --project, not --prompt (#882)', () => {
+			const prompt = loopCommand.options.find((o) => o.long === '--prompt');
+			const project = loopCommand.options.find((o) => o.long === '--project');
+			expect(prompt?.short).toBeUndefined();
+			expect(project?.short).toBe('-p');
 		});
 
 		it('should have -t as short flag for tag', () => {

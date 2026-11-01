@@ -4,6 +4,7 @@
  * starts as fast as `--version`.
  */
 
+import { isTaskGraphProject, resolveProjectRoot } from '@tm/core';
 import {
 	displayAsciiBanner,
 	isTopLevelHelpRequest,
@@ -23,5 +24,5 @@ export function printTopLevelHelp(args: string[], version: string): void {
 	if (shouldShowAsciiBanner(args, Boolean(process.stdout.isTTY))) {
 		displayAsciiBanner({ version });
 	}
-	console.log(formatHelp());
+	console.log(formatHelp(undefined, isTaskGraphProject(resolveProjectRoot())));
 }

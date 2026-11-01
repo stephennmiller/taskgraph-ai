@@ -32,7 +32,7 @@ export class AddSubtaskCommand extends Command {
 		super(name || 'add-subtask');
 
 		this.description('Add a subtask to an existing task')
-			.option('-p, --parent <id>', 'Parent task ID (required)')
+			.option('--parent <id>', 'Parent task ID (required)')
 			.option('-i, --task-id <id>', 'Existing task ID to convert to subtask')
 			.option(
 				'-t, --title <title>',
@@ -47,7 +47,7 @@ export class AddSubtaskCommand extends Command {
 			.option('-s, --status <status>', 'Status for the new subtask', 'pending')
 			.option('--tag <tag>', 'Specify tag context for task operations')
 			.option(
-				'--project <path>',
+				'-p, --project <path>',
 				'Project root directory (auto-detected if not provided)'
 			)
 			.addOption(legacyFileOption())

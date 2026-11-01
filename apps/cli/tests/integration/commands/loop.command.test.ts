@@ -139,12 +139,12 @@ describe('loop command', () => {
 			expect(output).toContain('--iterations');
 		});
 
-		it('should show -p/--prompt option in help', () => {
+		it('should show --prompt and -p/--project in help', () => {
 			const { output, exitCode } = runHelp();
 
 			expect(exitCode).toBe(0);
-			expect(output).toContain('-p');
 			expect(output).toContain('--prompt');
+			expect(output).toContain('-p, --project');
 		});
 
 		it('should show -t/--tag option in help', () => {

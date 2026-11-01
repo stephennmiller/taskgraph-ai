@@ -95,6 +95,21 @@ describe('expand', () => {
 		expect(text).not.toContain('\x1b[31m');
 	});
 
+	it('takes the ID as an argument (#882)', async () => {
+		await run('3');
+
+		expect(expand).toHaveBeenCalledWith(
+			expect.objectContaining({ id: '3' }),
+			expect.any(Object)
+		);
+	});
+
+	it('refuses two different IDs, before tm-core', async () => {
+		await expect(run('3', '--id=4')).rejects.toThrow('exit 1');
+
+		expect(expand).not.toHaveBeenCalled();
+	});
+
 	it('prints the warnings tm-core reports', async () => {
 		expand.mockImplementation(async (_input, hooks) => {
 			hooks.onWarning('Could not read or parse complexity report: \x1b[31mbad');

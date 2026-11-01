@@ -20,6 +20,7 @@ import {
 	displayError,
 	printError
 } from '../utils/error-handler.js';
+import { pickId } from '../utils/id-argument.js';
 import { getProjectRoot } from '../utils/project-root.js';
 import {
 	legacyFileOption,
@@ -35,7 +36,7 @@ export interface UpdateSubtaskCommandOptions {
 }
 
 const EXAMPLE =
-	"Try `taskgraph update-subtask --id=5.2 --prompt='Add more details about the API endpoint'`";
+	"Try `taskgraph update-subtask 5.2 --prompt='Add more details about the API endpoint'`";
 
 export class UpdateSubtaskCommand extends Command {
 	private spinner?: Ora;
@@ -53,10 +54,11 @@ export class UpdateSubtaskCommand extends Command {
 		this.description(
 			'Update a subtask by appending additional timestamped information'
 		)
+			.argument('[id]', 'Subtask ID to update (or use --id)')
 			.addOption(legacyFileOption())
-			.option('-i, --id <id>', 'Subtask ID to update (required)')
+			.option('-i, --id <id>', 'Subtask ID to update')
 			.option(
-				'-p, --prompt <text>',
+				'--prompt <text>',
 				'Prompt explaining what information to add (required)'
 			)
 			.option(
@@ -64,9 +66,17 @@ export class UpdateSubtaskCommand extends Command {
 				'Use Claude Code web research for research-backed updates'
 			)
 			.option('--tag <tag>', 'Specify tag context for task operations')
-			.action(async (options: UpdateSubtaskCommandOptions) => {
-				await this.executeCommand(options);
-			});
+			.action(
+				async (
+					id: string | undefined,
+					options: UpdateSubtaskCommandOptions
+				) => {
+					await this.executeCommand({
+						...options,
+						id: pickId(id, options.id, 'update-subtask')
+					});
+				}
+			);
 	}
 
 	private async executeCommand(

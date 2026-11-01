@@ -148,6 +148,14 @@ describe('formatErrorMessage', () => {
 });
 
 describe('formatCommanderError', () => {
+	it('says -p means --project (#882)', () => {
+		const text = formatCommanderError("error: unknown option '-p'", 'add-task');
+
+		expect(plain(text)).toBe(
+			"✗ Unknown option '-p'\n  -p means --project; write --prompt or --parent in full"
+		);
+	});
+
 	it('turns Commander suggestions for commands into a runnable hint', () => {
 		const text = formatCommanderError(
 			"error: unknown command 'shwo'\n(Did you mean show?)\n"

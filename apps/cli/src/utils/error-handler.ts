@@ -195,7 +195,10 @@ export function formatCommanderError(
 	}
 
 	let hint: string | undefined;
-	if (/^unknown command/i.test(reason)) {
+	if (/^unknown option '-p'$/i.test(reason)) {
+		// -p was --prompt in some commands and --parent in add-subtask (#882)
+		hint = '-p means --project; write --prompt or --parent in full';
+	} else if (/^unknown command/i.test(reason)) {
 		hint = suggestion
 			? `Did you mean \`taskgraph ${suggestion}\`?`
 			: 'Run `taskgraph --help` to see all commands';

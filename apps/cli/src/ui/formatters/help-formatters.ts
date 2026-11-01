@@ -128,8 +128,10 @@ const fit = (text: string, width: number) =>
  * Format the help screen.
  *
  * @param width - Terminal width; descriptions are cut to fit on one line
+ * @param hasProject - False outside a project: the screen then leads with
+ *   `taskgraph init`, the only command that works there (#882)
  */
-export function formatHelp(width = terminalWidth()): string {
+export function formatHelp(width = terminalWidth(), hasProject = true): string {
 	const rows = HELP_GROUPS.flatMap((group) => group.commands);
 	const nameWidth = Math.max(...rows.map((row) => row.name.length));
 	const descWidth = Math.max(
@@ -140,6 +142,13 @@ export function formatHelp(width = terminalWidth()): string {
 	const lines = [
 		`${chalk.bold('TaskGraph')}  ${theme.muted('AI task management for your coding agent')}`
 	];
+	if (!hasProject) {
+		lines.push(
+			'',
+			theme.muted('No project here yet. Start with ') +
+				theme.brand('taskgraph init')
+		);
+	}
 
 	for (const group of HELP_GROUPS) {
 		lines.push('', theme.heading(group.title));
