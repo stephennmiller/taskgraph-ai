@@ -536,6 +536,25 @@ describe('formatTaskDetail', () => {
 		expect(output).toContain('Details\n  - **one**\n  - <em>two</em>');
 	});
 
+	it('wraps prose but keeps a command and a table row on one line with rawText (#906)', () => {
+		const command =
+			'npm run build -- --filter=@tm/cli --with-a-very-long-flag=value';
+		const row = '| Column one | Column two | Column three | Column four |';
+		const task = createTask({
+			id: 9,
+			title: 'Piped',
+			details: `Run this before you push the branch to the remote:\n\n    ${command}\n\n${row}`
+		});
+
+		const output = plain(formatTaskDetail(task, { width: 40, rawText: true }));
+
+		expect(output).toContain(
+			'\n  Run this before you push the branch to\n  the remote:\n'
+		);
+		expect(output).toContain(`\n      ${command}\n`);
+		expect(output).toContain(`\n  ${row}\n`);
+	});
+
 	it('renders HTML task text as plain text', () => {
 		const task = createTask({
 			id: 4,

@@ -160,14 +160,32 @@ export function toMarkdown(content: string): string {
 /**
  * Stored task text as written, for a reader on the other end of a pipe:
  * markdown and HTML left as they are, so marked, marked-terminal and
- * turndown never load (#836). Lines aren't wrapped: an agent copying a
- * command or a table row needs it on one line (#906). HTML entities stay
- * encoded, so unlike turndown's output they can't turn into escape sequences.
+ * turndown never load (#836). Prose wraps to `columns` under its own indent;
+ * fenced code, indented code and table rows don't, so an agent copies a
+ * command or a row as one line (#906). HTML entities stay encoded, so unlike
+ * turndown's output they can't turn into escape sequences.
  */
-export function formatRawText(content: string): string {
+export function formatRawText(content: string, columns: number): string {
+	// The open fence's marker: only a bare fence line of the same character,
+	// as long or longer, closes it (CommonMark), so ```js inside ``` is code
+	let fence = '';
 	return terminalSafe(unescapeStored(content))
 		.replace(/^\s*\n/, '')
-		.trimEnd();
+		.trimEnd()
+		.split('\n')
+		.flatMap((line) => {
+			if (fence) {
+				const close = line.match(/^\s*(`{3,}|~{3,})\s*$/)?.[1];
+				if (close?.[0] === fence[0] && close.length >= fence.length) fence = '';
+				return [line];
+			}
+			const open = line.match(/^\s*(`{3,}|~{3,})/)?.[1];
+			if (open) fence = open;
+			if (open || /^( {4}|\t)/.test(line) || line.trimStart().startsWith('|'))
+				return [line];
+			return wrapLine(line, columns, line.match(/^ */)?.[0] ?? '');
+		})
+		.join('\n');
 }
 
 /**
