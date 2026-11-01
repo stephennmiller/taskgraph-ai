@@ -161,7 +161,7 @@ Some commands were merged so `taskgraph --help` is shorter. The old names still 
 | `loop -p tdd` | `loop --prompt tdd` |
 | `add-subtask -p 5 --title='…'` | `add-subtask --parent=5 --title='…'` |
 
-`loop` and `add-subtask` gain `-p` for `--project`. Running an old `-p` form fails with a hint that names the long flag. `expand` and `update-subtask` now also take the ID as an argument (`expand 3`, `update-subtask 5.2 --prompt='…'`), as `show` and `set-status` do.
+`loop`, `add-subtask` and `move` gain `-p` for `--project`. Running an old `-p` form fails with a hint that names the long flag. `expand` and `update-subtask` now also take the ID as an argument (`expand 3`, `update-subtask 5.2 --prompt='…'`), as `show` and `set-status` do.
 
 ## Credit
 
