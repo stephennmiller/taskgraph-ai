@@ -59,7 +59,8 @@ describe.skipIf(process.platform === 'win32')('loop iteration timeout', () => {
 		try {
 			return !/\) Z /.test(fs.readFileSync(`/proc/${pid}/stat`, 'utf8'));
 		} catch {
-			return true;
+			// On Linux a missing stat means the zombie was reaped after the kill check (#911); no /proc elsewhere
+			return process.platform !== 'linux';
 		}
 	};
 
