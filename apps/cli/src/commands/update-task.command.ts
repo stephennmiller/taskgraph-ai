@@ -109,6 +109,34 @@ async function runUpdate(
 	}
 }
 
+/**
+ * The task ID and prompt from `[id] [prompt...]`, --id and --prompt. With
+ * --id every argument is prompt words; words and --prompt together exit 1.
+ */
+function idAndPrompt(
+	command: string,
+	idArg: string | undefined,
+	promptWords: string[],
+	options: UpdateTaskCommandOptions
+): { id: string | undefined; prompt: string | undefined } {
+	const words =
+		options.id !== undefined && idArg !== undefined
+			? [idArg, ...promptWords]
+			: promptWords;
+	const id = options.id ?? idArg;
+	if (words.length > 0 && options.prompt !== undefined) {
+		printError(
+			'Give the prompt as words or --prompt, not both',
+			`Try \`taskgraph ${command} ${terminalSafe(id ?? '3')} --prompt="what changed"\``
+		);
+		process.exit(1);
+	}
+	return {
+		id,
+		prompt: words.length > 0 ? words.join(' ') : options.prompt
+	};
+}
+
 /** Rewrite one task with the AI, add notes with --append, or --assignee */
 async function updateOne(
 	command: string,
@@ -219,9 +247,12 @@ export class UpdateTaskCommand extends Command {
 					promptWords: string[],
 					options: UpdateTaskCommandOptions
 				) => {
-					const id = idArg || options.id;
-					const prompt =
-						promptWords.length > 0 ? promptWords.join(' ') : options.prompt;
+					const { id, prompt } = idAndPrompt(
+						'update-task',
+						idArg,
+						promptWords,
+						options
+					);
 					await updateOne('update-task', id, prompt, options);
 				}
 			);
@@ -275,7 +306,12 @@ export class UpdateCommand extends Command {
 					promptWords: string[],
 					options: UpdateCommandOptions
 				) => {
-					const id = idArg || options.id;
+					const { id, prompt } = idAndPrompt(
+						'update',
+						idArg,
+						promptWords,
+						options
+					);
 					if (id !== undefined && options.from !== undefined) {
 						printError(
 							'Give a task ID or --from, not both',
@@ -283,8 +319,6 @@ export class UpdateCommand extends Command {
 						);
 						process.exit(1);
 					}
-					const prompt =
-						promptWords.length > 0 ? promptWords.join(' ') : options.prompt;
 					if (id !== undefined) {
 						await updateOne('update', id, prompt, options);
 						return;

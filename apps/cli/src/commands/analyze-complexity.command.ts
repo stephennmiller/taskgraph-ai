@@ -77,6 +77,20 @@ export class AnalyzeComplexityCommand extends Command {
 			)
 			.action(async (options: AnalyzeComplexityCommandOptions) => {
 				if (options.report) {
+					// Analysis options would be silently ignored
+					const extra = this.options.find(
+						(o) =>
+							o.attributeName() !== 'tag' &&
+							o.attributeName() !== 'report' &&
+							this.getOptionValueSource(o.attributeName()) === 'cli'
+					);
+					if (extra) {
+						printError(
+							`--report shows the saved report, so ${extra.long} does nothing`,
+							'Run `taskgraph analyze-complexity --report [file]`, or analyze without --report'
+						);
+						process.exit(1);
+					}
 					await showComplexityReport({
 						tag: options.tag,
 						file: options.report === true ? undefined : options.report

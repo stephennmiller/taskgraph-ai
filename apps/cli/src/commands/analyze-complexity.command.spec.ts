@@ -189,6 +189,14 @@ describe('analyze-complexity and complexity-report', () => {
 		expect(out.join('\n')).toContain('Sign-in flow');
 	});
 
+	it('analyze-complexity --report refuses analysis options it would ignore', async () => {
+		await expect(analyze('--report', '--research')).rejects.toThrow('exit 1');
+
+		expect(err.join('\n')).toContain('--research does nothing');
+		expect(getComplexityReport).not.toHaveBeenCalled();
+		expect(analyzeComplexity).not.toHaveBeenCalled();
+	});
+
 	it('complexity-report exits 1 with how to make one when there is none', async () => {
 		getComplexityReport.mockReturnValue(null);
 

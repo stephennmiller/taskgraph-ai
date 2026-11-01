@@ -238,6 +238,30 @@ describe('update-task and update', () => {
 		expect(updateWithPrompt).not.toHaveBeenCalled();
 	});
 
+	it.each([
+		['update', update],
+		['update-task', updateTask]
+	])('%s --id takes every argument as the prompt', async (_name, run) => {
+		await run('--id=3', 'add', 'rate', 'limits');
+
+		expect(updateWithPrompt).toHaveBeenCalledWith(
+			expect.objectContaining({ id: '3', prompt: 'add rate limits' }),
+			expect.anything()
+		);
+	});
+
+	it.each([
+		['update', update],
+		['update-task', updateTask]
+	])('%s refuses prompt words and --prompt together', async (_name, run) => {
+		await expect(run('3', 'add', 'limits', '--prompt=other')).rejects.toThrow(
+			'exit 1'
+		);
+
+		expect(err.join('\n')).toContain('words or --prompt, not both');
+		expect(createTmCore).not.toHaveBeenCalled();
+	});
+
 	it('update without an ID or --from starts at task 1', async () => {
 		await update('--prompt=x');
 

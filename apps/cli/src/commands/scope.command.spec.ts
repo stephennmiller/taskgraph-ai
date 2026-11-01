@@ -120,6 +120,26 @@ describe('scope-up / scope-down', () => {
 		);
 	});
 
+	it('scope --id takes the lone argument as the direction', async () => {
+		await new ScopeCommand().parseAsync(['--id=3', 'down'], { from: 'user' });
+
+		expect(scope).toHaveBeenCalledWith(
+			expect.objectContaining({ ids: '3', direction: 'down' }),
+			expect.any(Object)
+		);
+	});
+
+	it.each([
+		[['--id=3', '4', 'up'], 'not both'],
+		[['--id=3', 'sideways'], `"sideways" isn't up or down`]
+	])('scope %o exits 1 before tm-core', async (args, message) => {
+		await expect(
+			new ScopeCommand().parseAsync(args, { from: 'user' })
+		).rejects.toThrow('exit 1');
+		expect(err.join('\n')).toContain(message);
+		expect(createTmCore).not.toHaveBeenCalled();
+	});
+
 	it('scope without up or down exits 1 before tm-core', async () => {
 		await expect(
 			new ScopeCommand().parseAsync(['3'], { from: 'user' })

@@ -80,8 +80,26 @@ export class ScopeCommand extends Command {
 			.addOption(legacyFileOption())
 			.option('--tag <tag>', 'Specify tag context for task operations')
 			.action(async () => {
-				const [ids, direction] = this.args;
+				let [ids, direction]: (string | undefined)[] = this.args;
 				const options = this.opts<ScopeCommandOptions>();
+				// With --id, a lone argument is the direction: scope --id=3 up
+				if (options.id !== undefined && ids !== undefined) {
+					if (direction !== undefined) {
+						printError(
+							'Give task IDs as an argument or --id, not both',
+							`Try \`taskgraph scope ${terminalSafe(options.id)} ${terminalSafe(direction)}\``
+						);
+						process.exit(1);
+					}
+					[ids, direction] = [undefined, ids];
+					if (direction !== 'up' && direction !== 'down') {
+						printError(
+							`"${terminalSafe(direction)}" isn't up or down`,
+							`Try \`taskgraph scope ${terminalSafe(options.id)} up\` (or down)`
+						);
+						process.exit(1);
+					}
+				}
 				await this.executeCommand(
 					{ ...options, id: options.id ?? ids },
 					this.fixedDirection ?? (direction as Direction | undefined)
