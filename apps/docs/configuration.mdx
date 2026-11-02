@@ -98,6 +98,7 @@ See [Archiving finished tasks](/capabilities/archive) for how archived IDs and d
 | `CLAUDE_CODE_API_KEY` | Optional. Bill Claude Code calls to this Anthropic API key instead of your Claude Code sign-in. |
 | `TASKGRAPH_AUTO_UPDATE` | `install` installs a newer version before a command runs. Unset, or `notify`, only tells you one is out. `taskgraph upgrade` installs on request. A home file can opt in too: `~/.taskgraph/auto-update.json` with `{ "autoUpdate": "install" }`. |
 | `TASKGRAPH_SKIP_AUTO_UPDATE` | Set to `1` to skip the version check. `loop` and `loop --parallel` set this on every process they start. |
+| `TASKGRAPH_NO_TASK_DATA_FENCE` | Set to `1` in the shell to leave the `<task-data>` lines off piped `list`, `show`, and `list --compact`. The titles are still rewritten so they cannot close that tag. Unset, the lines stay. Shell-only: a project's `.env` and `config.json` cannot set it, and it does not change `prime`, `loop`, `next`, `graph`, `why`, `--json`, MCP tools, or prompts. |
 | `TASKGRAPH_TOOLS` | Which MCP tools to load: `core` (default), `standard`, `all` or a comma-separated list. `all` gives the MCP host full project control. Prefer `core` or `standard`. See [MCP tools](/capabilities/mcp). |
 | `TASKGRAPH_RESPONSE_LANGUAGE` | Override the language of generated content (`global.responseLanguage`, which `taskgraph lang` sets). It must be a language name: letters, spaces and hyphens, up to 40 characters; anything else is ignored and responses stay in English (`taskgraph lang` shows the language in effect; the reason is logged at `TASKGRAPH_LOG_LEVEL=warn`). |
 | `TASKGRAPH_TAG` | Override the active tag. |
@@ -105,7 +106,7 @@ See [Archiving finished tasks](/capabilities/archive) for how archived IDs and d
 | `TASKGRAPH_LOG_LEVEL` | Console log level. |
 | `TASKGRAPH_DEBUG` | Set to `true` for debug logging. |
 
-Set these in your shell, CI or the MCP server's `env`. TaskGraph reads a project's `.env` only for `TASKGRAPH_TAG`, `TASKGRAPH_RESPONSE_LANGUAGE`, `TASKGRAPH_MODEL_MAIN`, `TASKGRAPH_MODEL_RESEARCH`, `TASKGRAPH_MODEL_FALLBACK` and `TASKGRAPH_ENABLE_CODEBASE_ANALYSIS`. It never loads `.env` into its own environment or passes it to Claude Code, so a `.env` in a cloned repository can't set anything else, such as `CLAUDE_CODE_API_KEY`, a proxy, `TASKGRAPH_PROJECT_ROOT`, `TASKGRAPH_TOOLS` or the log level.
+Set these in your shell, CI or the MCP server's `env`. TaskGraph reads a project's `.env` only for `TASKGRAPH_TAG`, `TASKGRAPH_RESPONSE_LANGUAGE`, `TASKGRAPH_MODEL_MAIN`, `TASKGRAPH_MODEL_RESEARCH`, `TASKGRAPH_MODEL_FALLBACK` and `TASKGRAPH_ENABLE_CODEBASE_ANALYSIS`. `TASKGRAPH_NO_TASK_DATA_FENCE` is not one of them: it is shell-only, read from the environment the process started with, and a line for it in `.env` or `config.json` is ignored. TaskGraph never loads `.env` into its own environment or passes it to Claude Code, so a `.env` in a cloned repository can't set anything else, such as `CLAUDE_CODE_API_KEY`, a proxy, `TASKGRAPH_PROJECT_ROOT`, `TASKGRAPH_TOOLS` or the log level.
 
 Models (set them with `taskgraph models`), `maxTokens`, `temperature`, `defaultSubtasks`, `defaultPriority` and `projectName` belong in `config.json`, not in environment variables.
 

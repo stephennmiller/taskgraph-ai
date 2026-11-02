@@ -173,6 +173,29 @@ describe('task text in AI prompts', () => {
 		}
 	);
 
+	it('still fences task text when TASKGRAPH_NO_TASK_DATA_FENCE=1 (#929)', () => {
+		const previous = process.env.TASKGRAPH_NO_TASK_DATA_FENCE;
+		process.env.TASKGRAPH_NO_TASK_DATA_FENCE = '1';
+		try {
+			const { systemPrompt, prompt } = scopeTaskPrompt(
+				scopedTask,
+				'down',
+				'regular',
+				'request-text'
+			);
+			expectFenced({ systemPrompt, userPrompt: prompt }, [
+				'title',
+				'description',
+				'details',
+				'test'
+			]);
+		} finally {
+			if (previous === undefined)
+				delete process.env.TASKGRAPH_NO_TASK_DATA_FENCE;
+			else process.env.TASKGRAPH_NO_TASK_DATA_FENCE = previous;
+		}
+	});
+
 	it('scope subtask regeneration fences the task as data it cannot close', () => {
 		const { systemPrompt, prompt } = regenerateSubtasksPrompt(
 			scopedTask,

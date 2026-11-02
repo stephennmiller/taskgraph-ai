@@ -15,6 +15,10 @@ import {
 import { getLogger } from '../../common/logger/index.js';
 import type { ConfigManager } from '../config/managers/config-manager.js';
 import { dropOldNumTasksDefault } from '../config/services/config-file.js';
+import {
+	isShellOnlyEnv,
+	shellEnvBeforeProject
+} from '../config/services/project-env.js';
 import type { AiServiceHost } from './ai-service.js';
 import { ClaudeCodeSettingsSchema } from './claude-code-settings.js';
 import supportedModels from './supported-models.json' with { type: 'json' };
@@ -225,6 +229,8 @@ export class AiConfig {
 
 	/** A variable from the MCP session, then the project's .env, then process.env */
 	resolveEnv(name: string, session?: unknown): string | undefined {
+		// A project file or an MCP session cannot set a shell-only variable
+		if (isShellOnlyEnv(name)) return shellEnvBeforeProject(name) || undefined;
 		const fromSession = (session as { env?: Record<string, string> })?.env?.[
 			name
 		];

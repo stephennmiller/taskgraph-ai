@@ -21,7 +21,10 @@ import { displayError, printError } from '../utils/error-handler.js';
 import { jsonOption, printJson } from '../utils/json-output.js';
 import { getProjectRoot } from '../utils/project-root.js';
 import * as ui from '../utils/ui.js';
-import { fencesTaskData } from '../ui/layout/helpers.js';
+import {
+	fencesTaskData,
+	shellOptsOutOfTaskDataFence
+} from '../ui/layout/helpers.js';
 import { theme } from '../ui/theme.js';
 
 /**
@@ -338,7 +341,7 @@ export class ShowCommand extends Command {
 					result.task,
 					Boolean(result.originalTaskId)
 				),
-				fence: fencesTaskData()
+				fence: fencesTaskData() && !shellOptsOutOfTaskDataFence()
 			})
 		);
 	}
@@ -384,7 +387,7 @@ export class ShowCommand extends Command {
 					showSubtasks: true,
 					showDependencies: true
 				}),
-				fencesTaskData()
+				fencesTaskData() && !shellOptsOutOfTaskDataFence()
 			)
 		);
 	}

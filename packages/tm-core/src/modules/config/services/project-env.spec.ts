@@ -4,7 +4,13 @@ import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { EnvironmentConfigProvider } from './environment-config-provider.service.js';
 import { RuntimeStateManager } from './runtime-state-manager.service.js';
-import { readProjectEnv } from './project-env.js';
+import {
+	isTaskDataFenceOptOut,
+	NO_TASK_DATA_FENCE_ENV,
+	PROJECT_ENV_ALLOWLIST,
+	readProjectEnv,
+	shellDisablesTaskDataFence
+} from './project-env.js';
 
 const projectWith = (envFile?: string): string => {
 	const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'tm-env-'));
@@ -55,6 +61,25 @@ describe('project .env', () => {
 		).toBeUndefined();
 	});
 
+	it('does not take TASKGRAPH_NO_TASK_DATA_FENCE from a project .env (#929)', () => {
+		delete process.env.TASKGRAPH_NO_TASK_DATA_FENCE;
+		const env = readProjectEnv(
+			projectWith(
+				'TASKGRAPH_NO_TASK_DATA_FENCE=1\nTASKGRAPH_MODEL_MAIN=opus\nCLAUDE_CODE_API_KEY=secret\n'
+			)
+		);
+
+		expect(env.TASKGRAPH_NO_TASK_DATA_FENCE).toBeUndefined();
+		expect(env.CLAUDE_CODE_API_KEY).toBeUndefined();
+		expect(env.TASKGRAPH_MODEL_MAIN).toBe('opus');
+		expect(PROJECT_ENV_ALLOWLIST.shellOnly).toContain(NO_TASK_DATA_FENCE_ENV);
+		expect(
+			(PROJECT_ENV_ALLOWLIST.allow as readonly string[]).includes(
+				NO_TASK_DATA_FENCE_ENV
+			)
+		).toBe(false);
+	});
+
 	it('takes the active tag from the env it is given', async () => {
 		const root = projectWith();
 		const manager = new RuntimeStateManager(root, { TASKGRAPH_TAG: 'feature' });
@@ -62,6 +87,27 @@ describe('project .env', () => {
 		await manager.loadState();
 
 		expect(manager.getCurrentTag()).toBe('feature');
+	});
+});
+
+describe('TASKGRAPH_NO_TASK_DATA_FENCE', () => {
+	it('is on only for the exact shell value 1', () => {
+		expect(isTaskDataFenceOptOut('1')).toBe(true);
+		for (const value of [undefined, '', '0', 'true', 'TRUE', ' 1', '1 ']) {
+			expect(isTaskDataFenceOptOut(value)).toBe(false);
+		}
+	});
+
+	it('does not follow a process.env write made after the module loaded', () => {
+		const previous = process.env.TASKGRAPH_NO_TASK_DATA_FENCE;
+		process.env.TASKGRAPH_NO_TASK_DATA_FENCE = '0';
+		const captured = shellDisablesTaskDataFence();
+		process.env.TASKGRAPH_NO_TASK_DATA_FENCE = '1';
+
+		expect(shellDisablesTaskDataFence()).toBe(captured);
+
+		if (previous === undefined) delete process.env.TASKGRAPH_NO_TASK_DATA_FENCE;
+		else process.env.TASKGRAPH_NO_TASK_DATA_FENCE = previous;
 	});
 });
 

@@ -4,9 +4,43 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { getContentWidth, planColumns, terminalWidth } from './helpers.js';
+import {
+	fencesTaskData,
+	getContentWidth,
+	planColumns,
+	shellOptsOutOfTaskDataFence,
+	terminalWidth
+} from './helpers.js';
 
 describe('Layout Helpers', () => {
+	describe('fencesTaskData', () => {
+		it('fences piped output and skips a terminal, ignoring the shell opt-out (#876)', () => {
+			const previous = process.env.TASKGRAPH_NO_TASK_DATA_FENCE;
+			const captured = shellOptsOutOfTaskDataFence();
+			process.env.TASKGRAPH_NO_TASK_DATA_FENCE = '1';
+
+			expect(fencesTaskData({ isTTY: false })).toBe(true);
+			expect(fencesTaskData({ isTTY: undefined })).toBe(true);
+			expect(fencesTaskData({ isTTY: true })).toBe(false);
+			// A write after startup does not arm the opt-out; fencesTaskData never reads it
+			expect(shellOptsOutOfTaskDataFence()).toBe(captured);
+
+			if (previous === undefined)
+				delete process.env.TASKGRAPH_NO_TASK_DATA_FENCE;
+			else process.env.TASKGRAPH_NO_TASK_DATA_FENCE = previous;
+		});
+
+		it('stays on for a loop child even when the helper is asked (#929)', () => {
+			const previous = process.env.TASKGRAPH_LOOP_CHILD;
+			process.env.TASKGRAPH_LOOP_CHILD = '1';
+
+			expect(shellOptsOutOfTaskDataFence()).toBe(false);
+
+			if (previous === undefined) delete process.env.TASKGRAPH_LOOP_CHILD;
+			else process.env.TASKGRAPH_LOOP_CHILD = previous;
+		});
+	});
+
 	describe('terminalWidth', () => {
 		it('uses the terminal width when output is a terminal', () => {
 			expect(terminalWidth({ columns: 132 }, { COLUMNS: '60' })).toBe(132);

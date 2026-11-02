@@ -208,6 +208,7 @@ export {
 // Per-project environment
 export {
 	readProjectEnv,
+	shellDisablesTaskDataFence,
 	type EnvMap
 } from './modules/config/services/project-env.js';
 

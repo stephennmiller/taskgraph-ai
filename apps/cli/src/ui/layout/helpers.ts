@@ -4,6 +4,11 @@
  */
 
 import { stripVTControlCharacters } from 'node:util';
+import {
+	LOOP_CHILD_ENV,
+	PARALLEL_WORKER_ENV,
+	shellDisablesTaskDataFence
+} from '@tm/core';
 import chalk from 'chalk';
 import { theme } from '../theme.js';
 
@@ -41,12 +46,30 @@ export function terminalWidth(
 
 /**
  * Whether to fence task text in `<task-data>`: only when stdout isn't a
- * terminal, since agents read a pipe and a person reads a TTY (#876)
+ * terminal, since agents read a pipe and a person reads a TTY (#876).
+ * Does not read `TASKGRAPH_NO_TASK_DATA_FENCE`. `list` and `show` apply
+ * that shell opt-out separately; every other caller keeps this answer.
  */
 export function fencesTaskData(
 	stream: { isTTY?: boolean } = process.stdout
 ): boolean {
 	return !stream.isTTY;
+}
+
+/**
+ * Whether human `list`, `show` and `list --compact` should drop the
+ * `<task-data>` lines. Only the shell value captured before project env
+ * loading can do this. A loop or parallel child keeps the fences, because
+ * that output is what Claude reads (#929).
+ */
+export function shellOptsOutOfTaskDataFence(): boolean {
+	if (
+		process.env[LOOP_CHILD_ENV] === '1' ||
+		process.env[PARALLEL_WORKER_ENV] === '1'
+	) {
+		return false;
+	}
+	return shellDisablesTaskDataFence();
 }
 
 /**
