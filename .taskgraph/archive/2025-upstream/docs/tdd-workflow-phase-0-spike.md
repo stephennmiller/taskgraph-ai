@@ -1,14 +1,17 @@
 # Phase 0: Spike - Autonomous TDD Workflow ✅ COMPLETE
 
 ## Objective
+
 Validate feasibility and build foundational understanding before full implementation.
 
 ## Status
+
 **COMPLETED** - All deliverables implemented and validated.
 
 See `apps/cli/src/commands/autopilot.command.ts` for implementation.
 
 ## Scope
+
 - Implement CLI skeleton `tm autopilot` with dry-run mode
 - Show planned steps from a real task with subtasks
 - Detect test runner from package.json
@@ -17,18 +20,21 @@ See `apps/cli/src/commands/autopilot.command.ts` for implementation.
 ## Deliverables
 
 ### 1. CLI Command Skeleton
+
 - Create `apps/cli/src/commands/autopilot.command.ts`
 - Support `tm autopilot <taskId>` command
 - Implement `--dry-run` flag
 - Basic help text and usage information
 
 ### 2. Preflight Detection System
+
 - Detect test runner from package.json (npm test, pnpm test, etc.)
 - Check git working tree state (clean/dirty)
 - Validate required tools are available (git, gh, node/npm)
 - Detect default branch
 
 ### 3. Dry-Run Execution Plan Display
+
 Display planned execution for a task including:
 - Preflight checks status
 - Branch name that would be created
@@ -41,6 +47,7 @@ Display planned execution for a task including:
 - Finalization steps: test suite run, coverage check, push, PR creation
 
 ### 4. Task Loading & Validation
+
 - Load task from TaskGraph state
 - Validate task exists and has subtasks
 - If no subtasks, show message about needing to expand first
@@ -94,12 +101,14 @@ Run without --dry-run to execute.
 ```
 
 ## Success Criteria
+
 - Dry-run output is clear and matches expected workflow
 - Preflight detection works correctly on the project repo
 - Task loading integrates with existing TaskGraph state
 - No actual git operations or file modifications occur in dry-run mode
 
 ## Out of Scope
+
 - Actual test generation
 - Actual code implementation
 - Git operations (branch creation, commits, push)
@@ -107,20 +116,24 @@ Run without --dry-run to execute.
 - Test execution
 
 ## Implementation Notes
+
 - Reuse existing `TaskService` from `packages/tm-core`
 - Use existing git utilities from `scripts/modules/utils/git-utils.js`
 - Load task/subtask data from `.taskgraph/tasks/tasks.json`
 - Detect test command via package.json → scripts.test field
 
 ## Dependencies
+
 - Existing TaskGraph CLI structure
 - Existing task storage format
 - Git utilities
 
 ## Estimated Effort
+
 2-3 days
 
 ## Validation
+
 Test dry-run mode with:
 - Task with 1 subtask
 - Task with multiple subtasks

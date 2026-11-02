@@ -66,41 +66,41 @@ const comments = JSON.parse(fs.readFileSync('/tmp/all-pr-comments.json', 'utf8')
 
 const byFile = {};
 const bySeverity = {
-  critical: [],
-  important: [],
-  suggestion: [],
-  info: []
+critical: [],
+important: [],
+suggestion: [],
+info: []
 };
 
 comments.forEach((c, idx) => {
-  const file = c.path;
-  const author = c.user.login;
-  const line = c.line || c.original_line || 'N/A';
-  const body = c.body;
-  
-  if (!byFile[file]) byFile[file] = [];
-  
-  const comment = {
-    num: idx + 1,
-    author,
-    line,
-    body: body.substring(0, 200) + (body.length > 200 ? '...' : ''),
-    fullBody: body
-  };
-  
-  byFile[file].push(comment);
-  
-  // Categorize by severity
-  const lower = body.toLowerCase();
-  if (lower.includes('critical') || lower.includes('security') || lower.includes('bug:')) {
-    bySeverity.critical.push({...comment, file});
-  } else if (lower.includes('important') || lower.includes('error') || lower.includes('fail')) {
-    bySeverity.important.push({...comment, file});
-  } else if (lower.includes('suggestion') || lower.includes('consider') || lower.includes('recommend')) {
-    bySeverity.suggestion.push({...comment, file});
-  } else {
-    bySeverity.info.push({...comment, file});
-  }
+const file = c.path;
+const author = c.user.login;
+const line = c.line || c.original_line || 'N/A';
+const body = c.body;
+
+if (!byFile[file]) byFile[file] = [];
+
+const comment = {
+num: idx + 1,
+author,
+line,
+body: body.substring(0, 200) + (body.length > 200 ? '...' : ''),
+fullBody: body
+};
+
+byFile[file].push(comment);
+
+// Categorize by severity
+const lower = body.toLowerCase();
+if (lower.includes('critical') || lower.includes('security') || lower.includes('bug:')) {
+bySeverity.critical.push({...comment, file});
+} else if (lower.includes('important') || lower.includes('error') || lower.includes('fail')) {
+bySeverity.important.push({...comment, file});
+} else if (lower.includes('suggestion') || lower.includes('consider') || lower.includes('recommend')) {
+bySeverity.suggestion.push({...comment, file});
+} else {
+bySeverity.info.push({...comment, file});
+}
 });
 
 console.log('\n=== SUMMARY BY SEVERITY ===\n');
@@ -111,21 +111,21 @@ console.log(`ℹ️  Info: ${bySeverity.info.length}`);
 
 console.log('\n=== SUMMARY BY FILE ===\n');
 Object.entries(byFile)
-  .sort((a, b) => b[1].length - a[1].length)
-  .forEach(([file, comments]) => {
-    console.log(`${file}: ${comments.length} comments`);
-  });
+.sort((a, b) => b[1].length - a[1].length)
+.forEach(([file, comments]) => {
+console.log(`${file}: ${comments.length} comments`);
+});
 
 console.log('\n=== CRITICAL ISSUES ===\n');
 bySeverity.critical.forEach(c => {
-  console.log(`\n#${c.num} [${c.author}] ${c.file}:${c.line}`);
-  console.log(c.body);
+console.log(`\n#${c.num} [${c.author}] ${c.file}:${c.line}`);
+console.log(c.body);
 });
 
 console.log('\n=== IMPORTANT ISSUES ===\n');
 bySeverity.important.slice(0, 10).forEach(c => {
-  console.log(`\n#${c.num} [${c.author}] ${c.file}:${c.line}`);
-  console.log(c.body);
+console.log(`\n#${c.num} [${c.author}] ${c.file}:${c.line}`);
+console.log(c.body);
 });
 EOF
 node /tmp/parse_comments.js

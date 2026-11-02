@@ -26,14 +26,14 @@ await tmCore.tasks.updateStatus('3.2', 'in-progress');
 await tmCore.close(); // releases file locks
 ```
 
-| Domain | What it does |
-| --- | --- |
-| `tmCore.tasks` | Read and change tasks: `list`, `get`, `getNext`, `claimNext`, `update`, `updateStatus`, `addNote`, checklists, archive, tags, dependency trees and blockers |
-| `tmCore.config` | Project config: `getConfig`, `getModelConfig`, `getActiveTag`, `setActiveTag`, `updateConfig` |
-| `tmCore.git` | Repository state, branches, staging and commits (`createCommit`, `generateCommitMessage`) |
-| `tmCore.github` | Sync with GitHub Issues: `status`, `planPush`/`push`, `planPull`/`pull`, `unlink` |
-| `tmCore.loop` | Run Claude Code over tasks one at a time (`run`) or in parallel worktrees (`runParallel`) |
-| `tmCore.logger` | The logger. Pass `loggerConfig` to `createTmCore` to route it; the MCP server sends it to the MCP log |
+| Domain          | What it does                                                                                                                                                |
+| --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `tmCore.tasks`  | Read and change tasks: `list`, `get`, `getNext`, `claimNext`, `update`, `updateStatus`, `addNote`, checklists, archive, tags, dependency trees and blockers |
+| `tmCore.config` | Project config: `getConfig`, `getModelConfig`, `getActiveTag`, `setActiveTag`, `updateConfig`                                                               |
+| `tmCore.git`    | Repository state, branches, staging and commits (`createCommit`, `generateCommitMessage`)                                                                   |
+| `tmCore.github` | Sync with GitHub Issues: `status`, `planPush`/`push`, `planPull`/`pull`, `unlink`                                                                           |
+| `tmCore.loop`   | Run Claude Code over tasks one at a time (`run`) or in parallel worktrees (`runParallel`)                                                                   |
+| `tmCore.logger` | The logger. Pass `loggerConfig` to `createTmCore` to route it; the MCP server sends it to the MCP log                                                       |
 
 `@tm/core` also exports the types, Zod schemas, errors (`TaskGraphError`, `ERROR_CODES`) and pure helpers the CLI and MCP share, such as `selectNextTask`, `buildPrimeContext` and the dependency and PRD utilities. See `src/index.ts` for the full list.
 
@@ -55,16 +55,16 @@ tests/         integration tests (*.test.ts); unit tests sit next to the source
 
 Run them from the repo root with `-w @tm/core`, for example `npm run test -w @tm/core`.
 
-| Script | What it runs |
-| --- | --- |
-| `test` | All tests (`vitest run`) |
-| `test:unit` | Unit tests only (`*.spec.ts`) |
-| `test:integration` | Integration tests only (`*.test.ts`) |
-| `test:watch` | Vitest in watch mode |
-| `test:coverage` | Tests with coverage |
-| `typecheck` | `tsc --noEmit` |
+| Script                             | What it runs                                                   |
+| ---------------------------------- | -------------------------------------------------------------- |
+| `test`                             | All tests (`vitest run`)                                       |
+| `test:unit`                        | Unit tests only (`*.spec.ts`)                                  |
+| `test:integration`                 | Integration tests only (`*.test.ts`)                           |
+| `test:watch`                       | Vitest in watch mode                                           |
+| `test:coverage`                    | Tests with coverage                                            |
+| `typecheck`                        | `tsc --noEmit`                                                 |
 | `lint` / `lint:check` / `lint:fix` | Biome check: write fixes / read only / also apply unsafe fixes |
-| `format` / `format:check` | Biome format: write / read only |
+| `format` / `format:check`          | Biome format: write / read only                                |
 
 The package has no build script: `npm run build` at the root builds the CLI, `@tm/core` included.
 

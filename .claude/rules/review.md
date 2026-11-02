@@ -21,10 +21,10 @@ Drop the finding, or lower its severity, unless you can answer yes to all four:
 
 A finding includes the snippet, the failure scenario, and why existing guards (types, validation, tests) don't catch it. A review with zero findings is a valid review; don't invent nits to fill it.
 
-| Severity | Meaning | Merge |
-|---|---|---|
-| CRITICAL | Security hole or data loss | Blocks |
-| HIGH | A bug a user can hit, or dead code the change left | Fix before merge |
+| Severity | Meaning                                            | Merge            |
+| -------- | -------------------------------------------------- | ---------------- |
+| CRITICAL | Security hole or data loss                         | Blocks           |
+| HIGH     | A bug a user can hit, or dead code the change left | Fix before merge |
 
 Report nothing below HIGH. Maintainability, style and "consider" ideas are not findings.
 

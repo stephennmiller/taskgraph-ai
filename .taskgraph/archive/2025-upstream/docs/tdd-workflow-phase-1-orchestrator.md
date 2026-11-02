@@ -1,11 +1,13 @@
 # Phase 1: Core Rails - State Machine & Orchestration
 
 ## Objective
+
 Build the WorkflowOrchestrator as a state machine that guides AI sessions through TDD workflow, rather than directly executing code.
 
 ## Architecture Overview
 
 ### Execution Model
+
 The orchestrator acts as a **state manager and guide**, not a code executor:
 
 ```
@@ -28,6 +30,7 @@ The orchestrator acts as a **state manager and guide**, not a code executor:
 ```
 
 ### Why This Approach?
+
 1. **Separation of Concerns**: State management separate from code execution
 2. **Leverage Existing Tools**: Uses Claude Code's capabilities instead of reimplementing
 3. **Human-in-the-Loop**: Easy to inspect state and intervene at any phase
@@ -37,6 +40,7 @@ The orchestrator acts as a **state manager and guide**, not a code executor:
 ## Core Components
 
 ### 1. WorkflowOrchestrator Service
+
 **Location**: `packages/tm-core/src/services/workflow-orchestrator.service.ts`
 
 **Responsibilities**:
@@ -248,42 +252,49 @@ mcp__taskgraph_ai__autopilot_resume(runId: string)
 ## Implementation Plan
 
 ### Step 1: WorkflowOrchestrator Skeleton
+
 - [ ] Create `workflow-orchestrator.service.ts` with interfaces
 - [ ] Implement state machine logic (phase transitions)
 - [ ] Add run state persistence (state.json, log.jsonl)
 - [ ] Write unit tests for state machine
 
 ### Step 2: Work Unit Generation
+
 - [ ] Implement `getNextWorkUnit()` with context assembly
 - [ ] Generate RED phase work units (test file paths, criteria)
 - [ ] Generate GREEN phase work units (implementation hints)
 - [ ] Generate COMMIT phase work units (commit messages)
 
 ### Step 3: Git/Test Adapters
+
 - [ ] Create GitAdapter for status checks only
 - [ ] Create TestAdapter for output parsing only
 - [ ] Add precondition validation using adapters
 - [ ] Write adapter unit tests
 
 ### Step 4: MCP Integration
+
 - [ ] Add MCP tool definitions in `packages/mcp-server/src/tools/`
 - [ ] Wire up WorkflowOrchestrator to MCP tools
 - [ ] Test MCP tools via Claude Code
 - [ ] Document MCP workflow in CLAUDE.md
 
 ### Step 5: CLI Integration
+
 - [ ] Update `autopilot.command.ts` to call WorkflowOrchestrator
 - [ ] Add `--interactive` mode that shows work units and waits for completion
 - [ ] Add `--resume` flag to continue paused runs
 - [ ] Test end-to-end flow
 
 ### Step 6: Integration Testing
+
 - [ ] Create test task with 2-3 subtasks
 - [ ] Run autopilot start → get work unit → complete → repeat
 - [ ] Verify state persistence and resumability
 - [ ] Test failure scenarios (test failures, git issues)
 
 ## Success Criteria
+
 - [ ] WorkflowOrchestrator can generate work units for all phases
 - [ ] MCP tools allow Claude Code to query and complete work units
 - [ ] State persists correctly between work unit completions
@@ -292,6 +303,7 @@ mcp__taskgraph_ai__autopilot_resume(runId: string)
 - [ ] End-to-end: Claude Code can complete a simple task via work units
 
 ## Out of Scope (Phase 1)
+
 - Actual git operations (branch creation, commits) - executor handles this
 - Actual test execution - executor handles this
 - PR creation - deferred to Phase 2
@@ -353,15 +365,18 @@ $ claude
 ```
 
 ## Dependencies
+
 - Existing TaskService (task loading, status updates)
 - Existing PreflightChecker (environment validation)
 - Existing TaskLoaderService (dependency ordering)
 - MCP server infrastructure
 
 ## Estimated Effort
+
 7-10 days
 
 ## Next Phase
+
 Phase 2 will add:
 - PR creation via gh CLI
 - Coverage enforcement

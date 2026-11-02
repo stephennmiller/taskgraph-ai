@@ -12,14 +12,13 @@ CLAUDE.md's "Test Guidelines" are the rules: where tests go, when to write them,
 
 ## Where tests go
 
-| What | Where | Example |
-| --- | --- | --- |
-| Unit test, one module | next to the source, `<file>.spec.ts` | `apps/cli/src/commands/parse-prd.command.spec.ts` |
-| tm-core integration | `packages/tm-core/tests/integration/<module>/<file>.test.ts` | `packages/tm-core/tests/integration/tasks/parse-prd.test.ts` |
-| CLI through the built binary | `apps/cli/tests/integration/<area>/<file>.test.ts` | `apps/cli/tests/integration/commands/parse-prd-clarify.command.test.ts` |
-| MCP tool | `apps/mcp/src/tools/<area>/<tool>.spec.ts`, `apps/mcp/tests/integration/tools/` | `apps/mcp/src/tools/tasks/parse-prd.tool.spec.ts` |
-| Plugin hooks, git hooks, CI scripts | `tests/unit/` (root suite) | `tests/unit/githooks/check-file-size.test.ts` |
-
+| What                                | Where                                                                           | Example                                                                 |
+| ----------------------------------- | ------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| Unit test, one module               | next to the source, `<file>.spec.ts`                                            | `apps/cli/src/commands/parse-prd.command.spec.ts`                       |
+| tm-core integration                 | `packages/tm-core/tests/integration/<module>/<file>.test.ts`                    | `packages/tm-core/tests/integration/tasks/parse-prd.test.ts`            |
+| CLI through the built binary        | `apps/cli/tests/integration/<area>/<file>.test.ts`                              | `apps/cli/tests/integration/commands/parse-prd-clarify.command.test.ts` |
+| MCP tool                            | `apps/mcp/src/tools/<area>/<tool>.spec.ts`, `apps/mcp/tests/integration/tools/` | `apps/mcp/src/tools/tasks/parse-prd.tool.spec.ts`                       |
+| Plugin hooks, git hooks, CI scripts | `tests/unit/` (root suite)                                                      | `tests/unit/githooks/check-file-size.test.ts`                           |
 - New tests are TypeScript. The root `tests/` suite (`vitest.root.config.ts`, `.js` allowed) holds only repo-level checks; don't add feature tests there.
 - Use `tests/unit/packages/<package>/` only when the test can't sit next to the source.
 - Shared test data lives beside the tests that use it as a named-export module (for example `packages/tm-core/tests/integration/tasks/parse-prd-fixture.ts`), not in a global fixtures folder.

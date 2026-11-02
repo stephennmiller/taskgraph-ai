@@ -1,9 +1,11 @@
 # Phase 3: Extensibility + Guardrails - Autonomous TDD Workflow
 
 ## Objective
+
 Add multi-language/framework support, enhanced safety guardrails, TUI interface, and extensibility for IDE/editor integration.
 
 ## Scope
+
 - Multi-language test runner support (pytest, go test, etc.)
 - Enhanced safety: diff preview, confirmation gates, minimal-change prompts
 - Optional TUI panel with tmux integration
@@ -482,6 +484,7 @@ tm autopilot-server start                # Start WebSocket API
 ```
 
 ## Success Criteria
+
 - Supports Python projects with pytest
 - Supports Go projects with go test
 - Diff preview prevents unwanted changes
@@ -490,12 +493,14 @@ tm autopilot-server start                # Start WebSocket API
 - Parallel execution reduces total time for independent subtasks
 
 ## Out of Scope
+
 - Full Electron/web GUI
 - AI executor selection UI (defer to Phase 4)
 - Multi-repository support
 - Remote execution on cloud runners
 
 ## Testing Strategy
+
 - Test with Python project (pytest)
 - Test with Go project (go test)
 - Test diff preview UI with mock changes
@@ -504,14 +509,17 @@ tm autopilot-server start                # Start WebSocket API
 - Test TUI with mock tmux environment
 
 ## Dependencies
+
 - Phase 2 completed (PR + resumability)
 - tmux installed (for TUI)
 - blessed or ink library (for TUI rendering)
 
 ## Estimated Effort
+
 3-4 weeks
 
 ## Risks & Mitigations
+
 - **Risk:** Parallel execution causes git conflicts
   - **Mitigation:** Conservative conflict detection, sequential fallback
 
@@ -525,6 +533,7 @@ tm autopilot-server start                # Start WebSocket API
   - **Mitigation:** Make optional, use --preview-diffs flag only when needed
 
 ## Validation
+
 Test with:
 - Python project with pytest and pytest-cov
 - Go project with go test

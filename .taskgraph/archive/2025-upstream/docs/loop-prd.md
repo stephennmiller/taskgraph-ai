@@ -87,27 +87,27 @@ taskgraph loop -n 5 --tag backend
 
 ### Options
 
-| Option | Type | Default | Description |
-| ------ | ---- | ------- | ----------- |
-| `--iterations, -n` | number | 10 | Maximum iterations before stopping |
-| `--prompt, -p` | string | "default" | Preset name (`default`, `test-coverage`, `linting`, `duplication`, `entropy`) or path to custom prompt file |
-| `--progress-file` | string | `.taskgraph/loop-progress.txt` | Path to progress log |
-| `--sleep` | number | 5 | Seconds to sleep between iterations |
-| `--on-complete` | string | - | Command to run when all tasks complete |
-| `--tag` | string | - | Only work on tasks with this tag |
-| `--status` | string | "pending" | Only work on tasks with this status |
+| Option             | Type   | Default                        | Description                                                                                                 |
+| ------------------ | ------ | ------------------------------ | ----------------------------------------------------------------------------------------------------------- |
+| `--iterations, -n` | number | 10                             | Maximum iterations before stopping                                                                          |
+| `--prompt, -p`     | string | "default"                      | Preset name (`default`, `test-coverage`, `linting`, `duplication`, `entropy`) or path to custom prompt file |
+| `--progress-file`  | string | `.taskgraph/loop-progress.txt` | Path to progress log                                                                                        |
+| `--sleep`          | number | 5                              | Seconds to sleep between iterations                                                                         |
+| `--on-complete`    | string | -                              | Command to run when all tasks complete                                                                      |
+| `--tag`            | string | -                              | Only work on tasks with this tag                                                                            |
+| `--status`         | string | "pending"                      | Only work on tasks with this status                                                                         |
 
 ### Built-in Presets
 
 Presets are bundled markdown files that define the workflow for each iteration. The `--prompt` flag accepts either a preset name or a file path (detected by presence of `/`, `\`, or file extension).
 
-| Preset | Description | Completion Criteria |
-| ------ | ----------- | ------------------- |
-| `default` | Standard task completion from TaskGraph backlog | All tasks done |
-| `test-coverage` | Find uncovered lines, write meaningful tests | Coverage target reached |
-| `linting` | Fix lint errors and type errors one by one | Zero lint errors |
-| `duplication` | Hook into jscpd, refactor clones into shared utilities | No duplicates above threshold |
-| `entropy` | Scan for code smells, clean them up | Entropy score below threshold |
+| Preset          | Description                                            | Completion Criteria           |
+| --------------- | ------------------------------------------------------ | ----------------------------- |
+| `default`       | Standard task completion from TaskGraph backlog        | All tasks done                |
+| `test-coverage` | Find uncovered lines, write meaningful tests           | Coverage target reached       |
+| `linting`       | Fix lint errors and type errors one by one             | Zero lint errors              |
+| `duplication`   | Hook into jscpd, refactor clones into shared utilities | No duplicates above threshold |
+| `entropy`       | Scan for code smells, clean them up                    | Entropy score below threshold |
 
 #### Preset: `default`
 

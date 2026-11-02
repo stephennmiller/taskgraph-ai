@@ -24,6 +24,14 @@
 			"trailingCommas": "none"
 		}
 	},
+	"markdown": {
+		"formatter": {
+			"formatEmbeds": false
+		},
+		"parser": {
+			"frontmatter": true
+		}
+	},
 	"linter": {
 		"enabled": false,
 		"rules": {
@@ -51,5 +59,22 @@
 				"noNonNullAssertion": "warn"
 			}
 		}
-	}
+	},
+	"overrides": [
+		{
+			"includes": [
+				"CHANGELOG.md",
+				".claude/rules/commands.md",
+				".claude/rules/ui.md",
+				".taskgraph/archive/2025-upstream/docs/autonomous-tdd-git-workflow.md",
+				".taskgraph/templates/example_prd.md",
+				".taskgraph/templates/example_prd_rpg.md",
+				"packages/tm-core/tests/fixtures/prd/bookmarks.md",
+				"packages/tm-core/tests/fixtures/prd/bookmarks-renamed.md"
+			],
+			"formatter": {
+				"enabled": false
+			}
+		}
+	]
 }

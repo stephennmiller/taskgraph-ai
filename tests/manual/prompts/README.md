@@ -14,7 +14,7 @@ node prompt-test.js
 
 **Main Menu Options:**
 1. **Test specific prompt template** - Choose individual templates and variants
-2. **Run all tests** - Execute the full test suite 
+2. **Run all tests** - Execute the full test suite
 3. **Toggle full prompt display** - Switch between preview and full prompt output (default: ON)
 4. **Generate HTML report** - Create a professional HTML report and open in browser
 5. **Exit** - Close the application
@@ -32,12 +32,14 @@ node prompt-test.js
 ## Batch Mode Options
 
 ### Run All Tests (Batch)
+
 ```bash
 node prompt-test.js --batch
 ```
 Runs all tests non-interactively and exits with appropriate status code.
 
 ### Generate HTML Report
+
 ```bash
 node prompt-test.js --html
 ```
@@ -49,7 +51,7 @@ Generates a professional HTML report with all test results and full prompt conte
 - **Separate error condition section** - Tests for missing parameters, invalid variants, nonexistent templates
 - **Alphabetically sorted** - Templates and variants are sorted for predictable ordering
 - **Space-efficient layout** - Optimized for developer review with minimal vertical space
-- **Two-section layout**: 
+- **Two-section layout**:
   1. **Prompt Templates** - Real template variants testing
   2. **Error Condition Tests** - Error handling validation (empty-prompt, missing-parameters, invalid-variant, etc.)
   3. **Detailed Content** - Full system and user prompts below
@@ -60,12 +62,14 @@ Generates a professional HTML report with all test results and full prompt conte
 Reports are saved to `tests/manual/prompts/output/` with timestamps.
 
 ### Legacy Full Test Mode
+
 ```bash
 node prompt-test.js --full
 ```
 Runs all tests and shows sample full prompts for verification.
 
 ### Help
+
 ```bash
 node prompt-test.js --help
 ```
@@ -80,23 +84,27 @@ The comprehensive test suite covers:
 **Total Test Cases: 23** (18 functional + 5 error condition tests)
 
 ### Templates with Research Conditional Content
+
 These templates have `useResearch` or `research` parameters that modify prompt content:
 - **add-task** (default, research variants)
-- **analyze-complexity** (default, research variants)  
+- **analyze-complexity** (default, research variants)
 - **parse-prd** (default, research variants)
 - **update-subtask** (default, research variants)
 - **update-task** (default, append, research variants)
 
 ### Templates with Legitimate Separate Variants
+
 These templates have genuinely different prompts for different use cases:
 - **expand-task** (default, research, complexity-report variants) - Three sophisticated strategies with advanced parameter support
 - **research** (low, medium, high detail level variants)
 
 ### Single Variant Templates
+
 These templates only have one variant because research mode only changes AI role, not prompt content:
 - **update-tasks** (default variant only)
 
 ### Prompt Templates (8 total)
+
 - **add-task** (default, research variants)
 - **expand-task** (default, research, complexity-report variants) - Enhanced with sophisticated parameter support and context handling
 - **analyze-complexity** (default variant)
@@ -107,11 +115,13 @@ These templates only have one variant because research mode only changes AI role
 - **update-tasks** (default variant with `useResearch` conditional content)
 
 ### Test Scenarios (27 total)
+
 - 16 valid template/variant combinations (including enhanced expand-task with new parameter support)
 - 4 conditional logic validation tests (testing new gt/gte helper functions)
 - 7 error condition tests (nonexistent variants, templates, missing params, invalid detail levels)
 
 ### Validation
+
 - Parameter schema compliance
 - Template loading success/failure
 - Error handling for invalid inputs
@@ -119,11 +129,12 @@ These templates only have one variant because research mode only changes AI role
 - **Output content validation** for conditional logic (NEW)
 
 #### Conditional Logic Testing (NEW)
+
 The test suite now includes specific validation for the new `gt` (greater than) and `gte` (greater than or equal) helper functions:
 
 **Helper Function Tests:**
 - `conditional-zero-tasks`: Validates `numTasks = 0` produces "an appropriate number of" text
-- `conditional-positive-tasks`: Validates `numTasks = 5` produces "approximately 5" text  
+- `conditional-positive-tasks`: Validates `numTasks = 5` produces "approximately 5" text
 - `conditional-zero-subtasks`: Validates `subtaskCount = 0` produces "an appropriate number of" text
 - `conditional-positive-subtasks`: Validates `subtaskCount = 3` produces "exactly 3" text
 
@@ -132,6 +143,7 @@ These tests use the new `validateOutput` function to verify that conditional tem
 ## Output Modes
 
 ### Preview Mode (Default)
+
 Shows truncated prompts (200 characters) for quick overview:
 ```
 System Prompt Preview:
@@ -144,6 +156,7 @@ Tip: Use option 3 in main menu to toggle full prompt display
 ```
 
 ### Full Mode
+
 Shows complete system and user prompts for detailed verification:
 ```
 System Prompt:
@@ -178,17 +191,20 @@ The test suite includes error condition validation:
 ## Use Cases
 
 ### Development Workflow
+
 1. **Template Development**: Test new templates interactively
 2. **Variant Testing**: Verify all variants work correctly
 3. **Parameter Validation**: Ensure parameter schemas are working
 4. **Regression Testing**: Run batch tests after changes
 
 ### Manual Verification
+
 1. **Prompt Review**: Human verification of generated prompts
 2. **Parameter Exploration**: See how different parameters affect output
 3. **Context Testing**: Verify context inclusion and formatting
 
 ### CI/CD Integration
+
 ```bash
 # In CI pipeline
 node tests/manual/prompts/prompt-test.js --batch
@@ -212,18 +228,21 @@ The interactive menu makes it easy to explore and verify prompt templates during
 ## 🎯 Use Cases
 
 ### For Developers
+
 - **Verify prompt changes** don't break existing functionality
 - **Test new prompt variants** before deployment
 - **Debug prompt generation** issues with full output
 - **Validate parameter schemas** work correctly
 
 ### For QA
+
 - **Regression testing** after prompt template changes
 - **Verification of prompt outputs** match expectations
 - **Parameter validation testing** for robustness
 - **Cross-variant consistency** checking
 
 ### For Documentation
+
 - **Reference for prompt usage** with realistic examples
 - **Parameter requirements** demonstration
 - **Variant differences** visualization
@@ -252,4 +271,4 @@ This test suite should be run whenever:
 - New variants are added
 - Parameter schemas change
 - Prompt manager logic is updated
-- Before major releases 
+- Before major releases

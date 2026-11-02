@@ -21,7 +21,6 @@ In an AI-driven development process—particularly with tools like [Cursor](http
 TaskGraph configuration is now managed through two primary methods:
 
 1.  **`.taskgraph/config.json` File (Project Root - Primary)**
-
     - Stores AI model selections (`main`, `research`, `fallback`), model parameters (`maxTokens`, `temperature`), `logLevel`, `defaultSubtasks`, `defaultPriority`, `projectName`, etc.
     - Managed using the `taskgraph models --setup` command or the `models` MCP tool.
     - This is the main configuration file for most settings.
@@ -36,7 +35,6 @@ TaskGraph configuration is now managed through two primary methods:
 ## How It Works
 
 1. **`tasks.json`**:
-
    - A JSON file at the project root containing an array of tasks (each with `id`, `title`, `description`, `status`, etc.).
    - The `meta` field can store additional info like the project's name, version, or reference to the PRD.
    - Tasks can have `subtasks` for more detailed implementation steps.
@@ -54,7 +52,6 @@ TaskGraph configuration is now managed through two primary methods:
    ```
 
    Available commands:
-
    - `init`: Initialize a new project
    - `parse-prd`: Generate tasks from a PRD document
    - `list`: Display all tasks with their status
@@ -222,20 +219,17 @@ taskgraph remove-dependency --id=<id> --depends-on=<id>
 These commands:
 
 1. **Allow precise dependency management**:
-
    - Add dependencies between tasks with automatic validation
    - Remove dependencies when they're no longer needed
    - Update task files automatically after changes
 
 2. **Include validation checks**:
-
    - Prevent circular dependencies (a task depending on itself)
    - Prevent duplicate dependencies
    - Verify that both tasks exist before adding/removing dependencies
    - Check if dependencies exist before attempting to remove them
 
 3. **Provide clear feedback**:
-
    - Success messages confirm when dependencies are added/removed
    - Error messages explain why operations failed (if applicable)
 

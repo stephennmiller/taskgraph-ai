@@ -43,6 +43,7 @@ All prompt templates are validated against JSON schemas located in `packages/tm-
 - **Cross-Reference Validation**: Ensures parameters match template variables
 
 ### Validation Features
+
 - **Required Fields**: `id`, `version`, `description`, `prompts.default`
 - **Type Safety**: String, number, boolean, array, object validation
 - **Pattern Matching**: Regex validation for string parameters
@@ -52,11 +53,13 @@ All prompt templates are validated against JSON schemas located in `packages/tm-
 ## Development Workflow
 
 ### Setting Up Development Environment
+
 1. **VS Code Integration**: Schemas are automatically configured for IntelliSense
 2. **Dependencies**: `ajv` and `ajv-formats` are required for validation
 3. **File Watching**: Changes to templates trigger automatic validation
 
 ### Creating New Prompts
+
 1. Create a new `.json` file in `packages/tm-core/src/modules/ai/prompts/`
 2. Follow the schema structure (see Template Structure section)
 3. Define parameters with proper types and validation
@@ -64,6 +67,7 @@ All prompt templates are validated against JSON schemas located in `packages/tm-
 5. Test with the PromptManager before committing
 
 ### Modifying Existing Prompts
+
 1. Update the `version` field following semantic versioning
 2. Maintain backward compatibility when possible
 3. Test with existing code that uses the prompt
@@ -72,6 +76,7 @@ All prompt templates are validated against JSON schemas located in `packages/tm-
 ## Prompt Template Reference
 
 ### 1. parse-prd.json
+
 **Purpose**: Parse a Product Requirements Document into structured tasks  
 **Variants**: `default`, `research` (when research mode is enabled)
 
@@ -87,6 +92,7 @@ All prompt templates are validated against JSON schemas located in `packages/tm-
 **Usage**: Used by `taskgraph parse-prd` command to convert PRD documents into actionable task lists.
 
 ### 2. add-task.json
+
 **Purpose**: Generate a new task based on user description  
 **Variants**: `default`, `research` (when research mode is enabled)
 
@@ -105,6 +111,7 @@ All prompt templates are validated against JSON schemas located in `packages/tm-
 **Usage**: Used by `taskgraph add-task` command to create new tasks with AI assistance.
 
 ### 3. expand-task.json
+
 **Purpose**: Break down a task into detailed subtasks with three sophisticated strategies  
 **Variants**: `complexity-report` (when expansionPrompt exists), `research` (when research mode is enabled), `default` (standard case)
 
@@ -128,6 +135,7 @@ All prompt templates are validated against JSON schemas located in `packages/tm-
 **Usage**: Used by `taskgraph expand` command to break complex tasks into manageable subtasks using the most appropriate strategy based on available context and complexity analysis.
 
 ### 4. update-task.json
+
 **Purpose**: Update a single task with new information, supporting full updates and append mode  
 **Variants**: `default`, `append` (when appendMode is true), `research` (when research mode is enabled)
 
@@ -145,6 +153,7 @@ All prompt templates are validated against JSON schemas located in `packages/tm-
 **Usage**: Used by `taskgraph update <id>` to modify existing tasks.
 
 ### 5. update-tasks.json
+
 **Purpose**: Update multiple tasks based on new context or changes  
 **Variants**: `default`, `research` (when research mode is enabled)
 
@@ -159,6 +168,7 @@ All prompt templates are validated against JSON schemas located in `packages/tm-
 **Usage**: Used by `taskgraph update` command to bulk update multiple tasks.
 
 ### 6. update-subtask.json
+
 **Purpose**: Append information to a subtask by generating only new content  
 **Variants**: `default`, `research` (when research mode is enabled)
 
@@ -176,6 +186,7 @@ All prompt templates are validated against JSON schemas located in `packages/tm-
 **Usage**: Used by `taskgraph update-subtask` command to log progress and findings on subtasks.
 
 ### 7. analyze-complexity.json
+
 **Purpose**: Analyze task complexity and generate expansion recommendations  
 **Variants**: `default`, `research` (when research mode is enabled), `batch` (when analyzing >10 tasks)
 
@@ -190,6 +201,7 @@ All prompt templates are validated against JSON schemas located in `packages/tm-
 **Usage**: Used by `taskgraph analyze-complexity` command to determine which tasks need breakdown.
 
 ### 8. research.json
+
 **Purpose**: Perform AI-powered research with project context  
 **Variants**: `default`, `low` (concise responses), `medium` (balanced), `high` (detailed)
 
@@ -254,12 +266,14 @@ Each prompt template is a JSON file with the following structure:
 ## Template Features
 
 ### Variable Substitution
+
 Use `{{variableName}}` to inject dynamic values:
 ```
 "user": "Analyze these {{tasks.length}} tasks with threshold {{threshold}}"
 ```
 
 ### Conditionals
+
 Use `{{#if variable}}...{{/if}}` for conditional content:
 ```
 "user": "{{#if useResearch}}Research and {{/if}}create a task"
@@ -268,6 +282,7 @@ Use `{{#if variable}}...{{/if}}` for conditional content:
 ### Helper Functions
 
 #### Equality Helper
+
 Use `{{#if (eq variable "value")}}...{{/if}}` for string comparisons:
 ```
 "user": "{{#if (eq detailLevel \"low\")}}Provide a brief summary{{/if}}"
@@ -280,6 +295,7 @@ The `eq` helper enables clean conditional logic based on parameter values:
 - Multiple conditions: `{{#if (eq level "1")}}First{{/if}}{{#if (eq level "2")}}Second{{/if}}`
 
 #### Negation Helper
+
 Use `{{#if (not variable)}}...{{/if}}` for negation conditions:
 ```
 "user": "{{#if (not useResearch)}}Use basic analysis{{/if}}"
@@ -292,6 +308,7 @@ The `not` helper enables clean negative conditional logic:
 - Cleaner than separate boolean parameters: No need for `notUseResearch` flags
 
 #### Numeric Comparison Helpers
+
 Use `{{#if (gt variable number)}}...{{/if}}` for greater than comparisons:
 ```
 "user": "generate {{#if (gt numTasks 0)}}approximately {{numTasks}}{{else}}an appropriate number of{{/if}} top-level development tasks"
@@ -314,12 +331,14 @@ The numeric comparison helpers enable sophisticated conditional logic:
 - **Enhanced prompt sophistication**: Enables parse-prd and expand-task logic matching GitHub specifications
 
 ### Loops
+
 Use `{{#each array}}...{{/each}}` to iterate over arrays:
 ```
 "user": "Tasks:\n{{#each tasks}}- {{id}}: {{title}}\n{{/each}}"
 ```
 
 ### Special Loop Variables
+
 Inside `{{#each}}` blocks, you have access to:
 - `{{@index}}`: Current array index (0-based)
 - `{{@first}}`: Boolean, true for first item
@@ -330,12 +349,14 @@ Inside `{{#each}}` blocks, you have access to:
 ```
 
 ### JSON Serialization
+
 Use `{{{json variable}}}` (triple braces) to serialize objects/arrays to JSON:
 ```
 "user": "Analyze these tasks: {{{json tasks}}}"
 ```
 
 ### Nested Properties
+
 Access nested properties with dot notation:
 ```
 "user": "Project: {{context.projectName}}"
@@ -367,6 +388,7 @@ Variants allow different prompts based on conditions:
 ```
 
 ### Condition Evaluation
+
 Conditions are JavaScript expressions evaluated with parameter values as context:
 - Simple comparisons: `useResearch === true`
 - Numeric comparisons: `threshold >= 5`
@@ -384,6 +406,7 @@ The PromptManager is implemented in `packages/tm-core/src/modules/ai/prompts/pro
 - **Singleton pattern**: One instance per project root for efficiency
 
 ### Validation Behavior
+
 - **Schema Available**: Full validation with detailed error messages
 - **Schema Missing**: Falls back to basic structural validation
 - **Invalid Templates**: Throws descriptive errors with field-level details
@@ -392,6 +415,7 @@ The PromptManager is implemented in `packages/tm-core/src/modules/ai/prompts/pro
 ## Usage in Code
 
 ### Basic Usage
+
 ```javascript
 import { getPromptManager } from '@tm/core';
 
@@ -414,6 +438,7 @@ const result = await new AiService(new AiConfig(configManager).toHost()).generat
 ```
 
 ### With Variants
+
 ```javascript
 // Research variant will be selected automatically
 const { systemPrompt, userPrompt } = promptManager.loadPrompt('expand-task', {
@@ -424,6 +449,7 @@ const { systemPrompt, userPrompt } = promptManager.loadPrompt('expand-task', {
 ```
 
 ### Error Handling
+
 ```javascript
 try {
   const result = promptManager.loadPrompt('invalid-template', {});
@@ -447,6 +473,7 @@ try {
 7. **Update this documentation** with the new prompt details
 
 ### Example New Prompt
+
 ```json
 {
   "id": "new-feature",
@@ -479,6 +506,7 @@ try {
 ## Best Practices
 
 ### Template Design
+
 1. **Clear IDs**: Use kebab-case, descriptive identifiers
 2. **Semantic Versioning**: Follow semver for version management
 3. **Comprehensive Parameters**: Define all required and optional parameters
@@ -486,18 +514,21 @@ try {
 5. **Clear Descriptions**: Document what each prompt and parameter does
 
 ### Variable Usage
+
 1. **Meaningful Names**: Use descriptive variable names
 2. **Consistent Patterns**: Follow established naming conventions
 3. **Safe Defaults**: Provide sensible default values
 4. **Validation**: Use patterns, enums, and ranges for validation
 
 ### Variant Strategy
+
 1. **Simple Conditions**: Keep variant conditions easy to understand
 2. **Clear Purpose**: Each variant should have a distinct use case
 3. **Fallback Logic**: Always provide a default variant
 4. **Documentation**: Explain when each variant is used
 
 ### Performance
+
 1. **Caching**: Templates are cached automatically
 2. **Lazy Loading**: Templates load only when needed
 3. **Minimal Variants**: Don't create unnecessary variants
@@ -506,6 +537,7 @@ try {
 ## Testing Prompts
 
 ### Validation Testing
+
 ```javascript
 // Test schema validation
 const promptManager = getPromptManager();
@@ -514,6 +546,7 @@ console.log(`Valid: ${results.valid.length}, Errors: ${results.errors.length}`);
 ```
 
 ### Integration Testing
+
 When modifying prompts, ensure to test:
 - Variable substitution works with actual data structures
 - Variant selection triggers correctly based on conditions
@@ -522,6 +555,7 @@ When modifying prompts, ensure to test:
 - Error handling works for invalid inputs
 
 ### Quick Testing
+
 ```javascript
 // Test prompt loading and variable substitution
 const promptManager = getPromptManager();
@@ -536,6 +570,7 @@ console.log('Metadata:', result.metadata);
 ```
 
 ### Testing Checklist
+
 - [ ] Template validates against schema
 - [ ] All required parameters are defined
 - [ ] Variable substitution works correctly

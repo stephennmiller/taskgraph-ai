@@ -101,12 +101,12 @@ needs a new approval.
 Releases are cut automatically when a PR merges to `main`, from its squashed
 commit title.
 
-| Title prefix | Release |
-| --- | --- |
-| `feat:` | Minor (patch while TaskGraph is below 1.0) |
-| `fix:`, `perf:`, `revert:` | Patch |
-| `feat!:` or a `BREAKING CHANGE:` footer | Major (minor while below 1.0) |
-| `chore:`, `docs:`, `ci:`, `test:` | No release |
+| Title prefix                            | Release                                    |
+| --------------------------------------- | ------------------------------------------ |
+| `feat:`                                 | Minor (patch while TaskGraph is below 1.0) |
+| `fix:`, `perf:`, `revert:`              | Patch                                      |
+| `feat!:` or a `BREAKING CHANGE:` footer | Major (minor while below 1.0)              |
+| `chore:`, `docs:`, `ci:`, `test:`       | No release                                 |
 
 Say what users get or what is fixed:
 

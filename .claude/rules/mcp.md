@@ -3,6 +3,7 @@ description: Guidelines for implementing and interacting with the TaskGraph MCP 
 paths:
   - "apps/mcp/**/*"
 ---
+
 # TaskGraph MCP Server Guidelines
 
 How the TaskGraph Model Context Protocol (MCP) server is built and how to add a tool to it. The server runs on FastMCP over stdio and is the published `taskgraph-mcp` / `taskgraph-ai` bin.

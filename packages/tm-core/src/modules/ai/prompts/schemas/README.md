@@ -14,6 +14,7 @@ The schema system provides:
 ## Schema Files
 
 ### `prompt-template.schema.json` (Main Schema)
+
 **Version**: 1.0.0  
 **Purpose**: Main schema for TaskGraph prompt template files
 
@@ -37,6 +38,7 @@ The schema system provides:
 - `prompts.*`: Additional prompt variants
 
 ### `parameter.schema.json` (Parameter Schema)
+
 **Version**: 1.0.0  
 **Purpose**: Reusable schema for individual prompt parameters
 
@@ -67,6 +69,7 @@ The schema system provides:
 ```
 
 ### `variant.schema.json` (Variant Schema)
+
 **Version**: 1.0.0  
 **Purpose**: Schema for prompt template variants
 
@@ -91,13 +94,15 @@ The schema system provides:
 ## Schema Validation Rules
 
 ### Template ID Validation
+
 - **Pattern**: `^[a-z][a-z0-9-]*[a-z0-9]$`
 - **Format**: Kebab-case, alphanumeric with hyphens
-- **Examples**: 
+- **Examples**:
   - ✅ `add-task`, `parse-prd`, `analyze-complexity`
   - ❌ `AddTask`, `add_task`, `-invalid-`, `task-`
 
 ### Version Validation
+
 - **Pattern**: Semantic versioning (semver)
 - **Format**: `MAJOR.MINOR.PATCH`
 - **Examples**:
@@ -105,6 +110,7 @@ The schema system provides:
   - ❌ `1.0`, `v1.0.0`, `1.0.0-beta`
 
 ### Parameter Type Validation
+
 - **String**: Text values with optional pattern/enum constraints
 - **Number**: Numeric values with optional min/max constraints
 - **Boolean**: True/false values
@@ -112,6 +118,7 @@ The schema system provides:
 - **Object**: Complex structures with property definitions
 
 ### Template Variable Validation
+
 - **Handlebars Syntax**: `{{variable}}`, `{{#if condition}}`, `{{#each array}}`
 - **Parameter References**: All template variables must have corresponding parameters
 - **Nested Access**: Support for `{{object.property}}` notation
@@ -120,6 +127,7 @@ The schema system provides:
 ## IDE Integration
 
 ### VS Code Setup
+
 The VS Code profile automatically configures schema validation:
 
 ```json
@@ -144,6 +152,7 @@ The VS Code profile automatically configures schema validation:
 - **Error Messages**: Detailed validation error explanations
 
 ### Other IDEs
+
 For other development environments:
 
 **Schema URLs**:
@@ -158,6 +167,7 @@ For other development environments:
 ## Validation Examples
 
 ### Valid Template Example
+
 ```json
 {
   "id": "example-prompt",
@@ -272,6 +282,7 @@ For other development environments:
 ## Development Workflow
 
 ### Creating New Templates
+
 1. **Start with Schema**: Use VS Code with schema validation enabled
 2. **Define Structure**: Begin with required fields (id, version, description)
 3. **Add Parameters**: Define all template variables with proper types
@@ -281,6 +292,7 @@ For other development environments:
 7. **Document Usage**: Update the main README with template details
 
 ### Modifying Existing Templates
+
 1. **Check Current Version**: Note the current version number
 2. **Assess Changes**: Determine if changes are breaking or non-breaking
 3. **Update Version**: Increment version following semantic versioning
@@ -289,6 +301,7 @@ For other development environments:
 6. **Update Documentation**: Reflect changes in README files
 
 ### Schema Evolution
+
 When updating schemas themselves:
 
 1. **Backward Compatibility**: Ensure existing templates remain valid
@@ -300,6 +313,7 @@ When updating schemas themselves:
 ## Advanced Validation Features
 
 ### Cross-Reference Validation
+
 The schema validates that:
 - All template variables have corresponding parameters
 - Parameter types match their usage in templates
@@ -307,12 +321,14 @@ The schema validates that:
 - Nested property access is properly defined
 
 ### Conditional Validation
+
 - **Dynamic Schemas**: Different validation rules based on parameter values
 - **Variant Conditions**: JavaScript expression validation
 - **Template Syntax**: Handlebars syntax validation
 - **Parameter Dependencies**: Required parameters based on other parameters
 
 ### Custom Validation Rules
+
 The schema includes custom validation for:
 - **Semantic Versioning**: Proper version format validation
 - **Template Variables**: Handlebars syntax and parameter references
@@ -322,16 +338,19 @@ The schema includes custom validation for:
 ## Performance Considerations
 
 ### Schema Loading
+
 - **Caching**: Schemas are loaded once and cached
 - **Lazy Loading**: Validation only occurs when templates are accessed
 - **Memory Efficiency**: Shared schema instances across templates
 
 ### Validation Performance
+
 - **Fast Validation**: AJV provides optimized validation
 - **Error Batching**: Multiple errors reported in single validation pass
 - **Minimal Overhead**: Validation adds minimal runtime cost
 
 ### Development Impact
+
 - **IDE Responsiveness**: Real-time validation without performance impact
 - **Build Time**: Schema validation during development, not production
 - **Testing Speed**: Fast validation during test execution
@@ -391,12 +410,14 @@ The schema includes custom validation for:
 ## Schema URLs and References
 
 ### Current Schema Locations
+
 - **Local Development**: `./packages/tm-core/src/modules/ai/prompts/schemas/prompt-template.schema.json`
 - **GitHub Blob**: `https://github.com/stephennmiller/taskgraph-ai/blob/main/packages/tm-core/src/modules/ai/prompts/schemas/prompt-template.schema.json`
 - **Schema ID**: Used for internal references and validation
 
 ### URL Usage Guidelines
+
 - **`$id` Field**: Use GitHub blob URLs for stable schema identification
 - **Local References**: Use relative paths for development and testing
 - **External Tools**: GitHub blob URLs provide stable, version-controlled access
-- **Documentation**: Link to GitHub for public schema access 
+- **Documentation**: Link to GitHub for public schema access

@@ -268,18 +268,18 @@ Research JWT best practices for this project
 
 The same actions as slash commands and CLI commands:
 
-| You say | Slash command | CLI |
-|---|---|---|
-| What should I work on next? | `/taskgraph:next` | `taskgraph next` |
-| Show me the task graph | `/taskgraph:graph` | `taskgraph graph` |
-| Why is task 7 blocked? | `/taskgraph:why 7` | `taskgraph why 7` |
-| Show task 1 | `/taskgraph:show 1` | `taskgraph show 1` |
-| Start task 3 | `/taskgraph:set-status 3 in-progress` | `taskgraph set-status --id=3 --status=in-progress` |
-| Mark task 3 done | `/taskgraph:to-done 3` | `taskgraph set-status --id=3 --status=done` |
-| Break task 4 into subtasks | `/taskgraph:expand 4` | `taskgraph expand --id=4` |
-| Add a task for ... | `/taskgraph:add-task <what you want>` | `taskgraph add-task --prompt='...'` |
-| Update task 5: ... | `/taskgraph:update-task 5 <change>` | `taskgraph update 5 --prompt='...'` |
-| Research ... | (research skill) | `taskgraph research "JWT best practices"` |
+| You say                     | Slash command                         | CLI                                                |
+| --------------------------- | ------------------------------------- | -------------------------------------------------- |
+| What should I work on next? | `/taskgraph:next`                     | `taskgraph next`                                   |
+| Show me the task graph      | `/taskgraph:graph`                    | `taskgraph graph`                                  |
+| Why is task 7 blocked?      | `/taskgraph:why 7`                    | `taskgraph why 7`                                  |
+| Show task 1                 | `/taskgraph:show 1`                   | `taskgraph show 1`                                 |
+| Start task 3                | `/taskgraph:set-status 3 in-progress` | `taskgraph set-status --id=3 --status=in-progress` |
+| Mark task 3 done            | `/taskgraph:to-done 3`                | `taskgraph set-status --id=3 --status=done`        |
+| Break task 4 into subtasks  | `/taskgraph:expand 4`                 | `taskgraph expand --id=4`                          |
+| Add a task for ...          | `/taskgraph:add-task <what you want>` | `taskgraph add-task --prompt='...'`                |
+| Update task 5: ...          | `/taskgraph:update-task 5 <change>`   | `taskgraph update 5 --prompt='...'`                |
+| Research ...                | (research skill)                      | `taskgraph research "JWT best practices"`          |
 
 If you use the MCP server instead, research, tags and the dependency editing
 tools (`add_dependency`, `remove_dependency`, `validate_dependencies`,
@@ -321,14 +321,14 @@ Claude Code:
 /taskgraph
 ```
 
-| Purpose | Commands |
-|---|---|
-| Daily workflow | `next`, `show`, `list`, `project-status`, `set-status`, `to-done`, `add-task`, `loop` |
-| Set up | `init`, `models` |
-| Create & update | `parse-prd`, `update`, `update-task`, `note`, `add-subtask`, `remove-task`, `remove-subtask`, `clear-subtasks`, `sync-readme` |
-| Analyze & expand | `analyze-complexity`, `complexity-report`, `expand` |
-| Organize | `graph`, `why`, `add-dependency`, `remove-dependency`, `validate-dependencies`, `fix-dependencies` |
-| Other | `help` |
+| Purpose          | Commands                                                                                                                      |
+| ---------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| Daily workflow   | `next`, `show`, `list`, `project-status`, `set-status`, `to-done`, `add-task`, `loop`                                         |
+| Set up           | `init`, `models`                                                                                                              |
+| Create & update  | `parse-prd`, `update`, `update-task`, `note`, `add-subtask`, `remove-task`, `remove-subtask`, `clear-subtasks`, `sync-readme` |
+| Analyze & expand | `analyze-complexity`, `complexity-report`, `expand`                                                                           |
+| Organize         | `graph`, `why`, `add-dependency`, `remove-dependency`, `validate-dependencies`, `fix-dependencies`                            |
+| Other            | `help`                                                                                                                        |
 
 ### CLI cheat sheet
 
@@ -372,12 +372,12 @@ Only relevant if you added the optional MCP server. Each tool you load costs
 context. `TASKGRAPH_TOOLS` controls how many are registered. If it's unset, you
 get `core`.
 
-| Value | Tools | Includes |
-|---|---|---|
-| `core` (default, alias `lean`) | 7 | `get_tasks`, `next_task`, `get_task`, `set_task_status`, `add_note`, `parse_prd`, `expand_task` |
-| `standard` | 16 | core, plus `update_subtask`, `initialize_project`, `analyze_project_complexity`, `expand_all`, `add_subtask`, `remove_task`, `add_task`, `complexity_report`, `dependency_analysis` |
-| `all` | 40 | everything: updates, dependencies, archive, tags, `research`, `move_task`, `scope_up_task`, `scope_down_task` and `generate` |
-| a list | custom | e.g. `get_tasks,next_task,set_task_status` |
+| Value                          | Tools  | Includes                                                                                                                                                                            |
+| ------------------------------ | ------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `core` (default, alias `lean`) | 7      | `get_tasks`, `next_task`, `get_task`, `set_task_status`, `add_note`, `parse_prd`, `expand_task`                                                                                     |
+| `standard`                     | 16     | core, plus `update_subtask`, `initialize_project`, `analyze_project_complexity`, `expand_all`, `add_subtask`, `remove_task`, `add_task`, `complexity_report`, `dependency_analysis` |
+| `all`                          | 40     | everything: updates, dependencies, archive, tags, `research`, `move_task`, `scope_up_task`, `scope_down_task` and `generate`                                                        |
+| a list                         | custom | e.g. `get_tasks,next_task,set_task_status`                                                                                                                                          |
 
 `all` registers every tool. That gives the MCP host full project control: it
 can create, edit and delete tasks and tags, change settings, generate task
