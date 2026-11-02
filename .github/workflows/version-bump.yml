@@ -6,9 +6,9 @@ name: Version Bump
 # GitHub Release and stages the build on npm for a maintainer to approve.
 on:
   workflow_run:
-    workflows: [CI]
-    types: [completed]
-    branches: [main]
+    workflows: [ CI ]
+    types: [ completed ]
+    branches: [ main ]
 
 # Serialize runs but never cancel one mid-push.
 concurrency:

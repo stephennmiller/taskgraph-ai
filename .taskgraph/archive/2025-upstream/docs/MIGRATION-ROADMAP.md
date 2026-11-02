@@ -1,6 +1,7 @@
 # TaskGraph Migration Roadmap
 
 ## Overview
+
 Gradual migration from scripts-based architecture to a clean monorepo with separated concerns.
 
 ## Architecture Vision
@@ -23,6 +24,7 @@ Gradual migration from scripts-based architecture to a clean monorepo with separ
 ## Migration Phases
 
 ### Phase 1: Core Extraction ✅ (In Progress)
+
 **Goal**: Move all business logic to @tm/core
 
 - [x] Create @tm/core package structure
@@ -35,6 +37,7 @@ Gradual migration from scripts-based architecture to a clean monorepo with separ
 - [ ] Complete test coverage
 
 ### Phase 2: CLI Package Creation 🚧 (Started)
+
 **Goal**: Create @tm/cli as a thin presentation layer
 
 - [x] Create @tm/cli package structure
@@ -46,6 +49,7 @@ Gradual migration from scripts-based architecture to a clean monorepo with separ
 - [ ] Remove UI logic from core
 
 ### Phase 3: Transitional Integration
+
 **Goal**: Use new packages in existing scripts without breaking changes
 
 ```javascript
@@ -63,6 +67,7 @@ programInstance
 ```
 
 ### Phase 4: MCP Package
+
 **Goal**: Separate MCP server as its own package
 
 - [ ] Create @tm/mcp package
@@ -71,6 +76,7 @@ programInstance
 - [ ] MCP becomes a thin RPC layer
 
 ### Phase 5: Complete Migration
+
 **Goal**: Remove old scripts, pure monorepo
 
 - [ ] All commands migrated to @tm/cli
@@ -82,6 +88,7 @@ programInstance
 ## Current Transitional Strategy
 
 ### 1. Adapter Pattern (commands-adapter.js)
+
 ```javascript
 // Checks if new CLI is available and uses it
 // Falls back to legacy implementation if not
@@ -94,6 +101,7 @@ export async function listTasksAdapter(...args) {
 ```
 
 ### 2. Command Bridge Pattern
+
 ```javascript
 // Allows new commands to work in old code
 const bridge = new CommandBridge(new ListTasksCommand());
@@ -102,6 +110,7 @@ const result = await bridge.execute(newOptions); // New style
 ```
 
 ### 3. Gradual File Migration
+
 Instead of big-bang refactoring:
 1. Create new implementation in @tm/cli
 2. Add adapter in commands-adapter.js
@@ -120,26 +129,31 @@ Instead of big-bang refactoring:
 ## Example PR Sequence
 
 ### PR 1: Core Package Setup ✅
+
 - Create @tm/core
 - Move types and interfaces
 - Basic TaskGraphCore implementation
 
 ### PR 2: CLI Package Foundation ✅
+
 - Create @tm/cli
 - Command interface and registry
 - Legacy bridge utilities
 
 ### PR 3: First Command Migration
+
 - Migrate list-tasks to new system
 - Add adapter in scripts
 - Test both implementations
 
 ### PR 4-N: Migrate Commands One by One
+
 - Each PR migrates 1-2 related commands
 - Small, reviewable changes
 - Continuous delivery
 
 ### Final PR: Cleanup
+
 - Remove legacy implementations
 - Remove adapters
 - Update documentation
@@ -147,6 +161,7 @@ Instead of big-bang refactoring:
 ## Testing Strategy
 
 ### Dual Testing During Migration
+
 ```javascript
 describe('List Tasks', () => {
   it('works with legacy implementation', async () => {

@@ -26,8 +26,7 @@ When implementing commands that delete or remove data (like `remove-task` or `re
     .option('-y, --yes', 'Skip confirmation prompt', false)
     .action(async (options) => {
       // Validation code...
-      
-      if (!options.yes) {
+        if (!options.yes) {
         if (!process.stdin.isTTY) {
           printError(
             `Removing task ${taskId} needs confirmation`,
@@ -47,8 +46,7 @@ When implementing commands that delete or remove data (like `remove-task` or `re
           return;
         }
       }
-      
-      // Proceed with removal...
+        // Proceed with removal...
     });
   ```
 
@@ -65,8 +63,7 @@ When implementing commands that delete or remove data (like `remove-task` or `re
     path.dirname(tasksPath),
     `task_${taskId.toString().padStart(3, '0')}.txt`
   );
-  
-  // ✅ DO: Check existence before deletion; report it in the final summary,
+    // ✅ DO: Check existence before deletion; report it in the final summary,
   // not as its own line, and warn only if it fails
   if (fs.existsSync(taskFilePath)) {
     try {
@@ -86,16 +83,14 @@ When implementing commands that delete or remove data (like `remove-task` or `re
   ```javascript
   // ✅ DO: Clean up references when deleting items
   let referencesRemoved = 0;
-  
-  // Update dependencies in other tasks
+    // Update dependencies in other tasks
   data.tasks.forEach(task => {
     if (task.dependencies && task.dependencies.includes(taskId)) {
       task.dependencies = task.dependencies.filter(depId => depId !== taskId);
       referencesRemoved++;
     }
   });
-  
-  // One result line covers the removal and its side effects:
+    // One result line covers the removal and its side effects:
   //   ✓ Removed task 5 · 2 tasks no longer depend on it
   return { removed: taskId, referencesRemoved };
   ```

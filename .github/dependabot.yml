@@ -9,10 +9,10 @@
 # bump that users must receive is promoted to `fix:` by hand.
 version: 2
 updates:
-  - package-ecosystem: 'github-actions'
-    directory: '/'
+  - package-ecosystem: "github-actions"
+    directory: "/"
     schedule:
-      interval: 'monthly'
+      interval: "monthly"
     # Skip releases younger than 7 days: a freshly published (possibly
     # compromised) version is not proposed until it has had time to be caught.
     # Security updates ignore cooldown.
@@ -21,14 +21,14 @@ updates:
     groups:
       github-actions:
         patterns:
-          - '*'
+          - "*"
     commit-message:
-      prefix: 'ci'
+      prefix: "ci"
 
-  - package-ecosystem: 'npm'
-    directory: '/'
+  - package-ecosystem: "npm"
+    directory: "/"
     schedule:
-      interval: 'monthly'
+      interval: "monthly"
     cooldown:
       default-days: 7
     open-pull-requests-limit: 5
@@ -38,13 +38,14 @@ updates:
       # pin the supported range. Migrate on purpose, not through a bump PR.
       # rolldown-plugin-dts peers `typescript ~7.0.0`, so a 7.1 bump breaks
       # installs; minors need the same deliberate migration.
-      - dependency-name: 'typescript'
-        update-types: ['version-update:semver-major', 'version-update:semver-minor']
+      - dependency-name: "typescript"
+        update-types:
+          [ "version-update:semver-major", "version-update:semver-minor" ]
       # marked-terminal 7.3.0 (the latest release) declares a peer of
       # `marked >=1 <16`, so `npm ci` fails on marked 16+. Revisit once
       # marked-terminal publishes a release that supports newer marked.
-      - dependency-name: 'marked'
-        update-types: ['version-update:semver-major']
+      - dependency-name: "marked"
+        update-types: [ "version-update:semver-major" ]
     groups:
       # Vitest and its @vitest/* packages pin exact peers on each other, so a
       # bump of one without the others installs two Vitest majors side by side.
@@ -52,14 +53,14 @@ updates:
       # dependency in the first group that matches it).
       vitest:
         patterns:
-          - 'vitest'
-          - '@vitest/*'
+          - "vitest"
+          - "@vitest/*"
       # Minor/patch only: majors (the AI SDK 7 move, for example) need a human
       # decision and their own PR.
       npm-minor-patch:
         update-types:
-          - 'minor'
-          - 'patch'
+          - "minor"
+          - "patch"
     commit-message:
-      prefix: 'chore'
-      include: 'scope'
+      prefix: "chore"
+      include: "scope"

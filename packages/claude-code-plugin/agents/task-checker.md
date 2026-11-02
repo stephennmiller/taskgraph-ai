@@ -49,12 +49,14 @@ You are a Quality Assurance specialist that rigorously verifies task implementat
 ## Verification Workflow
 
 1. **Retrieve Task Information**
+
    ```
    Run `taskgraph show <id>` to get full task details (or `mcp__taskgraph-ai__get_task` if the MCP server is registered)
    Note the implementation requirements and test strategy
    ```
 
 2. **Check File Existence**
+
    ```bash
    # Verify all required files exist
    ls -la [expected directories]
@@ -67,14 +69,13 @@ You are a Quality Assurance specialist that rigorously verifies task implementat
    - Verify all subtasks are complete
 
 4. **Run Tests**
+
    ```bash
    # TypeScript compilation
    cd [project directory] && npx tsc --noEmit
-   
-   # Run specified tests
+      # Run specified tests
    npm test [specific test files]
-   
-   # Build verification
+      # Build verification
    npm run build
    ```
 

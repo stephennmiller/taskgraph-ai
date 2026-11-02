@@ -2,13 +2,13 @@ name: Claude Code
 
 on:
   issue_comment:
-    types: [created]
+    types: [ created ]
   pull_request_review_comment:
-    types: [created]
+    types: [ created ]
   issues:
-    types: [opened, assigned]
+    types: [ opened, assigned ]
   pull_request_review:
-    types: [submitted]
+    types: [ submitted ]
 
 # No workflow-level grant: each job declares exactly what it needs.
 # A skipped job never starts a runner, so CLAUDE_CODE_OAUTH_TOKEN is not
@@ -159,4 +159,3 @@ jobs:
           # See https://github.com/anthropics/claude-code-action/blob/main/docs/usage.md
           # or https://code.claude.com/docs/en/cli-reference for available options
           # claude_args: '--allowed-tools Bash(gh pr *)'
-

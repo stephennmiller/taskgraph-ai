@@ -95,10 +95,9 @@ A task moved to `.taskgraph/tasks/archive.json` by `taskgraph archive` is done f
 
   ```javascript
   // ✅ DO: Format IDs consistently when adding dependencies
-  const formattedTaskId = typeof taskId === 'string' && taskId.includes('.') 
+  const formattedTaskId = typeof taskId === 'string' && taskId.includes('.')
     ? taskId : parseInt(taskId, 10);
-  
-  const formattedDependencyId = formatTaskId(dependencyId);
+    const formattedDependencyId = formatTaskId(dependencyId);
   ```
 
 - **Removing Dependencies**:
@@ -111,22 +110,18 @@ A task moved to `.taskgraph/tasks/archive.json` by `taskgraph archive` is done f
   const dependencyIndex = targetTask.dependencies.findIndex(dep => {
     // Convert both to strings for comparison
     let depStr = String(dep);
-    
-    // Handle relative subtask references
+      // Handle relative subtask references
     if (typeof dep === 'number' && dep < 100 && isSubtask) {
       const [parentId] = formattedTaskId.split('.');
       depStr = `${parentId}.${dep}`;
     }
-    
-    return depStr === normalizedDependencyId;
+      return depStr === normalizedDependencyId;
   });
-  
-  if (dependencyIndex === -1) {
+    if (dependencyIndex === -1) {
     log('info', `Task ${formattedTaskId} does not depend on ${formattedDependencyId}, no changes made.`);
     return;
   }
-  
-  // Remove the dependency
+    // Remove the dependency
   targetTask.dependencies.splice(dependencyIndex, 1);
   ```
 
@@ -180,15 +175,12 @@ A task moved to `.taskgraph/tasks/archive.json` by `taskgraph archive` is done f
     if (!dependencies || dependencies.length === 0) {
       return 'None';
     }
-    
-    return dependencies.map(depId => {
+      return dependencies.map(depId => {
       const depTask = findTaskById(allTasks, depId);
       if (!depTask) return `${depId} (Not found)`;
-      
-      const isDone = depTask.status === 'done';
+        const isDone = depTask.status === 'done';
       const statusIcon = isDone ? '✅' : '⏱️';
-      
-      return `${statusIcon} ${depId} (${depTask.status})`;
+        return `${statusIcon} ${depId} (${depTask.status})`;
     }).join(', ');
   }
   ```
@@ -210,4 +202,4 @@ A task moved to `.taskgraph/tasks/archive.json` by `taskgraph archive` is done f
   const inLoop = findLoopMembers(graph); // Set of full IDs ("3", "3.2")
   ```
 
-Refer to [`packages/tm-core/src/modules/dependencies/`](../../packages/tm-core/src/modules/dependencies/) (`dependency-edit.ts`, `dependency-check.ts`) for the implementation. 
+Refer to [`packages/tm-core/src/modules/dependencies/`](../../packages/tm-core/src/modules/dependencies/) (`dependency-edit.ts`, `dependency-check.ts`) for the implementation.

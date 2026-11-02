@@ -1,9 +1,11 @@
 # Phase 1: Core Rails - Autonomous TDD Workflow
 
 ## Objective
+
 Implement the core autonomous TDD workflow with safe git operations, test generation/execution, and commit gating.
 
 ## Scope
+
 - WorkflowOrchestrator with event stream
 - GitAdapter and TestResultValidator
 - Subtask loop (RED → GREEN → COMMIT)
@@ -19,26 +21,31 @@ Implement the core autonomous TDD workflow with safe git operations, test genera
 ## Key Design Decisions
 
 ### Global Storage (`~/.taskgraph/`)
+
 - **Why:** Keeps project directory clean, client-friendly, no tooling evidence in PRs
 - **What:** All runtime state, logs, and throwaway artifacts
 - **Where:** `~/.taskgraph/projects/<project-path>/runs/<run-id>/`
 
 ### Dual System: State + Activity Log
+
 - **State (`state.json`):** For orchestration, tells AI what to do next, mutable
 - **Activity Log (`activity.jsonl`):** For debugging/audit, append-only event stream
 - **Separation:** Optimizes for different use cases (fast reads vs. complete history)
 
 ### Enhanced Commit Messages
+
 - **Why:** Enables future task-checker bot validation without external dependencies
 - **What:** Embeds task ID, phase, tag, test counts, coverage in commit body
 - **Benefit:** PR contains full context for review and automated validation
 
 ### Worktree Support
+
 - **Why:** Enables parallel autonomous agents on different branches
 - **How:** Each worktree has independent global state directory
 - **Isolation:** No conflicts, complete separation
 
 ### Framework-Agnostic Test Execution
+
 - **AI runs tests:** AI agent knows project context and test framework (npm test, pytest, go test)
 - **TaskGraph validates:** Only checks that RED fails and GREEN passes
 - **No framework detection:** TaskGraph doesn't need to know Jest vs Vitest vs pytest
@@ -46,6 +53,7 @@ Implement the core autonomous TDD workflow with safe git operations, test genera
 - **Language agnostic:** Works with any language/framework without TaskGraph changes
 
 ### AI Agent Orchestration Model
+
 - **Who executes:** User's AI agent (Claude Code, Cursor, Windsurf, etc.) - not TaskGraph
 - **TaskGraph's role:** Workflow orchestration, validation, commit creation
 - **AI agent's role:** Code generation, test execution, result reporting
@@ -54,14 +62,14 @@ Implement the core autonomous TDD workflow with safe git operations, test genera
 
 **Separation of Concerns:**
 
-| TaskGraph Responsibilities | AI Agent Responsibilities |
-|----------------------------|---------------------------|
-| Workflow state machine | Generate tests |
-| Validate phase transitions | Run tests (knows test framework) |
-| Create commits with metadata | Implement code |
-| Store activity logs | Report test results |
-| Manage git operations | Understand project context |
-| Track progress | Choose appropriate test commands |
+| TaskGraph Responsibilities   | AI Agent Responsibilities        |
+| ---------------------------- | -------------------------------- |
+| Workflow state machine       | Generate tests                   |
+| Validate phase transitions   | Run tests (knows test framework) |
+| Create commits with metadata | Implement code                   |
+| Store activity logs          | Report test results              |
+| Manage git operations        | Understand project context       |
+| Track progress               | Choose appropriate test commands |
 
 **Flow:**
 ```
@@ -483,13 +491,13 @@ function generateRunId(tag: string, taskId: string): string {
 **State vs Activity Log:**
 
 | State File (state.json) | Activity Log (activity.jsonl) |
-|------------------------|-------------------------------|
-| Current position | Full history |
-| What to do next | What happened |
-| Mutable (updated) | Immutable (append-only) |
-| For orchestration | For debugging/audit |
-| Single JSON object | Line-delimited JSON |
-| Small (~2KB) | Can grow large |
+| ----------------------- | ----------------------------- |
+| Current position        | Full history                  |
+| What to do next         | What happened                 |
+| Mutable (updated)       | Immutable (append-only)       |
+| For orchestration       | For debugging/audit           |
+| Single JSON object      | Line-delimited JSON           |
+| Small (~2KB)            | Can grow large                |
 
 **Resume logic:**
 ```typescript
@@ -991,6 +999,7 @@ TaskGraph is responsible for:
 ```
 
 ## Success Criteria
+
 - Can execute a simple task end-to-end without manual intervention
 - All commits made on feature branch, never on default branch
 - Tests are generated before implementation (RED → GREEN order enforced)
@@ -1047,6 +1056,7 @@ TaskGraph is responsible for:
 ```
 
 ## Out of Scope (defer to Phase 2)
+
 - PR creation (gh integration)
 - Resume functionality (`--resume` flag)
 - Lint/format step
@@ -1055,6 +1065,7 @@ TaskGraph is responsible for:
 ## Implementation Order
 
 ### Phase 1A: Infrastructure (Week 1)
+
 1. Global storage utilities (path normalization, run ID generation)
 2. Activity log writer (append-only JSONL)
 3. State manager (load/save/update state.json)
@@ -1062,18 +1073,21 @@ TaskGraph is responsible for:
 5. TestResultValidator (validate RED/GREEN phase results)
 
 ### Phase 1B: Orchestration Core (Week 1-2)
+
 6. WorkflowOrchestrator state machine skeleton
 7. State transitions (Preflight → BranchSetup → SubtaskLoop → Finalize)
 8. Event emitter for activity logging
 9. Enhanced commit message generator
 
 ### Phase 1C: TDD Loop (Week 2)
+
 10. RED phase validator (ensure tests fail)
 11. GREEN phase validator (ensure tests pass)
 12. COMMIT phase implementation (staging, committing)
 13. Subtask progression logic
 
 ### Phase 1D: CLI Interface (Week 2-3)
+
 14. `tm autopilot start` command
 15. `tm autopilot next` command
 16. `tm autopilot complete` command
@@ -1082,6 +1096,7 @@ TaskGraph is responsible for:
 19. `tm autopilot resume` command
 
 ### Phase 1E: MCP Interface (Week 3)
+
 20. `autopilot_start` tool
 21. `autopilot_next` tool
 22. `autopilot_complete_phase` tool
@@ -1090,12 +1105,14 @@ TaskGraph is responsible for:
 25. `autopilot_resume` tool
 
 ### Phase 1F: Integration (Week 3)
+
 26. AI agent instruction templates
 27. Error handling and recovery
 28. Integration tests
 29. Documentation
 
 ## Testing Strategy
+
 - Unit tests for global storage (path normalization, state management)
 - Unit tests for activity log (JSONL append, parsing)
 - Unit tests for each adapter (mock git/test commands)
@@ -1108,14 +1125,17 @@ TaskGraph is responsible for:
 - Verify project directory stays clean (no runtime artifacts)
 
 ## Dependencies
+
 - Phase 0 completed (CLI skeleton, preflight checks)
 - Existing TaskService and executor infrastructure
 - Surgical Test Generator prompt file exists
 
 ## Estimated Effort
+
 2-3 weeks
 
 ## Risks & Mitigations
+
 - **Risk:** Test generation produces invalid/wrong tests
   - **Mitigation:** Use Surgical Test Generator prompt, add manual review step in early iterations
 
@@ -1129,6 +1149,7 @@ TaskGraph is responsible for:
   - **Mitigation:** Detailed error messages, save state before destructive ops
 
 ## Validation
+
 Test with:
 - Simple task (1 subtask, clear requirements)
 - Medium task (3 subtasks with dependencies)

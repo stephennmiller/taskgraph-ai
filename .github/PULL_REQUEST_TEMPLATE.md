@@ -1,28 +1,34 @@
 # What type of PR is this?
+
 <!-- Check one -->
 
- - [ ] 🐛 Bug fix
- - [ ] ✨ Feature
- - [ ] 🔌 Integration
- - [ ] 📝 Docs
- - [ ] 🧹 Refactor
- - [ ] Other:
+- [ ] 🐛 Bug fix
+- [ ] ✨ Feature
+- [ ] 🔌 Integration
+- [ ] 📝 Docs
+- [ ] 🧹 Refactor
+- [ ] Other:
 ## Description
+
 <!-- What does this PR do? -->
 
 ## Related Issues
+
 <!-- Link issues: Fixes #123 -->
 
 ## Testing
+
 <!-- What you ran and its output. Say what you could not test. -->
 ```bash
 # Commands you ran
 ```
 
 ## Risk
+
 <!-- Low, medium or high, and why. What could break for users? -->
 
 ## How to revert
+
 <!-- Usually "revert this PR". Say if data, config or a release needs undoing too. -->
 
 ## Contributor Checklist

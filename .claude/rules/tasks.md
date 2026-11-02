@@ -3,6 +3,7 @@ description: Guidelines for implementing task management operations
 paths:
   - "packages/tm-core/src/modules/tasks/**"
 ---
+
 # Task Management Guidelines
 
 ## Tagged Task Lists System
@@ -49,10 +50,8 @@ TaskGraph now uses a **tagged task lists system** for multi-context task managem
   const tasksData = readJSON(tasksPath);
   const currentTag = getCurrentTag() || 'master';
   const tasks = getTasksForTag(tasksData, currentTag);
-  
-  // Manipulate tasks as normal...
-  
-  // Save back to the tagged structure
+    // Manipulate tasks as normal...
+    // Save back to the tagged structure
   setTasksForTag(tasksData, currentTag, tasks);
   writeJSON(tasksPath, tasksData);
   ```
@@ -100,8 +99,7 @@ TaskGraph now uses a **tagged task lists system** for multi-context task managem
   // ✅ DO: Parse into current tag context
   const tasksData = readJSON(tasksPath) || {};
   const currentTag = getCurrentTag() || 'master';
-  
-  // Parse tasks and add to current tag
+    // Parse tasks and add to current tag
   const newTasks = await parseTasksFromPRD(prdContent);
   setTasksForTag(tasksData, currentTag, newTasks);
   writeJSON(tasksPath, tasksData);
@@ -120,19 +118,15 @@ TaskGraph now uses a **tagged task lists system** for multi-context task managem
     const tasksData = readJSON(tasksPath);
     const currentTag = getCurrentTag() || 'master';
     const tasks = getTasksForTag(tasksData, currentTag);
-    
-    // Check if it's a subtask (e.g., "1.2")
+      // Check if it's a subtask (e.g., "1.2")
     if (taskIdInput.includes('.')) {
       const [parentId, subtaskId] = taskIdInput.split('.').map(id => parseInt(id, 10));
-      
-      // Find the parent task and subtask
+        // Find the parent task and subtask
       const parentTask = tasks.find(t => t.id === parentId);
       const subtask = parentTask.subtasks.find(st => st.id === subtaskId);
-      
-      // Update subtask status
+        // Update subtask status
       subtask.status = newStatus;
-      
-      // Check if all subtasks are done
+        // Check if all subtasks are done
       if (newStatus === 'done') {
         const allSubtasksDone = parentTask.subtasks.every(st => st.status === 'done');
         if (allSubtasksDone) {
@@ -143,16 +137,14 @@ TaskGraph now uses a **tagged task lists system** for multi-context task managem
       // Handle regular task
       const task = tasks.find(t => t.id === parseInt(taskIdInput, 10));
       task.status = newStatus;
-      
-      // If marking as done, also mark subtasks
+        // If marking as done, also mark subtasks
       if (newStatus === 'done' && task.subtasks && task.subtasks.length > 0) {
         task.subtasks.forEach(subtask => {
           subtask.status = newStatus;
         });
       }
     }
-    
-    // Save updated tasks back to tagged structure
+      // Save updated tasks back to tagged structure
     setTasksForTag(tasksData, currentTag, tasks);
     writeJSON(tasksPath, tasksData);
   }
@@ -168,18 +160,15 @@ TaskGraph now uses a **tagged task lists system** for multi-context task managem
   const tasksData = readJSON(tasksPath);
   const currentTag = getCurrentTag() || 'master';
   const tasks = getTasksForTag(tasksData, currentTag);
-  
-  if (taskAnalysis) {
+    if (taskAnalysis) {
     log('info', `Found complexity analysis for task ${taskId}: Score ${taskAnalysis.complexityScore}/10`);
-    
-    // Use recommended number of subtasks if available
+      // Use recommended number of subtasks if available
     if (taskAnalysis.recommendedSubtasks && numSubtasks === CONFIG.defaultSubtasks) {
       numSubtasks = taskAnalysis.recommendedSubtasks;
       log('info', `Using recommended number of subtasks: ${numSubtasks}`);
     }
   }
-  
-  // Generate subtasks and save back
+    // Generate subtasks and save back
   // ... subtask generation logic ...
   setTasksForTag(tasksData, currentTag, tasks);
   writeJSON(tasksPath, tasksData);
@@ -197,8 +186,7 @@ TaskGraph now uses a **tagged task lists system** for multi-context task managem
   let content = `# Task ID: ${task.id}\n`;
   content += `# Title: ${task.title}\n`;
   content += `# Status: ${task.status || 'pending'}\n`;
-  
-  // Format dependencies with their status
+    // Format dependencies with their status
   if (task.dependencies && task.dependencies.length > 0) {
     content += `# Dependencies: ${formatDependenciesWithStatus(task.dependencies, tasks)}\n`;
   } else {
@@ -217,8 +205,7 @@ TaskGraph now uses a **tagged task lists system** for multi-context task managem
     const tasksData = readJSON(tasksPath);
     const currentTag = getCurrentTag() || 'master';
     const tasks = getTasksForTag(tasksData, currentTag);
-    
-    // Add tag context to file header
+      // Add tag context to file header
     let content = `# Tag Context: ${currentTag}\n`;
     content += `# Task ID: ${task.id}\n`;
     // ... rest of file generation
@@ -237,10 +224,9 @@ TaskGraph now uses a **tagged task lists system** for multi-context task managem
   const tasksData = readJSON(tasksPath);
   const currentTag = getCurrentTag() || 'master';
   const tasks = getTasksForTag(tasksData, currentTag);
-  
-  // Filter tasks by status if specified
-  const filteredTasks = statusFilter 
-    ? tasks.filter(task => 
+    // Filter tasks by status if specified
+  const filteredTasks = statusFilter
+    ? tasks.filter(task =>
         task.status && task.status.toLowerCase() === statusFilter.toLowerCase())
     : tasks;
   ```
@@ -255,21 +241,18 @@ TaskGraph now uses a **tagged task lists system** for multi-context task managem
   const tasksData = readJSON(tasksPath);
   const currentTag = getCurrentTag() || 'master';
   const tasks = getTasksForTag(tasksData, currentTag);
-  
-  // Calculate completion statistics
+    // Calculate completion statistics
   const totalTasks = tasks.length;
-  const completedTasks = tasks.filter(task => 
+  const completedTasks = tasks.filter(task =>
     task.status === 'done').length;
   const completionPercentage = totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0;
-  
-  // Count subtasks
+    // Count subtasks
   let totalSubtasks = 0;
   let completedSubtasks = 0;
-  
-  tasks.forEach(task => {
+    tasks.forEach(task => {
     if (task.subtasks && task.subtasks.length > 0) {
       totalSubtasks += task.subtasks.length;
-      completedSubtasks += task.subtasks.filter(st => 
+      completedSubtasks += task.subtasks.filter(st =>
         st.status === 'done').length;
     }
   });
@@ -286,8 +269,7 @@ TaskGraph now uses a **tagged task lists system** for multi-context task managem
   // ✅ DO: Handle silent migration (the shape of what FormatHandler does)
   function readJSON(filepath) {
     let data = JSON.parse(fs.readFileSync(filepath, 'utf8'));
-    
-    // Silent migration for tasks.json files
+      // Silent migration for tasks.json files
     if (data.tasks && Array.isArray(data.tasks) && !data.master && isTasksFile) {
       const migratedData = {
         master: {
@@ -297,8 +279,7 @@ TaskGraph now uses a **tagged task lists system** for multi-context task managem
       writeJSON(filepath, migratedData);
       data = migratedData;
     }
-    
-    return data;
+      return data;
   }
   ```
 
@@ -314,14 +295,12 @@ TaskGraph now uses a **tagged task lists system** for multi-context task managem
       // Legacy format - return as-is
       return data.tasks;
     }
-    
-    if (data[tagName] && data[tagName].tasks) {
+      if (data[tagName] && data[tagName].tasks) {
       // Tagged format - return tasks for specified tag
       return data[tagName].tasks;
     }
-    
-    return [];
+      return [];
   }
   ```
 
-Refer to [`@tm/core`](../../packages/tm-core/src/modules/tasks/) for implementation examples. 
+Refer to [`@tm/core`](../../packages/tm-core/src/modules/tasks/) for implementation examples.

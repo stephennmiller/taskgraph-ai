@@ -2,7 +2,7 @@ name: Log GitHub Issue Events
 
 on:
   issues:
-    types: [opened, closed]
+    types: [ opened, closed ]
 
 jobs:
   log-issue-created:

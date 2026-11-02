@@ -1,9 +1,11 @@
 # Phase 2: PR + Resumability - Autonomous TDD Workflow
 
 ## Objective
+
 Add PR creation with GitHub CLI integration, resumable checkpoints for interrupted runs, and enhanced guardrails with coverage enforcement.
 
 ## Scope
+
 - GitHub PR creation via `gh` CLI
 - Well-formed PR body using run report
 - Resumable checkpoints and `--resume` flag
@@ -382,6 +384,7 @@ Completed in 24 minutes
 ```
 
 ## Success Criteria
+
 - Can create PR automatically with well-formed body
 - Can resume interrupted runs from any checkpoint
 - Coverage checks prevent low-quality code from being merged
@@ -389,12 +392,14 @@ Completed in 24 minutes
 - Run reports include full PR context for review
 
 ## Out of Scope (defer to Phase 3)
+
 - Multiple test framework support (pytest, go test)
 - Diff preview before commits
 - TUI panel implementation
 - Extension/IDE integration
 
 ## Testing Strategy
+
 - Mock `gh` CLI for PR creation tests
 - Test resume from each possible pause point
 - Test coverage failure scenarios
@@ -402,14 +407,17 @@ Completed in 24 minutes
 - End-to-end test with PR creation on test repo
 
 ## Dependencies
+
 - Phase 1 completed (core workflow)
 - GitHub CLI (`gh`) installed (optional, fallback provided)
 - Test framework supports coverage output
 
 ## Estimated Effort
+
 1-2 weeks
 
 ## Risks & Mitigations
+
 - **Risk:** GitHub CLI auth issues
   - **Mitigation:** Clear auth setup docs, fallback to manual instructions
 
@@ -423,6 +431,7 @@ Completed in 24 minutes
   - **Mitigation:** Store coverage with each test run for comparison
 
 ## Validation
+
 Test with:
 - Successful PR creation end-to-end
 - Resume from GREEN attempt failure

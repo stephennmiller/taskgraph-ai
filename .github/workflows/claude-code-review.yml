@@ -2,14 +2,13 @@ name: Claude Code Review
 
 on:
   pull_request:
-    types: [opened, synchronize, ready_for_review, reopened]
+    types: [ opened, synchronize, ready_for_review, reopened ]
     # Optional: Only run on specific file changes
     # paths:
     #   - "src/**/*.ts"
     #   - "src/**/*.tsx"
     #   - "src/**/*.js"
     #   - "src/**/*.jsx"
-
 # No workflow-level grant: the job below declares exactly what it needs.
 # A skipped job never starts a runner, so CLAUDE_CODE_OAUTH_TOKEN is not
 # mounted for a fork or an untrusted author.

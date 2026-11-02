@@ -16,7 +16,6 @@ A task management system for AI-driven development with Claude, designed to work
 Taskmaster uses two primary configuration methods:
 
 1.  **`.taskmasterconfig` File (Project Root)**
-
     - Stores most settings: AI model selections (main, research, fallback), parameters (max tokens, temperature), logging level, default priority/subtasks, project name.
     - **Created and managed using `taskgraph models --setup` CLI command or the `models` MCP tool.**
     - Do not edit manually unless you know what you are doing.
@@ -55,7 +54,6 @@ This will prompt you for project details and set up a new project with the neces
 ### Important Notes
 
 1. **ES Modules Configuration:**
-
    - This project uses ES Modules (ESM) instead of CommonJS.
    - This is set via `"type": "module"` in your package.json.
    - Use `import/export` syntax instead of `require()`.
