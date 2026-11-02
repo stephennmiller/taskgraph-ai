@@ -168,6 +168,10 @@ Some commands were merged so `taskgraph --help` is shorter. The old names still 
 
 `loop`, `add-subtask` and `move` gain `-p` for `--project`. Running an old `-p` form fails with a hint that names the long flag. `expand` and `update-subtask` now also take the ID as an argument (`expand 3`, `update-subtask 5.2 --prompt='…'`), as `show` and `set-status` do.
 
+## 11. A number after `update --id` is an ID
+
+`update --id=3 add rate limits` still takes the words as the prompt. `update --id=N` now treats a first positional word that looks like a task ID (`3`, `3.2`) as a second ID, so `update --id=3 2 more retries` exits 1 with `Give the ID once`. Put that prompt in `--prompt`: `update --id=3 --prompt='2 more retries'`. The same ID twice (`update 3 --id=3`) is still one ID.
+
 ## Credit
 
 TaskGraph is based on [Task Master](https://github.com/eyaltoledano/claude-task-master) by Eyal Toledano and Ralph Khreish, and keeps the original license and copyright notices. See [Licensing](/licensing).
