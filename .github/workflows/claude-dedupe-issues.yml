@@ -42,7 +42,7 @@ jobs:
         # it. When it bumps claude-code-action in claude.yml, move this pin to
         # the matching "Sync from claude-code-action base-action@<sha>" commit
         # by hand.
-        uses: anthropics/claude-code-base-action@2a32bc834f10ce844915c4830aad32db0659b2ec # mirror of claude-code-action v1.0.252
+        uses: anthropics/claude-code-base-action@33edbb44fb532939e88135c89311b5c20a0524de # mirror of claude-code-action v1.0.252
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
