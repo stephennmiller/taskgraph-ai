@@ -33,7 +33,7 @@
 		"@tm/core": "*",
 		"chalk": "6.0.1",
 		"cli-table3": "^0.6.5",
-		"commander": "^14",
+		"commander": "^15.0.0",
 		"gradient-string": "^3.0.0",
 		"inquirer": "^14.2.3",
 		"ora": "^9.4.1",
