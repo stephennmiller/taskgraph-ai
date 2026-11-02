@@ -12,6 +12,7 @@ import { describe, expect, it } from 'vitest';
 import { minimumVersion } from '../../../tm-core/src/modules/setup/version-range.js';
 import {
 	type CliSurface,
+	cliSurface,
 	codeLines,
 	hookLines,
 	invocations,
@@ -89,6 +90,19 @@ const hookCommands = Object.entries(hooks).flatMap(([event, groups]) =>
 describe('plugin CLI range', () => {
 	it('is a minimum', () => {
 		expect(minimum, `${range} is not a >=x.y.z range`).not.toBeNull();
+	});
+
+	it('still accepts the init flags that help hides', () => {
+		// The minimum's snapshot lists them, and this checkout still declares
+		// them (hidden no-ops), so a script that passes them is not on an
+		// unknown option.
+		const current = cliSurface((file) =>
+			readFileSync(join(repoRoot, file), 'utf-8')
+		);
+		for (const flag of ['skip-install', 'author', 'version']) {
+			expect(snapshot.commands.init).toContain(flag);
+			expect(current.get('init')?.has(flag)).toBe(true);
+		}
 	});
 
 	it('has a snapshot of the minimum CLI', () => {
