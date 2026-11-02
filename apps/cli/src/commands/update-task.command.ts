@@ -30,6 +30,7 @@ import {
 	displayError,
 	printError
 } from '../utils/error-handler.js';
+import { isTaskIdToken, rejectDifferentId } from '../utils/id-argument.js';
 import { getProjectRoot } from '../utils/project-root.js';
 import {
 	legacyFileOption,
@@ -111,8 +112,10 @@ async function runUpdate(
 }
 
 /**
- * The task ID and prompt from `[id] [prompt...]`, --id and --prompt. With
- * --id every argument is prompt words; words and --prompt together exit 1.
+ * The task ID and prompt from `[id] [prompt...]`, --id and --prompt.
+ * `update 3` and `update --id=3` mean the same. With --id, words that are
+ * not a task ID are the prompt (`update --id=3 add rate limits`). A second,
+ * different ID exits 1. Prompt words and --prompt together exit 1.
  */
 function idAndPrompt(
 	command: string,
@@ -120,11 +123,23 @@ function idAndPrompt(
 	promptWords: string[],
 	options: UpdateTaskCommandOptions
 ): { id: string | undefined; prompt: string | undefined } {
-	const words =
-		options.id !== undefined && idArg !== undefined
-			? [idArg, ...promptWords]
-			: promptWords;
-	const id = options.id ?? idArg;
+	let words = promptWords;
+	let id = options.id ?? idArg;
+	if (options.id !== undefined && idArg !== undefined) {
+		if (isTaskIdToken(idArg)) {
+			if (idArg !== options.id) {
+				rejectDifferentId(
+					idArg,
+					options.id,
+					`taskgraph ${command} ${terminalSafe(options.id)} --prompt="what changed"`
+				);
+			}
+			id = options.id;
+		} else {
+			words = [idArg, ...promptWords];
+			id = options.id;
+		}
+	}
 	if (words.length > 0 && options.prompt !== undefined) {
 		printError(
 			'Give the prompt as words or --prompt, not both',
@@ -221,10 +236,7 @@ export class UpdateTaskCommand extends Command {
 				'Update prompt - multiple words, no quotes needed'
 			)
 			.addOption(legacyFileOption())
-			.option(
-				'-i, --id <id>',
-				'Task ID to update (fallback if not using positional)'
-			)
+			.option('-i, --id <id>', 'The same as the [id] argument')
 			.option('--prompt <text>', 'Prompt (fallback if not using positional)')
 			.option(
 				'-r, --research',
@@ -271,7 +283,10 @@ export class UpdateCommand extends Command {
 		this.description(
 			'Update one task with the AI, or every unfinished task --from an ID on'
 		)
-			.argument('[id]', 'Task ID to update (e.g., 1, 1.1); or use --from')
+			.argument(
+				'[id]',
+				'Task ID to update, e.g. 3 or 3.2 (same as --id). Or use --from'
+			)
 			.argument(
 				'[prompt...]',
 				'Update prompt - multiple words, no quotes needed'
@@ -296,6 +311,14 @@ export class UpdateCommand extends Command {
 				"One task: GitHub login of who it is for ('' clears it); no prompt needed"
 			)
 			.option('--tag <tag>', 'Specify tag context for task operations')
+			.addHelpText(
+				'after',
+				`
+Examples:
+  $ taskgraph update 3 --prompt='what changed'
+  $ taskgraph update --id=3 --prompt='what changed'
+`
+			)
 			.action(
 				async (
 					idArg: string | undefined,

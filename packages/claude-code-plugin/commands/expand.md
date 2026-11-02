@@ -13,7 +13,7 @@ Arguments: $ARGUMENTS (task ID or `all`, then optional modifiers)
    - a task ID: use it only when it is digits and dots and names a top-level task (`5`). Run:
 
      ```bash
-     taskgraph expand --id=<id>
+     taskgraph expand <id>
      ```
 
      Add flags from the arguments: a number → `--num=<n>`; any other words → `--prompt='<words>'` (single quotes, any `'` written as `'\''`). If the task already has subtasks, the new ones are added after them.

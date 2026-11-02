@@ -276,7 +276,7 @@ The same actions as slash commands and CLI commands:
 | Show task 1                 | `/taskgraph:show 1`                   | `taskgraph show 1`                                 |
 | Start task 3                | `/taskgraph:set-status 3 in-progress` | `taskgraph set-status --id=3 --status=in-progress` |
 | Mark task 3 done            | `/taskgraph:to-done 3`                | `taskgraph set-status --id=3 --status=done`        |
-| Break task 4 into subtasks  | `/taskgraph:expand 4`                 | `taskgraph expand --id=4`                          |
+| Break task 4 into subtasks  | `/taskgraph:expand 4`                 | `taskgraph expand 4`                               |
 | Add a task for ...          | `/taskgraph:add-task <what you want>` | `taskgraph add-task --prompt='...'`                |
 | Update task 5: ...          | `/taskgraph:update-task 5 <change>`   | `taskgraph update 5 --prompt='...'`                |
 | Research ...                | (research skill)                      | `taskgraph research "JWT best practices"`          |
@@ -341,7 +341,7 @@ taskgraph why 7                              # why task 7 is blocked
 taskgraph show 1,3,5                         # one or more tasks
 taskgraph set-status --id=3 --status=done    # change status
 taskgraph add-task --prompt='...' --research # add a task
-taskgraph expand --id=4 --research           # split into subtasks
+taskgraph expand 4 --research           # split into subtasks
 taskgraph expand --all                       # expand every eligible task
 taskgraph update 5 --prompt='...'            # change one task
 taskgraph update --from=5 --prompt='...'     # change task 5 onward

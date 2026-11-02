@@ -5,7 +5,7 @@
  *     1  3 subtasks  Set up the database schema
  *     2  1 subtask   Build the login API
  *   Task 3 had no subtasks
- *   Run taskgraph expand --id=<id> to add new ones
+ *   Run taskgraph expand <id> to add new ones
  *
  * It replaces a boxed heading, a table wider than 80 columns, a boxed
  * success message and a boxed "Next Steps" list.
@@ -88,7 +88,7 @@ export function formatClearedSubtasks(
 	const expandId = cleared.length === 1 ? String(cleared[0].id) : '<id>';
 	lines.push(
 		theme.muted('Run ') +
-			theme.brand(`taskgraph expand --id=${expandId}`) +
+			theme.brand(`taskgraph expand ${expandId}`) +
 			theme.muted(' to add new ones')
 	);
 

@@ -219,6 +219,23 @@ describe('update-task and update', () => {
 		expect(process.exitCode).toBeUndefined();
 	});
 
+	it('help shows update 3 and update --id=3 as the same', () => {
+		let help = '';
+		new UpdateCommand()
+			.configureOutput({
+				writeOut: (text) => {
+					help += text;
+				}
+			})
+			.outputHelp();
+		help = help.replace(/\x1b\[[0-9;]*m/g, '');
+
+		expect(help).toContain('same as --id');
+		expect(help).toContain('The same as the [id] argument');
+		expect(help).toContain("$ taskgraph update 3 --prompt='what changed'");
+		expect(help).toContain("$ taskgraph update --id=3 --prompt='what changed'");
+	});
+
 	it('update <id> rewrites one task, as update-task did (#882)', async () => {
 		await update('3', 'add', 'rate', 'limits');
 
@@ -236,6 +253,28 @@ describe('update-task and update', () => {
 
 		expect(assign).toHaveBeenCalledWith('3', 'octocat', 'master');
 		expect(updateWithPrompt).not.toHaveBeenCalled();
+	});
+
+	it.each([
+		['update', update],
+		['update-task', updateTask]
+	])('%s accepts the same ID as an argument and --id', async (_name, run) => {
+		await run('3', '--id=3', '--prompt=Use SQLite');
+
+		expect(updateWithPrompt).toHaveBeenCalledWith(
+			expect.objectContaining({ id: '3', prompt: 'Use SQLite' }),
+			expect.anything()
+		);
+	});
+
+	it.each([
+		['update', update],
+		['update-task', updateTask]
+	])('%s exits 1 when the argument and --id differ', async (_name, run) => {
+		await expect(run('3', '--id=4', '--prompt=x')).rejects.toThrow('exit 1');
+
+		expect(err.join('\n')).toContain('Give the ID once: "3" or --id=4');
+		expect(createTmCore).not.toHaveBeenCalled();
 	});
 
 	it.each([

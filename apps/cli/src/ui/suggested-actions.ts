@@ -30,7 +30,7 @@ export function getSuggestedActions(
 		!isSubtask && !hasSubtasks
 			? [
 					{
-						command: `taskgraph expand --id=${id}`,
+						command: `taskgraph expand ${id}`,
 						description: 'to break down into subtasks'
 					}
 				]

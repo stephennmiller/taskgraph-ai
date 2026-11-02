@@ -82,7 +82,7 @@ describe.skipIf(!built)('add-task command output', () => {
 			[
 				'✓ Added task 3  Write the README · medium priority',
 				'  Depends on  1  Set up the database schema',
-				'Next: taskgraph show 3 to read it, or taskgraph expand --id=3 to break it down'
+				'Next: taskgraph show 3 to read it, or taskgraph expand 3 to break it down'
 			].join('\n')
 		);
 		expect(res.stdout).not.toMatch(BOXES);

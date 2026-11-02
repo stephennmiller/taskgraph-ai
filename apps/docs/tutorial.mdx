@@ -251,7 +251,7 @@ Task 5 seems complex. Can you break it down into subtasks?
 The agent will execute:
 
 ```bash
-taskgraph expand --id=5 --num=3
+taskgraph expand 5 --num=3
 ```
 
 You can provide additional context:
@@ -263,7 +263,7 @@ Please break down task 5 with a focus on security considerations.
 The agent will execute:
 
 ```bash
-taskgraph expand --id=5 --prompt="Focus on security aspects"
+taskgraph expand 5 --prompt="Focus on security aspects"
 ```
 
 You can also expand all pending tasks:
@@ -287,7 +287,7 @@ Please break down task 5 using research-backed generation.
 The agent will execute:
 
 ```bash
-taskgraph expand --id=5 --research
+taskgraph expand 5 --research
 ```
 
 ## Example Claude Code Interactions

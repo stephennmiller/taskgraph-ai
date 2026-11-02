@@ -136,7 +136,7 @@ function levelCounts(items: ComplexityAnalysisItem[]): string {
 
 const expandHint = () =>
 	theme.muted('Run ') +
-	theme.brand('taskgraph expand --id=<id>') +
+	theme.brand('taskgraph expand <id>') +
 	theme.muted(' or ') +
 	theme.brand('--all') +
 	theme.muted(' to use these recommendations');

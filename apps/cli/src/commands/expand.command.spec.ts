@@ -95,6 +95,23 @@ describe('expand', () => {
 		expect(text).not.toContain('\x1b[31m');
 	});
 
+	it('help shows expand 3 and expand --id=3 as the same', () => {
+		let help = '';
+		new ExpandCommand()
+			.configureOutput({
+				writeOut: (text) => {
+					help += text;
+				}
+			})
+			.outputHelp();
+		help = help.replace(/\x1b\[[0-9;]*m/g, '');
+
+		expect(help).toContain('same as --id');
+		expect(help).toContain('The same as the [id] argument');
+		expect(help).toContain('$ taskgraph expand 3');
+		expect(help).toContain('$ taskgraph expand --id=3');
+	});
+
 	it('takes the ID as an argument (#882)', async () => {
 		await run('3');
 

@@ -22,6 +22,7 @@ import {
 	displayError,
 	printError
 } from '../utils/error-handler.js';
+import { rejectDifferentId } from '../utils/id-argument.js';
 import { getProjectRoot } from '../utils/project-root.js';
 import {
 	legacyFileOption,
@@ -38,6 +39,59 @@ interface ScopeCommandOptions {
 }
 
 type Direction = 'up' | 'down';
+
+const ID_HELP = 'Task IDs, e.g. 3 or 1,2 (same as --id)';
+
+/** `3`, `3.2`, or a comma-separated list of those */
+function isIdList(value: string): boolean {
+	return /^(\s*\d+(\.\d+)?\s*)(,\s*\d+(\.\d+)?\s*)*$/.test(value);
+}
+
+/**
+ * `scope 3 up` and `scope --id=3 up` mean the same. With --id, a lone
+ * argument is the direction. Two different IDs exit 1.
+ */
+function resolveScopeTargets(
+	command: string,
+	argIds: string | undefined,
+	argDirection: string | undefined,
+	flag: string | undefined,
+	positionalDirection: boolean
+): { ids: string | undefined; direction: string | undefined } {
+	let ids = argIds;
+	let direction = argDirection;
+	if (flag !== undefined && ids !== undefined) {
+		if (
+			positionalDirection &&
+			direction === undefined &&
+			(ids === 'up' || ids === 'down')
+		) {
+			direction = ids;
+			ids = undefined;
+		} else if (
+			positionalDirection &&
+			direction === undefined &&
+			!isIdList(ids)
+		) {
+			printError(
+				`"${terminalSafe(ids)}" isn't up or down`,
+				`Try \`taskgraph ${command} ${terminalSafe(flag)} up\` (or down)`
+			);
+			process.exit(1);
+		} else if (ids !== flag) {
+			const example =
+				direction !== undefined
+					? `${terminalSafe(flag)} ${terminalSafe(direction)}`
+					: positionalDirection
+						? `${terminalSafe(flag)} up`
+						: terminalSafe(flag);
+			rejectDifferentId(ids, flag, `taskgraph ${command} ${example}`);
+		} else {
+			ids = undefined;
+		}
+	}
+	return { ids: flag ?? ids, direction };
+}
 
 export class ScopeCommand extends Command {
 	private spinner?: Ora;
@@ -58,16 +112,25 @@ export class ScopeCommand extends Command {
 			this.fixedDirection = name === 'scope-down' ? 'down' : 'up';
 			this.description(
 				`${this.fixedDirection === 'up' ? 'Increase' : 'Decrease'} task complexity with AI assistance`
-			);
+			).argument('[ids]', ID_HELP);
 		} else {
 			this.description('Make tasks more (up) or less (down) complex with AI')
-				.argument('[ids]', 'Comma-separated task IDs (or use --id)')
+				.argument('[ids]', ID_HELP)
 				.addArgument(
 					new Argument('[direction]', 'up or down').choices(['up', 'down'])
+				)
+				.addHelpText(
+					'after',
+					`
+Examples:
+  $ taskgraph scope 3 up
+  $ taskgraph scope --id=3 up
+  $ taskgraph scope 1,2 down
+`
 				);
 		}
 
-		this.option('-i, --id <ids>', 'Comma-separated task IDs to scope')
+		this.option('-i, --id <ids>', 'The same as the [ids] argument')
 			.option(
 				'-s, --strength <level>',
 				'How far to change it: light, regular, heavy',
@@ -81,28 +144,17 @@ export class ScopeCommand extends Command {
 			.addOption(legacyFileOption())
 			.option('--tag <tag>', 'Specify tag context for task operations')
 			.action(async () => {
-				let [ids, direction]: (string | undefined)[] = this.args;
+				const [argIds, argDirection] = this.args as (string | undefined)[];
 				const options = this.opts<ScopeCommandOptions>();
-				// With --id, a lone argument is the direction: scope --id=3 up
-				if (options.id !== undefined && ids !== undefined) {
-					if (direction !== undefined) {
-						printError(
-							'Give task IDs as an argument or --id, not both',
-							`Try \`taskgraph scope ${terminalSafe(options.id)} ${terminalSafe(direction)}\``
-						);
-						process.exit(1);
-					}
-					[ids, direction] = [undefined, ids];
-					if (direction !== 'up' && direction !== 'down') {
-						printError(
-							`"${terminalSafe(direction)}" isn't up or down`,
-							`Try \`taskgraph scope ${terminalSafe(options.id)} up\` (or down)`
-						);
-						process.exit(1);
-					}
-				}
+				const { ids, direction } = resolveScopeTargets(
+					this.name(),
+					argIds,
+					argDirection,
+					options.id,
+					this.fixedDirection === undefined
+				);
 				await this.executeCommand(
-					{ ...options, id: options.id ?? ids },
+					{ ...options, id: ids },
 					this.fixedDirection ?? (direction as Direction | undefined)
 				);
 			});
@@ -118,7 +170,7 @@ export class ScopeCommand extends Command {
 				options.id ? 'Say up or down' : 'Missing task ID',
 				name === 'scope'
 					? `Try \`taskgraph scope ${terminalSafe(options.id ?? '3')} up\` (or down)`
-					: `Try \`taskgraph ${name} --id=1,2,3 --strength=regular\``
+					: `Try \`taskgraph scope 1,2,3 ${this.fixedDirection}\``
 			);
 			process.exit(1);
 		}

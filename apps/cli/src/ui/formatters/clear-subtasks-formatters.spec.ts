@@ -21,7 +21,7 @@ describe('formatClearedSubtasks', () => {
 		expect(output.split('\n')).toEqual([
 			'✓ Cleared 3 subtasks from task 1',
 			'  1  Set up the database',
-			'Run taskgraph expand --id=1 to add new ones'
+			'Run taskgraph expand 1 to add new ones'
 		]);
 	});
 
@@ -41,7 +41,7 @@ describe('formatClearedSubtasks', () => {
 			'  1   3 subtasks  Set up the database',
 			'  12  1 subtask   Build the login API',
 			'Task 3 had no subtasks',
-			'Run taskgraph expand --id=<id> to add new ones'
+			'Run taskgraph expand <id> to add new ones'
 		]);
 	});
 

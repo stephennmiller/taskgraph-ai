@@ -5,7 +5,7 @@
  *     Depends on  1  Set up the database schema
  *                 2  Email and password sign-in with sessions  added by AI
  *                 3  Bookmark CRUD endpoints                   added by AI
- *   Next: taskgraph show 4 to read it, or taskgraph expand --id=4 to break it down
+ *   Next: taskgraph show 4 to read it, or taskgraph expand 4 to break it down
  *
  * With `--discovered-from=2` it adds a row that doesn't block the task:
  *
@@ -105,7 +105,7 @@ export function formatTaskCreated(
 
 	const next =
 		`Next: ${theme.brand(`taskgraph show ${task.id}`)} to read it, or ` +
-		`${theme.brand(`taskgraph expand --id=${task.id}`)} to break it down`;
+		`${theme.brand(`taskgraph expand ${task.id}`)} to break it down`;
 	lines.push(...wrapLine(next, width, '      '));
 
 	return lines.join('\n');

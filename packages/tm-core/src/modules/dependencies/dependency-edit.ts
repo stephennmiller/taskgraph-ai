@@ -86,7 +86,7 @@ function findTarget(
 		throw errorWithHint(
 			ERROR_CODES.VALIDATION_ERROR,
 			`Task ${parentId} has no subtasks`,
-			`Add some with \`taskgraph expand --id=${parentId}\``
+			`Add some with \`taskgraph expand ${parentId}\``
 		);
 	}
 	const subtask = parent.subtasks.find(

@@ -31,7 +31,7 @@ TaskGraph's output follows Apple's Human Interface Guidelines and Emil Kowalski'
   1  3 subtasks  Set up the database schema
   2  1 subtask   Build the login API
 Task 3 had no subtasks
-Run taskgraph expand --id=<id> to add new ones
+Run taskgraph expand <id> to add new ones
 ```
 
 - **Lead with the result.** One line starting with a green `✓`: `✓ Saved to task 3`, `✓ Analyzed 5 tasks · skipped 1 done`, `✓ Main model  sonnet → opus`. Don't use "Successfully", "Operation complete" or emoji (✅ ❌ 💾 🔍).

@@ -81,10 +81,10 @@ taskgraph add-task --prompt="Description" --ac="Users can log in" --ac="Tokens e
 
 ```bash
 # Expand a specific task with subtasks
-taskgraph expand --id=<id> --num=<number>
+taskgraph expand <id> --num=<number>
 
 # Expand with additional context
-taskgraph expand --id=<id> --prompt='<context>'
+taskgraph expand <id> --prompt='<context>'
 
 # Expand all pending tasks
 taskgraph expand --all
@@ -93,7 +93,7 @@ taskgraph expand --all
 taskgraph expand --all --force
 
 # Research-backed subtask generation for a specific task
-taskgraph expand --id=<id> --research
+taskgraph expand <id> --research
 
 # Research-backed generation for all tasks
 taskgraph expand --all --research
