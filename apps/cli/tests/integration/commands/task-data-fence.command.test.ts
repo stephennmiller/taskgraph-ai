@@ -31,8 +31,13 @@ describe('task-data fence opt-out', () => {
 			TASKGRAPH_SKIP_AUTO_UPDATE: '1',
 			...extra
 		};
-		if (!Object.hasOwn(extra, 'TASKGRAPH_NO_TASK_DATA_FENCE')) {
-			delete env.TASKGRAPH_NO_TASK_DATA_FENCE;
+		// The runner's own shell may set these (Claude Code sets the last two)
+		for (const name of [
+			'TASKGRAPH_NO_TASK_DATA_FENCE',
+			'CLAUDECODE',
+			'CLAUDE_CODE_CHILD_SESSION'
+		]) {
+			if (!Object.hasOwn(extra, name)) delete env[name];
 		}
 		return spawnSync(process.execPath, [getCliBinPath(), ...args], {
 			cwd: dir,

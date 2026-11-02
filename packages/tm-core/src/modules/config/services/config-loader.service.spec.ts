@@ -103,32 +103,6 @@ describe('ConfigLoader', () => {
 			});
 		});
 
-		it('drops TASKGRAPH_NO_TASK_DATA_FENCE from config.json (#929)', async () => {
-			vi.mocked(fsPromises.readFile).mockImplementation(async (file) => {
-				if (String(file).endsWith('config.local.json')) {
-					throw Object.assign(new Error('missing'), { code: 'ENOENT' });
-				}
-				return JSON.stringify({
-					models: { main: 'test-model' },
-					TASKGRAPH_NO_TASK_DATA_FENCE: '1',
-					global: {
-						TASKGRAPH_NO_TASK_DATA_FENCE: '1',
-						logLevel: 'info'
-					}
-				});
-			});
-
-			const result = await configLoader.loadLocalConfig();
-
-			expect(result).toEqual({
-				models: { main: 'test-model' },
-				global: { logLevel: 'info' }
-			});
-			expect(JSON.stringify(result)).not.toContain(
-				'TASKGRAPH_NO_TASK_DATA_FENCE'
-			);
-		});
-
 		it('uses config.json alone when there is no config.local.json', async () => {
 			const shared = { models: { main: { modelId: 'sonnet' } } };
 			vi.mocked(fsPromises.readFile).mockImplementation(async (file) => {

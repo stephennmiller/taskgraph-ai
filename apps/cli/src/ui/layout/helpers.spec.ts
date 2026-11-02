@@ -5,7 +5,6 @@
 
 import { describe, expect, it } from 'vitest';
 import {
-	fencesTaskData,
 	getContentWidth,
 	planColumns,
 	shellOptsOutOfTaskDataFence,
@@ -13,31 +12,29 @@ import {
 } from './helpers.js';
 
 describe('Layout Helpers', () => {
-	describe('fencesTaskData', () => {
-		it('fences piped output and skips a terminal, ignoring the shell opt-out (#876)', () => {
-			const previous = process.env.TASKGRAPH_NO_TASK_DATA_FENCE;
-			const captured = shellOptsOutOfTaskDataFence();
-			process.env.TASKGRAPH_NO_TASK_DATA_FENCE = '1';
-
-			expect(fencesTaskData({ isTTY: false })).toBe(true);
-			expect(fencesTaskData({ isTTY: undefined })).toBe(true);
-			expect(fencesTaskData({ isTTY: true })).toBe(false);
-			// A write after startup does not arm the opt-out; fencesTaskData never reads it
-			expect(shellOptsOutOfTaskDataFence()).toBe(captured);
-
-			if (previous === undefined)
-				delete process.env.TASKGRAPH_NO_TASK_DATA_FENCE;
-			else process.env.TASKGRAPH_NO_TASK_DATA_FENCE = previous;
+	describe('shellOptsOutOfTaskDataFence', () => {
+		it('is on only for the exact value 1 (#929)', () => {
+			expect(shellOptsOutOfTaskDataFence({})).toBe(false);
+			expect(
+				shellOptsOutOfTaskDataFence({ TASKGRAPH_NO_TASK_DATA_FENCE: 'true' })
+			).toBe(false);
+			expect(
+				shellOptsOutOfTaskDataFence({ TASKGRAPH_NO_TASK_DATA_FENCE: '1' })
+			).toBe(true);
 		});
 
-		it('stays on for a loop child even when the helper is asked (#929)', () => {
-			const previous = process.env.TASKGRAPH_LOOP_CHILD;
-			process.env.TASKGRAPH_LOOP_CHILD = '1';
-
-			expect(shellOptsOutOfTaskDataFence()).toBe(false);
-
-			if (previous === undefined) delete process.env.TASKGRAPH_LOOP_CHILD;
-			else process.env.TASKGRAPH_LOOP_CHILD = previous;
+		it.each([
+			'TASKGRAPH_LOOP_CHILD',
+			'TASKGRAPH_PARALLEL_WORKER',
+			'CLAUDECODE',
+			'CLAUDE_CODE_CHILD_SESSION'
+		])('stays off when %s=1 (#929)', (marker) => {
+			expect(
+				shellOptsOutOfTaskDataFence({
+					TASKGRAPH_NO_TASK_DATA_FENCE: '1',
+					[marker]: '1'
+				})
+			).toBe(false);
 		});
 	});
 

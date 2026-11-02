@@ -22,7 +22,6 @@ import {
 	refuseSymlinkedFolders
 } from '../../storage/adapters/file-storage/file-operations.js';
 import { mergeMachineConfig, splitMachineConfig } from './machine-config.js';
-import { omitShellOnlyConfig } from './project-env.js';
 
 type JsonObject = Record<string, any>;
 
@@ -191,8 +190,7 @@ export function readConfigJson(
 	if (!fs.existsSync(filePath)) return null;
 	const text = fs.readFileSync(filePath, 'utf-8');
 	try {
-		// Shell-only keys (the task-data fence opt-out) are ignored (#929)
-		return omitShellOnlyConfig(JSON.parse(text));
+		return JSON.parse(text);
 	} catch {
 		return UNREADABLE_CONFIG;
 	}

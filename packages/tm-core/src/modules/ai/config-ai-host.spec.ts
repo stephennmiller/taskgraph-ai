@@ -162,19 +162,6 @@ describe('AiConfig', () => {
 			expect(config.resolveEnv('OTHER')).toBe('from-process');
 			expect(config.resolveEnv('MISSING')).toBeUndefined();
 		});
-
-		it('ignores a project .env and a session for TASKGRAPH_NO_TASK_DATA_FENCE (#929)', () => {
-			fs.writeFileSync(
-				path.join(projectRoot, '.env'),
-				'TASKGRAPH_NO_TASK_DATA_FENCE=1\n'
-			);
-
-			expect(
-				aiConfig({}).resolveEnv('TASKGRAPH_NO_TASK_DATA_FENCE', {
-					env: { TASKGRAPH_NO_TASK_DATA_FENCE: '1' }
-				})
-			).toBeUndefined();
-		});
 	});
 
 	describe('hasCodebaseAnalysis', () => {

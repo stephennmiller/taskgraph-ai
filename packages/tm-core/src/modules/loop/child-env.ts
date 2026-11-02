@@ -8,10 +8,10 @@
 
 import {
 	LOOP_CHILD_ENV,
+	NO_TASK_DATA_FENCE_ENV,
 	PARALLEL_WORKER_ENV,
 	SKIP_AUTO_UPDATE_ENV
 } from '../../common/constants/auto-update.js';
-import { NO_TASK_DATA_FENCE_ENV } from '../config/services/project-env.js';
 
 /**
  * `loop` or one parallel worker.

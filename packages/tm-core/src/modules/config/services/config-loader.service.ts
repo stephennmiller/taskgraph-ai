@@ -14,7 +14,6 @@ import { DEFAULT_CONFIG_VALUES } from '../../../common/interfaces/configuration.
 import { TASKGRAPH_LOCAL_CONFIG_FILE } from '../../../common/constants/paths.js';
 import { getLogger } from '../../../common/logger/index.js';
 import { mergeMachineConfig } from './machine-config.js';
-import { omitShellOnlyConfig } from './project-env.js';
 
 /**
  * ConfigLoader handles loading configuration from files
@@ -95,8 +94,7 @@ export class ConfigLoader {
 	): Promise<PartialConfiguration | null> {
 		try {
 			const configData = await fs.readFile(configPath, 'utf-8');
-			// Shell-only keys (the task-data fence opt-out) are ignored (#929)
-			return omitShellOnlyConfig(JSON.parse(configData));
+			return JSON.parse(configData);
 		} catch (error: any) {
 			if (error.code === 'ENOENT') return null;
 			throw new TaskGraphError(

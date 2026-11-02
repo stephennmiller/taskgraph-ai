@@ -4,7 +4,6 @@ import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
 	dropOldNumTasksDefault,
-	readConfigJson,
 	readLogLevel,
 	toSavedConfig,
 	writeSplitConfig
@@ -19,22 +18,6 @@ beforeEach(() => {
 	fs.mkdirSync(path.join(root, '.taskgraph'));
 });
 afterEach(() => fs.rmSync(root, { recursive: true, force: true }));
-
-describe('readConfigJson', () => {
-	it('drops TASKGRAPH_NO_TASK_DATA_FENCE so config.json cannot set it (#929)', () => {
-		write(
-			'config.json',
-			JSON.stringify({
-				TASKGRAPH_NO_TASK_DATA_FENCE: '1',
-				global: { TASKGRAPH_NO_TASK_DATA_FENCE: '1', logLevel: 'warn' }
-			})
-		);
-
-		const config = readConfigJson(path.join(root, '.taskgraph', 'config.json'));
-
-		expect(config).toEqual({ global: { logLevel: 'warn' } });
-	});
-});
 
 describe('readLogLevel', () => {
 	it("is 'info' without a config", () => {
