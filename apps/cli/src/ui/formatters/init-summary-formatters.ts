@@ -6,6 +6,7 @@
  *     .gitignore     added TaskGraph entries
  *
  *   Next: taskgraph add-task --prompt='<what to do>', or taskgraph parse-prd <file>
+ *         or taskgraph add-task -t 'Title' -d 'What'
  *   Add the slash commands in Claude Code:
  *     /plugin marketplace add stephennmiller/taskgraph-ai
  *     /plugin install taskgraph@taskgraph
@@ -83,7 +84,9 @@ export function formatInitSummary(summary: InitSummary): string {
 	if (!summary.alreadySetUp || summary.claudeCode) lines.push('');
 	if (!summary.alreadySetUp) {
 		lines.push(
-			`Next: ${theme.brand("taskgraph add-task --prompt='<what to do>'")}, or ${theme.brand('taskgraph parse-prd <file>')}`
+			`Next: ${theme.brand("taskgraph add-task --prompt='<what to do>'")}, or ${theme.brand('taskgraph parse-prd <file>')}`,
+			// -t/-d needs no Claude sign-in; the line above does (#924)
+			`      or ${theme.brand("taskgraph add-task -t 'Title' -d 'What'")}`
 		);
 	}
 	if (summary.claudeCode) {

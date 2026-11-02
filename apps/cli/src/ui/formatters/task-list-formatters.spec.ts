@@ -215,11 +215,15 @@ describe('formatListNextStep', () => {
 });
 
 describe('formatEmptyList', () => {
-	it('says there are no tasks and how to add one', () => {
+	it('says there are no tasks and how to add one, including by hand', () => {
 		const out = lines(formatEmptyList(undefined, { width: 80 }));
 
-		expect(out[0]).toBe('No tasks found');
-		expect(out[1]).toMatch(/^Next: taskgraph add-task/);
+		expect(out).toEqual([
+			'No tasks found',
+			"Next: taskgraph add-task --prompt='...' to add one, or taskgraph parse-prd",
+			"      or taskgraph add-task -t 'Title' -d 'What'"
+		]);
+		for (const line of out) expect(line.length).toBeLessThanOrEqual(80);
 	});
 
 	it('names the filter that matched nothing', () => {
@@ -250,7 +254,10 @@ describe('formatNoNextTask', () => {
 	});
 
 	it('says there are no tasks in an empty project', () => {
-		expect(lines(formatNoNextTask(false))[0]).toBe('No tasks found');
+		const out = lines(formatNoNextTask(false, { width: 80 }));
+
+		expect(out[0]).toBe('No tasks found');
+		expect(out).toContain("      or taskgraph add-task -t 'Title' -d 'What'");
 	});
 });
 

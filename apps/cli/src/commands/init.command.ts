@@ -24,7 +24,7 @@ import {
 	setUpMergeDriver
 } from '@tm/core';
 import chalk from 'chalk';
-import { Command } from 'commander';
+import { Command, Option } from 'commander';
 import { displayPath } from '../completion/install.js';
 import { displayInitBanner } from '../ui/components/brand-banner.component.js';
 import {
@@ -74,51 +74,58 @@ export class InitCommand extends Command {
 	constructor(name?: string) {
 		super(name || 'init');
 
-		this.description('Initialize a new project with TaskGraph structure')
-			.option('-y, --yes', 'Skip prompts and use default values')
-			.option('-n, --name <name>', 'Project name')
-			.option('-d, --description <description>', 'Project description')
-			.option('-v, --version <version>', 'Project version', '0.1.0')
-			.option('-a, --author <author>', 'Author name')
+		// --skip-install, -v/--version and -a/--author are accepted so old
+		// scripts keep working. Nothing reads them: InitCommandOptions omits
+		// them, and initializeProject has no version, author or install step.
+		this.description('Set up TaskGraph in this project')
+			.optionsGroup('Tasks:')
+			.option('-y, --yes', 'Skip the question and use the defaults')
+			.option('--git-tasks', 'Keep tasks in Git')
+			.option('--no-git-tasks', 'Keep tasks out of Git')
+			.optionsGroup('Git:')
+			.option('--git', 'Start a Git repository')
+			.option('--no-git', "Don't start a Git repository")
+			.option('--merge-driver', 'Only set up Git to merge tasks.json by task')
+			.optionsGroup('Claude Code:')
+			.option('--claude', 'Set up the Claude Code integration (the default)')
+			.option('--no-claude', 'Skip the Claude Code integration')
+			.option('--mcp', 'Also add the TaskGraph MCP server to .mcp.json')
 			.option(
 				'-r, --rules <rules...>',
-				'Rule profiles to install (claude). Accepts comma or space separated values.'
+				'Rule profiles to install (claude; comma or space separated)'
 			)
-			.option('--claude', 'Set up Claude Code integration (the default)')
-			.option(
-				'--no-claude',
-				'Skip the Claude Code integration (CLAUDE.md import)'
-			)
-			.option(
-				'--mcp',
-				'Also register the TaskGraph MCP server in .mcp.json (Claude Code)'
-			)
-			.option('--skip-install', 'Skip installing dependencies')
-			.option('--dry-run', 'Show what would be done without making changes')
+			.optionsGroup('Project:')
+			.option('-n, --name <name>', 'Project name')
+			.option('-d, --description <description>', 'Project description')
 			.option('--aliases', 'Add the tm alias to your shell startup file')
 			.option('--no-aliases', "Don't add the tm alias (the default)")
-			.option('--git', 'Initialize Git repository')
-			.option('--no-git', 'Skip Git repository initialization')
-			.option('--git-tasks', 'Store tasks in Git')
-			.option('--no-git-tasks', 'No Git storage of tasks')
-			.option(
-				'--merge-driver',
-				'Only set up Git to merge tasks.json by task (existing projects)'
-			)
+			.option('--dry-run', 'Show what would change, then change nothing')
 			.option(
 				UPSTREAM_IMPORT_FLAG,
 				`Import a ${UPSTREAM_NAME} project (${UPSTREAM_DIR}/)`
 			)
-			.action(async (options: InitCommandOptions) => {
-				try {
-					await this.executeCommand(options);
-				} catch (error) {
-					// displayError exits 1; only Ctrl-C at a prompt gets here
-					if (!(error instanceof InitCancelled)) return displayError(error);
-					console.log(theme.muted('\nCancelled; nothing changed'));
-					process.exitCode = 130;
-				}
-			});
+			.addOption(
+				new Option('-v, --version <version>', 'Project version')
+					.default('0.1.0')
+					.hideHelp()
+			)
+			.addOption(new Option('-a, --author <author>', 'Author name').hideHelp())
+			.addOption(
+				new Option('--skip-install', 'Skip installing dependencies').hideHelp()
+			);
+		// The built-in -h is created with no group, so it would sit alone
+		// under "Options:". Making it here puts it in Project.
+		this.helpOption('-h, --help', 'display help for command');
+		this.action(async (options: InitCommandOptions) => {
+			try {
+				await this.executeCommand(options);
+			} catch (error) {
+				// displayError exits 1; only Ctrl-C at a prompt gets here
+				if (!(error instanceof InitCancelled)) return displayError(error);
+				console.log(theme.muted('\nCancelled; nothing changed'));
+				process.exitCode = 130;
+			}
+		});
 	}
 
 	private async executeCommand(options: InitCommandOptions): Promise<void> {

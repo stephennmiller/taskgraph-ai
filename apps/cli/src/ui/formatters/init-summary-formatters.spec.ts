@@ -36,6 +36,7 @@ describe('formatInitSummary', () => {
 		expect(text).toContain(
 			"Next: taskgraph add-task --prompt='<what to do>', or taskgraph parse-prd <file>"
 		);
+		expect(text).toContain("or taskgraph add-task -t 'Title' -d 'What'");
 		expect(text).not.toContain('Next steps');
 		expect(text).not.toMatch(/^\s*\d\. /m);
 		for (const line of text.split('\n')) expect(line.length).toBeLessThan(80);
@@ -62,7 +63,10 @@ describe('formatInitSummary', () => {
 		).split('\n');
 		const next = lines.findIndex((line) => line.startsWith('Next: '));
 
-		expect(lines.slice(next + 1, next + 4)).toEqual([
+		expect(lines[next + 1]).toBe(
+			"      or taskgraph add-task -t 'Title' -d 'What'"
+		);
+		expect(lines.slice(next + 2, next + 5)).toEqual([
 			'Add the slash commands in Claude Code:',
 			'  /plugin marketplace add stephennmiller/taskgraph-ai',
 			'  /plugin install taskgraph@taskgraph'

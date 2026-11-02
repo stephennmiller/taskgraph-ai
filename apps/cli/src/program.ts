@@ -175,9 +175,10 @@ export function setupCLI(): Command {
 	// output settings, so apply them to the whole tree.
 	const styleParseErrors = (command: Command, commandPath: string) => {
 		command.configureOutput({
+			// No leading blank line: printError doesn't start with one (#928)
 			outputError: (text, write) =>
 				write(
-					`\n${formatCommanderError(text, commandPath || undefined, command.args)}\n`
+					`${formatCommanderError(text, commandPath || undefined, command.args)}\n`
 				)
 		});
 		for (const sub of command.commands) {

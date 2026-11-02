@@ -93,6 +93,44 @@ describe('add-dependency and remove-dependency', () => {
 		expect(process.exitCode).toBe(1);
 	});
 
+	it('prints one dim line on stderr naming the new command', async () => {
+		tasks.addDependency.mockResolvedValue({
+			changed: true,
+			message: 'Task 3 now depends on task 1'
+		});
+		tasks.removeDependency.mockResolvedValue({
+			removed: true,
+			message: 'Task 3 no longer depends on task 1'
+		});
+
+		await run('add-dependency', '3', '1');
+		await run('remove-dependency', '3', '1');
+
+		const err = vi
+			.mocked(console.error)
+			.mock.calls.map((call) => call.join(' '))
+			.join('\n')
+			.replace(/\u001b\[[0-9;]*m/g, '');
+		expect(err).toContain('(add-dependency is now taskgraph depend)');
+		expect(err).toContain(
+			'(remove-dependency is now taskgraph depend --remove)'
+		);
+		expect(err.startsWith('\n')).toBe(false);
+		expect(printed()).not.toContain('is now taskgraph');
+	});
+
+	it('depend itself prints no alias notice', async () => {
+		tasks.addDependency.mockResolvedValue({ changed: true, message: 'ok' });
+
+		await run('depend', '3', '1');
+
+		const err = vi
+			.mocked(console.error)
+			.mock.calls.map((call) => call.join(' '))
+			.join('\n');
+		expect(err).not.toContain('is now taskgraph');
+	});
+
 	it('a dependency that was not there is not an error', async () => {
 		tasks.removeDependency.mockResolvedValue({
 			removed: false,

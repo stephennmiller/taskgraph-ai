@@ -16,6 +16,7 @@ import { formatUsageLine } from '../ui/formatters/usage-formatters.js';
 import { createSpinner } from '../ui/spinner.js';
 import { theme } from '../ui/theme.js';
 import { displayCommandHeader } from '../utils/display-helpers.js';
+import { noticeOldAlias } from '../utils/alias-notice.js';
 import {
 	aiErrorHint,
 	displayError,
@@ -176,11 +177,13 @@ export class ScopeCommand extends Command {
 export class ScopeUpCommand extends ScopeCommand {
 	constructor() {
 		super('scope-up');
+		noticeOldAlias(this, 'scope <ids> up');
 	}
 }
 
 export class ScopeDownCommand extends ScopeCommand {
 	constructor() {
 		super('scope-down');
+		noticeOldAlias(this, 'scope <ids> down');
 	}
 }

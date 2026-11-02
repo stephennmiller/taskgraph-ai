@@ -181,6 +181,57 @@ describe('help <command> (#835)', () => {
 	});
 });
 
+describe('parser errors (#928)', () => {
+	const strip = (text: string) => text.replace(/\u001b\[[0-9;]*m/g, '');
+
+	function run(args: string[]) {
+		const stderr = vi
+			.spyOn(process.stderr, 'write')
+			.mockImplementation(() => true);
+		const consoleError = vi
+			.spyOn(console, 'error')
+			.mockImplementation(() => {});
+		const exit = vi.spyOn(process, 'exit').mockImplementation((code) => {
+			throw new Error(`exit ${code ?? 0}`);
+		});
+		try {
+			expect(() => setupCLI().parse(args, { from: 'user' })).toThrow(/exit/);
+			return {
+				code: Number(String(exit.mock.calls[0][0] ?? 0)),
+				err: strip(
+					[...stderr.mock.calls, ...consoleError.mock.calls].flat().join('')
+				)
+			};
+		} finally {
+			stderr.mockRestore();
+			consoleError.mockRestore();
+			exit.mockRestore();
+		}
+	}
+
+	it.each([
+		[['lsit'], "Unknown command 'lsit'", 'taskgraph list'],
+		[['list', '--bogus'], "Unknown option '--bogus'", 'taskgraph list --help'],
+		[
+			['validate-dependencies', '3', '1'],
+			"Too many arguments for 'validate-dependencies'",
+			'taskgraph validate-dependencies --help'
+		]
+	])(
+		'%j exits 1 on two lines with no leading blank line',
+		(args, message, hint) => {
+			const { code, err } = run(args);
+			const lines = err.split('\n').filter((line) => line.length > 0);
+
+			expect(code).toBe(1);
+			expect(err.startsWith('\n')).toBe(false);
+			expect(lines[0]).toMatch(new RegExp(`^✗ ${message}`));
+			expect(lines[1]?.startsWith('  ')).toBe(true);
+			expect(err).toContain(hint);
+		}
+	);
+});
+
 const updateAvailable = {
 	currentVersion: '1.0.0',
 	latestVersion: '1.1.0',
