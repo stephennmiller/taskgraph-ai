@@ -58,25 +58,22 @@ export class AddTaskCommand extends Command {
 		super(name || 'add-task');
 
 		this.description(
-			'Add a new task using AI, optionally providing manual details'
+			'Add a task with AI from --prompt, or with -t and -d (no AI)'
 		)
 			.addOption(legacyFileOption())
 			.option(
 				'--prompt <prompt>',
-				'Description of the task to add (required if not using manual fields)'
+				'What the task should do. The AI writes the title and description'
 			)
-			.option('-t, --title <title>', 'Task title (for manual task creation)')
+			.option('-t, --title <title>', 'Task title (with -d, no AI call)')
 			.option(
 				'-d, --description <description>',
-				'Task description (for manual task creation)'
+				'Task description (with -t, no AI call)'
 			)
-			.option(
-				'--details <details>',
-				'Implementation details (for manual task creation)'
-			)
+			.option('--details <details>', 'Implementation details')
 			.option(
 				'--dependencies <dependencies>',
-				'Comma-separated list of task IDs this task depends on'
+				'Comma-separated IDs of tasks this one depends on'
 			)
 			.option(
 				'--discovered-from <id>',
@@ -84,19 +81,22 @@ export class AddTaskCommand extends Command {
 			)
 			.option(
 				'--priority <priority>',
-				'Task priority (high, medium, low; default: global.defaultPriority, else medium)'
+				'high, medium or low (default medium, unless your config sets one)'
 			)
 			.option(
 				'-r, --research',
-				'Whether to use research capabilities for task creation'
+				'Look through the project before the AI writes the task'
 			)
 			.option(
 				'--ac <criterion>',
-				'Acceptance criterion; repeat for more (set-status --check ticks them)',
+				'An acceptance criterion; repeat for more (set-status --check ticks them)',
 				(value: string, previous: string[] = []) => [...previous, value]
 			)
 			.option('--assignee <login>', 'GitHub login of who the task is for')
-			.option('--tag <tag>', 'Specify tag context for task operations')
+			.option(
+				'--tag <tag>',
+				'Tag to add the task to (default: the current tag)'
+			)
 			.action(async (options: AddTaskCommandOptions) => {
 				await this.executeCommand(options);
 			});

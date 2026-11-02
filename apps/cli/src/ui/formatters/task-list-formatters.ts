@@ -312,7 +312,18 @@ export function formatEmptyList(
 					command: "taskgraph add-task --prompt='...'",
 					description: 'to add one, or taskgraph parse-prd'
 				};
-	return [theme.text(message), ...formatNextStep(action, width)].join('\n');
+	const lines = [theme.text(message), ...formatNextStep(action, width)];
+	// The prompt and parse-prd paths need Claude. -t/-d does not (#924).
+	if (!filter && !assignee) {
+		lines.push(
+			...wrapLine(
+				`      or ${theme.brand("taskgraph add-task -t 'Title' -d 'What'")}`,
+				width,
+				'      '
+			)
+		);
+	}
+	return lines.join('\n');
 }
 
 /**

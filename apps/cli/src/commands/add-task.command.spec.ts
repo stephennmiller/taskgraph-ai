@@ -124,6 +124,23 @@ describe('add-task', () => {
 		expect(add).toHaveBeenCalled();
 	});
 
+	it('says -t and -d work without AI and drops the config key', () => {
+		const help = new AddTaskCommand()
+			.helpInformation()
+			.replace(/\u001b\[[0-9;]*m/g, '')
+			.replace(/\s+/g, ' ');
+
+		expect(help).toContain(
+			'Add a task with AI from --prompt, or with -t and -d (no AI)'
+		);
+		expect(help).toContain('with -d, no AI call');
+		expect(help).toContain('with -t, no AI call');
+		expect(help).not.toContain('global.defaultPriority');
+		expect(help).not.toContain('for manual task creation');
+		expect(help).not.toContain('Whether to use research');
+		expect(help).toContain('unless your config sets one');
+	});
+
 	it('prints a failure once with the hint for it and exits 1', async () => {
 		add.mockRejectedValue(new Error('Reached maximum number of turns (6)'));
 

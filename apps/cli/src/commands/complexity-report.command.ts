@@ -13,6 +13,7 @@ import {
 import { Command } from 'commander';
 import { formatComplexityReport } from '../ui/formatters/complexity-report-formatters.js';
 import { displayCommandHeader } from '../utils/display-helpers.js';
+import { noticeOldAlias } from '../utils/alias-notice.js';
 import { displayError, printError } from '../utils/error-handler.js';
 import { getProjectRoot } from '../utils/project-root.js';
 
@@ -67,6 +68,7 @@ export class ComplexityReportCommand extends Command {
 			.action(async (options: ComplexityReportCommandOptions) => {
 				await showComplexityReport(options);
 			});
+		noticeOldAlias(this, 'analyze-complexity --report');
 	}
 
 	static register(program: Command, name?: string): ComplexityReportCommand {

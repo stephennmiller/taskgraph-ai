@@ -43,9 +43,7 @@ const filesWithFormat = readdirSync(COMMANDS_DIR, { recursive: true })
 	.map(String)
 	.filter((file) => file.endsWith('.command.ts'))
 	.filter((file) =>
-		/--format <format>',\s*'Output format/.test(
-			readFileSync(join(COMMANDS_DIR, file), 'utf8')
-		)
+		/--format <format>'/.test(readFileSync(join(COMMANDS_DIR, file), 'utf8'))
 	)
 	.sort();
 

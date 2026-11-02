@@ -14,6 +14,7 @@ import {
 } from '../ui/formatters/dependency-check-formatters.js';
 import { formatPrdCoverage } from '../ui/formatters/prd-coverage-formatters.js';
 import { theme } from '../ui/theme.js';
+import { noticeOldAlias } from '../utils/alias-notice.js';
 import { printError } from '../utils/error-handler.js';
 import { withTmCore } from '../utils/with-tm-core.js';
 
@@ -38,9 +39,11 @@ function editCommand(
 	name: string,
 	description: string,
 	idHelp: string,
-	dependsOnHelp: string
+	dependsOnHelp: string,
+	/** Set on an old name, so the run says what replaced it */
+	replacement?: string
 ): Command {
-	return new Command(name)
+	const command = new Command(name)
 		.description(description)
 		.argument('[id]', idHelp)
 		.argument('[dependsOn]', dependsOnHelp)
@@ -50,31 +53,33 @@ function editCommand(
 		.option(
 			'-p, --project <path>',
 			'Project root directory (auto-detected if not provided)'
-		)
-		.hook('preAction', (command) => {
-			// `depend 3 1` and `depend --id=3 --depends-on=1` mean the same
-			const [argId, argDependsOn] = command.args;
-			const opts = command.opts<DependencyOptions>();
-			// Mixing the forms would silently drop one of the IDs typed
-			if (argId !== undefined && (opts.id ?? opts.dependsOn) !== undefined) {
-				printError(
-					'Give the IDs as arguments or as --id and --depends-on, not both',
-					`Try \`taskgraph ${name} 3 1\` (task 3 depends on task 1)`
-				);
-				process.exit(1);
-			}
-			const id = opts.id ?? argId;
-			const dependsOn = opts.dependsOn ?? argDependsOn;
-			if (!id || !dependsOn) {
-				printError(
-					'Say which task depends on which',
-					`Try \`taskgraph ${name} 3 1\` (task 3 depends on task 1)`
-				);
-				process.exit(1);
-			}
-			command.setOptionValue('id', id);
-			command.setOptionValue('dependsOn', dependsOn);
-		});
+		);
+	// Before the ID check, which exits: the old name was still what they typed
+	if (replacement) noticeOldAlias(command, replacement);
+	return command.hook('preAction', (command) => {
+		// `depend 3 1` and `depend --id=3 --depends-on=1` mean the same
+		const [argId, argDependsOn] = command.args;
+		const opts = command.opts<DependencyOptions>();
+		// Mixing the forms would silently drop one of the IDs typed
+		if (argId !== undefined && (opts.id ?? opts.dependsOn) !== undefined) {
+			printError(
+				'Give the IDs as arguments or as --id and --depends-on, not both',
+				`Try \`taskgraph ${name} 3 1\` (task 3 depends on task 1)`
+			);
+			process.exit(1);
+		}
+		const id = opts.id ?? argId;
+		const dependsOn = opts.dependsOn ?? argDependsOn;
+		if (!id || !dependsOn) {
+			printError(
+				'Say which task depends on which',
+				`Try \`taskgraph ${name} 3 1\` (task 3 depends on task 1)`
+			);
+			process.exit(1);
+		}
+		command.setOptionValue('id', id);
+		command.setOptionValue('dependsOn', dependsOn);
+	});
 }
 
 const TYPE_HELP =
@@ -127,7 +132,8 @@ export class AddDependencyCommand {
 			'add-dependency',
 			'Add a dependency to a task',
 			'Task ID to add dependency to',
-			'Task ID that will become a dependency'
+			'Task ID that will become a dependency',
+			'depend'
 		)
 			.option('--type <type>', TYPE_HELP)
 			.action((_id, _dependsOn, options: DependencyOptions) =>
@@ -144,7 +150,8 @@ export class RemoveDependencyCommand {
 			'remove-dependency',
 			'Remove a dependency or a non-blocking link from a task',
 			'Task ID to remove dependency from',
-			'Task ID to remove as a dependency'
+			'Task ID to remove as a dependency',
+			'depend --remove'
 		).action((_id, _dependsOn, options: DependencyOptions) =>
 			removeDependency(options)
 		);
@@ -153,14 +160,21 @@ export class RemoveDependencyCommand {
 }
 
 /** The options both check commands take */
-function checkCommand(name: string, description: string): Command {
-	return new Command(name)
+function checkCommand(
+	name: string,
+	description: string,
+	/** Set on an old name, so the run says what replaced it */
+	replacement?: string
+): Command {
+	const command = new Command(name)
 		.description(description)
 		.option('--tag <tag>', 'Tag to work in (default: the current tag)')
 		.option(
 			'-p, --project <path>',
 			'Project root directory (auto-detected if not provided)'
 		);
+	if (replacement) noticeOldAlias(command, replacement);
+	return command;
 }
 
 function validateDependencies(options: DependencyOptions) {
@@ -182,7 +196,8 @@ export class ValidateDependenciesCommand {
 	static register(program: Command): void {
 		const command = checkCommand(
 			'validate-dependencies',
-			'Identify invalid dependencies without fixing them'
+			'Identify invalid dependencies without fixing them',
+			'fix-dependencies --check'
 		).action(validateDependencies);
 		program.addCommand(command, { hidden: true });
 	}

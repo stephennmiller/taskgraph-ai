@@ -6,6 +6,9 @@
  * For backward compatibility, use src/utils/ui.ts which re-exports from src/ui/
  */
 
+// Old command names (`add-dependency` and the like)
+export { noticeOldAlias } from './alias-notice.js';
+
 // Error handling utilities
 export {
 	aiErrorHint,

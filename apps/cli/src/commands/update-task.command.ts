@@ -24,6 +24,7 @@ import { formatUsageLine } from '../ui/formatters/usage-formatters.js';
 import { createSpinner } from '../ui/spinner.js';
 import { theme } from '../ui/theme.js';
 import { displayCommandHeader } from '../utils/display-helpers.js';
+import { noticeOldAlias } from '../utils/alias-notice.js';
 import {
 	aiErrorHint,
 	displayError,
@@ -253,6 +254,7 @@ export class UpdateTaskCommand extends Command {
 					await updateOne('update-task', id, prompt, options);
 				}
 			);
+		noticeOldAlias(this, 'update');
 	}
 
 	static register(program: Command, name?: string): UpdateTaskCommand {

@@ -81,7 +81,7 @@ export class CommandRegistry {
 		// Task Management Commands
 		{
 			name: 'list',
-			description: 'List all tasks with filtering and status overview',
+			description: 'List tasks, filtered by status or tag',
 			commandClass: ListTasksCommand as any,
 			category: 'task'
 		},
@@ -136,7 +136,7 @@ export class CommandRegistry {
 		{
 			name: 'add-task',
 			description:
-				'Add a new task using AI, optionally providing manual details',
+				'Add a task with AI from a prompt, or with -t and -d (no AI)',
 			commandClass: AddTaskCommand as any,
 			category: 'task'
 		},
@@ -348,7 +348,7 @@ export class CommandRegistry {
 		},
 		{
 			name: 'init',
-			description: 'Initialize a new project with TaskGraph structure',
+			description: 'Set up TaskGraph in this project',
 			commandClass: InitCommand as any,
 			category: 'utility'
 		}

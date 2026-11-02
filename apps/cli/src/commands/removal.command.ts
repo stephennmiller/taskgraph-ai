@@ -13,6 +13,7 @@ import { terminalSafe } from '../ui/formatters/markdown-formatters.js';
 import { formatTasksRemoved } from '../ui/formatters/remove-task-formatters.js';
 import { formatSubtaskRemoved } from '../ui/formatters/subtask-change-formatters.js';
 import { theme } from '../ui/theme.js';
+import { noticeOldAlias } from '../utils/alias-notice.js';
 import {
 	describeError,
 	displayError,
@@ -251,9 +252,12 @@ export class RemoveTaskCommand {
 /** Hidden alias of `remove-task <subtask>` and `remove-task --convert` */
 export class RemoveSubtaskCommand {
 	static register(program: Command): void {
-		const command = idArgument(
-			removalCommand('remove-subtask', 'Remove a subtask from its parent task')
-		)
+		const command = removalCommand(
+			'remove-subtask',
+			'Remove a subtask from its parent task'
+		);
+		noticeOldAlias(command, 'remove-task');
+		idArgument(command)
 			.option(
 				'-i, --id <id>',
 				'Subtask ID(s) to remove in format "parentId.subtaskId" (can be comma-separated for multiple subtasks)'

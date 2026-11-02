@@ -289,11 +289,12 @@ describe('ListTasksCommand', () => {
 			consoleErrorSpy.mockRestore();
 		});
 
-		it('rejects an unknown status, and all inside a list', () => {
+		it('rejects an unknown status on two lines, with no leading blank', () => {
 			const consoleErrorSpy = vi
 				.spyOn(console, 'error')
 				.mockImplementation(() => {});
 			const command = new ListTasksCommand();
+			const plain = (text: string) => text.replace(/\u001b\[[0-9;]*m/g, '');
 
 			expect((command as any).validateOptions({ status: 'pending' })).toBe(
 				true
@@ -302,9 +303,14 @@ describe('ListTasksCommand', () => {
 			expect((command as any).validateOptions({ status: 'pending,all' })).toBe(
 				false
 			);
-			expect(consoleErrorSpy).toHaveBeenCalledWith(
-				expect.stringContaining('✗ "bogus" isn\'t a status. Use one of:')
+			const printed = consoleErrorSpy.mock.calls.map((call) =>
+				plain(String(call[0]))
 			);
+			expect(printed[0]).toMatch(
+				/^✗ "bogus" isn't a status\n {2}Use one of: pending,/
+			);
+			expect(printed[0].startsWith('\n')).toBe(false);
+			expect(printed[1]).toMatch(/^✗ "all" isn't a status\n {2}Use one of: /);
 
 			consoleErrorSpy.mockRestore();
 		});
@@ -669,5 +675,22 @@ describe('ListTasksCommand', () => {
 			expect(parsed.tasks[0].id).toBe('2');
 			expect(parsed.tasks[0].status).toBe('pending');
 		});
+	});
+});
+
+describe('list --help', () => {
+	it('matches the top-level voice and explains all next to --with-subtasks', () => {
+		const help = new ListTasksCommand()
+			.helpInformation()
+			.replace(/\u001b\[[0-9;]*m/g, '')
+			.replace(/\s+/g, ' ');
+
+		expect(help).toContain('List tasks, filtered by status or tag');
+		expect(help).toContain(
+			'all shows every task and its subtasks, like --with-subtasks'
+		);
+		expect(help).toContain('same as the argument (the argument wins)');
+		expect(help).not.toContain('fallback if not using positional');
+		expect(help).toContain("Show each task's subtasks");
 	});
 });

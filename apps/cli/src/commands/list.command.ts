@@ -63,44 +63,31 @@ export class ListTasksCommand extends Command {
 		super(name || 'list');
 
 		// Configure the command with positional status argument
-		this.description('List tasks with optional filtering')
+		this.description('List tasks, filtered by status or tag')
 			.alias('ls')
 			.argument(
 				'[status]',
-				'Filter by status (e.g., pending, done, in-progress) or "all" to show with subtasks'
+				'Status to show. all shows every task and its subtasks, like --with-subtasks'
 			)
 			.option(
 				'-s, --status <status>',
-				'Filter by status (fallback if not using positional)'
+				'Status to show, same as the argument (the argument wins)'
 			)
-			.option('-t, --tag <tag>', 'Filter by tag')
-			.option('--with-subtasks', 'Include subtasks in the output')
-			.option(
-				'-f, --format <format>',
-				'Output format (text, json, compact)',
-				'text'
-			)
+			.option('-t, --tag <tag>', 'Show tasks in one tag')
+			.option('--with-subtasks', "Show each task's subtasks")
+			.option('-f, --format <format>', 'text, json or compact', 'text')
 			.addOption(jsonOption())
-			.option(
-				'-c, --compact',
-				'Output in compact format (shorthand for --format compact)'
-			)
-			.option('--no-header', 'Hide the command header')
-			.option('--silent', 'Suppress output (useful for programmatic usage)')
-			.option(
-				'-p, --project <path>',
-				'Project root directory (auto-detected if not provided)'
-			)
-			.option('-w, --watch', 'Watch for changes and update list automatically')
-			.option(
-				'--ready',
-				'Show only tasks ready to work on (dependencies satisfied)'
-			)
-			.option('--blocking', 'Show only tasks that block other tasks')
-			.option('--mine', 'Show only tasks assigned to you (your GitHub login)')
+			.option('-c, --compact', 'Same as --format compact')
+			.option('--no-header', 'Hide the tag line above the list')
+			.option('--silent', 'Print nothing')
+			.option('-p, --project <path>', 'Project folder (found automatically)')
+			.option('-w, --watch', 'Reprint the list when tasks change')
+			.option('--ready', 'Only tasks you can start now')
+			.option('--blocking', 'Only tasks that block other tasks')
+			.option('--mine', 'Only tasks assigned to you')
 			.option(
 				'--all-tags',
-				'Show tasks from all tags (combine with --ready for actionable tasks)'
+				'Tasks from every tag (with --ready, the ones you can start)'
 			)
 			.action(async (statusArg?: string, options?: ListCommandOptions) => {
 				// Handle special "all" keyword to show with subtasks
@@ -250,7 +237,13 @@ export class ListTasksCommand extends Command {
 		try {
 			parseStatusFilter(options.status);
 		} catch (error) {
-			printError((error as Error).message);
+			// "isn't a status. Use one of: …" is one sentence; the printer
+			// wants the problem and the fix on their own lines (#928)
+			const raw = (error as Error).message;
+			const marker = ' Use one of: ';
+			const at = raw.indexOf(marker);
+			if (at === -1) printError(raw);
+			else printError(raw.slice(0, at), raw.slice(at + 1));
 			return false;
 		}
 
