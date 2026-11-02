@@ -48,6 +48,8 @@ Loads only 7 essential tools for daily development. Ideal for minimal context us
 
 You can also use `"lean"` as an alias for `"core"`. If `TASKGRAPH_TOOLS` is not set, core tools are loaded by default.
 
+A [Grok Bot connector](/capabilities/grok-bot) uses this `core` block. Set `TASKGRAPH_TOOLS` in the connector's env, or in the shell that starts the server. A project `.env` cannot set it ([GHSA-gprw-26cx-5f4r](https://github.com/stephennmiller/taskgraph-ai/security/advisories/GHSA-gprw-26cx-5f4r), [GHSA-8m93-x6f3-3mfv](https://github.com/stephennmiller/taskgraph-ai/security/advisories/GHSA-8m93-x6f3-3mfv)).
+
 #### Standard Tools
 Loads 16 commonly used tools. Balances functionality with context efficiency.
 

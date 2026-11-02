@@ -1,0 +1,7 @@
+{
+	"command": "npx",
+	"args": ["-y", "taskgraph-ai@<version>"],
+	"env": {
+		"TASKGRAPH_TOOLS": "core"
+	}
+}

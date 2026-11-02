@@ -253,6 +253,7 @@ describe('TASKGRAPH_TOOLS=all is documented as full project control', () => {
 		'llms-install.md',
 		'.claude/rules/mcp.md',
 		'apps/docs/capabilities/mcp.mdx',
+		'apps/docs/capabilities/grok-bot.mdx',
 		'apps/docs/best-practices/configuration-advanced.mdx',
 		'apps/docs/capabilities/github-sync.mdx',
 		'apps/docs/configuration.mdx'
