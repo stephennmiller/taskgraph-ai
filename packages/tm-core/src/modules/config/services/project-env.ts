@@ -3,19 +3,14 @@
  * A long-running server may serve several projects, so a project's .env is
  * read into a value that is handed on, never loaded into process.env.
  *
- * The fence check's startup values are copied here, once, as this module
- * loads: the opt-out, the Claude Code markers, and the loop-child markers.
- * That is before `readProjectEnv` merges a project file. Nothing else from
- * the process environment is kept.
+ * The fence check copies two things from the process environment when this
+ * module loads, before `readProjectEnv` merges a project file: the opt-out
+ * and the two Claude Code markers. Nothing else is kept.
  */
 
 import fs from 'node:fs';
 import path from 'node:path';
 import { parseEnv } from 'node:util';
-import {
-	LOOP_CHILD_ENV,
-	PARALLEL_WORKER_ENV
-} from '../../../common/constants/auto-update.js';
 import { getLogger } from '../../../common/logger/index.js';
 
 export type EnvMap = Record<string, string | undefined>;
@@ -57,16 +52,13 @@ const FILE_KEYS = new Set<string>(PROJECT_ENV_ALLOWLIST.allow);
 const SHELL_ONLY_KEYS = new Set<string>(PROJECT_ENV_ALLOWLIST.shellOnly);
 
 /**
- * Startup values the fence check reads, taken when this module loads, before
- * `readProjectEnv` merges a project file. Only these keys are kept, so a
- * secret in the process environment is not held for the life of the process.
- * Frozen so a later write to this object cannot turn the fence opt-out on.
+ * The opt-out and the two Claude Code markers, taken when this module loads.
+ * Not `{ ...process.env }`: a secret in the process environment is not held
+ * for the life of the process. Frozen so a later write cannot change them.
  */
 const STARTUP_ENV_KEYS = [
 	NO_TASK_DATA_FENCE_ENV,
-	...CLAUDE_CODE_SHELL_MARKERS,
-	LOOP_CHILD_ENV,
-	PARALLEL_WORKER_ENV
+	...CLAUDE_CODE_SHELL_MARKERS
 ] as const;
 
 const shellEnvAtLoad: EnvMap = Object.freeze(
