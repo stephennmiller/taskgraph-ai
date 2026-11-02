@@ -10,6 +10,7 @@ import {
 	PROJECT_ENV_ALLOWLIST,
 	readProjectEnv,
 	shellDisablesTaskDataFence,
+	shellEnvBeforeProject,
 	shellRunsUnderClaudeCode
 } from './project-env.js';
 
@@ -97,6 +98,12 @@ describe('TASKGRAPH_NO_TASK_DATA_FENCE', () => {
 		for (const value of [undefined, '', '0', 'true', 'TRUE', ' 1', '1 ']) {
 			expect(isTaskDataFenceOptOut(value)).toBe(false);
 		}
+	});
+
+	it('does not keep the rest of the process environment', () => {
+		expect(process.env.PATH).toBeTruthy();
+		expect(shellEnvBeforeProject('PATH')).toBeUndefined();
+		expect(shellEnvBeforeProject('HOME')).toBeUndefined();
 	});
 
 	it('does not treat a Claude Code marker written after startup as one', () => {

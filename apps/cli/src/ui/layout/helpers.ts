@@ -8,6 +8,7 @@ import {
 	LOOP_CHILD_ENV,
 	PARALLEL_WORKER_ENV,
 	shellDisablesTaskDataFence,
+	shellEnvBeforeProject,
 	shellRunsUnderClaudeCode
 } from '@tm/core';
 import chalk from 'chalk';
@@ -65,10 +66,15 @@ export function fencesTaskData(
  * `CLAUDE_CODE_CHILD_SESSION` in the startup environment), because that
  * output is what Claude reads (#929).
  */
+/** `1` at startup, or set on this process before the command runs */
+function markedLoopChild(name: string): boolean {
+	return shellEnvBeforeProject(name) === '1' || process.env[name] === '1';
+}
+
 export function shellOptsOutOfTaskDataFence(): boolean {
 	if (
-		process.env[LOOP_CHILD_ENV] === '1' ||
-		process.env[PARALLEL_WORKER_ENV] === '1' ||
+		markedLoopChild(LOOP_CHILD_ENV) ||
+		markedLoopChild(PARALLEL_WORKER_ENV) ||
 		shellRunsUnderClaudeCode()
 	) {
 		return false;

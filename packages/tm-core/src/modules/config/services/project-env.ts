@@ -3,14 +3,19 @@
  * A long-running server may serve several projects, so a project's .env is
  * read into a value that is handed on, never loaded into process.env.
  *
- * `TASKGRAPH_NO_TASK_DATA_FENCE` is copied here, once, from the process
- * environment as this module loads. That is before `readProjectEnv` merges a
- * project file. Nothing in a project can change the copy afterward.
+ * The fence check's startup values are copied here, once, as this module
+ * loads: the opt-out, the Claude Code markers, and the loop-child markers.
+ * That is before `readProjectEnv` merges a project file. Nothing else from
+ * the process environment is kept.
  */
 
 import fs from 'node:fs';
 import path from 'node:path';
 import { parseEnv } from 'node:util';
+import {
+	LOOP_CHILD_ENV,
+	PARALLEL_WORKER_ENV
+} from '../../../common/constants/auto-update.js';
 import { getLogger } from '../../../common/logger/index.js';
 
 export type EnvMap = Record<string, string | undefined>;
@@ -26,7 +31,7 @@ export const NO_TASK_DATA_FENCE_ENV = 'TASKGRAPH_NO_TASK_DATA_FENCE';
  * `CLAUDE_CODE_CHILD_SESSION` from v2.1.172 (Bash, PowerShell, and Monitor
  * tools, hooks, and the status line).
  */
-export const CLAUDE_CODE_SHELL_MARKERS = [
+const CLAUDE_CODE_SHELL_MARKERS = [
 	'CLAUDECODE',
 	'CLAUDE_CODE_CHILD_SESSION'
 ] as const;
@@ -52,10 +57,26 @@ const FILE_KEYS = new Set<string>(PROJECT_ENV_ALLOWLIST.allow);
 const SHELL_ONLY_KEYS = new Set<string>(PROJECT_ENV_ALLOWLIST.shellOnly);
 
 /**
- * Process environment at load, before any project `.env` is read. Frozen so
- * a later write to this object cannot turn the fence opt-out on.
+ * Startup values the fence check reads, taken when this module loads, before
+ * `readProjectEnv` merges a project file. Only these keys are kept, so a
+ * secret in the process environment is not held for the life of the process.
+ * Frozen so a later write to this object cannot turn the fence opt-out on.
  */
-const shellEnvAtLoad: EnvMap = Object.freeze({ ...process.env });
+const STARTUP_ENV_KEYS = [
+	NO_TASK_DATA_FENCE_ENV,
+	...CLAUDE_CODE_SHELL_MARKERS,
+	LOOP_CHILD_ENV,
+	PARALLEL_WORKER_ENV
+] as const;
+
+const shellEnvAtLoad: EnvMap = Object.freeze(
+	Object.fromEntries(
+		STARTUP_ENV_KEYS.flatMap((key) => {
+			const value = process.env[key];
+			return value === undefined ? [] : [[key, value]];
+		})
+	)
+);
 
 /** A name only the shell may set. A project `.env` value is ignored. */
 export function isShellOnlyEnv(name: string): boolean {
