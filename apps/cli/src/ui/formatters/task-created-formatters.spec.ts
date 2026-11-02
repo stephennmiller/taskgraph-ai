@@ -29,7 +29,7 @@ describe('formatTaskCreated', () => {
 			'  Depends on  1  Set up the database schema',
 			'              2  Email and password sign-in with sessions  added by AI',
 			'              3  Bookmark CRUD endpoints                   added by AI',
-			'Next: taskgraph show 4 to read it, or taskgraph expand --id=4 to break it down'
+			'Next: taskgraph show 4 to read it, or taskgraph expand 4 to break it down'
 		]);
 	});
 
@@ -41,7 +41,7 @@ describe('formatTaskCreated', () => {
 
 		expect(lines(output)).toEqual([
 			'✓ Added task 1  Write the README',
-			'Next: taskgraph show 1 to read it, or taskgraph expand --id=1 to break it down'
+			'Next: taskgraph show 1 to read it, or taskgraph expand 1 to break it down'
 		]);
 	});
 
@@ -137,7 +137,7 @@ describe('formatTaskCreated', () => {
 			'              2  Email and password…   added by AI',
 			'              3  Bookmark CRUD endpo…  added by AI',
 			'Next: taskgraph show 4 to read it, or taskgraph',
-			'      expand --id=4 to break it down'
+			'      expand 4 to break it down'
 		]);
 	});
 });

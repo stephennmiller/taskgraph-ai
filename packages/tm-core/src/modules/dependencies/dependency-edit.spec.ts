@@ -169,6 +169,17 @@ describe('addDependencyIn', () => {
 		expect(tasks).toEqual(before);
 	});
 
+	it('points at expand with a positional id when the parent has no subtasks', () => {
+		const tasks = [task(1), task(2, [1])];
+
+		expect(() => add(tasks, '1.1', '2')).toThrow(
+			expect.objectContaining({
+				message: 'Task 1 has no subtasks',
+				hint: 'Add some with `taskgraph expand 1`'
+			})
+		);
+	});
+
 	it('refuses a loop through a dependency the subtask inherits (#698)', () => {
 		// 4 waits on 1.1, so task 1 depending on 4 makes 1.1 wait on 4
 		const tasks = [

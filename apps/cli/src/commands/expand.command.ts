@@ -73,8 +73,8 @@ export class ExpandCommand extends Command {
 		super(name || 'expand');
 
 		this.description('Expand a task into subtasks using AI')
-			.argument('[id]', 'ID of the task to expand (or use --id)')
-			.option('-i, --id <id>', 'ID of the task to expand')
+			.argument('[id]', 'Task ID to expand, e.g. 3 (same as --id)')
+			.option('-i, --id <id>', 'The same as the [id] argument')
 			.option(
 				'-a, --all',
 				'Expand all pending tasks based on complexity analysis'
@@ -96,6 +96,15 @@ export class ExpandCommand extends Command {
 				'Path to the complexity report file (use this to specify the complexity report, not --file)'
 			)
 			.option('--tag <tag>', 'Specify tag context for task operations')
+			.addHelpText(
+				'after',
+				`
+Examples:
+  $ taskgraph expand 3
+  $ taskgraph expand --id=3
+  $ taskgraph expand --all
+`
+			)
 			.action(async (id: string | undefined, options: ExpandCommandOptions) => {
 				await this.executeCommand({
 					...options,

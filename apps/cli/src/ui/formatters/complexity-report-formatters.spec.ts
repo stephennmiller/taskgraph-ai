@@ -181,7 +181,7 @@ describe('formatComplexityReport', () => {
 		const output = plain(formatComplexityReport(report, 80));
 
 		expect(output).not.toContain('A long prompt');
-		expect(output).toContain('taskgraph expand --id=<id> or --all');
+		expect(output).toContain('taskgraph expand <id> or --all');
 	});
 
 	it('wraps reasoning to the terminal width', () => {

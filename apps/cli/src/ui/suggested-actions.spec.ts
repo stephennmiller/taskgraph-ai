@@ -8,7 +8,7 @@ describe('getSuggestedActions', () => {
 	it('suggests starting a pending task', () => {
 		const actions = commands(getSuggestedActions(3, 'pending', false));
 		expect(actions[0]).toBe('taskgraph set-status 3 in-progress');
-		expect(actions).toContain('taskgraph expand --id=3');
+		expect(actions).toContain('taskgraph expand 3');
 	});
 
 	it('points a pending task that waits on dependencies at why, not at starting it (#710)', () => {

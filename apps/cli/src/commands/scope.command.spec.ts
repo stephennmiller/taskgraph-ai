@@ -105,6 +105,23 @@ describe('scope-up / scope-down', () => {
 		);
 	});
 
+	it('help shows scope 3 up and scope --id=3 up as the same', () => {
+		let help = '';
+		new ScopeCommand()
+			.configureOutput({
+				writeOut: (text) => {
+					help += text;
+				}
+			})
+			.outputHelp();
+		help = help.replace(/\x1b\[[0-9;]*m/g, '');
+
+		expect(help).toContain('same as --id');
+		expect(help).toContain('The same as the [ids] argument');
+		expect(help).toContain('$ taskgraph scope 3 up');
+		expect(help).toContain('$ taskgraph scope --id=3 up');
+	});
+
 	it('scope <ids> down scopes down (#882)', async () => {
 		await new ScopeCommand().parseAsync(['1,2', 'down', '-s', 'light'], {
 			from: 'user'
@@ -129,8 +146,30 @@ describe('scope-up / scope-down', () => {
 		);
 	});
 
+	it('scope 3 up --id=3 is the same ID twice', async () => {
+		await new ScopeCommand().parseAsync(['3', 'up', '--id=3'], {
+			from: 'user'
+		});
+
+		expect(scope).toHaveBeenCalledWith(
+			expect.objectContaining({ ids: '3', direction: 'up' }),
+			expect.any(Object)
+		);
+	});
+
+	it('scope-up 3 is the same as scope-up --id=3', async () => {
+		await new ScopeUpCommand().parseAsync(['3'], { from: 'user' });
+
+		expect(scope).toHaveBeenCalledWith(
+			expect.objectContaining({ ids: '3', direction: 'up' }),
+			expect.any(Object)
+		);
+	});
+
 	it.each([
-		[['--id=3', '4', 'up'], 'not both'],
+		[['--id=3', '4', 'up'], 'Give the ID once'],
+		[['--id=3', '4'], 'Give the ID once'],
+		[['3', 'up', '--id=4'], 'Give the ID once'],
 		[['--id=3', 'sideways'], `"sideways" isn't up or down`]
 	])('scope %o exits 1 before tm-core', async (args, message) => {
 		await expect(
@@ -159,11 +198,13 @@ describe('scope-up / scope-down', () => {
 		expect(scope).not.toHaveBeenCalled();
 	});
 
-	it('exits 1 without --id, before tm-core', async () => {
+	it('exits 1 without an id, before tm-core, and keeps the new-name notice', async () => {
 		await expect(
 			new ScopeUpCommand().parseAsync([], { from: 'user' })
 		).rejects.toThrow('exit 1');
-		expect(err.join('\n')).toContain('taskgraph scope-up --id=1,2,3');
+		const text = err.join('\n');
+		expect(text).toContain('(scope-up is now taskgraph scope <ids> up)');
+		expect(text).toContain('taskgraph scope 1,2,3 up');
 		expect(createTmCore).not.toHaveBeenCalled();
 	});
 

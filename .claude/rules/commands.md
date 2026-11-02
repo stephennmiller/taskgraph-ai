@@ -169,7 +169,7 @@ console.log(formatClearedSubtasks(result));
 //   ✓ Cleared 4 subtasks from 2 tasks
 //     1  3 subtasks  Set up the database schema
 //     2  1 subtask   Build the login API
-//   Run taskgraph expand --id=<id> to add new ones
+//   Run taskgraph expand <id> to add new ones
 
 // ❌ DON'T: Box a success message and number the next steps
 console.log(boxen(chalk.white.bold('Subtasks Cleared Successfully') + '\n\nNext Steps:\n1. …'));
