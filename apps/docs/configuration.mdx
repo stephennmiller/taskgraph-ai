@@ -110,6 +110,8 @@ Set these in your shell, CI or the MCP server's `env`. TaskGraph reads a project
 
 Do not export `TASKGRAPH_NO_TASK_DATA_FENCE` anywhere an agent runs `taskgraph`.
 
+The opt-out does nothing when `CLAUDECODE=1` or `CLAUDE_CODE_CHILD_SESSION=1` is set at startup, so `taskgraph` run from Claude Code always keeps the tags.
+
 Models (set them with `taskgraph models`), `maxTokens`, `temperature`, `defaultSubtasks`, `defaultPriority` and `projectName` belong in `config.json`, not in environment variables.
 
 <Note>

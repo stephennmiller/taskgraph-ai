@@ -68,6 +68,8 @@ When stdout isn't a terminal (a pipe, a file, or an agent's shell) and no `--for
 
 Set `TASKGRAPH_NO_TASK_DATA_FENCE=1` in the shell to drop those lines from piped `list`, `show`, and `list --compact`. That is the only output it changes. It is shell-only: a project's `.env` or `config.json` cannot set it, and the value is the one the process started with, not a value loaded from the project. `prime`, `loop` (including `taskgraph` run inside a loop), `next`, `graph`, `why`, `--json`, MCP tools, and prompts keep the task-data tags. `--json` still prints a `<task-data>` or `</task-data>` inside task text as `-task-data`, so the opt-out does not remove that. A title is rewritten the same way when the lines are dropped, so it still cannot close a fence.
 
+The opt-out does nothing when `CLAUDECODE=1` or `CLAUDE_CODE_CHILD_SESSION=1` is set at startup, so `taskgraph` run from Claude Code always keeps the tags.
+
 ```
 <task-data>
 1  done         high    Set up the database
