@@ -9,7 +9,8 @@ import {
 	NO_TASK_DATA_FENCE_ENV,
 	PROJECT_ENV_ALLOWLIST,
 	readProjectEnv,
-	shellDisablesTaskDataFence
+	shellDisablesTaskDataFence,
+	shellRunsUnderClaudeCode
 } from './project-env.js';
 
 const projectWith = (envFile?: string): string => {
@@ -96,6 +97,16 @@ describe('TASKGRAPH_NO_TASK_DATA_FENCE', () => {
 		for (const value of [undefined, '', '0', 'true', 'TRUE', ' 1', '1 ']) {
 			expect(isTaskDataFenceOptOut(value)).toBe(false);
 		}
+	});
+
+	it('does not treat a Claude Code marker written after startup as one', () => {
+		const previous = process.env.CLAUDECODE;
+		process.env.CLAUDECODE = '1';
+
+		expect(shellRunsUnderClaudeCode()).toBe(false);
+
+		if (previous === undefined) delete process.env.CLAUDECODE;
+		else process.env.CLAUDECODE = previous;
 	});
 
 	it('does not follow a process.env write made after the module loaded', () => {

@@ -209,6 +209,7 @@ export {
 export {
 	readProjectEnv,
 	shellDisablesTaskDataFence,
+	shellRunsUnderClaudeCode,
 	type EnvMap
 } from './modules/config/services/project-env.js';
 

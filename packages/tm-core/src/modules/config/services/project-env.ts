@@ -19,6 +19,19 @@ export type EnvMap = Record<string, string | undefined>;
 export const NO_TASK_DATA_FENCE_ENV = 'TASKGRAPH_NO_TASK_DATA_FENCE';
 
 /**
+ * Set to `1` in a subprocess Claude Code spawned, from
+ * https://code.claude.com/docs/en/env-vars (Environment variables).
+ * `CLAUDECODE` on every version (Bash and PowerShell tools, tmux, hooks,
+ * the status line, stdio MCP servers, and IDE integrated terminals).
+ * `CLAUDE_CODE_CHILD_SESSION` from v2.1.172 (Bash, PowerShell, and Monitor
+ * tools, hooks, and the status line).
+ */
+export const CLAUDE_CODE_SHELL_MARKERS = [
+	'CLAUDECODE',
+	'CLAUDE_CODE_CHILD_SESSION'
+] as const;
+
+/**
  * What a project's `.env` may contribute. `allow` is the only keys copied
  * out of the file. `shellOnly` is never copied, even if it is later added
  * to `allow`: only the process environment from before this merge counts.
@@ -66,6 +79,16 @@ export function isTaskDataFenceOptOut(value: string | undefined): boolean {
  */
 export function shellDisablesTaskDataFence(): boolean {
 	return isTaskDataFenceOptOut(shellEnvBeforeProject(NO_TASK_DATA_FENCE_ENV));
+}
+
+/**
+ * Whether this process started under a Claude Code shell: either documented
+ * marker was `1` in the startup environment, not a value written later.
+ */
+export function shellRunsUnderClaudeCode(): boolean {
+	return CLAUDE_CODE_SHELL_MARKERS.some(
+		(name) => shellEnvBeforeProject(name) === '1'
+	);
 }
 
 /** Drop shell-only keys at any depth so `config.json` cannot set them */

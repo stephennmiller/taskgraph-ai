@@ -7,7 +7,8 @@ import { stripVTControlCharacters } from 'node:util';
 import {
 	LOOP_CHILD_ENV,
 	PARALLEL_WORKER_ENV,
-	shellDisablesTaskDataFence
+	shellDisablesTaskDataFence,
+	shellRunsUnderClaudeCode
 } from '@tm/core';
 import chalk from 'chalk';
 import { theme } from '../theme.js';
@@ -59,13 +60,16 @@ export function fencesTaskData(
 /**
  * Whether human `list`, `show` and `list --compact` should drop the
  * `<task-data>` lines. Only the shell value captured before project env
- * loading can do this. A loop or parallel child keeps the fences, because
- * that output is what Claude reads (#929).
+ * loading can do this. A loop or parallel child keeps the fences, and so
+ * does a process Claude Code started (`CLAUDECODE` or
+ * `CLAUDE_CODE_CHILD_SESSION` in the startup environment), because that
+ * output is what Claude reads (#929).
  */
 export function shellOptsOutOfTaskDataFence(): boolean {
 	if (
 		process.env[LOOP_CHILD_ENV] === '1' ||
-		process.env[PARALLEL_WORKER_ENV] === '1'
+		process.env[PARALLEL_WORKER_ENV] === '1' ||
+		shellRunsUnderClaudeCode()
 	) {
 		return false;
 	}
