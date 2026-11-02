@@ -91,7 +91,7 @@ describe('merged plugin commands', () => {
 	});
 
 	it('expand covers one task and all of them', () => {
-		expect(body('expand')).toContain('taskgraph expand --id=<id>');
+		expect(body('expand')).toContain('taskgraph expand <id>');
 		expect(body('expand')).toContain('taskgraph expand --all');
 	});
 
