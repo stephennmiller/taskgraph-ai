@@ -12,6 +12,7 @@ Welcome to the TaskGraph documentation. This documentation site provides compreh
 ## Core Capabilities
 
 - [MCP Tools](/capabilities/mcp) - Model Context Protocol integration
+- [Grok Bot connector](/capabilities/grok-bot) - stdio MCP connector for a Grok Bot
 - [CLI Commands](/capabilities/cli-root-commands) - Command line interface reference
 - [Task Structure](/capabilities/task-structure) - Understanding tasks and subtasks
 

@@ -57,6 +57,7 @@
 						"group": "Technical Capabilities",
 						"pages": [
 							"capabilities/mcp",
+							"capabilities/grok-bot",
 							"capabilities/claude-code",
 							{
 								"group": "CLI Commands",
