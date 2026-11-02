@@ -4,9 +4,7 @@
  *
  *   (add-dependency is now taskgraph depend)
  *
- * It goes to stderr, so a `--json` payload on stdout stays the payload alone.
- * `--json` and `--silent` are for scripts, which already know the command
- * they called, so the line is skipped there.
+ * It goes to stderr, so the command's own stdout stays unchanged.
  */
 
 import type { Command } from 'commander';
@@ -19,14 +17,7 @@ import { theme } from '../ui/theme.js';
  */
 export function noticeOldAlias(command: Command, replacement: string): void {
 	const name = command.name();
-	command.hook('preAction', (thisCommand) => {
-		if (aliasNoticeSuppressed(thisCommand)) return;
+	command.hook('preAction', () => {
 		console.error(theme.muted(`(${name} is now taskgraph ${replacement})`));
 	});
-}
-
-/** A script run (`--json`, `--format json`, `--silent`) gets no notice */
-function aliasNoticeSuppressed(command: Command): boolean {
-	const opts = command.optsWithGlobals();
-	return opts.json === true || opts.silent === true || opts.format === 'json';
 }

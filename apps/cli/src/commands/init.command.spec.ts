@@ -5,7 +5,7 @@
  */
 
 import { UPSTREAM_IMPORT_FLAG } from '@tm/core';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { InitCommand } from './init.command.js';
 
 const help = () =>
@@ -47,4 +47,25 @@ describe('init --help', () => {
 		expect(text).toContain(UPSTREAM_IMPORT_FLAG);
 		expect(text).toContain('--dry-run');
 	});
+
+	it('accepts --skip-install without an unknown-option error', async () => {
+		const stderr: string[] = [];
+		const command = new InitCommand().exitOverride().configureOutput({
+			writeErr: (text) => {
+				stderr.push(text);
+			}
+		});
+		vi.spyOn(console, 'log').mockImplementation(() => {});
+
+		await command.parseAsync(
+			['--yes', '--dry-run', '--skip-install', '-v', '1.2.3', '-a', 'Ada'],
+			{ from: 'user' }
+		);
+
+		expect(stderr.join('')).not.toMatch(/unknown option/i);
+	});
+});
+
+afterEach(() => {
+	vi.restoreAllMocks();
 });

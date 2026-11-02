@@ -1,6 +1,5 @@
 /**
- * @fileoverview The old-name notice: one dim stderr line, skipped for the
- * output modes a script uses (#930).
+ * @fileoverview The old-name notice: one dim line on stderr (#930).
  */
 
 import { Command } from 'commander';
@@ -10,15 +9,10 @@ import { noticeOldAlias } from './alias-notice.js';
 
 const strip = (text: string) => text.replace(/\u001b\[[0-9;]*m/g, '');
 
-function run(args: string[]) {
-	const command = new Command('add-dependency')
-		.exitOverride()
-		.option('--json')
-		.option('--silent')
-		.option('--format <format>')
-		.action(() => {});
+function run() {
+	const command = new Command('add-dependency').exitOverride().action(() => {});
 	noticeOldAlias(command, 'depend');
-	return command.parseAsync(args, { from: 'user' });
+	return command.parseAsync([], { from: 'user' });
 }
 
 describe('noticeOldAlias', () => {
@@ -41,7 +35,7 @@ describe('noticeOldAlias', () => {
 	});
 
 	it('prints one dim line on stderr and nothing on stdout', async () => {
-		await run([]);
+		await run();
 
 		expect(err).toEqual([
 			theme.muted('(add-dependency is now taskgraph depend)')
@@ -50,13 +44,4 @@ describe('noticeOldAlias', () => {
 		expect(err[0].startsWith('\n')).toBe(false);
 		expect(out).toEqual([]);
 	});
-
-	it.each([['--json'], ['--silent'], ['--format', 'json'], ['--format=json']])(
-		'skips the notice under %s',
-		async (...args) => {
-			await run(args);
-
-			expect(err).toEqual([]);
-		}
-	);
 });

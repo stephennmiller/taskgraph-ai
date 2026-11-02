@@ -24,7 +24,7 @@ import {
 	setUpMergeDriver
 } from '@tm/core';
 import chalk from 'chalk';
-import { Command } from 'commander';
+import { Command, Option } from 'commander';
 import { displayPath } from '../completion/install.js';
 import { displayInitBanner } from '../ui/components/brand-banner.component.js';
 import {
@@ -74,9 +74,9 @@ export class InitCommand extends Command {
 	constructor(name?: string) {
 		super(name || 'init');
 
-		// --skip-install, -v/--version and -a/--author used to be listed here.
-		// Nothing read them: InitCommandOptions omits them, and
-		// initializeProject has no version, author or install step (#927).
+		// --skip-install, -v/--version and -a/--author are accepted so old
+		// scripts keep working. Nothing reads them: InitCommandOptions omits
+		// them, and initializeProject has no version, author or install step.
 		this.description('Set up TaskGraph in this project')
 			.optionsGroup('Tasks:')
 			.option('-y, --yes', 'Skip the question and use the defaults')
@@ -103,6 +103,15 @@ export class InitCommand extends Command {
 			.option(
 				UPSTREAM_IMPORT_FLAG,
 				`Import a ${UPSTREAM_NAME} project (${UPSTREAM_DIR}/)`
+			)
+			.addOption(
+				new Option('-v, --version <version>', 'Project version')
+					.default('0.1.0')
+					.hideHelp()
+			)
+			.addOption(new Option('-a, --author <author>', 'Author name').hideHelp())
+			.addOption(
+				new Option('--skip-install', 'Skip installing dependencies').hideHelp()
 			);
 		// The built-in -h is created with no group, so it would sit alone
 		// under "Options:". Making it here puts it in Project.
