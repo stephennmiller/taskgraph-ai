@@ -6,8 +6,9 @@
 import { stripVTControlCharacters } from 'node:util';
 import {
 	LOOP_CHILD_ENV,
-	NO_TASK_DATA_FENCE_ENV,
-	PARALLEL_WORKER_ENV
+	PARALLEL_WORKER_ENV,
+	shellDisablesTaskDataFence,
+	shellRunsUnderClaudeCode
 } from '@tm/core';
 import chalk from 'chalk';
 import { theme } from '../theme.js';
@@ -46,7 +47,9 @@ export function terminalWidth(
 
 /**
  * Whether to fence task text in `<task-data>`: only when stdout isn't a
- * terminal, since agents read a pipe and a person reads a TTY (#876)
+ * terminal, since agents read a pipe and a person reads a TTY (#876).
+ * Does not read `TASKGRAPH_NO_TASK_DATA_FENCE`. `list` and `show` apply
+ * that shell opt-out separately; every other caller keeps this answer.
  */
 export function fencesTaskData(
 	stream: { isTTY?: boolean } = process.stdout
@@ -56,21 +59,21 @@ export function fencesTaskData(
 
 /**
  * Whether human `list`, `show` and `list --compact` should drop the
- * `<task-data>` lines (#929). A project `.env` can't set this: it is never
- * loaded into process.env. A loop or parallel child, or anything Claude Code
- * started (`CLAUDECODE`, `CLAUDE_CODE_CHILD_SESSION`), keeps the fences,
- * because that output is what Claude reads.
+ * `<task-data>` lines. Only the shell value captured before project env
+ * loading can do this. A loop or parallel child keeps the fences, and so
+ * does a process Claude Code started (`CLAUDECODE` or
+ * `CLAUDE_CODE_CHILD_SESSION` in the startup environment), because that
+ * output is what Claude reads (#929).
  */
-export function shellOptsOutOfTaskDataFence(
-	env: NodeJS.ProcessEnv = process.env
-): boolean {
-	const agentReads = [
-		LOOP_CHILD_ENV,
-		PARALLEL_WORKER_ENV,
-		'CLAUDECODE',
-		'CLAUDE_CODE_CHILD_SESSION'
-	].some((name) => env[name] === '1');
-	return !agentReads && env[NO_TASK_DATA_FENCE_ENV] === '1';
+export function shellOptsOutOfTaskDataFence(): boolean {
+	if (
+		process.env[LOOP_CHILD_ENV] === '1' ||
+		process.env[PARALLEL_WORKER_ENV] === '1' ||
+		shellRunsUnderClaudeCode()
+	) {
+		return false;
+	}
+	return shellDisablesTaskDataFence();
 }
 
 /**

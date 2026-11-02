@@ -43,6 +43,8 @@ async function runCommand() {
 	// The project's .env is never loaded into process.env, which the Claude
 	// Code subprocess inherits: tm-core reads the keys it supports per project
 	// (readProjectEnv), so a cloned repo's .env can't set anything else.
+	// TASKGRAPH_NO_TASK_DATA_FENCE is copied from this process.env when
+	// tm-core loads, before that merge. A project file cannot set it.
 
 	// Store the original working directory
 	// This is needed for commands that take relative paths as arguments
