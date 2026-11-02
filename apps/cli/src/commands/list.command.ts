@@ -7,11 +7,11 @@ import {
 	OUTPUT_FORMATS,
 	buildBlocksMap,
 	createTmCore,
-	fenceAsData,
 	filterBlockingTasks,
 	filterByAssignee,
 	filterByStatus,
 	filterReadyTasks,
+	formatTaskData,
 	neutralizeTaskData,
 	parseStatusFilter,
 	sanitizeForTerminal,
@@ -19,7 +19,6 @@ import {
 	type InvalidDependency,
 	type OutputFormat,
 	STATUS_ICONS,
-	TASK_DATA_TAG,
 	type TmCore,
 	type WatchSubscription,
 	withFullSubtaskIds
@@ -40,6 +39,7 @@ import { displayCommandHeader } from '../utils/display-helpers.js';
 import { displayError, printError } from '../utils/error-handler.js';
 import { jsonOption, printJson } from '../utils/json-output.js';
 import { getProjectRoot } from '../utils/project-root.js';
+import { shellOptsOutOfTaskDataFence } from '../ui/layout/helpers.js';
 import { theme } from '../ui/theme.js';
 import * as ui from '../utils/ui.js';
 import {
@@ -552,7 +552,8 @@ export class ListTasksCommand extends Command {
 			console.log(this.emptyList(options));
 			return;
 		}
-		// An agent reads this too: fence the titles as the plain output does
+		// An agent reads this too: fence the titles as the plain output does,
+		// unless the shell opted out (#929). A loop child never opts out.
 		const lines: string[] = [];
 		for (const task of tasks) {
 			const icon = STATUS_ICONS[task.status];
@@ -575,7 +576,7 @@ export class ListTasksCommand extends Command {
 				}
 			}
 		}
-		console.log(fenceAsData(lines.join('\n'), TASK_DATA_TAG));
+		console.log(this.fenceHumanText(lines.join('\n')));
 	}
 
 	/**
@@ -589,15 +590,23 @@ export class ListTasksCommand extends Command {
 			console.log(this.emptyList(options));
 			return;
 		}
-		// An agent reads this: fence the titles as show and next do
+		// An agent reads this: fence the titles as show and next do, unless
+		// the shell opted out (#929). A loop child never opts out.
 		console.log(
-			fenceAsData(
+			this.fenceHumanText(
 				formatPlainTaskList(data.tasks, {
 					withSubtasks: options.withSubtasks
-				}),
-				TASK_DATA_TAG
+				})
 			)
 		);
+	}
+
+	/**
+	 * Fence human list text, or print it neutralized when the shell opted
+	 * out. Either way a title cannot close a `<task-data>` tag.
+	 */
+	private fenceHumanText(text: string): string {
+		return formatTaskData(text, !shellOptsOutOfTaskDataFence());
 	}
 
 	/** What an empty list says: `No ready tasks found`, `Nothing assigned to steve` */

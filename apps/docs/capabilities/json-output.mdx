@@ -66,6 +66,10 @@ Task text in the JSON from `list`, `next`, `show`, `prime`, `archive`, `archive 
 
 When stdout isn't a terminal (a pipe, a file, or an agent's shell) and no `--format` is given, `taskgraph list` prints one plain line per task instead of the summary and table: full titles, no color codes, no box characters. The lines sit between `<task-data>` and `</task-data>`, as `show`, `next`, `graph`, `why` and `next --claim` print task text when stdout isn't a terminal and `list --compact` always does, so an agent can tell the task text from the instructions around it. At a terminal, `show`, `next`, `graph`, `why` and `next --claim` leave those lines out.
 
+Set `TASKGRAPH_NO_TASK_DATA_FENCE=1` in the shell to drop those lines from piped `list`, `show`, and `list --compact`. That is the only output it changes. It is shell-only: a project's `.env` or `config.json` cannot set it, and the value is the one the process started with, not a value loaded from the project. `prime`, `loop` (including `taskgraph` run inside a loop), `next`, `graph`, `why`, `--json`, MCP tools, and prompts keep the task-data tags. `--json` still prints a `<task-data>` or `</task-data>` inside task text as `-task-data`, so the opt-out does not remove that. A title is rewritten the same way when the lines are dropped, so it still cannot close a fence.
+
+The opt-out is ignored inside a Claude Code session (`CLAUDECODE=1` or `CLAUDE_CODE_CHILD_SESSION=1`). Do not export `TASKGRAPH_NO_TASK_DATA_FENCE` anywhere an agent runs `taskgraph`.
+
 ```
 <task-data>
 1  done         high    Set up the database
