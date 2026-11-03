@@ -115,11 +115,17 @@ const definitionOfDone = (config: Record<string, any>): Set<string> =>
 
 /**
  * `loop.bands` and `loop.resumeMaxContextTokens`, which pick each iteration's
- * model, effort and resume; undefined when neither is set
+ * model, effort and resume, and `loop.smokeCommand`, which a run executes
+ * before each done (#949); undefined when none is set
  */
 function loopModelSettings(config: Record<string, any>): unknown {
 	const loop = config?.loop;
-	const settings = [loop?.bands, loop?.resumeMaxContextTokens];
+	// The smoke command only joins the list when set, so approvals saved before it stay valid
+	const settings = [
+		loop?.bands,
+		loop?.resumeMaxContextTokens,
+		...(loop?.smokeCommand === undefined ? [] : [loop.smokeCommand])
+	];
 	return settings.some((v) => v !== undefined) ? settings : undefined;
 }
 
