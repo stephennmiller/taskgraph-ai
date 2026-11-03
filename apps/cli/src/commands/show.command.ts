@@ -72,6 +72,8 @@ export class ShowCommand extends Command {
 	private requestedId?: string;
 	/** The single task shown waits on unfinished dependencies */
 	private blocked = false;
+	/** Commits that name the single task shown (#954) */
+	private commits: Array<{ sha: string; subject: string }> = [];
 
 	constructor(name?: string) {
 		super(name || 'show');
@@ -204,6 +206,7 @@ export class ShowCommand extends Command {
 			this.blocked = (
 				await this.tmCore.tasks.explainBlockers(taskId, { tag: options.tag })
 			).blocked;
+			this.commits = await this.tmCore.tasks.getCommits(taskId);
 		}
 
 		return {
@@ -341,7 +344,8 @@ export class ShowCommand extends Command {
 					result.task,
 					Boolean(result.originalTaskId)
 				),
-				fence: fencesTaskData() && !shellOptsOutOfTaskDataFence()
+				fence: fencesTaskData() && !shellOptsOutOfTaskDataFence(),
+				commits: this.commits
 			})
 		);
 	}

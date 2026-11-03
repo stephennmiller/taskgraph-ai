@@ -46,7 +46,7 @@ export const PRIME_RULES: readonly PrimeRule[] = [
 	},
 	{
 		text: 'Commit with the task ID in the message',
-		command: "git commit -m '<type>: <change> (task <id>)'"
+		command: "git commit -m '<type>: <change> [task <id>]'"
 	}
 ];
 
