@@ -13,7 +13,7 @@ PROCESS:
 5. Write tests alongside implementation.
 6. Run type check (e.g., \`npm run typecheck\`, \`tsc --noEmit\`).
 7. Run tests (e.g., \`npm test\`, \`npm run test\`).
-8. Run the app through its real entry point (the CLI, server or UI the PRD describes) on an input this task should now handle, and check the output. If it is wrong, fix it before going on. If the entry point can't show this task's behavior yet because nothing wires it in, and no pending task does that wiring, add one now (taskgraph add-task --prompt='<wire what into the entry point>') and say so in the progress notes.
+8. Run the app through its real entry point (the CLI, server or UI the PRD describes) on an input this task should now handle, and check the output. If it is wrong, fix it before going on. If the entry point can't show this task's behavior yet because nothing wires it in, and no pending task does that wiring, add one now (taskgraph add-task --priority=high --prompt='<wire what into the entry point>') and say so in the progress notes.
 9. Mark complete: taskgraph set-status --id=<id> --status=done
 10. Update .taskgraph/design.md (create it if missing, keep it under 60 lines) with anything a later task needs to know: modules and what they own, key types and interfaces, conventions, and what is still a stub.
 11. Commit with message: feat(<scope>): <what was implemented>
