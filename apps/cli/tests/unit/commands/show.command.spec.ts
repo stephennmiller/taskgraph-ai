@@ -52,7 +52,8 @@ describe('ShowCommand', () => {
 				}),
 				getChecklist: vi.fn().mockReturnValue(undefined),
 				getPrdSection: vi.fn().mockResolvedValue(undefined),
-				explainBlockers: vi.fn().mockResolvedValue({ blocked: false })
+				explainBlockers: vi.fn().mockResolvedValue({ blocked: false }),
+				getCommits: vi.fn().mockResolvedValue([])
 			} as any,
 			config: {
 				getActiveTag: vi.fn().mockReturnValue('master')
