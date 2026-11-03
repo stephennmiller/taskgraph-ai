@@ -67,6 +67,8 @@ const DEFAULT_RESEARCH_MAX_TURNS = 8;
 // spend most of its tokens exploring the repo. `claudeCode.maxTurns` (or a
 // command's `commandSpecific` entry) overrides it.
 const DEFAULT_MAX_TURNS = 6;
+// Claude Code's message when a call uses up maxTurns before answering
+const MAX_TURNS_ERROR = /maximum number of turns/i;
 // Not claude.cmd: the SDK spawns it without a shell, which Node refuses on
 // Windows (EINVAL), and a shell would expose the prompt arguments to cmd.exe
 const CLAUDE_EXECUTABLE_NAME = /^claude(\.exe)?$/i;
@@ -189,18 +191,20 @@ export function claudeFromPath(
  * @param role - 'main', 'research' or 'fallback'
  * @param settings - Settings from config, used for maxTurns
  * @param projectRoot - Directory file tools are confined to
+ * @param fileTools - False withholds the file tools from main and fallback
  */
 function getRoleRestrictions(
 	role: string | undefined,
 	settings: ClaudeCodeConfigSettings,
-	projectRoot: string | null
+	projectRoot: string | null,
+	fileTools: boolean
 ) {
 	const isResearch = role === 'research';
 	// Without a known project root there is no boundary to enforce, so the
 	// file tools are withheld rather than scoped to wherever the process runs
 	const tools = isResearch
 		? RESEARCH_TOOLS
-		: projectRoot
+		: projectRoot && fileTools
 			? REPO_READ_TOOLS
 			: [];
 
@@ -362,7 +366,12 @@ export class ClaudeCodeProvider extends BaseAIProvider {
 					error: (message: string) => this.log('error', message)
 				},
 				...settings,
-				...getRoleRestrictions(params.role, settings, projectRoot)
+				...getRoleRestrictions(
+					params.role,
+					settings,
+					projectRoot,
+					params.withholdFileTools !== true
+				)
 			};
 			return createClaudeCode({ defaultSettings }) as unknown as ModelFactory;
 		} catch (error: any) {
@@ -387,6 +396,41 @@ export class ClaudeCodeProvider extends BaseAIProvider {
 				this.handleError('Claude Code CLI initialization', enhancedError);
 			}
 			this.handleError('client initialization', error);
+		}
+	}
+
+	async generateText(params: ProviderCallParams) {
+		return this.retryWithoutFileTools(params, (p) => super.generateText(p));
+	}
+
+	async generateObject(params: ProviderCallParams) {
+		return this.retryWithoutFileTools(params, (p) => super.generateObject(p));
+	}
+
+	/**
+	 * A main or fallback call can spend every turn reading files and never
+	 * answer (#936). Retry it once without file tools, so the model answers
+	 * from the prompt, which already carries the project summary.
+	 */
+	private async retryWithoutFileTools<T>(
+		params: ProviderCallParams,
+		call: (params: ProviderCallParams) => Promise<T>
+	): Promise<T> {
+		try {
+			return await call(params);
+		} catch (error: any) {
+			if (
+				params.role === 'research' ||
+				params.withholdFileTools === true ||
+				!MAX_TURNS_ERROR.test(String(error?.message))
+			) {
+				throw error;
+			}
+			this.log(
+				'debug',
+				'Claude Code ran out of turns reading files; retrying without file tools'
+			);
+			return call({ ...params, withholdFileTools: true });
 		}
 	}
 
