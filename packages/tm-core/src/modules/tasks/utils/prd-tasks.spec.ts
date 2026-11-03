@@ -140,6 +140,25 @@ describe('prepareGeneratedTasks', () => {
 		}
 	});
 
+	it('stores the files a task will change as relevantFiles, and no field for none (#952)', () => {
+		const tasks = prepare([
+			raw(1, {
+				files: [
+					{ path: 'src/db.ts', action: 'create' },
+					{ path: 'src/cli.ts', action: 'modify' }
+				]
+			}),
+			raw(2, { files: [] })
+		]);
+
+		expect(tasks[0].relevantFiles).toEqual([
+			{ path: 'src/db.ts', description: '', action: 'create' },
+			{ path: 'src/cli.ts', description: '', action: 'modify' }
+		]);
+		expect(tasks[0]).not.toHaveProperty('files');
+		expect(tasks[1]).not.toHaveProperty('relevantFiles');
+	});
+
 	it('fills in the defaults the model left out', () => {
 		const [task] = prepare([
 			{ ...raw(1), priority: '', status: '', details: undefined } as any
