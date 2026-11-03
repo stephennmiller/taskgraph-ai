@@ -10,6 +10,7 @@ import { TaskRemovalService } from './services/task-removal.service.js';
 import { TagService } from './services/tag.service.js';
 import { TaskAiCommands } from './tasks-ai-commands.js';
 import { TaskEditCommands } from './tasks-edit-commands.js';
+import { TaskStatusCommands } from './tasks-status-commands.js';
 import { TaskDependencyViews } from './tasks-dependency-views.js';
 import {
 	TaskFileGeneratorService,
@@ -28,7 +29,6 @@ import { TASKGRAPH_TASKS_FILE } from '../../common/constants/paths.js';
 import type { Subtask, Task, TaskStatus } from '../../common/types/index.js';
 import { readPrdSection } from '../prd/prd-coverage.js';
 import { getPrdSource } from '../prd/prd-sections.js';
-import { newlyReadyTasks } from './utils/next-task.js';
 import { subtaskInContext } from './utils/subtask-context.js';
 import { normalizeTaskId } from './validation/task-id.js';
 import {
@@ -46,11 +46,9 @@ import {
 } from '../../common/errors/taskgraph-error.js';
 import { parseNoteSince } from './utils/notes.js';
 import { type TaskCommit, findTaskCommits } from './utils/task-commits.js';
-import { runSmokeCheck, smokeCommandFor } from './utils/smoke-gate.js';
 import {
 	applyChecklistChanges,
 	buildChecklist,
-	checkDoneGate,
 	type ChecklistChanges,
 	type TaskChecklist
 } from './utils/acceptance-criteria.js';
@@ -64,7 +62,6 @@ import type {
 } from './services/task-service.js';
 import type {
 	TaskFieldUpdates,
-	UpdateStatusOptions,
 	WatchEvent,
 	WatchOptions,
 	WatchSubscription
@@ -80,6 +77,7 @@ export class TasksDomain {
 	private removalService: TaskRemovalService;
 	private ai: TaskAiCommands;
 	private edits: TaskEditCommands;
+	private statuses: TaskStatusCommands;
 	private views: TaskDependencyViews;
 	private taskFileGenerator!: TaskFileGeneratorService;
 	private projectRoot: string;
@@ -99,6 +97,7 @@ export class TasksDomain {
 		);
 		this.ai = new TaskAiCommands(this.taskService, configManager);
 		this.edits = new TaskEditCommands(this.taskService, configManager);
+		this.statuses = new TaskStatusCommands(this.taskService, configManager);
 		this.views = new TaskDependencyViews(this.taskService, configManager);
 	}
 
@@ -381,80 +380,12 @@ export class TasksDomain {
 		return this.taskService.modifyTask(String(taskId), change, tag);
 	}
 
-	/**
-	 * Update task status.
-	 *
-	 * Moving a task to done is refused while its checklist (its acceptance
-	 * criteria, plus the project's Definition of Done for a top-level task)
-	 * has unchecked items: the error has code CRITERIA_UNCHECKED, and
-	 * `getUncheckedCriteria(error)` lists them. In a loop run with
-	 * `loop.smokeCommand` set, done is also refused while that command fails.
-	 * `force` skips both checks. A parent whose last subtask finishes stays in
-	 * progress until its own checklist is clear, even with `force`.
-	 */
-	async updateStatus(
-		taskId: string,
-		status: TaskStatus,
-		tag?: string,
-		options: { force?: boolean } = {}
-	) {
-		await this.smokeGate([taskId], status, options.force);
-		return this.taskService.updateTaskStatus(
-			normalizeTaskId(taskId),
-			status,
-			tag,
-			this.statusWriteOptions(options.force)
-		);
-	}
+	// ===== Status changes and their done gates (TaskStatusCommands) =====
 
-	/**
-	 * `updateStatus` for several ids in one write: a missing id or a refused
-	 * done leaves every id unchanged. `ready`: what a done unblocked, in next order
-	 */
-	async updateStatuses(
-		taskIds: string[],
-		status: TaskStatus,
-		tag?: string,
-		options: { force?: boolean } = {}
-	) {
-		await this.smokeGate(taskIds, status, options.force);
-		const view = () => this.taskService.getDependencyView(tag);
-		const before = status === 'done' ? await view() : undefined;
-		const updated = await this.taskService.updateTaskStatuses(
-			taskIds.map(normalizeTaskId),
-			status,
-			tag,
-			this.statusWriteOptions(options.force)
-		);
-		const ready = before ? newlyReadyTasks(before, await view()) : [];
-		return { updated, ready };
-	}
-
-	/**
-	 * In a loop run, moving a task to done first runs `loop.smokeCommand`
-	 * (#949); `force` skips it like the checklist gate
-	 */
-	private async smokeGate(
-		taskIds: string[],
-		status: TaskStatus,
-		force?: boolean
-	): Promise<void> {
-		if (status !== 'done' || force) return;
-		const loop = (this.configManager.getConfig() as { loop?: unknown }).loop;
-		const command = smokeCommandFor(loop);
-		if (command) await runSmokeCheck(command, this.projectRoot, taskIds);
-	}
-
-	/** The done gate shared by updateStatus and updateStatuses */
-	private statusWriteOptions(force?: boolean): UpdateStatusOptions {
-		const definitionOfDone = this.configManager.getDefinitionOfDone();
-		return {
-			guardDone: (task, id, auto) =>
-				force && !auto
-					? undefined
-					: checkDoneGate(task, id, definitionOfDone, id.includes('.'))
-		};
-	}
+	updateStatus: TaskStatusCommands['updateStatus'] = (...a) =>
+		this.statuses.updateStatus(...a);
+	updateStatuses: TaskStatusCommands['updateStatuses'] = (...a) =>
+		this.statuses.updateStatuses(...a);
 
 	// ========== Acceptance Criteria ==========
 
