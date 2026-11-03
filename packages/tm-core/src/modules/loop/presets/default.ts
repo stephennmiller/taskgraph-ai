@@ -20,7 +20,7 @@ PROCESS:
 8. Run the app through its real entry point (the CLI, server or UI the PRD describes) on an input this task should now handle, and check the output. If it is wrong, fix it before going on. If the entry point can't show this task's behavior yet because nothing wires it in, and no pending task does that wiring, add one now (taskgraph add-task --priority=high -t '<wire what into the entry point>' -d '<what to wire and why>') and say so in the progress notes.
 9. Mark complete: taskgraph set-status --id=<id> --status=done
 10. Update .taskgraph/design.md (create it if missing, keep it under 60 lines) with anything a later task needs to know: modules and what they own, key types and interfaces, conventions, and what is still a stub.
-11. Commit with message: feat(<scope>): <what was implemented>
+11. Commit with message: feat(<scope>): <what was implemented> [task <id>]. The tag links the commit to the task in taskgraph show.
 12. Append super-concise notes to progress file: task ID, what was done, any learnings.
 13. Go back to step 2 for the next task. You already know the code, so don't re-read what you just wrote.
 

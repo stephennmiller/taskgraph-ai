@@ -132,6 +132,24 @@ describe('formatTaskDetail', () => {
 		]);
 	});
 
+	it('lists the commits that name the task, newest first (#954)', () => {
+		const output = lines(
+			formatTaskDetail(signIn(), {
+				width: 80,
+				commits: [
+					{ sha: 'a1b2c3d', subject: 'fix(auth): expire tokens [task 3]' },
+					{ sha: 'e4f5a6b', subject: 'feat(auth): sessions [task 3]' }
+				]
+			})
+		);
+
+		const at = output.indexOf('Commits');
+		expect(output.slice(at + 1, at + 3)).toEqual([
+			'  a1b2c3d  fix(auth): expire tokens [task 3]',
+			'  e4f5a6b  feat(auth): sessions [task 3]'
+		]);
+	});
+
 	it('prints no source line for a task without one', () => {
 		expect(plain(formatTaskDetail(signIn(), { width: 80 }))).not.toContain(
 			'From '

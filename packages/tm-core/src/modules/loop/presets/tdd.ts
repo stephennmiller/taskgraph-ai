@@ -33,7 +33,7 @@ RED: Write a test for the behavior the subtask describes. Run the tests. The new
 
 GREEN: Write the smallest change that makes the test pass. Run the whole test suite. Every test must pass. Do not change the test to make it pass.
 
-COMMIT: Run the type check if the project has one. Commit the test and the code together, with a message like: feat(<scope>): <what the subtask added> (task <id>.<subtask id>). Mark the subtask done: taskgraph set-status --id=<id>.<subtask id> --status=done
+COMMIT: Run the type check if the project has one. Commit the test and the code together, with a message like: feat(<scope>): <what the subtask added> [task <id>.<subtask id>]. Mark the subtask done: taskgraph set-status --id=<id>.<subtask id> --status=done
 
 ### Finish
 

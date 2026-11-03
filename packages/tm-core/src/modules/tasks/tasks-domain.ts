@@ -45,6 +45,7 @@ import {
 	TaskGraphError
 } from '../../common/errors/taskgraph-error.js';
 import { parseNoteSince } from './utils/notes.js';
+import { type TaskCommit, findTaskCommits } from './utils/task-commits.js';
 import { runSmokeCheck, smokeCommandFor } from './utils/smoke-gate.js';
 import {
 	applyChecklistChanges,
@@ -467,6 +468,14 @@ export class TasksDomain {
 			this.configManager.getDefinitionOfDone(),
 			isSubtask
 		);
+	}
+
+	/**
+	 * The commits whose message names this task (`[task <id>]`), newest
+	 * first; empty outside git (#954)
+	 */
+	getCommits(taskId: string): Promise<TaskCommit[]> {
+		return findTaskCommits(this.projectRoot, normalizeTaskId(taskId));
 	}
 
 	/**

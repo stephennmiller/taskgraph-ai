@@ -98,6 +98,8 @@ export interface TaskDetailOptions {
 	rawText?: boolean;
 	/** Fence the task text in `<task-data>` for an agent; default true (#876) */
 	fence?: boolean;
+	/** Commits that name this task (`tasks.getCommits`), newest first */
+	commits?: Array<{ sha: string; subject: string }>;
 }
 
 /** `1`, `1 and 3`, `1, 3 and 4` */
@@ -405,6 +407,16 @@ export function formatTaskDetail(
 	for (const [title, text] of textSections) {
 		if (text?.trim())
 			sections.push([heading(title), ...body(text, width, options.rawText)]);
+	}
+
+	if (options.commits?.length) {
+		sections.push([
+			heading('Commits'),
+			...options.commits.map(
+				({ sha, subject }) =>
+					`${INDENT}${theme.muted(sha)}  ${fit(terminalSafe(subject), width - INDENT.length - sha.length - 2)}`
+			)
+		]);
 	}
 
 	if (task.relevantFiles?.length) {
