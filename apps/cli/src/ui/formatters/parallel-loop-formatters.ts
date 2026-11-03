@@ -192,5 +192,13 @@ export function formatParallelSummary(
 			: null;
 	}
 
-	return [lead, ...rows, ...(next ? [next] : [])].join('\n');
+	const held = result.heldBackIds.length
+		? theme.muted(
+				`Held back ${result.heldBackIds.join(', ')}: ${result.heldBackIds.length === 1 ? 'it edits' : 'they edit'} files a task above edits; the next run takes ${result.heldBackIds.length === 1 ? 'it' : 'them'}`
+			)
+		: null;
+
+	return [lead, ...rows, ...(held ? [held] : []), ...(next ? [next] : [])].join(
+		'\n'
+	);
 }

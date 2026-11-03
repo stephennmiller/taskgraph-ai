@@ -30,6 +30,7 @@ const result = (
 	tasks,
 	readyCount: tasks.length,
 	skippedIds: [],
+	heldBackIds: [],
 	aborted: false,
 	...fields
 });
@@ -114,6 +115,19 @@ describe('formatParallelSummary', () => {
 			'  1  taskgraph/task-1 · 2 commits',
 			'  2  no changes; worktree removed',
 			'  3  failed: exit 1 · .taskgraph/worktrees/task-3.log',
+			'Next: review with git log -p HEAD..taskgraph/task-1'
+		]);
+	});
+
+	it('names the tasks held back because they edit the same files (#952)', () => {
+		const out = summary(
+			result([task('1', { commits: 1, kept: true, finished: true })], {
+				heldBackIds: ['2', '4']
+			})
+		);
+
+		expect(out.split('\n').slice(2)).toEqual([
+			'Held back 2, 4: they edit files a task above edits; the next run takes them',
 			'Next: review with git log -p HEAD..taskgraph/task-1'
 		]);
 	});

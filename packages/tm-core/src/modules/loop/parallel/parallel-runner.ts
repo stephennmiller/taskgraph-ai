@@ -31,7 +31,9 @@ import { resolveClaimant } from '../../tasks/utils/claim.js';
 import { ContainerWorkers, preflightContainer } from './container-workers.js';
 import {
 	buildParallelPrompt,
+	freeOfOverlap,
 	parseParallelCount,
+	plannedFilesById,
 	taskBranchName,
 	taskLogPath,
 	taskWorktreePath,
@@ -170,6 +172,9 @@ export class ParallelLoopRunner {
 			this.logger.warn(`Skipping task "${id}": its ID can't be a branch name`);
 		}
 		const among = new Set(wave.filter(isSafeTaskId));
+		const files = plannedFilesById((await this.tasks.list({ tag })).tasks);
+		// Files the running tasks edit
+		const busy = new Set<string>();
 
 		const running: Running[] = [];
 		let aborted = signal?.aborted ?? false;
@@ -204,10 +209,17 @@ export class ParallelLoopRunner {
 		try {
 			let ignored = false;
 			while (running.length < limit && !aborted && among.size > 0) {
-				const claim = await this.tasks.claimNext({ tag, claimant, among });
+				const free = freeOfOverlap(among, files, busy);
+				if (!free.size) break;
+				const claim = await this.tasks.claimNext({
+					tag,
+					claimant,
+					among: free
+				});
 				if (!claim) break;
 				const id = String(claim.task.id);
 				among.delete(id);
+				for (const file of files.get(id) ?? []) busy.add(file);
 
 				const entry: Running = {
 					task: {
@@ -318,6 +330,7 @@ export class ParallelLoopRunner {
 		}
 
 		await this.settle(running, git, workers, base, tag, claimant, aborted);
+		const free = freeOfOverlap(among, files, busy);
 		const costs = running.flatMap((r) =>
 			r.task.costUsd === undefined ? [] : [r.task.costUsd]
 		);
@@ -325,6 +338,7 @@ export class ParallelLoopRunner {
 			tasks: running.map((r) => r.task),
 			readyCount: wave.length,
 			skippedIds,
+			heldBackIds: [...among].filter((id) => !free.has(id)),
 			aborted,
 			...(costs.length
 				? { totalCostUsd: costs.reduce((a, b) => a + b, 0) }

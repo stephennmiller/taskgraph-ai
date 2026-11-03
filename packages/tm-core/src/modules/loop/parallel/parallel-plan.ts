@@ -1,11 +1,13 @@
 /**
  * @fileoverview Pure rules for `loop --parallel`: which flags it takes, which
  * task IDs are safe to put in a branch or path, where each task's worktree
- * and log go, and the prompt each Claude Code process gets.
+ * and log go, which tasks may run side by side, and the prompt each Claude
+ * Code process gets.
  */
 
 import path from 'node:path';
 import { TASKGRAPH_WORKTREES_DIR } from '../../../common/constants/paths.js';
+import type { RelevantFile } from '../../../common/types/index.js';
 import { TASK_DATA_RULE } from '../../../common/utils/prompt-tag.js';
 import { isSafeTaskId } from '../../../common/utils/safe-task-id.js';
 import { LoopError } from '../loop-task.js';
@@ -157,4 +159,44 @@ export function buildParallelPrompt(options: {
 		'',
 		TASK_DATA_RULE
 	].join('\n');
+}
+
+interface FilesOf {
+	relevantFiles?: RelevantFile[];
+	subtasks?: { relevantFiles?: RelevantFile[] }[];
+}
+
+/**
+ * The files a task says it creates or modifies (its own and its subtasks'),
+ * normalized so `./src/a.ts` and `src/a.ts` match. A file it only reads
+ * doesn't count: two tasks may read the same file at once.
+ */
+export function plannedFiles(task: FilesOf): string[] {
+	return [task, ...(task.subtasks ?? [])].flatMap((t) =>
+		(t.relevantFiles ?? [])
+			.filter((f) => f.action !== 'reference' && f.path)
+			.map((f) => path.posix.normalize(f.path.replaceAll('\\', '/')))
+	);
+}
+
+/** Each task's planned files, by task ID */
+export function plannedFilesById(
+	tasks: (FilesOf & { id: string | number })[]
+): Map<string, string[]> {
+	return new Map(tasks.map((t) => [String(t.id), plannedFiles(t)]));
+}
+
+/**
+ * The IDs in `ids` whose planned files don't touch `busy`, the files of the
+ * tasks already running: `--parallel` never runs two tasks that would edit
+ * the same file. A task with no planned files is always free.
+ */
+export function freeOfOverlap(
+	ids: Iterable<string>,
+	files: ReadonlyMap<string, string[]>,
+	busy: ReadonlySet<string>
+): Set<string> {
+	return new Set(
+		[...ids].filter((id) => !(files.get(id) ?? []).some((f) => busy.has(f)))
+	);
 }

@@ -58,6 +58,7 @@ describe('ParallelLoopRunner', () => {
 			recursive: true
 		});
 		const tasks = {
+			list: async () => ({ tasks: [] }),
 			getDependencyTree: async () => ({ waves: { waves: [['1']] } }),
 			claimNext: async () => ({ task: { id: '1', title: 'Write the lock' } }),
 			get: async () => ({ task: { status: 'pending', metadata: {} } }),
@@ -101,6 +102,7 @@ describe('ParallelLoopRunner', () => {
 			recursive: true
 		});
 		const tasks = {
+			list: async () => ({ tasks: [] }),
 			getDependencyTree: async () => ({ waves: { waves: [['1']] } }),
 			claimNext: async () => ({ task: { id: '1', title: 'Write the lock' } }),
 			get: async () => ({
@@ -138,6 +140,7 @@ describe('ParallelLoopRunner', () => {
 		});
 		const ids = ['1', '2'];
 		const tasks = {
+			list: async () => ({ tasks: [] }),
 			getDependencyTree: async () => ({ waves: { waves: [ids] } }),
 			claimNext: async () => {
 				const id = ids.shift();
@@ -177,5 +180,52 @@ describe('ParallelLoopRunner', () => {
 			['2', undefined, true]
 		]);
 		expect(result).toMatchObject({ totalCostUsd: 0.4, costPartial: true });
+	});
+	it('never runs two tasks that edit the same file at once (#952)', async () => {
+		root = fs.mkdtempSync(path.join(os.tmpdir(), 'tg-parallel-'));
+		fs.mkdirSync(path.join(root, '.taskgraph', 'worktrees'), {
+			recursive: true
+		});
+		const edits = (p: string) => ({
+			path: p,
+			description: '',
+			action: 'modify'
+		});
+		const tasks = {
+			list: async () => ({
+				tasks: [
+					{ id: 1, relevantFiles: [edits('src/db.ts')] },
+					{ id: 2, relevantFiles: [edits('./src/db.ts')] },
+					{ id: 3, relevantFiles: [edits('src/cli.ts')] }
+				]
+			}),
+			getDependencyTree: async () => ({ waves: { waves: [['1', '2', '3']] } }),
+			// The real claim takes the first ready task in `among`
+			claimNext: async ({ among }: { among: Set<string> }) => {
+				const [id] = among;
+				return id ? { task: { id, title: `Task ${id}` } } : null;
+			},
+			get: async () => ({ task: { status: 'pending', metadata: {} } }),
+			updateStatus: async () => {}
+		};
+		const spawner = vi.fn(() => {
+			const child = new EventEmitter() as EventEmitter & {
+				pid: number;
+				kill: () => void;
+			};
+			child.pid = 4242;
+			child.kill = () => {};
+			setImmediate(() => child.emit('close', 0, null));
+			return child;
+		});
+
+		const result = await new ParallelLoopRunner(
+			root,
+			tasks as never,
+			() => 'master'
+		).run({ parallel: 3, spawner: spawner as never });
+
+		expect(result.tasks.map((t) => t.id)).toEqual(['1', '3']);
+		expect(result.heldBackIds).toEqual(['2']);
 	});
 });
