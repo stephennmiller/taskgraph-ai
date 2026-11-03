@@ -61,6 +61,7 @@ export const HELP_GROUPS: readonly HelpGroup[] = [
 		title: 'Setup',
 		commands: [
 			{ name: 'init', desc: 'Set up TaskGraph in this project' },
+			{ name: 'go <prd>', desc: 'Plan a PRD into tasks and build them' },
 			{ name: 'doctor', desc: 'Check that TaskGraph and Claude Code work' },
 			{ name: 'upgrade', desc: 'Install the latest TaskGraph' },
 			{ name: 'models', desc: 'View or change the AI models' },

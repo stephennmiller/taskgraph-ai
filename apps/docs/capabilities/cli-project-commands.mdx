@@ -36,6 +36,25 @@ Inside a Git repository, `init` also sets up the [tasks.json merge driver](/capa
 
 Without a terminal (scripts, CI, agents), `init` asks nothing: it stops with an error and exits 1 unless `--yes`, `--git-tasks`/`--no-git-tasks` (or `--name` with `--description`) answers the question. Ctrl-C at the question exits 130 and changes nothing.
 
+## From a PRD to built tasks
+
+```bash
+# Set up the project if needed, plan the PRD into tasks, then run loop
+taskgraph go docs/prd.md
+
+# Without a terminal: let loop turn Claude's permission prompts off
+taskgraph go docs/prd.md --trust
+
+# Or run loop in Docker sandbox mode
+taskgraph go docs/prd.md --sandbox
+```
+
+`go` runs `init --yes` when the folder isn't a TaskGraph project yet, then
+`parse-prd <file> --append` (new sections become tasks; tasks you already have
+stay), then [`loop`](/capabilities/loop) with the default preset. Each step
+prints what it always prints. The first step that fails stops the rest, and
+`go` exits with its code.
+
 ## Check the Setup
 
 ```bash

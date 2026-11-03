@@ -42,6 +42,7 @@ import { GraphCommand } from './commands/graph.command.js';
 import { InitCommand } from './commands/init.command.js';
 // Import all commands
 import { ListTasksCommand } from './commands/list.command.js';
+import { GoCommand } from './commands/go.command.js';
 import { GithubCommand } from './commands/github/github.command.js';
 import { LoopCommand } from './commands/loop.command.js';
 import { MergeDriverCommand } from './commands/merge-driver.command.js';
@@ -278,6 +279,12 @@ export class CommandRegistry {
 			description:
 				'Run Claude Code in a loop over the ready tasks, committing after each',
 			commandClass: LoopCommand as any,
+			category: 'development'
+		},
+		{
+			name: 'go',
+			description: 'Plan a PRD into tasks and build them with Claude Code',
+			commandClass: GoCommand as any,
 			category: 'development'
 		},
 		{
