@@ -29,13 +29,13 @@ taskgraph-ai/
 ├── .claude-plugin/
 │   └── marketplace.json        # Marketplace manifest (repo root)
 └── packages/claude-code-plugin/
-    ├── commands/               # 29 slash commands
+    ├── commands/               # 16 slash commands
     └── agents/                 # 2 agents
 ```
 
 ### Slash commands
 
-The plugin provides 29 slash commands, invoked as `/taskgraph:<name>`. Each is named after the `taskgraph` CLI command it runs (`/taskgraph:next` runs `taskgraph next`), except `to-done`, which checks a task's acceptance criteria against your changes before closing it, and `project-status`. `/taskgraph:help` lists them. For example:
+The plugin provides 16 slash commands, invoked as `/taskgraph:<name>`: the daily workflow and planning. Each is named after the `taskgraph` CLI command it runs (`/taskgraph:next` runs `taskgraph next`), except `to-done`, which checks a task's acceptance criteria against your changes before closing it. The rest of the CLI (dependency editing, subtask removal, models, reports) has no slash command; Claude runs those `taskgraph` commands directly. `/taskgraph:help` lists both. For example:
 
 ```txt
 /taskgraph:parse-prd .taskgraph/docs/prd.md
