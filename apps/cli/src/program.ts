@@ -46,7 +46,9 @@ const RUNS_WITHOUT_PROJECT = new Set([
 	'merge-driver',
 	'doctor',
 	// Installs the CLI itself; it doesn't read a project's tasks
-	'upgrade'
+	'upgrade',
+	// Runs init itself when the folder isn't a project yet
+	'go'
 ]);
 
 /**
