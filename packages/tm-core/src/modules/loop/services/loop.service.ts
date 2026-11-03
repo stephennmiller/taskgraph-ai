@@ -247,7 +247,20 @@ export class LoopService {
 				);
 			}
 			if (iteration.status === 'blocked') {
-				return this.finalize(config, iterations, tasksCompleted, 'blocked');
+				// A task waiting on unfinished work doesn't block the rest (#938):
+				// once Claude has rewired the tasks, keep going while one is ready
+				const ready =
+					progress.changed || committed
+						? await this.readyTask(config)
+						: undefined;
+				if (!ready) {
+					return this.finalize(config, iterations, tasksCompleted, 'blocked');
+				}
+				this.reportError(
+					config.callbacks,
+					`Blocked: ${iteration.message}. Task ${ready} is ready, so continuing.`,
+					'warning'
+				);
 			}
 			consecutiveErrors =
 				iteration.status === 'error' ? consecutiveErrors + 1 : 0;

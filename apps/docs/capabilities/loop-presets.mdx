@@ -33,6 +33,8 @@ taskgraph loop -n 10 --prompt default
 
 **Completion criteria:** All pending tasks are complete.
 
+**When a task needs unfinished work:** the agent makes it depend on that task (`taskgraph depend`), notes why, commits and ends the iteration, so the next one picks other work. It ends with `<loop-blocked>` only when no task can proceed, such as missing credentials. Even then, if the iteration changed a task or committed, the loop warns and keeps going while `taskgraph next` finds a task.
+
 ## tdd
 
 Works through the backlog like `default`, but builds each task test-first. This preset replaces the `taskgraph autopilot` command and its `autopilot_*` MCP tools.
