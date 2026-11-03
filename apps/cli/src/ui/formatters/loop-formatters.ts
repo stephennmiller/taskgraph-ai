@@ -170,7 +170,8 @@ export function formatLoopSummary(
 			formatLoopSpend({
 				costUsd: result.totalCostUsd,
 				costPartial: result.costPartial,
-				turns: result.totalTurns
+				turns: result.totalTurns,
+				durationMs: result.totalDurationMs
 			}),
 		width
 	);

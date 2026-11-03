@@ -95,6 +95,8 @@ describe('LoopService cost and caps', () => {
 				turns: 12
 			});
 			expect(result).toMatchObject({ totalCostUsd: 0.4213, totalTurns: 12 });
+			expect(result.totalDurationMs).toBe(result.iterations[0].duration);
+			expect(result.totalDurationMs).toEqual(expect.any(Number));
 			// Quiet mode prints the reply, not the JSON events
 			if (!verbose) expect(onOutput).toHaveBeenCalledWith('Did one task');
 		}

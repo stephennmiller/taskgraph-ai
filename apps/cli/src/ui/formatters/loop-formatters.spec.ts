@@ -224,6 +224,7 @@ describe('formatLoopSummary', () => {
 	it('is one line that leads with the outcome and carries the spend', () => {
 		const lines = [
 			summary({ totalCostUsd: 1.42, totalTurns: 61 }),
+			summary({ totalCostUsd: 1.5, totalTurns: 9, totalDurationMs: 2_820_000 }),
 			summary({ finalStatus: 'max_iterations', tasksCompleted: 1 }),
 			summary({
 				finalStatus: 'budget_reached',
@@ -235,6 +236,7 @@ describe('formatLoopSummary', () => {
 		];
 		expect(lines).toEqual([
 			'✓ All tasks complete · 3 tasks completed in 4 iterations · $1.42 · 61 turns',
+			'✓ All tasks complete · 3 tasks completed in 4 iterations · $1.50 · 9 turns · 47m',
 			'Iteration limit reached · 1 task completed in 4 iterations',
 			'--max-budget-usd reached · 3 tasks completed in 1 iteration · at least $5.00',
 			'✗ Blocked · 0 tasks completed in 4 iterations'
