@@ -10,13 +10,13 @@ Not all of the setup steps are required but they are recommended in order to ens
 </Tip>
 
 ## Expand Tasks
-Used to add detail to tasks and create subtasks. We recommend expanding all tasks using the MCP request below:
+`parse-prd` sizes each task so one agent session can finish it, so you usually don't need subtasks. Expand a task only when it turns out too big:
 ```
-Expand all tasks into subtasks.
+Expand task 4 into subtasks.
 ```
 The agent will execute
 ```bash
-taskgraph expand --all
+taskgraph expand 4
 ```
 ## List/Show Tasks
 
