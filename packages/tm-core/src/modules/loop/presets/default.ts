@@ -10,15 +10,18 @@ export const DEFAULT_PRESET = `SETUP: If taskgraph command not found, run: npm i
 TASK: Implement ONE task/subtask from the TaskGraph backlog.
 
 PROCESS:
-1. Run taskgraph next to get the next available task/subtask.
-2. Read task details with taskgraph show <id>. Routes, field names and formats must match the PRD section it prints exactly.
-3. Implement following codebase patterns.
-4. Write tests alongside implementation.
-5. Run type check (e.g., \`npm run typecheck\`, \`tsc --noEmit\`).
-6. Run tests (e.g., \`npm test\`, \`npm run test\`).
-7. Mark complete: taskgraph set-status --id=<id> --status=done
-8. Commit with message: feat(<scope>): <what was implemented>
-9. Append super-concise notes to progress file: task ID, what was done, any learnings.
+1. Read .taskgraph/design.md if it exists: the project's layout, key types and interfaces, and how the entry point reaches each part. Follow it.
+2. Run taskgraph next to get the next available task/subtask.
+3. Read task details with taskgraph show <id>. Routes, field names and formats must match the PRD section it prints exactly.
+4. Implement following codebase patterns.
+5. Write tests alongside implementation.
+6. Run type check (e.g., \`npm run typecheck\`, \`tsc --noEmit\`).
+7. Run tests (e.g., \`npm test\`, \`npm run test\`).
+8. Run the app through its real entry point (the CLI, server or UI the PRD describes) on an input this task should now handle, and check the output. If it is wrong, fix it before going on. If the entry point can't show this task's behavior yet, say so in the progress notes.
+9. Mark complete: taskgraph set-status --id=<id> --status=done
+10. Update .taskgraph/design.md (create it if missing, keep it under 60 lines) with anything a later task needs to know: modules and what they own, key types and interfaces, conventions, and what is still a stub.
+11. Commit with message: feat(<scope>): <what was implemented>
+12. Append super-concise notes to progress file: task ID, what was done, any learnings.
 
 IMPORTANT:
 - Complete ONLY ONE task per iteration.
