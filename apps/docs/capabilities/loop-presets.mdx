@@ -28,7 +28,7 @@ taskgraph loop -n 10 --prompt default
 2. Runs `taskgraph next` to get the highest priority available task
 3. Reads task details with `taskgraph show <id>`
 4. Implements the task with the smallest possible change
-5. Runs tests and type checks, then runs the app through its real entry point (the CLI, server or UI) on an input the task should handle
+5. Runs tests and type checks, then runs the app through its real entry point (the CLI, server or UI) on an input the task should handle. If the entry point can't reach the task's code yet and no task wires it in, it adds that task
 6. Marks the task complete with `taskgraph set-status --id=<id> --status=done`
 7. Updates `.taskgraph/design.md` with what later tasks need to know, so each fresh session starts from the design instead of rediscovering it
 8. Commits work with a descriptive message
