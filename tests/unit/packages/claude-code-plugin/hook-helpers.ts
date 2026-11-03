@@ -21,6 +21,7 @@ export const config = JSON.parse(
 export const sessionStart = path.join(pluginDir, 'hooks/session-start.sh');
 export const stop = path.join(pluginDir, 'hooks/stop.sh');
 export const promptSubmit = path.join(pluginDir, 'hooks/prompt-submit.sh');
+export const todoWrite = path.join(pluginDir, 'hooks/todo-write.sh');
 
 const tempDirs: string[] = [];
 export const tempDir = (prefix: string) => {

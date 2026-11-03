@@ -47,6 +47,7 @@ import { LoopCommand } from './commands/loop.command.js';
 import { MergeDriverCommand } from './commands/merge-driver.command.js';
 import { MoveCommand } from './commands/move.command.js';
 import { NextCommand } from './commands/next.command.js';
+import { LogTodosCommand } from './commands/log-todos.command.js';
 import { NoteCommand } from './commands/note.command.js';
 import { PrimeCommand } from './commands/prime.command.js';
 import { SetStatusCommand } from './commands/set-status.command.js';
@@ -339,6 +340,13 @@ export class CommandRegistry {
 			description: 'Set up Tab completion for bash, zsh or fish',
 			commandClass: CompletionCommand as any,
 			category: 'utility'
+		},
+		{
+			name: 'log-todos',
+			description: "Log Claude Code's finished todo list (the plugin runs it)",
+			commandClass: LogTodosCommand as any,
+			category: 'utility',
+			hidden: true
 		},
 		{
 			name: 'merge-driver',

@@ -28,7 +28,7 @@ class NoteTooLargeError extends Error {}
  * MAX_NOTE_BYTES so a large file or an endless stream (`/dev/zero`, a
  * forgotten `tail -f`) can't fill memory before tm-core refuses it.
  */
-async function readNoteSource(file: string): Promise<string> {
+export async function readNoteSource(file: string): Promise<string> {
 	const stream =
 		file === '-'
 			? process.stdin

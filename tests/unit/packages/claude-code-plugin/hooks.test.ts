@@ -39,12 +39,14 @@ import {
 afterAll(removeTempDirs);
 
 describe('plugin hooks.json', () => {
-	it('registers a SessionStart hook for every session source, a UserPromptSubmit hook and a Stop hook', () => {
+	it('registers a SessionStart hook for every session source, a UserPromptSubmit hook, a TodoWrite hook and a Stop hook', () => {
 		expect(Object.keys(config.hooks)).toEqual([
 			'SessionStart',
 			'UserPromptSubmit',
+			'PostToolUse',
 			'Stop'
 		]);
+		expect(config.hooks.PostToolUse[0].matcher).toBe('TodoWrite');
 		// No matcher: startup, resume, clear and compact all re-prime. That
 		// covers compaction: a PreCompact hook's output never reaches Claude
 		expect(config.hooks.SessionStart[0].matcher).toBeUndefined();
@@ -74,6 +76,9 @@ describe('plugin hooks.json', () => {
 		);
 		expect(config.hooks.UserPromptSubmit[0].hooks[0].command).toBe(
 			'sh "${CLAUDE_PLUGIN_ROOT}/hooks/prompt-submit.sh"'
+		);
+		expect(config.hooks.PostToolUse[0].hooks[0].command).toBe(
+			'sh "${CLAUDE_PLUGIN_ROOT}/hooks/todo-write.sh"'
 		);
 	});
 
