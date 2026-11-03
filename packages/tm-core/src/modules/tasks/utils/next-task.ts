@@ -25,7 +25,8 @@ export interface SelectNextTaskOptions {
 /**
  * Prefers an eligible subtask of an in-progress task (its own and its
  * parent's dependencies satisfied), then the best
- * top-level task: priority, then how much work it unblocks (in top-level
+ * top-level task: in-progress before pending when it has no subtasks (so a
+ * run that stopped mid-task picks it up again), then priority, then how much work it unblocks (in top-level
  * tasks; between subtasks, then how much of their own task), then fewest
  * dependencies, then lowest id.
  * @returns The next item, or null when nothing is eligible
@@ -131,8 +132,16 @@ export function rankNextTasks(
 		return deps.every((depId) => satisfied(String(task.id), depId));
 	});
 
-	// Sort by priority → blocked count → dependency count → task ID
+	// Sort in-progress first (a run that stopped mid-task resumes it, #951)
+	// → priority → blocked count → dependency count → task ID. A task with
+	// subtasks is worked through them, which already come first.
+	const started = (task: Task) =>
+		(task.status || '').toLowerCase() === 'in-progress' &&
+		!task.subtasks?.length
+			? 1
+			: 0;
 	eligibleTasks.sort((a, b) => {
+		if (started(a) !== started(b)) return started(b) - started(a);
 		const pa = priorityValues[a.priority as keyof typeof priorityValues] ?? 2;
 		const pb = priorityValues[b.priority as keyof typeof priorityValues] ?? 2;
 		if (pb !== pa) return pb - pa;
