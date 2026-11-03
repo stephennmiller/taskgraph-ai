@@ -209,6 +209,7 @@ export class LoopService {
 				statuses && after
 					? statusProgress(statuses, after)
 					: { finished: 0, changed: true };
+			const statusesMoved = !!statuses && !!after && progress.changed;
 			statuses = after;
 			tasksCompleted += progress.finished;
 			// A task can take several iterations; a new commit is work on it
@@ -262,8 +263,11 @@ export class LoopService {
 					'warning'
 				);
 			}
+			// A session that timed out or crashed after finishing work isn't a broken setup
 			consecutiveErrors =
-				iteration.status === 'error' ? consecutiveErrors + 1 : 0;
+				iteration.status === 'error' && !statusesMoved && !committed
+					? consecutiveErrors + 1
+					: 0;
 			const missing =
 				iteration.message === CLAUDE_MISSING ||
 				iteration.message === DOCKER_MISSING;

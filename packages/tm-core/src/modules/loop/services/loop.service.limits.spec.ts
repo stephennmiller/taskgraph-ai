@@ -106,6 +106,19 @@ describe('LoopService limits', () => {
 		expect(result.errorMessage).toBe('Exit code 1');
 	});
 
+	it('keeps going when each failed session committed work (a long session that timed out)', async () => {
+		spawn.mockImplementation(exit(1));
+		let n = 0;
+		const committing = new LoopService({
+			projectRoot: '/test/project',
+			headCommit: async () => `sha${n++}`
+		});
+
+		const result = await committing.run(config({ iterations: 5 }));
+
+		expect(result.totalIterations).toBe(5);
+	});
+
 	it('keeps going when a success breaks the run of errors', async () => {
 		for (const status of [1, 1, 0, 1, 1, 0]) {
 			spawn.mockImplementationOnce(exit(status));
