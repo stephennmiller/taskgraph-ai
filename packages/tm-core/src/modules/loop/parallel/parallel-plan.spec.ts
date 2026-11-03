@@ -6,6 +6,8 @@ import {
 	ParallelLoopError,
 	assertParallelFlags,
 	buildParallelPrompt,
+	freeOfOverlap,
+	plannedFiles,
 	parseParallelCount,
 	taskBranchName,
 	taskLogPath,
@@ -169,5 +171,38 @@ describe('buildParallelPrompt', () => {
 		expect(() => buildParallelPrompt({ taskId: '7 && x' })).toThrow(
 			ParallelLoopError
 		);
+	});
+});
+
+describe('plannedFiles', () => {
+	it('lists the files a task and its subtasks create or modify, not ones they only read', () => {
+		const file = (p: string, action: 'create' | 'modify' | 'reference') => ({
+			path: p,
+			description: '',
+			action
+		});
+		expect(
+			plannedFiles({
+				relevantFiles: [
+					file('./src/db.ts', 'modify'),
+					file('README.md', 'reference')
+				],
+				subtasks: [{ relevantFiles: [file('src\\api\\routes.ts', 'create')] }]
+			})
+		).toEqual(['src/db.ts', 'src/api/routes.ts']);
+		expect(plannedFiles({})).toEqual([]);
+	});
+});
+
+describe('freeOfOverlap', () => {
+	it('drops tasks that edit a file a running task edits, and keeps tasks with no planned files', () => {
+		const files = new Map([
+			['1', ['src/db.ts']],
+			['2', ['src/db.ts', 'src/api.ts']],
+			['3', ['src/cli.ts']]
+		]);
+		expect([
+			...freeOfOverlap(['2', '3', '4'], files, new Set(['src/db.ts']))
+		]).toEqual(['3', '4']);
 	});
 });

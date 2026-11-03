@@ -112,6 +112,8 @@ export interface ParallelLoopResult {
 	readyCount: number;
 	/** Ready tasks left out because their ID can't be a branch name */
 	skippedIds: string[];
+	/** Ready tasks not started because they edit a file a running task edits */
+	heldBackIds: string[];
 	/** The run was aborted */
 	aborted: boolean;
 	/** Sum of the tasks' costUsd, when any reported one */

@@ -70,6 +70,7 @@ describe('LoopCommand --parallel', () => {
 		],
 		readyCount: 1,
 		skippedIds: [],
+		heldBackIds: [],
 		aborted: false,
 		...overrides
 	});
