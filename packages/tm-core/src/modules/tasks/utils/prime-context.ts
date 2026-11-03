@@ -37,7 +37,7 @@ export const PRIME_RULES: readonly PrimeRule[] = [
 	{
 		text: 'File work you find as a new task instead of doing it now',
 		command:
-			"taskgraph add-task --prompt='<what you found>' --discovered-from=<id>"
+			"taskgraph add-task -t '<title>' -d '<what>' --discovered-from=<id>"
 	},
 	{
 		// set-status done refuses while a criterion is unchecked (#283)
