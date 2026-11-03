@@ -86,6 +86,32 @@ describe('selectNextTask', () => {
 		expect(next?.id).toBe('2.1');
 	});
 
+	it('resumes an in-progress task before a higher-priority pending one (#951)', () => {
+		const next = selectNextTask([
+			createTask({ id: 1, title: 'Urgent', priority: 'critical' }),
+			createTask({
+				id: 2,
+				title: 'Left mid-way by a killed loop',
+				status: 'in-progress',
+				priority: 'low'
+			})
+		]);
+
+		expect(next?.id).toBe('2');
+	});
+
+	it('skips in-progress tasks when only unstarted work is wanted', () => {
+		const next = selectNextTask(
+			[
+				createTask({ id: 1, title: 'Pending', priority: 'low' }),
+				createTask({ id: 2, title: 'Claimed', status: 'in-progress' })
+			],
+			{ unstartedOnly: true }
+		);
+
+		expect(next?.id).toBe('1');
+	});
+
 	it('skips subtasks whose parent still waits on an unfinished task', () => {
 		const next = selectNextTask([
 			createTask({ id: 1, title: 'Database', status: 'review' }),
