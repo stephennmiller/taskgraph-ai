@@ -24,12 +24,14 @@ taskgraph loop -n 10 --prompt default
 ```
 
 **What it does:**
-1. Runs `taskgraph next` to get the highest priority available task
-2. Reads task details with `taskgraph show <id>`
-3. Implements the task with the smallest possible change
-4. Runs tests and type checks to verify quality
-5. Marks the task complete with `taskgraph set-status --id=<id> --status=done`
-6. Commits work with a descriptive message
+1. Reads `.taskgraph/design.md`, the project's design notes, if it exists
+2. Runs `taskgraph next` to get the highest priority available task
+3. Reads task details with `taskgraph show <id>`
+4. Implements the task with the smallest possible change
+5. Runs tests and type checks, then runs the app through its real entry point (the CLI, server or UI) on an input the task should handle
+6. Marks the task complete with `taskgraph set-status --id=<id> --status=done`
+7. Updates `.taskgraph/design.md` with what later tasks need to know, so each fresh session starts from the design instead of rediscovering it
+8. Commits work with a descriptive message
 
 **Completion criteria:** All pending tasks are complete.
 
