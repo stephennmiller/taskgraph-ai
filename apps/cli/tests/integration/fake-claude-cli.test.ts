@@ -188,8 +188,18 @@ describe.skipIf(!built)('built CLI against the fake claude', () => {
 		expect(call.prompt).toContain('server.js');
 	});
 
-	it('points at claudeCode.maxTurns when a call runs out of turns', () => {
+	it('retries a call that runs out of turns, without file tools (#936)', () => {
 		install([{ error: 'Reached maximum number of turns (6)' }]);
+
+		const res = taskgraph('add-task', '--prompt', 'Too much to read');
+
+		expect(res.status).toBe(0);
+		expect(readTasks()).toHaveLength(1);
+	});
+
+	it('points at claudeCode.maxTurns when the retry also runs out of turns', () => {
+		const maxTurns = { error: 'Reached maximum number of turns (6)' };
+		install([maxTurns, maxTurns]);
 
 		const res = taskgraph('add-task', '--prompt', 'Too much to read');
 

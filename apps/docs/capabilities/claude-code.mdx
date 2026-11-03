@@ -85,7 +85,7 @@ Exploring a repo with `Glob`, `Grep` and `Read` on every call is what makes AI c
 
 The summary is built once per commit and cached in `.taskgraph/cache/repo-summary.json`, keyed by the git `HEAD` commit. The folder has its own `.gitignore`, so it never shows up in `git status`. Outside a git repository the summary is built for each call and not cached. In a repository only files git tracks are read, and files that are symlinks are skipped. Manifest lines that look like credentials (a `password` or `token` value, a login in a URL) are hidden. The summary goes in the prompt between `<project_summary>` tags, marked as data from the repository. Setting `enableCodebaseAnalysis` to `false` in the `global` section of `.taskgraph/config.json` (or `TASKGRAPH_ENABLE_CODEBASE_ANALYSIS=false`) leaves the codebase section, summary included, out of prompts.
 
-If a call runs out of turns, the command fails with `Reached maximum number of turns (6)`. Raise `maxTurns` (below) for that command or for all of them.
+If a `main` or `fallback` call runs out of turns, it is retried once without the file tools, so the model answers from the prompt. If that also runs out, the command fails with `Reached maximum number of turns (6)`. Raise `maxTurns` (below) for that command or for all of them.
 
 ## Structured outputs
 
