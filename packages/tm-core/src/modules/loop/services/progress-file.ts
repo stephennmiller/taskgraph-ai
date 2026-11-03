@@ -96,7 +96,7 @@ export async function appendFinalSummary(
 - Total iterations: ${result.totalIterations}
 - Tasks completed: ${result.tasksCompleted}
 - Final status: ${result.finalStatus}
-${cost.length ? `- Spent: ${cost.join(' · ')}\n` : ''}`,
+${cost.length ? `- Spent: ${cost.join(' · ')}\n` : ''}${result.totalDurationMs !== undefined ? `- Time: ${Math.round(result.totalDurationMs / 60000)} min\n` : ''}`,
 		'utf-8'
 	);
 }

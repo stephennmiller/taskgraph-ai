@@ -120,12 +120,13 @@ export function loopResult(
 		finalStatus = 'error';
 		errorMessage = last.message;
 	}
-	const sum = (key: 'costUsd' | 'turns') =>
+	const sum = (key: 'costUsd' | 'turns' | 'duration') =>
 		iterations.some((it) => it[key] !== undefined)
 			? iterations.reduce((total, it) => total + (it[key] ?? 0), 0)
 			: undefined;
 	const totalCostUsd = sum('costUsd');
 	const totalTurns = sum('turns');
+	const totalDurationMs = sum('duration');
 	// Not in the total: an iteration that died before reporting, with no budget to count
 	const costPartial = iterations.some(
 		(it) => it.costUnknown && it.costUsd === undefined
@@ -138,6 +139,7 @@ export function loopResult(
 		...(errorMessage ? { errorMessage } : {}),
 		...(totalCostUsd !== undefined ? { totalCostUsd } : {}),
 		...(totalTurns !== undefined ? { totalTurns } : {}),
+		...(totalDurationMs !== undefined ? { totalDurationMs } : {}),
 		...(costPartial ? { costPartial } : {})
 	};
 }

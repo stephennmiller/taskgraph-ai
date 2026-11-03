@@ -169,6 +169,8 @@ export interface LoopResult {
 	costPartial?: boolean;
 	/** Sum of the iterations' turns, when any reported them */
 	totalTurns?: number;
+	/** Sum of the iterations' durations in milliseconds, when any reported one */
+	totalDurationMs?: number;
 	/** Error message when finalStatus is 'error' (optional) */
 	errorMessage?: string;
 }
