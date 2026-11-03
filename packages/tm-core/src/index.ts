@@ -254,6 +254,7 @@ export {
 	hasNoteSince,
 	parseNoteSince,
 	type TaskNote,
+	todoListNote,
 	type SelectNextTaskOptions,
 	type TaskClaim,
 	type TaskWithBlocks,

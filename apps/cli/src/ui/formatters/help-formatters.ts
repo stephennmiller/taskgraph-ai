@@ -38,7 +38,8 @@ export interface HelpGroup {
  * registry.
  *
  * Every command a user runs gets a row. Left out on purpose: `prime` (for
- * agents, named in the footer), the hidden `merge-driver` (git runs it),
+ * agents, named in the footer), the hidden `merge-driver` (git runs it)
+ * and `log-todos` (the plugin runs it),
  * `help`, `update-subtask` (the help points at `note`
  * instead, #245), the old per-tag commands that `tags <…>` replaces, and the
  * hidden aliases of merged commands (#882).

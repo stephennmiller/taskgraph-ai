@@ -99,6 +99,7 @@ describe('formatHelp', () => {
 
 	it.each([
 		'merge-driver',
+		'log-todos',
 		'update-task',
 		'complexity-report',
 		'scope-up',
