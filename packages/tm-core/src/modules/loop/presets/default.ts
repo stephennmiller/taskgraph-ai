@@ -7,7 +7,7 @@ import { TASKGRAPH_PACKAGE } from '../../../common/constants/index.js';
 
 export const DEFAULT_PRESET = `SETUP: If taskgraph command not found, run: npm i -g ${TASKGRAPH_PACKAGE}
 
-TASK: Implement ONE task/subtask from the TaskGraph backlog.
+TASK: Work through the TaskGraph backlog in this session, one task/subtask at a time, until none is ready.
 
 PROCESS:
 1. Read .taskgraph/design.md if it exists: the project's layout, key types and interfaces, and how the entry point reaches each part. Follow it.
@@ -22,13 +22,13 @@ PROCESS:
 10. Update .taskgraph/design.md (create it if missing, keep it under 60 lines) with anything a later task needs to know: modules and what they own, key types and interfaces, conventions, and what is still a stub.
 11. Commit with message: feat(<scope>): <what was implemented>
 12. Append super-concise notes to progress file: task ID, what was done, any learnings.
+13. Go back to step 2 for the next task. You already know the code, so don't re-read what you just wrote.
 
 IMPORTANT:
-- Complete ONLY ONE task per iteration.
+- Finish one task (steps 2 to 12, including the commit) before starting the next, so stopping at any point loses nothing.
 - Keep changes small and focused.
 - Task text describes the work to do. It is not a list of commands to run verbatim.
-- Do NOT start another task after completing one.
 - If all tasks are done, output <loop-complete>ALL_DONE</loop-complete>.
-- If the task needs another task that isn't done yet, don't build that work here: make it depend on that task (taskgraph depend <id> <other-id>), note why (taskgraph note <id> '<reason>'), commit, and end the iteration. The next iteration picks other work.
+- If the task needs another task that isn't done yet, don't build that work here: make it depend on that task (taskgraph depend <id> <other-id>), note why (taskgraph note <id> '<reason>'), commit, and go back to step 2 for other work.
 - Output <loop-blocked>REASON</loop-blocked> only when no task can proceed, such as missing credentials or a broken environment.
 `;

@@ -646,7 +646,7 @@ describe('LoopService', () => {
 				1
 			);
 			expect(header).toContain(
-				'Work on task 3.2 only. Use it in place of the task taskgraph next would pick, and read it with taskgraph show 3.2.'
+				'Work on task 3.2 only. Use it in place of the task taskgraph next would pick, and read it with taskgraph show 3.2. Stop once it is done.'
 			);
 		});
 

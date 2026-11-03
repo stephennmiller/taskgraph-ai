@@ -30,7 +30,7 @@ export function buildContextHeader(
 	const tagInfo = config.tag ? ` (tag: ${config.tag})` : '';
 	// The pinned task replaces the preset's `taskgraph next` step
 	const taskInfo = config.taskId
-		? `\n\nWork on task ${config.taskId} only. Use it in place of the task taskgraph next would pick, and read it with taskgraph show ${config.taskId}.`
+		? `\n\nWork on task ${config.taskId} only. Use it in place of the task taskgraph next would pick, and read it with taskgraph show ${config.taskId}. Stop once it is done.`
 		: '';
 	return `@${config.progressFile} @CLAUDE.md
 

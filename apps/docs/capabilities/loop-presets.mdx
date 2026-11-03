@@ -4,7 +4,7 @@ sidebarTitle: "Loop Presets"
 description: "The built-in prompts taskgraph loop runs: the backlog, test-first TDD, test coverage, linting, duplication and code smells"
 ---
 
-The loop command includes six built-in presets for common development workflows. Each preset guides agents to complete ONE focused task per iteration.
+The loop command includes six built-in presets for common development workflows. The `default` preset works through ready tasks in one session, committing after each; the others do one focused change per iteration.
 
 | Preset | Purpose | Completion Marker |
 | ------ | ------- | ----------------- |
@@ -17,7 +17,7 @@ The loop command includes six built-in presets for common development workflows.
 
 ## default
 
-The standard task completion workflow. Agents work through your TaskGraph backlog, completing one task per iteration.
+The standard task completion workflow. Agents work through your TaskGraph backlog, one task at a time in the same session, committing after each. A new iteration starts only when the session ends (a crash, the timeout, or the budget), and it picks up from the task statuses and `.taskgraph/design.md`.
 
 ```bash
 taskgraph loop -n 10 --prompt default

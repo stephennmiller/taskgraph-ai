@@ -274,7 +274,8 @@ export class CommandRegistry {
 		},
 		{
 			name: 'loop',
-			description: 'Run Claude Code in a loop, one task per iteration',
+			description:
+				'Run Claude Code in a loop over the ready tasks, committing after each',
 			commandClass: LoopCommand as any,
 			category: 'development'
 		},

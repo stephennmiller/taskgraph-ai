@@ -68,7 +68,9 @@ export class LoopCommand extends Command {
 	constructor(name?: string) {
 		super(name || 'loop');
 
-		this.description('Run Claude Code in a loop, one task per iteration')
+		this.description(
+			'Run Claude Code in a loop over the ready tasks, committing after each'
+		)
 			.option('-n, --iterations <number>', 'Maximum iterations')
 			.option(
 				'-i, --id <id>',
