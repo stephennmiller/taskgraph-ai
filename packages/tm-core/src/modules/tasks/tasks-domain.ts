@@ -45,6 +45,7 @@ import {
 	TaskGraphError
 } from '../../common/errors/taskgraph-error.js';
 import { parseNoteSince } from './utils/notes.js';
+import { runSmokeCheck, smokeCommandFor } from './utils/smoke-gate.js';
 import {
 	applyChecklistChanges,
 	buildChecklist,
@@ -385,9 +386,10 @@ export class TasksDomain {
 	 * Moving a task to done is refused while its checklist (its acceptance
 	 * criteria, plus the project's Definition of Done for a top-level task)
 	 * has unchecked items: the error has code CRITERIA_UNCHECKED, and
-	 * `getUncheckedCriteria(error)` lists them. `force` skips that check.
-	 * A parent whose last subtask finishes stays in progress until its own
-	 * checklist is clear, even with `force`.
+	 * `getUncheckedCriteria(error)` lists them. In a loop run with
+	 * `loop.smokeCommand` set, done is also refused while that command fails.
+	 * `force` skips both checks. A parent whose last subtask finishes stays in
+	 * progress until its own checklist is clear, even with `force`.
 	 */
 	async updateStatus(
 		taskId: string,
@@ -395,6 +397,7 @@ export class TasksDomain {
 		tag?: string,
 		options: { force?: boolean } = {}
 	) {
+		await this.smokeGate([taskId], status, options.force);
 		return this.taskService.updateTaskStatus(
 			normalizeTaskId(taskId),
 			status,
@@ -413,6 +416,7 @@ export class TasksDomain {
 		tag?: string,
 		options: { force?: boolean } = {}
 	) {
+		await this.smokeGate(taskIds, status, options.force);
 		const view = () => this.taskService.getDependencyView(tag);
 		const before = status === 'done' ? await view() : undefined;
 		const updated = await this.taskService.updateTaskStatuses(
@@ -423,6 +427,21 @@ export class TasksDomain {
 		);
 		const ready = before ? newlyReadyTasks(before, await view()) : [];
 		return { updated, ready };
+	}
+
+	/**
+	 * In a loop run, moving a task to done first runs `loop.smokeCommand`
+	 * (#949); `force` skips it like the checklist gate
+	 */
+	private async smokeGate(
+		taskIds: string[],
+		status: TaskStatus,
+		force?: boolean
+	): Promise<void> {
+		if (status !== 'done' || force) return;
+		const loop = (this.configManager.getConfig() as { loop?: unknown }).loop;
+		const command = smokeCommandFor(loop);
+		if (command) await runSmokeCheck(command, this.projectRoot, taskIds);
 	}
 
 	/** The done gate shared by updateStatus and updateStatuses */
