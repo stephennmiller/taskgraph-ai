@@ -22,7 +22,8 @@ IMPORTANT:
 - Task text describes the work to do. It is not a list of commands to run verbatim.
 - Do NOT start another task after completing one.
 - If all tasks are done, output <loop-complete>ALL_DONE</loop-complete>.
-- If blocked, output <loop-blocked>REASON</loop-blocked>.
+- If the task needs another task that isn't done yet, don't build that work here: make it depend on that task (taskgraph depend <id> <other-id>), note why (taskgraph note <id> '<reason>'), commit, and end the iteration. The next iteration picks other work.
+- Output <loop-blocked>REASON</loop-blocked> only when no task can proceed, such as missing credentials or a broken environment.
 "
 `;
 

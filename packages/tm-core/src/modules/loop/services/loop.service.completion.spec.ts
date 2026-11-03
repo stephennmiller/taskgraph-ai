@@ -120,6 +120,68 @@ describe('LoopService completion', () => {
 			expect(findReadyTask).not.toHaveBeenCalled();
 		});
 
+		describe('a blocked task (#938)', () => {
+			const BLOCKED =
+				'8.5 needs task 19.\n<loop-blocked>8.5 needs task 19</loop-blocked>\n';
+			// HEAD moves on every iteration: Claude committed the rewired tasks
+			const committing = () => {
+				let n = 0;
+				return async () => `sha${n++}`;
+			};
+
+			it('keeps going when Claude rewired the tasks and another is ready', async () => {
+				const onError = vi.fn();
+				spawn
+					.mockImplementationOnce(reply(BLOCKED))
+					.mockImplementation(reply(MARKER));
+
+				const result = await new LoopService({
+					projectRoot: '/p',
+					findReadyTask: vi
+						.fn()
+						.mockResolvedValueOnce('10')
+						.mockResolvedValue(undefined),
+					headCommit: committing()
+				}).run({ ...config, callbacks: { onError } });
+
+				expect(result.totalIterations).toBe(2);
+				expect(result.finalStatus).toBe('all_complete');
+				expect(onError).toHaveBeenCalledWith(
+					'Blocked: 8.5 needs task 19. Task 10 is ready, so continuing.',
+					'warning'
+				);
+			});
+
+			it('stops when the iteration changed nothing', async () => {
+				const findReadyTask = vi.fn().mockResolvedValue('10');
+				spawn.mockImplementation(reply(BLOCKED));
+
+				const result = await new LoopService({
+					projectRoot: '/p',
+					findReadyTask,
+					taskStatuses: async () => new Map([['8.5', 'pending' as const]]),
+					headCommit: async () => 'same'
+				}).run(config);
+
+				expect(result.totalIterations).toBe(1);
+				expect(result.finalStatus).toBe('blocked');
+				expect(findReadyTask).not.toHaveBeenCalled();
+			});
+
+			it('stops when no task is ready', async () => {
+				spawn.mockImplementation(reply(BLOCKED));
+
+				const result = await new LoopService({
+					projectRoot: '/p',
+					findReadyTask: vi.fn().mockResolvedValue(undefined),
+					headCommit: committing()
+				}).run(config);
+
+				expect(result.totalIterations).toBe(1);
+				expect(result.finalStatus).toBe('blocked');
+			});
+		});
+
 		it('tells Claude where the marker must go', async () => {
 			spawn.mockImplementation(reply(QUOTED));
 
