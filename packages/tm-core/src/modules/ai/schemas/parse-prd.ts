@@ -17,7 +17,17 @@ const ParsePrdTaskSchema = z.object({
 	// Slug of the PRD section the task implements; checked against the PRD's
 	// headings and stored as metadata.source. Models may leave it out
 	section: z.string().nullable().default(null),
-	acceptanceCriteria: GeneratedAcceptanceCriteriaSchema
+	acceptanceCriteria: GeneratedAcceptanceCriteriaSchema,
+	// The files the task will create or change, stored as relevantFiles so
+	// `loop --parallel` never runs two tasks that edit one file (#952)
+	files: z
+		.array(
+			z.object({
+				path: z.string().min(1),
+				action: z.enum(['create', 'modify'])
+			})
+		)
+		.default([])
 });
 
 // The whole reply. Tag metadata is written by the code, so the AI isn't asked for any

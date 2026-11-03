@@ -19,6 +19,7 @@ export interface GeneratedPrdTask {
 	id: number;
 	title?: string;
 	section?: string | null;
+	files?: { path: string; action: 'create' | 'modify' }[];
 	dependencies?: unknown;
 	[key: string]: any;
 }
@@ -140,7 +141,7 @@ export function prepareGeneratedTasks(
 		existingIds
 	});
 
-	return rawTasks.map(({ section, ...task }, index) => {
+	return rawTasks.map(({ section, files, ...task }, index) => {
 		// Only a section the PRD has; an invented slug would point nowhere.
 		// The section's hash lets a later --append tell whether it changed
 		const source = prd
@@ -159,7 +160,17 @@ export function prepareGeneratedTasks(
 			title: task.title || '',
 			description: task.description || '',
 			details: task.details || '',
-			testStrategy: task.testStrategy || ''
+			testStrategy: task.testStrategy || '',
+			// What `loop --parallel` reads to keep two tasks off one file (#952)
+			...(Array.isArray(files) && files.length
+				? {
+						relevantFiles: files.map((f) => ({
+							path: f.path,
+							description: '',
+							action: f.action
+						}))
+					}
+				: {})
 		});
 		// The AI invented these dependencies, so record them as inferred
 		assignMetadata(processed, reconcileDependencySources(processed));
