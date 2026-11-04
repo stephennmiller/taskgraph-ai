@@ -1,6 +1,6 @@
 /**
- * @fileoverview When failing iterations end the run: a per-iteration
- * timeout, three errors in a row, or no Claude CLI at all (#659)
+ * @fileoverview When failing iterations end the run: an iteration that goes
+ * quiet (#977), three errors in a row, or no Claude CLI at all (#659)
  */
 
 import * as childProcess from 'node:child_process';
@@ -47,7 +47,7 @@ describe('LoopService limits', () => {
 		['an', false],
 		['a --verbose', true]
 	])(
-		'stops %s iteration that runs past TASKGRAPH_LOOP_TIMEOUT_MS and says how to allow longer',
+		'stops %s iteration that prints nothing for TASKGRAPH_LOOP_TIMEOUT_MS and says how to allow longer',
 		async (_, verbose) => {
 			vi.useFakeTimers();
 			vi.stubEnv('TASKGRAPH_LOOP_TIMEOUT_MS', '1000');
@@ -66,6 +66,33 @@ describe('LoopService limits', () => {
 			expect(result.iterations[0].message).toContain(
 				'TASKGRAPH_LOOP_TIMEOUT_MS'
 			);
+		}
+	);
+
+	it.each([
+		['an', false],
+		['a --verbose', true]
+	])(
+		'keeps %s iteration that is still printing past TASKGRAPH_LOOP_TIMEOUT_MS (#977)',
+		async (_, verbose) => {
+			vi.useFakeTimers();
+			vi.stubEnv('TASKGRAPH_LOOP_TIMEOUT_MS', '1000');
+			const child = fakeClaude({ hang: true });
+			spawn.mockReturnValue(child as never);
+
+			const run = service.run(config({ verbose }));
+			for (let i = 0; i < 3; i++) {
+				await vi.advanceTimersByTimeAsync(900);
+				child.stdout.write('{"type":"system","subtype":"status"}\n');
+				await vi.advanceTimersByTimeAsync(0);
+			}
+			await vi.advanceTimersByTimeAsync(999);
+			expect(child.kill).not.toHaveBeenCalled();
+			await vi.advanceTimersByTimeAsync(1);
+			const result = await run;
+
+			expect(child.kill).toHaveBeenCalledWith('SIGTERM');
+			expect(result.iterations[0].message).toContain('no output for 1 second ');
 		}
 	);
 

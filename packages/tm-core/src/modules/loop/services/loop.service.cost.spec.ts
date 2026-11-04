@@ -262,9 +262,9 @@ describe('LoopService cost and caps', () => {
 				finalStatus: 'error',
 				totalCostUsd: 1.5
 			});
-			expect(result.errorMessage).toContain("Claude didn't finish");
+			expect(result.errorMessage).toContain('Claude produced no output');
 			expect(written()).toMatch(
-				/# Iteration 1: error · Claude didn't finish .+ · cost unknown, counted as \$1\.50 · \d+s\n/
+				/# Iteration 1: error · Claude produced no output .+ · cost unknown, counted as \$1\.50 · \d+s\n/
 			);
 		}
 	);

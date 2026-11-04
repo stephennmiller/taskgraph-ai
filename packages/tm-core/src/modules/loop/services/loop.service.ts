@@ -55,7 +55,7 @@ import {
 	MAX_CONSECUTIVE_ERRORS,
 	MAX_STALLED_ITERATIONS,
 	loopIterationTimeoutMs,
-	timeoutMessage
+	silenceMessage
 } from './iteration-limits.js';
 import type {
 	LoopConfig,
@@ -468,7 +468,7 @@ export class LoopService {
 				// No result event (an older Claude Code, or one that died): what
 				// isn't an event is the reply
 				const run = findResultEvent(stdout);
-				if (timedOut) return fail(timeoutMessage(timeout), runSpend(run));
+				if (timedOut) return fail(silenceMessage(timeout), runSpend(run));
 
 				const reply = run ? run.text : withoutEvents(stdout);
 				const output = reply + stderr;
@@ -639,7 +639,7 @@ export class LoopService {
 
 				if (timedOut || exitCode === null) {
 					const errorMsg = timedOut
-						? timeoutMessage(timeout)
+						? silenceMessage(timeout)
 						: 'Command terminated abnormally (no exit code)';
 					this.reportError(callbacks, errorMsg);
 					resolveOnce(

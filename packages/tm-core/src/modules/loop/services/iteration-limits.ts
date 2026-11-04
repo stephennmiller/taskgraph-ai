@@ -24,7 +24,10 @@ export const budgetSpent = (left: number, total: number) =>
 
 const DEFAULT_ITERATION_TIMEOUT_MS = 60 * 60 * 1000;
 
-/** One iteration's limit: TASKGRAPH_LOOP_TIMEOUT_MS, else an hour */
+/**
+ * TASKGRAPH_LOOP_TIMEOUT_MS, else an hour: how long a loop iteration may go
+ * without output, or a `--parallel` task or conflict resolution may run
+ */
 export const loopIterationTimeoutMs = () =>
 	timeoutFromEnv('TASKGRAPH_LOOP_TIMEOUT_MS', DEFAULT_ITERATION_TIMEOUT_MS);
 
@@ -35,6 +38,11 @@ export const DOCKER_MISSING =
 
 export function timeoutMessage(ms: number): string {
 	return `Claude didn't finish within ${formatTimeout(ms)} and was stopped. Set TASKGRAPH_LOOP_TIMEOUT_MS (milliseconds) to allow longer.`;
+}
+
+/** A loop iteration's limit counts from Claude's last output (#977) */
+export function silenceMessage(ms: number): string {
+	return `Claude produced no output for ${formatTimeout(ms)} and was stopped. Set TASKGRAPH_LOOP_TIMEOUT_MS (milliseconds) to allow longer.`;
 }
 
 /** Caps on each `claude -p` loop starts (#837) */
