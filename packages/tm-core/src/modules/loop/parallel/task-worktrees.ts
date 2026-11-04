@@ -445,6 +445,36 @@ export class TaskWorktrees {
 		return Number.parseInt(count.trim(), 10) || 0;
 	}
 
+	/**
+	 * Merge a task branch into the current branch (--merge)
+	 * @returns false, with the merge undone, when it conflicts or fails
+	 */
+	async merge(branch: string): Promise<boolean> {
+		if (await this.succeeds(['merge', '--no-edit', branch])) {
+			return true;
+		}
+		await this.succeeds(['merge', '--abort']);
+		return false;
+	}
+
+	/**
+	 * Keep a conflicting task branch's work as `<branch>-conflict-<n>` and
+	 * remove its worktree, so the task can start again from the current commit
+	 * @returns The name the work was kept under, or undefined (nothing
+	 *   changed) when the worktree has uncommitted changes
+	 */
+	async setAside(
+		worktree: string,
+		branch: string
+	): Promise<string | undefined> {
+		if (!(await this.succeeds(['worktree', 'remove', worktree]))) return;
+		let n = 1;
+		while (await this.branchExists(`${branch}-conflict-${n}`)) n++;
+		const kept = `${branch}-conflict-${n}`;
+		await this.git(['branch', '-m', branch, kept]);
+		return kept;
+	}
+
 	async deleteBranch(branch: string): Promise<void> {
 		await this.succeeds(['branch', '-d', branch]);
 	}

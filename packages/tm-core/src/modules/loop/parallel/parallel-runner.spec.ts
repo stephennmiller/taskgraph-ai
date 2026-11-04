@@ -227,5 +227,15 @@ describe('ParallelLoopRunner', () => {
 
 		expect(result.tasks.map((t) => t.id)).toEqual(['1', '3']);
 		expect(result.heldBackIds).toEqual(['2']);
+
+		// --merge resolves conflicts when it merges, so all three run (#973)
+		const merging = await new ParallelLoopRunner(
+			root,
+			tasks as never,
+			() => 'master'
+		).run({ parallel: 3, merge: true, spawner: spawner as never });
+
+		expect(merging.tasks.map((t) => t.id)).toEqual(['1', '2', '3']);
+		expect(merging.heldBackIds).toEqual([]);
 	});
 });

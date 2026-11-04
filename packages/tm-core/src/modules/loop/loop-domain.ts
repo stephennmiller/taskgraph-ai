@@ -25,6 +25,8 @@ import { type LoopBand, resolveLoopBands } from './model-bands.js';
 import { preflightContainer } from './parallel/container-workers.js';
 import { ParallelLoopRunner } from './parallel/parallel-runner.js';
 import { TaskWorktrees } from './parallel/task-worktrees.js';
+import { resolveConflict } from './parallel/resolve-conflict.js';
+import { runMergingWaves } from './parallel/wave-merge.js';
 import type {
 	ParallelLoopOptions,
 	ParallelLoopResult
@@ -165,7 +167,8 @@ export class LoopDomain {
 	/**
 	 * Run up to `parallel` ready tasks (wave 1) side by side, each claimed,
 	 * in its own worktree on `taskgraph/task-<id>`, with one Claude Code
-	 * process per task. Never merges. Abort with `options.signal`.
+	 * process per task. Merges nothing, unless `options.merge` chains waves
+	 * (see runMergingWaves). Abort with `options.signal`.
 	 * @throws ParallelLoopError (with a hint) for a bad count, a dirty tree,
 	 *   or a project that isn't a git repository
 	 */
@@ -179,13 +182,40 @@ export class LoopDomain {
 			throw new Error('loop --parallel needs the tasks domain');
 		}
 		const approved = isLoopTrusted(this.projectRoot);
+		const tasks = this.tasks;
+		const runner = new ParallelLoopRunner(
+			this.projectRoot,
+			tasks,
+			() => this.configManager.getActiveTag(),
+			this.loopBands()
+		);
 		try {
-			return await new ParallelLoopRunner(
-				this.projectRoot,
-				this.tasks,
-				() => this.configManager.getActiveTag(),
-				this.loopBands()
-			).run(options);
+			if (!options.merge) return await runner.run(options);
+			const git = new TaskWorktrees(this.projectRoot);
+			return await runMergingWaves(options, {
+				runWave: (o) => runner.run(o),
+				merge: (branch) => git.merge(branch),
+				// A --container task's work comes back as a branch, with no local worktree to resolve in
+				resolve: async (task, budgetUsd) =>
+					options.container
+						? { ok: false, costUsd: 0 }
+						: resolveConflict({
+								projectRoot: this.projectRoot,
+								worktree: task.worktree,
+								branch: task.branch,
+								commit: await git.head(),
+								command: options.command,
+								maxBudgetUsd: budgetUsd,
+								model: options.model
+							}),
+				remove: (worktree, branch) => git.remove(worktree, branch, true),
+				markDone: (id) => tasks.updateStatus(id, 'done', options.tag),
+				setAside: async (id, worktree, branch) => {
+					const kept = await git.setAside(worktree, branch);
+					if (kept) await tasks.updateStatus(id, 'pending', options.tag);
+					return kept;
+				}
+			});
 		} finally {
 			// The tasks' own changes (notes, new subtasks) stay approved for the next run
 			if (approved) keepLoopTrust(this.projectRoot);

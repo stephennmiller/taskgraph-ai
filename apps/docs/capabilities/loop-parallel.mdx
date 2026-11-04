@@ -16,9 +16,9 @@ TaskGraph picks the tasks from the graph: wave 1 of `taskgraph graph`, the tasks
 2. Creates a git worktree at `.taskgraph/worktrees/task-<id>` on a new branch `taskgraph/task-<id>`, starting from your current commit.
 3. Starts one Claude Code process in that worktree. Its output goes to `.taskgraph/worktrees/task-<id>.log`, as Claude Code's `stream-json` events (one JSON object per line); the last line is the `result` event with what the task cost.
 
-Claude reads the task with `taskgraph show`, does the work, commits it on the task's branch, and marks the task `review` with `taskgraph set-status`.
+Claude reads the task with `taskgraph show`, does the work, commits it on the task's branch, and marks the task `review` with `taskgraph set-status`, checking off the acceptance criteria it met so the task can be marked `done` once you merge the branch.
 
-Two tasks that list the same file to create or modify in `relevantFiles` (their own or a subtask's) never run at the same time, so their branches don't conflict when you merge them. The run holds the second one back, names it in the summary, and the next run picks it up. A file listed only for reference doesn't count, and a task with no `relevantFiles` runs alongside anything. `parse-prd` fills `relevantFiles` with the files it expects each task to create or modify, so a freshly planned project gets this without editing tasks.
+Two tasks that list the same file to create or modify in `relevantFiles` (their own or a subtask's) never run at the same time, so their branches don't conflict when you merge them. The run holds the second one back, names it in the summary, and the next run picks it up. `--merge` turns this off (see [below](#merge-and-run-the-next-wave)). A file listed only for reference doesn't count, and a task with no `relevantFiles` runs alongside anything. `parse-prd` fills `relevantFiles` with the files it expects each task to create or modify, so a freshly planned project gets this without editing tasks.
 
 <Warning>
 Every task's Claude Code process runs with `--dangerously-skip-permissions`: permission prompts are off, nobody watches it, and it can read, edit and run anything your user account can, not only files in its worktree. With `--parallel 4`, four of them run at once. The first run in a project asks you to approve this (or pass `--trust`), and it asks again when the task text or the project instructions Claude loads changed since you approved it, including after a command saves text from the research model (see [loop](/capabilities/loop)). `--sandbox` isn't available with `--parallel`: a worktree's git data lives in the main repository's `.git`, outside the folder the Docker sandbox mounts, so Claude couldn't commit. Run parallel tasks only in a repository you trust, on a machine where that's acceptable, or add `--container` to run each one in its own container (see [below](#run-each-task-in-a-container)).
@@ -38,7 +38,7 @@ The cost and turns come from each task's log; a task whose Claude Code didn't ge
 
 A task counts as done in the summary only when Claude Code exited without an error and the task is in `review` (or `done`); one Claude left `in-progress` or `pending` doesn't count.
 
-**Nothing is merged.** A task that left commits or changes keeps its worktree and its branch, ready for you to review and merge yourself. It's in `review` if Claude got that far, and otherwise stays claimed (`in-progress`). If Claude Code failed (exited non-zero), the worktree is still kept but the claim is released, so the next `taskgraph loop --parallel` run retries the task in that worktree. A task's Claude Code process that runs past an hour (`TASKGRAPH_LOOP_TIMEOUT_MS`, see [Loop iteration timeout](/best-practices/configuration-advanced#loop-iteration-timeout)) is stopped and counts as failed. A task that left nothing has its worktree and branch removed, and its claim released: it goes back to `pending`, unless Claude already marked it.
+**Nothing is merged** unless you pass `--merge` (see [below](#merge-and-run-the-next-wave)). A task that left commits or changes keeps its worktree and its branch, ready for you to review and merge yourself. It's in `review` if Claude got that far, and otherwise stays claimed (`in-progress`). If Claude Code failed (exited non-zero), the worktree is still kept but the claim is released, so the next `taskgraph loop --parallel` run retries the task in that worktree. A task's Claude Code process that runs past an hour (`TASKGRAPH_LOOP_TIMEOUT_MS`, see [Loop iteration timeout](/best-practices/configuration-advanced#loop-iteration-timeout)) is stopped and counts as failed. A task that left nothing has its worktree and branch removed, and its claim released: it goes back to `pending`, unless Claude already marked it.
 
 **Ctrl-C** stops every Claude Code process and releases every claim (the tasks still `in-progress` go back to `pending`; one Claude already marked `review` stays there). Closing the terminal or sending `SIGTERM` does the same. Worktrees with work in them stay. Run the same command again to pick up where they left off: an existing `taskgraph/task-<id>` branch or worktree is reused, as long as the branch is at your current commit or where a run left it. Commits a `--container` run brought back don't count as left by a run, since they were made in the container. A branch with any other commits, as after `gh pr checkout`, a pull or a commit of your own, isn't reused: its files weren't the ones you approved, so that task fails and names the branch. Review it with `git diff HEAD taskgraph/task-<id>`, then rename it (`git branch -m`) or delete it, and run again. A second Ctrl-C exits at once, without the cleanup, but still kills the Claude Code processes; where a run's branches were left isn't recorded then, so a branch Claude committed to isn't reused.
 
@@ -46,7 +46,26 @@ A task counts as done in the summary only when Claude Code exited without an err
 
 `.taskgraph/worktrees` must be a real folder. If it, a task's worktree path or a log file is a symlink, that task fails instead of writing through it.
 
-`--parallel` takes a number from 1 to 16 and works with `--tag`, `--trust`, `--project`, `--container`, `--max-turns` and `--max-budget-usd`. Each task's Claude Code gets `--max-turns` as given, and an equal share of `--max-budget-usd` (`--parallel 4 --max-budget-usd 10` gives each task $2.50), so the whole run stays under the amount. Each task also runs at the model and effort its complexity score picks, and `--model` overrides the model (see [Model and effort by complexity](/capabilities/loop-cost#model-and-effort-by-complexity)). It can't be combined with `--prompt` (other than `default`), `--iterations`, `--id`, `--verbose` or `--sandbox` (see the warning above). The exit code is 0 when every task finished, 1 when one failed, and 130 after Ctrl-C.
+`--parallel` takes a number from 1 to 16 and works with `--tag`, `--trust`, `--project`, `--merge`, `--container`, `--max-turns` and `--max-budget-usd`. Each task's Claude Code gets `--max-turns` as given, and an equal share of `--max-budget-usd` (`--parallel 4 --max-budget-usd 10` gives each task $2.50), so the whole run stays under the amount. Each task also runs at the model and effort its complexity score picks, and `--model` overrides the model (see [Model and effort by complexity](/capabilities/loop-cost#model-and-effort-by-complexity)). It can't be combined with `--prompt` (other than `default`), `--iterations`, `--id`, `--verbose` or `--sandbox` (see the warning above). The exit code is 0 when every task finished, 1 when one failed, and 130 after Ctrl-C.
+
+## Merge and run the next wave
+
+`--merge` keeps going without you:
+
+```bash
+taskgraph loop --parallel 3 --merge --trust
+```
+
+After each wave it merges every finished task's branch into your current branch (`git merge --no-edit`), removes the task's worktree and branch, and marks the task `done`, so the tasks that depend on it become ready. Then it runs the next wave. It stops when:
+
+- a wave finishes nothing it can merge, such as when nothing is ready
+- a task's branch still conflicts after a redo. When a branch conflicts with what merged before it, the merge is undone and Claude Code merges your current commit into the task's worktree, resolves the conflict and runs the tests there; then the branch merges. If that fails, the branch is kept as `taskgraph/task-<id>-conflict-1` and the task goes back to `pending`, so the next wave redoes it on top of what merged. If it fails again, or the worktree has uncommitted changes, the summary names the branch so you can resolve it and run the same command again (exit code 1). With `--container`, there is no Claude step: the branch is set aside straight away
+- `--max-budget-usd` has less than $0.25 left; each wave gets what's left
+- you press Ctrl-C
+
+A task whose acceptance criteria aren't all checked off is still merged but stays in `review`, since `done` refuses it; the summary lists it. Its dependents wait until you check the criteria (`taskgraph set-status --check`) and mark it done.
+
+With `--merge`, tasks that edit the same file run side by side: a conflict between them is resolved when the second one merges, so a plan where every feature registers itself in one entry file isn't held to one task per wave.
 
 ## Status goes to the main project
 

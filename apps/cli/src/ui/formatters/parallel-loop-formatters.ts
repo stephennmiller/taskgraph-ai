@@ -107,6 +107,12 @@ function outcome(task: ParallelTask, projectRoot: string): string {
 		const why = plain(task.error ?? 'failed');
 		return `failed: ${why} ${theme.muted(`· ${rel(projectRoot, task.logFile)}`)}`;
 	}
+	if (task.setAsideAs) {
+		return `conflicted; work kept on ${theme.brand(task.setAsideAs)}, task back to pending`;
+	}
+	if (task.merged) {
+		return `merged ${theme.brand(task.branch)}${task.commits ? ` ${theme.muted(`· ${plural(task.commits, 'commit')}`)}` : ''}`;
+	}
 	if (!task.kept) return theme.muted('no changes; worktree removed');
 	const work = [
 		task.commits ? plural(task.commits, 'commit') : null,
@@ -129,7 +135,7 @@ const rerunFlags = (container?: { image?: string }) =>
 
 /**
  * The end-of-run summary. Never suggests merging: the branches are left
- * for review.
+ * for review, unless --merge merged them.
  */
 export function formatParallelSummary(
 	result: ParallelLoopResult,
@@ -165,13 +171,18 @@ export function formatParallelSummary(
 		costUsd: result.totalCostUsd,
 		costPartial: result.costPartial
 	});
-	const kept = tasks.filter((t) => t.kept);
+	const kept = tasks.filter((t) => t.kept && !t.merged && !t.setAsideAs);
+	const merged = tasks.filter((t) => t.merged).length;
 	// Exiting 0 isn't enough: Claude must have marked the task review or done
 	const done = tasks.filter((t) => t.finished).length;
 	const failed = tasks.filter((t) => t.state === 'failed').length;
 	const review = kept.length
 		? ` · ${plural(kept.length, 'branch', 'branches')} to review`
 		: '';
+	const waves =
+		result.waves === undefined
+			? ''
+			: ` · ${merged} merged in ${plural(result.waves, 'wave')}`;
 
 	let lead: string;
 	let next: string | null;
@@ -186,10 +197,12 @@ export function formatParallelSummary(
 		lead = `${chalk.red('✗')} ${plural(tasks.length, 'task')} failed${review}${spent}`;
 		next = `Next: read the log beside each worktree, e.g. ${theme.brand(rel(projectRoot, tasks[0].logFile))}`;
 	} else {
-		lead = `${done ? chalk.green('✓') : chalk.red('✗')} ${done} of ${plural(tasks.length, 'task')} done${failed ? ` · ${failed} failed` : ''}${review}${spent}`;
-		next = kept.length
-			? `Next: review with ${theme.brand(`git log -p HEAD..${kept[0].branch}`)}`
-			: null;
+		lead = `${done ? chalk.green('✓') : chalk.red('✗')} ${done} of ${plural(tasks.length, 'task')} done${failed ? ` · ${failed} failed` : ''}${waves}${review}${spent}`;
+		next = result.conflictBranch
+			? `Next: ${theme.brand(`git merge ${result.conflictBranch}`)} conflicts; resolve it, then run ${theme.brand(`taskgraph loop --parallel ${options.parallel} --merge${rerunFlags(options.container)}`)} again`
+			: kept.length
+				? `Next: review with ${theme.brand(`git log -p HEAD..${kept[0].branch}`)}`
+				: null;
 	}
 
 	const held = result.heldBackIds.length
@@ -198,7 +211,15 @@ export function formatParallelSummary(
 			)
 		: null;
 
-	return [lead, ...rows, ...(held ? [held] : []), ...(next ? [next] : [])].join(
-		'\n'
-	);
+	const notDone = result.notDoneIds?.length
+		? `Merged but not done (unchecked criteria): ${result.notDoneIds.join(', ')}. See ${theme.brand(`taskgraph show ${result.notDoneIds[0]}`)}`
+		: null;
+
+	return [
+		lead,
+		...rows,
+		...(held ? [held] : []),
+		...(notDone ? [notDone] : []),
+		...(next ? [next] : [])
+	].join('\n');
 }

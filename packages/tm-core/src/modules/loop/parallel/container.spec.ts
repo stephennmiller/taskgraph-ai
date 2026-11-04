@@ -267,4 +267,10 @@ describe('assertContainerFlags', () => {
 			assertContainerFlags({ parallel: '2', containerImage: 'x' })
 		).toThrow('--container-image only works with --container');
 	});
+
+	it('refuses --merge without --parallel', () => {
+		expect(() => assertContainerFlags({ merge: true })).toThrow(
+			'--merge only works with --parallel'
+		);
+	});
 });
