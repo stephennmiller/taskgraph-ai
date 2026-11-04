@@ -290,13 +290,21 @@ describe('formatParallelSummary', () => {
 			result(
 				[
 					task('1', { finished: true, kept: true, merged: true, commits: 1 }),
-					task('2', { finished: true, kept: true, commits: 1 })
+					task('2', { finished: true, kept: true, commits: 1 }),
+					task('3', {
+						finished: true,
+						kept: true,
+						setAsideAs: 'taskgraph/task-3-conflict-1'
+					})
 				],
 				{ waves: 1, conflictBranch: 'taskgraph/task-2', notDoneIds: ['1'] }
 			)
 		);
 
 		expect(out).toContain('Merged but not done (unchecked criteria): 1');
+		expect(out).toContain(
+			'3  conflicted; work kept on taskgraph/task-3-conflict-1, task back to pending'
+		);
 		expect(out.split('\n').at(-1)).toBe(
 			'Next: git merge taskgraph/task-2 conflicts; resolve it, then run taskgraph loop --parallel 3 --merge again'
 		);

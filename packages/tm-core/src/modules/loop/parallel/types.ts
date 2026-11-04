@@ -55,6 +55,8 @@ export interface ParallelTask extends ModelChoice {
 	kept?: boolean;
 	/** --merge: its branch was merged into the current branch, and the worktree removed */
 	merged?: boolean;
+	/** --merge: its branch conflicted, so its work was kept under this name and the task redone */
+	setAsideAs?: string;
 	/** The task is still claimed (in-progress) after the run (set at the end) */
 	claimed?: boolean;
 	/**

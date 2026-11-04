@@ -59,7 +59,7 @@ taskgraph loop --parallel 3 --merge --trust
 After each wave it merges every finished task's branch into your current branch (`git merge --no-edit`), removes the task's worktree and branch, and marks the task `done`, so the tasks that depend on it become ready. Then it runs the next wave. It stops when:
 
 - a wave finishes nothing it can merge, such as when nothing is ready
-- a branch doesn't merge cleanly; the merge is undone and the summary names the branch, so you can resolve it and run the same command again (exit code 1)
+- a task's branch conflicts a second time. The first time, the merge is undone, the branch is kept as `taskgraph/task-<id>-conflict-1` and the task goes back to `pending`, so the next wave redoes it on top of what merged. The second time (or when its worktree has uncommitted changes), the summary names the branch so you can resolve it and run the same command again (exit code 1)
 - `--max-budget-usd` has less than $0.25 left; each wave gets what's left
 - you press Ctrl-C
 

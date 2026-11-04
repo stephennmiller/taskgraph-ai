@@ -51,4 +51,29 @@ describe('TaskWorktrees.merge', () => {
 		expect(git('status', '--porcelain')).toBe('');
 		expect(fs.readFileSync(path.join(root, 'a.txt'), 'utf8')).toBe('ours\n');
 	});
+
+	it('sets a branch aside under a new name, removing its worktree', async () => {
+		const worktree = path.join(root, 'wt');
+		git('worktree', 'add', '-q', '-b', 'taskgraph/task-1', worktree);
+		const tg = new TaskWorktrees(root);
+
+		expect(await tg.setAside(worktree, 'taskgraph/task-1')).toBe(
+			'taskgraph/task-1-conflict-1'
+		);
+		expect(fs.existsSync(worktree)).toBe(false);
+		expect(git('branch', '--list', 'taskgraph/*').trim()).toBe(
+			'taskgraph/task-1-conflict-1'
+		);
+	});
+
+	it('leaves a worktree with uncommitted changes alone', async () => {
+		const worktree = path.join(root, 'wt');
+		git('worktree', 'add', '-q', '-b', 'taskgraph/task-1', worktree);
+		fs.writeFileSync(path.join(worktree, 'a.txt'), 'dirty\n');
+
+		expect(
+			await new TaskWorktrees(root).setAside(worktree, 'taskgraph/task-1')
+		).toBeUndefined();
+		expect(fs.existsSync(path.join(worktree, 'a.txt'))).toBe(true);
+	});
 });

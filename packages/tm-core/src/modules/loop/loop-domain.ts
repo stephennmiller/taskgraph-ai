@@ -195,7 +195,12 @@ export class LoopDomain {
 				runWave: (o) => runner.run(o),
 				merge: (branch) => git.merge(branch),
 				remove: (worktree, branch) => git.remove(worktree, branch, true),
-				markDone: (id) => tasks.updateStatus(id, 'done', options.tag)
+				markDone: (id) => tasks.updateStatus(id, 'done', options.tag),
+				setAside: async (id, worktree, branch) => {
+					const kept = await git.setAside(worktree, branch);
+					if (kept) await tasks.updateStatus(id, 'pending', options.tag);
+					return kept;
+				}
 			});
 		} finally {
 			// The tasks' own changes (notes, new subtasks) stay approved for the next run

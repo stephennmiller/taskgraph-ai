@@ -1,8 +1,11 @@
 /**
  * @fileoverview `loop --parallel --merge` (#973): run a wave, merge every
  * finished task's branch into the current branch, mark the task done so its
- * dependents become ready, and run the next wave. Stops when a wave merges
- * nothing, a merge conflicts, the run is aborted, or the budget is spent.
+ * dependents become ready, and run the next wave. A branch that conflicts
+ * is set aside and its task goes back to pending, so the next wave redoes it
+ * on top of what merged; a second conflict on the same task stops the run.
+ * Stops too when a wave merges nothing, the run is aborted, or the budget is
+ * spent.
  */
 
 import type { ParallelLoopOptions, ParallelLoopResult } from './types.js';
@@ -14,6 +17,15 @@ export interface WaveMergeDeps {
 	remove: (worktree: string, branch: string) => Promise<unknown>;
 	/** Mark a merged task done; throws when done is refused (unchecked criteria, smoke check) */
 	markDone: (id: string) => Promise<unknown>;
+	/**
+	 * A branch conflicted: keep its work under another name and put the task
+	 * back to pending. Returns that name, or undefined when it couldn't
+	 */
+	setAside: (
+		id: string,
+		worktree: string,
+		branch: string
+	) => Promise<string | undefined>;
 }
 
 /** Less than this left and no wave starts, as in the sequential loop (#971) */
@@ -32,6 +44,7 @@ export async function runMergingWaves(
 		waves: 0
 	};
 	const notDone: string[] = [];
+	const conflicted = new Set<string>();
 	let spent = 0;
 
 	while (!options.signal?.aborted) {
@@ -64,8 +77,16 @@ export async function runMergingWaves(
 		for (const task of wave.tasks) {
 			if (!task.finished || !task.kept) continue;
 			if (!(await deps.merge(task.branch))) {
-				total.conflictBranch = task.branch;
-				break;
+				const kept =
+					!conflicted.has(task.id) &&
+					(await deps.setAside(task.id, task.worktree, task.branch));
+				if (!kept) {
+					total.conflictBranch = task.branch;
+					break;
+				}
+				conflicted.add(task.id);
+				task.setAsideAs = kept;
+				continue;
 			}
 			task.merged = true;
 			merged++;

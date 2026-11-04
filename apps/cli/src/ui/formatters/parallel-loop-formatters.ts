@@ -107,6 +107,9 @@ function outcome(task: ParallelTask, projectRoot: string): string {
 		const why = plain(task.error ?? 'failed');
 		return `failed: ${why} ${theme.muted(`· ${rel(projectRoot, task.logFile)}`)}`;
 	}
+	if (task.setAsideAs) {
+		return `conflicted; work kept on ${theme.brand(task.setAsideAs)}, task back to pending`;
+	}
 	if (task.merged) {
 		return `merged ${theme.brand(task.branch)}${task.commits ? ` ${theme.muted(`· ${plural(task.commits, 'commit')}`)}` : ''}`;
 	}
@@ -168,7 +171,7 @@ export function formatParallelSummary(
 		costUsd: result.totalCostUsd,
 		costPartial: result.costPartial
 	});
-	const kept = tasks.filter((t) => t.kept && !t.merged);
+	const kept = tasks.filter((t) => t.kept && !t.merged && !t.setAsideAs);
 	const merged = tasks.filter((t) => t.merged).length;
 	// Exiting 0 isn't enough: Claude must have marked the task review or done
 	const done = tasks.filter((t) => t.finished).length;
