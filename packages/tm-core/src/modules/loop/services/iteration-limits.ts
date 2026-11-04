@@ -15,6 +15,13 @@ export const MAX_CONSECUTIVE_ERRORS = 3;
 /** Iterations in a row that change no task status before the run stops as stuck (#812) */
 export const MAX_STALLED_ITERATIONS = 2;
 
+/** Least budget an iteration starts with (#971): less than this only reads the context and reports blocked */
+const MIN_ITERATION_BUDGET_USD = 0.25;
+
+/** Too little of the run's budget is left to start another iteration */
+export const budgetSpent = (left: number, total: number) =>
+	left < Math.min(MIN_ITERATION_BUDGET_USD, total);
+
 const DEFAULT_ITERATION_TIMEOUT_MS = 60 * 60 * 1000;
 
 /** One iteration's limit: TASKGRAPH_LOOP_TIMEOUT_MS, else an hour */

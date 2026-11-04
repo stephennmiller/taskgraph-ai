@@ -48,6 +48,7 @@ import {
 	withoutEvents
 } from './stream-events.js';
 import {
+	budgetSpent,
 	CLAUDE_MISSING,
 	capArgs,
 	DOCKER_MISSING,
@@ -157,7 +158,7 @@ export class LoopService {
 				config.maxBudgetUsd === undefined
 					? undefined
 					: config.maxBudgetUsd - spent;
-			if (left !== undefined && left < 0.0001) {
+			if (left !== undefined && budgetSpent(left, config.maxBudgetUsd ?? 0)) {
 				return this.finalize(
 					config,
 					iterations,
