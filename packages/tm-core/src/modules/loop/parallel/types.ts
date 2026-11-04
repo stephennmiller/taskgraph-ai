@@ -53,6 +53,8 @@ export interface ParallelTask extends ModelChoice {
 	uncommitted?: boolean;
 	/** The worktree and branch were kept for review (set at the end) */
 	kept?: boolean;
+	/** --merge: its branch was merged into the current branch, and the worktree removed */
+	merged?: boolean;
 	/** The task is still claimed (in-progress) after the run (set at the end) */
 	claimed?: boolean;
 	/**
@@ -88,6 +90,12 @@ export interface ParallelLoopOptions {
 	maxBudgetUsd?: number;
 	/** `--model` for every task, in place of the band's model */
 	model?: string;
+	/**
+	 * After each wave, merge every finished task's branch into the current
+	 * branch, mark the task done, and run the next wave, until nothing is
+	 * ready, a merge conflicts, or the budget is spent
+	 */
+	merge?: boolean;
 	/** Stops the run: children are killed, claims released */
 	signal?: AbortSignal;
 	callbacks?: ParallelLoopCallbacks;
@@ -120,4 +128,10 @@ export interface ParallelLoopResult {
 	totalCostUsd?: number;
 	/** A task's cost is unknown and not in totalCostUsd, so the run spent at least that */
 	costPartial?: boolean;
+	/** --merge: how many waves ran */
+	waves?: number;
+	/** --merge: the branch that didn't merge cleanly, which ended the run */
+	conflictBranch?: string;
+	/** --merge: merged tasks left in review because done was refused (unchecked criteria) */
+	notDoneIds?: string[];
 }

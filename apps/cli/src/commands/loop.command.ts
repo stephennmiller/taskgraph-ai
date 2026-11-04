@@ -56,6 +56,7 @@ export interface LoopCommandOptions {
 	parallel?: string;
 	container?: boolean;
 	containerImage?: string;
+	merge?: boolean;
 	maxTurns?: string;
 	maxBudgetUsd?: string;
 	model?: string;
@@ -120,6 +121,10 @@ export class LoopCommand extends Command {
 			.option(
 				'--parallel <n>',
 				`Run up to n ready tasks at once (1-${MAX_PARALLEL}), each in its own git worktree and branch`
+			)
+			.option(
+				'--merge',
+				'With --parallel: merge each finished branch, mark its task done and run the next wave, until nothing is ready'
 			)
 			.option(
 				'--container',
@@ -306,6 +311,7 @@ export class LoopCommand extends Command {
 				tag: options.tag,
 				trusted: true,
 				container,
+				merge: options.merge,
 				...caps,
 				model,
 				signal: controller.signal,
@@ -337,7 +343,10 @@ export class LoopCommand extends Command {
 				})
 			);
 			if (result.aborted) process.exitCode = 130;
-			else if (result.tasks.some((t) => t.state === 'failed')) {
+			else if (
+				result.conflictBranch ||
+				result.tasks.some((t) => t.state === 'failed')
+			) {
 				process.exitCode = 1;
 			}
 		} catch (error: unknown) {

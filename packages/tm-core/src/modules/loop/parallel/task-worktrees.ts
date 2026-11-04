@@ -445,6 +445,18 @@ export class TaskWorktrees {
 		return Number.parseInt(count.trim(), 10) || 0;
 	}
 
+	/**
+	 * Merge a task branch into the current branch (--merge)
+	 * @returns false, with the merge undone, when it conflicts or fails
+	 */
+	async merge(branch: string): Promise<boolean> {
+		if (await this.succeeds(['merge', '--no-edit', branch])) {
+			return true;
+		}
+		await this.succeeds(['merge', '--abort']);
+		return false;
+	}
+
 	async deleteBranch(branch: string): Promise<void> {
 		await this.succeeds(['branch', '-d', branch]);
 	}

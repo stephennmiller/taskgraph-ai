@@ -25,6 +25,7 @@ import { type LoopBand, resolveLoopBands } from './model-bands.js';
 import { preflightContainer } from './parallel/container-workers.js';
 import { ParallelLoopRunner } from './parallel/parallel-runner.js';
 import { TaskWorktrees } from './parallel/task-worktrees.js';
+import { runMergingWaves } from './parallel/wave-merge.js';
 import type {
 	ParallelLoopOptions,
 	ParallelLoopResult
@@ -165,7 +166,8 @@ export class LoopDomain {
 	/**
 	 * Run up to `parallel` ready tasks (wave 1) side by side, each claimed,
 	 * in its own worktree on `taskgraph/task-<id>`, with one Claude Code
-	 * process per task. Never merges. Abort with `options.signal`.
+	 * process per task. Merges nothing, unless `options.merge` chains waves
+	 * (see runMergingWaves). Abort with `options.signal`.
 	 * @throws ParallelLoopError (with a hint) for a bad count, a dirty tree,
 	 *   or a project that isn't a git repository
 	 */
@@ -179,13 +181,22 @@ export class LoopDomain {
 			throw new Error('loop --parallel needs the tasks domain');
 		}
 		const approved = isLoopTrusted(this.projectRoot);
+		const tasks = this.tasks;
+		const runner = new ParallelLoopRunner(
+			this.projectRoot,
+			tasks,
+			() => this.configManager.getActiveTag(),
+			this.loopBands()
+		);
 		try {
-			return await new ParallelLoopRunner(
-				this.projectRoot,
-				this.tasks,
-				() => this.configManager.getActiveTag(),
-				this.loopBands()
-			).run(options);
+			if (!options.merge) return await runner.run(options);
+			const git = new TaskWorktrees(this.projectRoot);
+			return await runMergingWaves(options, {
+				runWave: (o) => runner.run(o),
+				merge: (branch) => git.merge(branch),
+				remove: (worktree, branch) => git.remove(worktree, branch, true),
+				markDone: (id) => tasks.updateStatus(id, 'done', options.tag)
+			});
 		} finally {
 			// The tasks' own changes (notes, new subtasks) stay approved for the next run
 			if (approved) keepLoopTrust(this.projectRoot);

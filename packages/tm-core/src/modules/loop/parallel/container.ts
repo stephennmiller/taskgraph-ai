@@ -41,7 +41,14 @@ export function assertContainerFlags(flags: {
 	parallel?: string;
 	container?: boolean;
 	containerImage?: string;
+	merge?: boolean;
 }): void {
+	if (flags.merge && flags.parallel === undefined) {
+		throw new ParallelLoopError(
+			'--merge only works with --parallel',
+			'Add --parallel, e.g. `taskgraph loop --parallel 3 --merge`'
+		);
+	}
 	if (flags.containerImage !== undefined && !flags.container) {
 		throw new ParallelLoopError(
 			'--container-image only works with --container',
