@@ -5,10 +5,11 @@ description: "How taskgraph loop compares with plain Claude Code on long builds 
 ---
 
 In short: taskgraph doesn't score higher than plain Claude Code, which already
-passes nearly every case on these builds. What it buys you is cost and
-recovery. It spent about 40% less on the Shell and jq builds, and after an
-interruption `taskgraph loop` picks up from its task statuses, where a fresh
-plain session often stops early.
+passes nearly every case on these builds, and it doesn't cost less either: a
+later recheck found it cost about three times as much as plain on the Shell and
+jq builds (see [Cost recheck](#cost-recheck)). What it buys you is recovery:
+after an interruption `taskgraph loop` picks up from its task statuses, where a
+fresh plain session often stops early.
 
 Each benchmark is a PRD for a program that copies an existing tool, so the real
 tool serves as the oracle for hidden acceptance tests. Each test compares
@@ -99,38 +100,35 @@ also edits `src/cli.ts` to register itself. The file guard held the other
 tasks back. With `--merge`, taskgraph merges each wave itself and resolves
 conflicts in shared files, so tasks run side by side.
 
-## Effort, model and prompt
+## Cost recheck
 
-The taskgraph arm built jq and Shell four ways, all four at once, from one
-shared plan per bench (12 tasks each). Scores, costs and times are for both
-benches together; times exclude planning.
+A later batch reran plain Claude Code on Shell and jq, and built the same two
+PRDs with taskgraph at low effort from a fixed 12-task plan. Costs are from the
+session transcripts.
 
-| Arm                         | Score | Cost   | Time    |
-| --------------------------- | ----- | ------ | ------- |
-| Sonnet, default effort      | 77/87 | $13.56 | 121 min |
-| `--model haiku`             | 78/87 | $8.96  | 105 min |
-| Sonnet, low effort          | 75/87 | $7.84  | 62 min  |
-| Sonnet, a leaner loop prompt | 77/87 | $12.11 | 97 min  |
+| Bench | Plain | Cost  | Time   | Taskgraph | Cost  | Time   |
+| ----- | ----- | ----- | ------ | --------- | ----- | ------ |
+| Shell | 42/45 | $2.38 | 18 min | 43/45     | $3.98 | 40 min |
+| jq    | 38/42 | $2.23 | 18 min | 40/42     | $9.61 | 66 min |
 
-Low effort cost 42% less and took half the time, with the score within noise,
-so `loop` runs at low effort unless you choose one (see
-[Default effort](/capabilities/loop-cost#default-effort)). Haiku ran each bench
-in one session that grew past 100,000 tokens, where its price per token is five
-times higher. These runs cost more than the taskgraph runs above, for reasons
-not yet pinned down, so compare the arms with each other rather than with other
-rounds.
+Plain cost a quarter to a third of what it did in the runs above, and
+taskgraph's jq cost was more than twice its earlier runs. Plain built each
+program in 19 to 27 API calls. Taskgraph used about 165, each one reading the
+whole session again, and on jq it wrote 2.6 times the output tokens.
+Taskgraph at Claude Code's default effort, run earlier the same day, cost
+$7.19 on Shell and $6.37 on jq.
 
 ## Takeaways
 
 - Uninterrupted, taskgraph ties or trails plain Claude Code on score on every
   benchmark. Interrupted, it scored a case or two higher on Shell and jq, which
   is within noise.
-- With no interruption, it spent about 40% less on Shell and jq. On JS it
-  spent more.
+- With no interruption, it spent about 40% less on Shell and jq in these
+  runs, and more on JS. The [cost recheck](#cost-recheck) didn't hold that up:
+  costs swing a lot between runs, and there taskgraph cost about three times
+  as much as plain.
 - After an interruption, taskgraph resumed from its task statuses and came close
   to its uninterrupted score. Plain sessions often end early on their own,
   before the work is complete.
 - On independent parts, `loop --parallel --merge` came within a case of plain
   subagents, at twice the cost and four times the time.
-- Low effort cut the loop's cost by 42% and its time by half on Shell and jq,
-  with the score within noise.

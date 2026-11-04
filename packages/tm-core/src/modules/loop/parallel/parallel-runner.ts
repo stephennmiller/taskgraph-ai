@@ -53,7 +53,6 @@ import {
 import { TaskWorktrees } from './task-worktrees.js';
 import {
 	type LoopBand,
-	type LoopEffort,
 	type ModelChoice,
 	modelArgs,
 	pickModelEffort
@@ -132,9 +131,7 @@ export class ParallelLoopRunner {
 		/** The tag a run without --tag works on */
 		private readonly activeTag: () => string,
 		/** Complexity bands that pick each task's model and effort */
-		private readonly bands: LoopBand[] = [],
-		/** The effort where no band picks one */
-		private readonly defaultEffort?: LoopEffort
+		private readonly bands: LoopBand[] = []
 	) {}
 
 	async run(options: ParallelLoopOptions): Promise<ParallelLoopResult> {
@@ -363,7 +360,7 @@ export class ParallelLoopRunner {
 			.get(id, tag)
 			.then((found) => found.task?.complexity)
 			.catch(() => undefined);
-		return pickModelEffort(score, this.bands, model, this.defaultEffort);
+		return pickModelEffort(score, this.bands, model);
 	}
 
 	/** Start Claude Code in the task's worktree; resolves when it's gone */

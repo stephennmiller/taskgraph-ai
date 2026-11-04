@@ -93,8 +93,6 @@ export interface LoopConfig {
 	 * model-bands.ts); none means Claude Code's defaults every time
 	 */
 	bands?: LoopBand[];
-	/** The effort where no band picks one (defaultLoopEffort); none means Claude Code's */
-	defaultEffort?: LoopEffort;
 	/** Resume the previous iteration's Claude Code session for the next task when it can (#841); off by default */
 	reuseSession?: boolean;
 	/**

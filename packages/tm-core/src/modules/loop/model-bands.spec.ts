@@ -3,13 +3,9 @@
  * complexity score (#838)
  */
 
-import fs from 'node:fs';
-import os from 'node:os';
-import path from 'node:path';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import {
 	DEFAULT_LOOP_BANDS,
-	defaultLoopEffort,
 	modelArgs,
 	parseLoopModel,
 	pickModelEffort,
@@ -51,70 +47,6 @@ describe('pickModelEffort', () => {
 		expect(pickModelEffort(undefined, DEFAULT_LOOP_BANDS, 'opus')).toEqual({
 			model: 'opus'
 		});
-	});
-
-	it('fills in the default effort where no band picks one', () => {
-		expect(pickModelEffort(5, DEFAULT_LOOP_BANDS, undefined, 'low')).toEqual({
-			effort: 'low'
-		});
-		expect(pickModelEffort(undefined, [], 'opus', 'low')).toEqual({
-			model: 'opus',
-			effort: 'low'
-		});
-		expect(pickModelEffort(9, DEFAULT_LOOP_BANDS, undefined, 'low')).toEqual({
-			effort: 'high'
-		});
-	});
-});
-
-describe('defaultLoopEffort', () => {
-	let root: string;
-	let home: string;
-	const env = (extra: NodeJS.ProcessEnv = {}) => ({
-		CLAUDE_CONFIG_DIR: home,
-		...extra
-	});
-
-	beforeEach(() => {
-		root = fs.mkdtempSync(path.join(os.tmpdir(), 'tm-effort-'));
-		home = fs.mkdtempSync(path.join(os.tmpdir(), 'tm-claude-'));
-	});
-
-	afterEach(() => {
-		fs.rmSync(root, { recursive: true, force: true });
-		fs.rmSync(home, { recursive: true, force: true });
-	});
-
-	const write = (file: string, json: string) => {
-		fs.mkdirSync(path.dirname(file), { recursive: true });
-		fs.writeFileSync(file, json);
-	};
-
-	it('is low when you chose no effort', () => {
-		expect(defaultLoopEffort(root, env())).toBe('low');
-	});
-
-	it('is none when CLAUDE_CODE_EFFORT_LEVEL is set', () => {
-		expect(
-			defaultLoopEffort(root, env({ CLAUDE_CODE_EFFORT_LEVEL: 'high' }))
-		).toBeUndefined();
-	});
-
-	it.each([
-		['user', () => path.join(home, 'settings.json')],
-		['project', () => path.join(root, '.claude', 'settings.json')],
-		['local project', () => path.join(root, '.claude', 'settings.local.json')]
-	])('is none when your %s settings set effortLevel', (_, file) => {
-		write(file(), '{"effortLevel": "medium"}');
-
-		expect(defaultLoopEffort(root, env())).toBeUndefined();
-	});
-
-	it("is low when a settings file can't be read or sets no effort", () => {
-		write(path.join(root, '.claude', 'settings.json'), '{ not json');
-		write(path.join(home, 'settings.json'), '{"model": "opus"}');
-
-		expect(defaultLoopEffort(root, env())).toBe('low');
 	});
 });
 

@@ -102,21 +102,6 @@ describe('LoopService model and effort', () => {
 		expect(args()).not.toContain('--effort');
 	});
 
-	it('runs at the default effort where no band picks one', async () => {
-		await service('3').run(config({ defaultEffort: 'low' }));
-		await new LoopService({ projectRoot: '/test/project' }).run(
-			config({ defaultEffort: 'low' })
-		);
-
-		const efforts = vi
-			.mocked(childProcess.spawn)
-			.mock.calls.map((call) => (call[1] as string[]).join(' '));
-		expect(efforts).toEqual([
-			expect.stringContaining('--effort low'),
-			expect.stringContaining('--effort low')
-		]);
-	});
-
 	it("doesn't score a preset that picks its own work", async () => {
 		await service().run(config({ prompt: 'linting' }));
 

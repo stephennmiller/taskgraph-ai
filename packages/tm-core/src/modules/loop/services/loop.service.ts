@@ -334,18 +334,13 @@ export class LoopService {
 	): Promise<ModelChoice & { complexity?: number }> {
 		// No lookup or no bands: skip the extra `taskgraph next`
 		if (!this.taskComplexity || !config.bands?.length) {
-			return pickModelEffort(undefined, [], config.model, config.defaultEffort);
+			return pickModelEffort(undefined, [], config.model);
 		}
 		const id = config.taskId ?? (await this.readyTask(config));
 		const score = id
 			? await this.taskComplexity(id, config.tag).catch(() => undefined)
 			: undefined;
-		const choice = pickModelEffort(
-			score,
-			config.bands,
-			config.model,
-			config.defaultEffort
-		);
+		const choice = pickModelEffort(score, config.bands, config.model);
 		return typeof score === 'number'
 			? { ...choice, complexity: score }
 			: choice;

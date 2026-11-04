@@ -95,9 +95,6 @@ describe('loop --parallel', () => {
 		);
 		vi.stubEnv('FAKE_TASKGRAPH', taskgraphScript);
 		vi.stubEnv('FAKE_TSX', createRequire(import.meta.url).resolve('tsx/cli'));
-		// No effort chosen, whatever this machine's Claude Code settings say
-		vi.stubEnv('CLAUDE_CONFIG_DIR', path.join(base, 'claude-config'));
-		vi.stubEnv('CLAUDE_CODE_EFFORT_LEVEL', '');
 
 		fs.mkdirSync(path.join(root, '.taskgraph', 'tasks'), { recursive: true });
 		fs.writeFileSync(
@@ -169,7 +166,7 @@ describe('loop --parallel', () => {
 		const byId = Object.fromEntries(result.tasks.map((t) => [t.id, t]));
 
 		// Claude got the prompt as one argv entry, with permission prompts off,
-		// stream-json for the cost, a third of the budget each and low effort
+		// stream-json for the cost, and a third of the budget each
 		const argv = JSON.parse(
 			fs.readFileSync(byId['1'].logFile, 'utf8').split('\n')[0]
 		);
@@ -183,9 +180,7 @@ describe('loop --parallel', () => {
 			'--max-turns',
 			'7',
 			'--max-budget-usd',
-			'1',
-			'--effort',
-			'low'
+			'1'
 		]);
 		// The cost comes from the result event at the end of the log
 		expect(byId['1']).toMatchObject({ costUsd: 0.25, turns: 3 });

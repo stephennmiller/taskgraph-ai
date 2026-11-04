@@ -30,10 +30,6 @@ taskgraph loop --max-turns 60 --max-budget-usd 10 --trust
 
 Both work with `--sandbox` and `--parallel` (see [Run tasks in parallel](/capabilities/loop-parallel)).
 
-## Default effort
-
-Iterations run at low effort (`--effort low`) unless you've chosen one: `CLAUDE_CODE_EFFORT_LEVEL`, or `effortLevel` in your user or project Claude Code settings. A complexity band's effort (below) also takes precedence. In the [cost benchmarks](/best-practices/benchmarks), low effort cost 42% less and took half the time, with scores within noise. To run at Claude Code's own default effort instead, set `CLAUDE_CODE_EFFORT_LEVEL=auto`.
-
 ## Model and effort by complexity
 
 When the task an iteration works on has a complexity score from [`analyze-complexity`](/capabilities/cli-planning-commands#analyze-task-complexity) (1 to 10), `loop` picks the model and effort for that iteration from it, so a one-line fix doesn't cost as much as a refactor. The task is the one `--id` names, or the one `taskgraph next` picks with the `default` and `tdd` presets. It passes `--model` and `--effort` to `claude -p`, which take precedence over the `model` and `effortLevel` in your Claude Code settings:
@@ -41,12 +37,12 @@ When the task an iteration works on has a complexity score from [`analyze-comple
 | Score | Model | Effort |
 | ----- | ----- | ------ |
 | 1-3   | `sonnet` | `low` |
-| 4-6   | Claude Code's default | the [default effort](#default-effort) |
+| 4-6   | Claude Code's default | Claude Code's default |
 | 7-10  | Claude Code's default | `high` |
 
 Each iteration reads the score from the report as it is then, so a task re-scored during the run (by `scope` or `analyze-complexity`) runs at its new band from the next iteration.
 
-A task without a score (a subtask, a task `analyze-complexity` hasn't scored, or a preset that picks its own work such as `linting`) runs on Claude Code's own model at the default effort. The status line and the progress file show what each iteration ran at, next to its cost:
+A task without a score (a subtask, a task `analyze-complexity` hasn't scored, or a preset that picks its own work such as `linting`) runs as before, with Claude Code's own model and effort. The status line and the progress file show what each iteration ran at, next to its cost:
 
 ```
 ✓ Iteration 1 · sonnet, low effort · $0.12 · 6 turns · 48s
@@ -58,7 +54,7 @@ A task without a score (a subtask, a task `analyze-complexity` hasn't scored, or
 
 `--model <model>` runs every iteration on that model (an alias such as `opus`, or a full model name). It replaces the band's model only; the band's effort still applies.
 
-Set your own bands under `loop.bands` in `.taskgraph/config.json`. A task goes into the first band whose `maxScore` its score doesn't exceed; a band without `model` leaves the model to Claude Code, and one without `effort` runs at the default effort. `effort` is one of `low`, `medium`, `high`, `xhigh` or `max`:
+Set your own bands under `loop.bands` in `.taskgraph/config.json`. A task goes into the first band whose `maxScore` its score doesn't exceed; a band without `model` or `effort` leaves that one to Claude Code. `effort` is one of `low`, `medium`, `high`, `xhigh` or `max`:
 
 ```json
 {
@@ -72,7 +68,7 @@ Set your own bands under `loop.bands` in `.taskgraph/config.json`. A task goes i
 }
 ```
 
-A score above the last band's `maxScore` runs on Claude Code's model at the default effort. `"bands": []` turns the picking off. A band `loop` can't use (a `maxScore` that isn't a whole number from 1 to 10, two bands with the same `maxScore`, an unknown effort, a model name that starts with `-`) stops the run before Claude Code starts, with the band named.
+A score above the last band's `maxScore` runs with Claude Code's defaults. `"bands": []` turns the picking off. A band `loop` can't use (a `maxScore` that isn't a whole number from 1 to 10, two bands with the same `maxScore`, an unknown effort, a model name that starts with `-`) stops the run before Claude Code starts, with the band named.
 
 ## Session reuse
 
