@@ -7,14 +7,14 @@
  *    same locked claim as `next --claim`.
  * 3. For each, make `.taskgraph/worktrees/task-<id>` on `taskgraph/task-<id>`
  *    and start `claude -p <prompt>` there, with TASKGRAPH_PROJECT_ROOT set
- *    to this project so its `taskgraph` commands update the main
- *    tasks.json, not the worktree's copy. Output goes to a log file.
+ *    so its `taskgraph` commands update the main tasks.json. Output goes to
+ *    a log file.
  * 4. When all have exited: keep every worktree with commits or changes, and
  *    its claim if Claude finished without marking the task `review`; remove
  *    the empty ones and release their claims. A failed task's claim is
  *    released too, so a later run retries it in the kept worktree.
  *
- * Nothing is ever merged. An abort kills the processes, releases every
+ * This merges nothing (see wave-merge.ts). An abort kills the processes, releases every
  * claim, and keeps the worktrees that have work in them.
  */
 
@@ -172,7 +172,10 @@ export class ParallelLoopRunner {
 			this.logger.warn(`Skipping task "${id}": its ID can't be a branch name`);
 		}
 		const among = new Set(wave.filter(isSafeTaskId));
-		const files = plannedFilesById((await this.tasks.list({ tag })).tasks);
+		// --merge resolves conflicts, so no file guard
+		const files = plannedFilesById(
+			options.merge ? [] : (await this.tasks.list({ tag })).tasks
+		);
 		// Files the running tasks edit
 		const busy = new Set<string>();
 
@@ -397,12 +400,10 @@ export class ParallelLoopRunner {
 				// argv array, no shell: the prompt is one argument whatever it holds
 				const child = ctx.spawner(ctx.command, ctx.args, {
 					cwd: ctx.cwd,
-					// `taskgraph` run in the worktree would otherwise find the
-					// worktree's own copy of tasks.json, checked out from HEAD:
-					// status changes would land on the branch, and tasks not yet
-					// committed would be missing. An env value, never a shell.
-					// The marker and TASKGRAPH_SKIP_AUTO_UPDATE stop the worker
-					// from installing an update.
+					// Else `taskgraph` in the worktree finds its copy of tasks.json
+					// (from HEAD): statuses would land on the branch, uncommitted
+					// tasks would be missing. An env value, never a shell. The
+					// marker and TASKGRAPH_SKIP_AUTO_UPDATE stop updates.
 					env: childAutoUpdateEnv('parallel', {
 						...process.env,
 						[PROJECT_ROOT_ENV]: path.resolve(this.projectRoot)

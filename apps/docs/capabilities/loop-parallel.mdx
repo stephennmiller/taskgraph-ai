@@ -18,7 +18,7 @@ TaskGraph picks the tasks from the graph: wave 1 of `taskgraph graph`, the tasks
 
 Claude reads the task with `taskgraph show`, does the work, commits it on the task's branch, and marks the task `review` with `taskgraph set-status`, checking off the acceptance criteria it met so the task can be marked `done` once you merge the branch.
 
-Two tasks that list the same file to create or modify in `relevantFiles` (their own or a subtask's) never run at the same time, so their branches don't conflict when you merge them. The run holds the second one back, names it in the summary, and the next run picks it up. A file listed only for reference doesn't count, and a task with no `relevantFiles` runs alongside anything. `parse-prd` fills `relevantFiles` with the files it expects each task to create or modify, so a freshly planned project gets this without editing tasks.
+Two tasks that list the same file to create or modify in `relevantFiles` (their own or a subtask's) never run at the same time, so their branches don't conflict when you merge them. The run holds the second one back, names it in the summary, and the next run picks it up. `--merge` turns this off (see [below](#merge-and-run-the-next-wave)). A file listed only for reference doesn't count, and a task with no `relevantFiles` runs alongside anything. `parse-prd` fills `relevantFiles` with the files it expects each task to create or modify, so a freshly planned project gets this without editing tasks.
 
 <Warning>
 Every task's Claude Code process runs with `--dangerously-skip-permissions`: permission prompts are off, nobody watches it, and it can read, edit and run anything your user account can, not only files in its worktree. With `--parallel 4`, four of them run at once. The first run in a project asks you to approve this (or pass `--trust`), and it asks again when the task text or the project instructions Claude loads changed since you approved it, including after a command saves text from the research model (see [loop](/capabilities/loop)). `--sandbox` isn't available with `--parallel`: a worktree's git data lives in the main repository's `.git`, outside the folder the Docker sandbox mounts, so Claude couldn't commit. Run parallel tasks only in a repository you trust, on a machine where that's acceptable, or add `--container` to run each one in its own container (see [below](#run-each-task-in-a-container)).
@@ -65,7 +65,7 @@ After each wave it merges every finished task's branch into your current branch 
 
 A task whose acceptance criteria aren't all checked off is still merged but stays in `review`, since `done` refuses it; the summary lists it. Its dependents wait until you check the criteria (`taskgraph set-status --check`) and mark it done.
 
-The rule that two tasks editing the same file never run at once still applies inside each wave, so tasks that all edit one file (say, an entry point each feature registers itself in) run one per wave.
+With `--merge`, tasks that edit the same file run side by side: a conflict between them is resolved when the second one merges, so a plan where every feature registers itself in one entry file isn't held to one task per wave.
 
 ## Status goes to the main project
 
