@@ -35,6 +35,10 @@ plan and progress stored in your repo.
   language. Slash commands (`/taskgraph:next`) and the `taskgraph` CLI do
   the same things when you'd rather type them.
 - **No API keys:** every AI call runs through your signed-in Claude Code.
+- **Cheaper, resumable long builds:** on our
+  [benchmarks](https://taskgraph-ai.com/best-practices/benchmarks), `taskgraph
+  go` scored within 10% of plain Claude Code, spent about 40% less on two of
+  three large builds, and resumed cleanly after an interruption.
 
 <p align="center">
   <a href="images/demo/03-pick-up-where-you-left-off.mp4"><img src="images/demo/03-pick-up-where-you-left-off.svg" alt="A new Claude Code session running /taskgraph:next and resuming from the notes logged last time" width="820"></a>
@@ -129,7 +133,7 @@ add it to the project's `.mcp.json`, or see step 4.
 
 ### 3. Install the plugin
 
-The plugin lets Claude act on plain requests about your tasks. It also adds 34
+The plugin lets Claude act on plain requests about your tasks. It also adds 16
 slash commands (as `/taskgraph:<name>`) and two agents (`task-executor`,
 `task-checker`). In Claude Code, run:
 
@@ -287,6 +291,19 @@ tools (`add_dependency`, `remove_dependency`, `validate_dependencies`,
 is in `standard` (see [MCP tool tiers](#mcp-tool-tiers)), and everything else
 here works with `standard`.
 
+### Or let it build unattended
+
+To plan a PRD and have Claude Code work through every task on its own, run:
+
+```bash
+taskgraph go .taskgraph/docs/prd.md
+```
+
+It runs `parse-prd`, then `taskgraph loop`, which works the tasks in order and
+commits after each. If it stops partway, run `taskgraph loop` again and it
+picks up from the task statuses. Add `--trust` to run with Claude Code's
+permission prompts off.
+
 ### 4. Keep it organized
 
 - **Tags** keep separate task lists per branch, feature or experiment. Ask:
@@ -321,14 +338,13 @@ Claude Code:
 /taskgraph
 ```
 
-| Purpose          | Commands                                                                                                                      |
-| ---------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| Daily workflow   | `next`, `show`, `list`, `project-status`, `set-status`, `to-done`, `add-task`, `loop`                                         |
-| Set up           | `init`, `models`                                                                                                              |
-| Create & update  | `parse-prd`, `update`, `update-task`, `note`, `add-subtask`, `remove-task`, `remove-subtask`, `clear-subtasks`, `sync-readme` |
-| Analyze & expand | `analyze-complexity`, `complexity-report`, `expand`                                                                           |
-| Organize         | `graph`, `why`, `add-dependency`, `remove-dependency`, `validate-dependencies`, `fix-dependencies`                            |
-| Other            | `help`                                                                                                                        |
+| Purpose        | Commands                                                                    |
+| -------------- | --------------------------------------------------------------------------- |
+| Daily workflow | `next`, `show`, `list`, `set-status`, `to-done`, `add-task`, `note`, `loop` |
+| Set up         | `init`                                                                      |
+| Plan & update  | `parse-prd`, `update-task`, `analyze-complexity`, `expand`                  |
+| Dependencies   | `graph`, `why`                                                              |
+| Other          | `help`                                                                      |
 
 ### CLI cheat sheet
 
