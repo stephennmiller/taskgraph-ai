@@ -2,18 +2,28 @@
  * @fileoverview `loop --parallel --merge` (#973): run a wave, merge every
  * finished task's branch into the current branch, mark the task done so its
  * dependents become ready, and run the next wave. A branch that conflicts
+ * goes to Claude Code to resolve in its worktree. If that fails, the branch
  * is set aside and its task goes back to pending, so the next wave redoes it
- * on top of what merged; a second conflict on the same task stops the run.
+ * on top of what merged; failing again on the same task stops the run.
  * Stops too when a wave merges nothing, the run is aborted, or the budget is
  * spent.
  */
 
-import type { ParallelLoopOptions, ParallelLoopResult } from './types.js';
+import type {
+	ParallelLoopOptions,
+	ParallelLoopResult,
+	ParallelTask
+} from './types.js';
 
 /** What merging needs: TaskWorktrees and the tasks domain in a real run */
 export interface WaveMergeDeps {
 	runWave: (options: ParallelLoopOptions) => Promise<ParallelLoopResult>;
 	merge: (branch: string) => Promise<boolean>;
+	/** Have Claude Code resolve a conflicting branch in its worktree, within this budget */
+	resolve: (
+		task: ParallelTask,
+		budgetUsd?: number
+	) => Promise<{ ok: boolean; costUsd: number }>;
 	remove: (worktree: string, branch: string) => Promise<unknown>;
 	/** Mark a merged task done; throws when done is refused (unchecked criteria, smoke check) */
 	markDone: (id: string) => Promise<unknown>;
@@ -46,6 +56,16 @@ export async function runMergingWaves(
 	const notDone: string[] = [];
 	const conflicted = new Set<string>();
 	let spent = 0;
+	const resolveAndMerge = async (task: ParallelTask) => {
+		const share =
+			options.maxBudgetUsd === undefined
+				? undefined
+				: Math.max(0, options.maxBudgetUsd - spent) / options.parallel;
+		const { ok, costUsd } = await deps.resolve(task, share);
+		spent += costUsd;
+		if (costUsd) total.totalCostUsd = spent;
+		return ok && (await deps.merge(task.branch));
+	};
 
 	while (!options.signal?.aborted) {
 		const left =
@@ -76,7 +96,7 @@ export async function runMergingWaves(
 		let merged = 0;
 		for (const task of wave.tasks) {
 			if (!task.finished || !task.kept) continue;
-			if (!(await deps.merge(task.branch))) {
+			if (!(await deps.merge(task.branch)) && !(await resolveAndMerge(task))) {
 				const kept =
 					!conflicted.has(task.id) &&
 					(await deps.setAside(task.id, task.worktree, task.branch));

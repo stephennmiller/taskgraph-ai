@@ -59,7 +59,7 @@ taskgraph loop --parallel 3 --merge --trust
 After each wave it merges every finished task's branch into your current branch (`git merge --no-edit`), removes the task's worktree and branch, and marks the task `done`, so the tasks that depend on it become ready. Then it runs the next wave. It stops when:
 
 - a wave finishes nothing it can merge, such as when nothing is ready
-- a task's branch conflicts a second time. The first time, the merge is undone, the branch is kept as `taskgraph/task-<id>-conflict-1` and the task goes back to `pending`, so the next wave redoes it on top of what merged. The second time (or when its worktree has uncommitted changes), the summary names the branch so you can resolve it and run the same command again (exit code 1)
+- a task's branch still conflicts after a redo. When a branch conflicts with what merged before it, the merge is undone and Claude Code merges your current commit into the task's worktree, resolves the conflict and runs the tests there; then the branch merges. If that fails, the branch is kept as `taskgraph/task-<id>-conflict-1` and the task goes back to `pending`, so the next wave redoes it on top of what merged. If it fails again, or the worktree has uncommitted changes, the summary names the branch so you can resolve it and run the same command again (exit code 1). With `--container`, there is no Claude step: the branch is set aside straight away
 - `--max-budget-usd` has less than $0.25 left; each wave gets what's left
 - you press Ctrl-C
 

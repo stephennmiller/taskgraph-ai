@@ -37,15 +37,18 @@ const wave = (
 function fakeRun(
 	waves: ParallelLoopResult[],
 	conflicts: string[] = [],
-	cantSetAside = false
+	cantSetAside = false,
+	resolves: string[] = []
 ) {
 	const calls = {
 		budgets: [] as (number | undefined)[],
 		merged: [] as string[],
 		removed: [] as string[],
 		done: [] as string[],
-		setAside: [] as string[]
+		setAside: [] as string[],
+		resolved: [] as string[]
 	};
+	const fixed = new Set<string>();
 	let i = 0;
 	return {
 		calls,
@@ -55,12 +58,18 @@ function fakeRun(
 				return waves[i++] ?? wave([]);
 			},
 			merge: async (branch: string) => {
-				if (conflicts.includes(branch)) return false;
+				if (conflicts.includes(branch) && !fixed.has(branch)) return false;
 				calls.merged.push(branch);
 				return true;
 			},
 			remove: async (worktree: string) => {
 				calls.removed.push(worktree);
+			},
+			resolve: async (t: ParallelTask, budgetUsd?: number) => {
+				calls.resolved.push(`${t.id}:${budgetUsd}`);
+				const ok = resolves.includes(t.branch);
+				if (ok) fixed.add(t.branch);
+				return { ok, costUsd: 0.1 };
 			},
 			setAside: async (id: string, _worktree: string, branch: string) => {
 				if (cantSetAside) return undefined;
@@ -113,6 +122,26 @@ describe('runMergingWaves', () => {
 		expect(calls.merged).toEqual([]);
 		// Nothing merged, so another wave would do the same
 		expect(result.waves).toBe(1);
+	});
+
+	it('has Claude resolve a conflicting branch, then merges it', async () => {
+		const { calls, deps } = fakeRun(
+			[wave([task('1'), task('2')], { totalCostUsd: 2 })],
+			['taskgraph/task-2'],
+			false,
+			['taskgraph/task-2']
+		);
+
+		const result = await runMergingWaves(
+			{ parallel: 2, maxBudgetUsd: 6 },
+			deps
+		);
+
+		// Its share of what was left: (6 - 2) / 2
+		expect(calls.resolved).toEqual(['2:2']);
+		expect(calls.merged).toEqual(['taskgraph/task-1', 'taskgraph/task-2']);
+		expect(calls.setAside).toEqual([]);
+		expect(result.totalCostUsd).toBeCloseTo(2.1);
 	});
 
 	it('sets a conflicting branch aside, merges the rest and redoes the task next wave', async () => {

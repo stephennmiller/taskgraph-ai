@@ -25,6 +25,7 @@ import { type LoopBand, resolveLoopBands } from './model-bands.js';
 import { preflightContainer } from './parallel/container-workers.js';
 import { ParallelLoopRunner } from './parallel/parallel-runner.js';
 import { TaskWorktrees } from './parallel/task-worktrees.js';
+import { resolveConflict } from './parallel/resolve-conflict.js';
 import { runMergingWaves } from './parallel/wave-merge.js';
 import type {
 	ParallelLoopOptions,
@@ -194,6 +195,19 @@ export class LoopDomain {
 			return await runMergingWaves(options, {
 				runWave: (o) => runner.run(o),
 				merge: (branch) => git.merge(branch),
+				// A --container task's work comes back as a branch, with no local worktree to resolve in
+				resolve: async (task, budgetUsd) =>
+					options.container
+						? { ok: false, costUsd: 0 }
+						: resolveConflict({
+								projectRoot: this.projectRoot,
+								worktree: task.worktree,
+								branch: task.branch,
+								commit: await git.head(),
+								command: options.command,
+								maxBudgetUsd: budgetUsd,
+								model: options.model
+							}),
 				remove: (worktree, branch) => git.remove(worktree, branch, true),
 				markDone: (id) => tasks.updateStatus(id, 'done', options.tag),
 				setAside: async (id, worktree, branch) => {
