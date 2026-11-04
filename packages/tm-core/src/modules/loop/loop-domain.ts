@@ -21,7 +21,11 @@ import {
 	isTaskPreset
 } from './loop-task.js';
 import { isLoopTrusted, keepLoopTrust, trustLoop } from './loop-trust.js';
-import { type LoopBand, resolveLoopBands } from './model-bands.js';
+import {
+	defaultLoopEffort,
+	type LoopBand,
+	resolveLoopBands
+} from './model-bands.js';
 import { preflightContainer } from './parallel/container-workers.js';
 import { ParallelLoopRunner } from './parallel/parallel-runner.js';
 import { TaskWorktrees } from './parallel/task-worktrees.js';
@@ -187,7 +191,8 @@ export class LoopDomain {
 			this.projectRoot,
 			tasks,
 			() => this.configManager.getActiveTag(),
-			this.loopBands()
+			this.loopBands(),
+			defaultLoopEffort(this.projectRoot)
 		);
 		try {
 			if (!options.merge) return await runner.run(options);
@@ -354,6 +359,8 @@ export class LoopDomain {
 			maxBudgetUsd: partial.maxBudgetUsd,
 			model: partial.model,
 			bands: partial.bands ?? this.loopBands(),
+			defaultEffort:
+				partial.defaultEffort ?? defaultLoopEffort(this.projectRoot),
 			reuseSession: partial.reuseSession,
 			resumeMaxContextTokens:
 				partial.resumeMaxContextTokens ??

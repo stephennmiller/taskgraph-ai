@@ -12,9 +12,13 @@
  *
  * A task scores into the first band whose maxScore it doesn't exceed. A band
  * without a model leaves Claude Code's own default model; a task without a
- * score, or past every band, runs as `claude -p` always has.
+ * score, or past every band, keeps Claude Code's model. Where no band picks an
+ * effort, an iteration runs at defaultLoopEffort.
  */
 
+import { readFileSync } from 'node:fs';
+import { homedir } from 'node:os';
+import { join } from 'node:path';
 import { LoopError } from './loop-task.js';
 
 /** `claude --effort` levels (Claude Code 2.1) */
@@ -38,9 +42,7 @@ export interface ModelChoice {
 
 /**
  * Simple tasks on a cheaper model at low effort; hard ones at high effort.
- * 4-6 passes nothing: Claude Code's default effort is model-dependent
- * (high on most, xhigh on Opus 4.7) and `--effort` beats the user's
- * `effortLevel` setting, so a fixed `medium` would downgrade those tasks.
+ * 4-6 sets no effort, so it runs at defaultLoopEffort.
  */
 export const DEFAULT_LOOP_BANDS: LoopBand[] = [
 	{ maxScore: 3, model: 'sonnet', effort: 'low' },
@@ -130,22 +132,54 @@ export function resolveLoopBands(loop: unknown): LoopBand[] {
 }
 
 /**
+ * The effort an iteration runs at when no band picks one: low, which cost 42%
+ * less and took half the time in the cost benchmarks, with the score within
+ * noise. None when you chose an effort, with CLAUDE_CODE_EFFORT_LEVEL or
+ * `effortLevel` in Claude Code's settings, since `--effort` would override it.
+ * shortcut: managed (organization) settings aren't read, so their effortLevel
+ * loses to `--effort low`; read them if an organization asks.
+ */
+export function defaultLoopEffort(
+	projectRoot: string,
+	env: NodeJS.ProcessEnv = process.env
+): LoopEffort | undefined {
+	if (env.CLAUDE_CODE_EFFORT_LEVEL) return undefined;
+	const settings = [
+		join(env.CLAUDE_CONFIG_DIR || join(homedir(), '.claude'), 'settings.json'),
+		join(projectRoot, '.claude', 'settings.json'),
+		join(projectRoot, '.claude', 'settings.local.json')
+	];
+	return settings.some(setsEffort) ? undefined : 'low';
+}
+
+function setsEffort(file: string): boolean {
+	try {
+		return JSON.parse(readFileSync(file, 'utf8'))?.effortLevel !== undefined;
+	} catch {
+		return false; // missing or unreadable: Claude Code ignores it too
+	}
+}
+
+/**
  * The model and effort for a task with this complexity score. `--model`
- * replaces the band's model; the band's effort still applies.
+ * replaces the band's model; the band's effort still applies, and
+ * defaultEffort fills in where it sets none.
  */
 export function pickModelEffort(
 	score: unknown,
 	bands: LoopBand[],
-	modelOverride?: string
+	modelOverride?: string,
+	defaultEffort?: LoopEffort
 ): ModelChoice {
 	const band =
 		typeof score === 'number' && Number.isFinite(score)
 			? bands.find((b) => score <= b.maxScore)
 			: undefined;
 	const model = modelOverride ?? band?.model;
+	const effort = band?.effort ?? defaultEffort;
 	return {
 		...(model ? { model } : {}),
-		...(band?.effort ? { effort: band.effort } : {})
+		...(effort ? { effort } : {})
 	};
 }
 
