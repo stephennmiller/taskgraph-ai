@@ -50,7 +50,8 @@
 						"pages": [
 							"best-practices/index",
 							"best-practices/configuration-advanced",
-							"best-practices/advanced-tasks"
+							"best-practices/advanced-tasks",
+							"best-practices/benchmarks"
 						]
 					},
 					{

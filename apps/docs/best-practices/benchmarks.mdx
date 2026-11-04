@@ -1,0 +1,102 @@
+---
+title: Benchmarks
+sidebarTitle: "Benchmarks"
+description: "How taskgraph loop compares with plain Claude Code on long builds scored by hidden tests, with and without an interruption."
+---
+
+Each benchmark is a PRD for a program that copies an existing tool, so the real
+tool serves as the oracle for hidden acceptance tests. Each test compares
+standard output and exit status. Before any run, the harness points the tests
+at the oracle itself and checks that it passes 100%.
+
+Two arms build each PRD unattended in an empty git repository, on Sonnet:
+
+- **Plain**: `claude -p` with the PRD.
+- **Taskgraph**: `taskgraph init`, `parse-prd`, then `loop --trust` with a
+  budget, which is what `taskgraph go` runs.
+
+Each run is capped at $15 and 110 minutes. Costs are what Claude Code reports.
+Times include planning but not scoring. Each row is one run, so a difference of
+a few cases is within noise.
+
+## Large PRDs
+
+The PRDs are about five times the size of the SQL and Python ones below:
+
+- **JS**: a JavaScript interpreter, scored against `node` (72 cases).
+- **Shell**: a POSIX shell, scored against `dash` (45 cases).
+- **jq**: a jq 1.7 clone, scored against jq (42 cases).
+
+| Bench | Plain | Cost  | Time   | Taskgraph | Cost  | Time   |
+| ----- | ----- | ----- | ------ | --------- | ----- | ------ |
+| JS    | 70/72 | $7.04 | 37 min | 63/72     | $8.42 | 51 min |
+| Shell | 45/45 | $8.50 | 70 min | 44/45     | $4.83 | 38 min |
+| jq    | 40/42 | $7.52 | 69 min | 38/42     | $4.37 | 36 min |
+
+A second taskgraph run on jq scored 33/42 for $3.54.
+
+## Interrupted
+
+The run is stopped partway through, then resumed the way a person would resume
+it:
+
+- **Plain**: the same prompt goes to a new session.
+- **Taskgraph**: `taskgraph loop` runs again.
+
+The first phase runs under a lower budget cap, then stops. Taskgraph's cap was
+40% of what it spent uninterrupted: $3.37 for JS, $1.93 for Shell and $1.75 for
+jq. Plain sessions often ended early on their own, so their caps were set lower,
+at $1.10, $1.30 and $1.50. Both phases share the one budget and time limit.
+
+| Bench | Plain  | Cost  | Time   | Taskgraph | Cost  | Time   |
+| ----- | ------ | ----- | ------ | --------- | ----- | ------ |
+| JS    | 71/72  | $8.77 | 47 min | 69/72     | $5.83 | 39 min |
+| Shell | 39/45¹ | $1.64 | 12 min | 41/45     | $2.79 | 26 min |
+| jq    | 33/42¹ | $1.72 | 13 min | 34/42     | $2.78 | 24 min |
+
+¹ The first plain session ended on its own, before the stop point, at $1.28 for
+Shell and $1.41 for jq. The second session, given the same prompt, added little.
+
+## Earlier PRDs
+
+These benchmarks are smaller, and taskgraph should never lose on them. The
+results below come from the build in which one loop session works through the
+tasks:
+
+| Bench  | Plain | Cost  | Taskgraph | Cost  |
+| ------ | ----- | ----- | --------- | ----- |
+| SQL    | 97/97 | $1.54 | 96/97     | $4.99 |
+| Python | 79/80 | $8.38 | 78/80     | $7.23 |
+
+The git-compatible VCS benchmark was not rerun on this build.
+
+## Parallel
+
+**Toolbelt** is a PRD for 13 independent coreutils clones, scored against GNU
+coreutils 9.4 (21 cases). It compares two arms:
+
+- **Plain**: told to build the parts in parallel with subagents.
+- **Taskgraph**: runs `loop --parallel 3`. Between waves the harness merges
+  each finished branch and marks its task done, as a person would.
+
+| Arm                      | Score  | Cost  | Time    |
+| ------------------------ | ------ | ----- | ------- |
+| Plain with subagents     | 18/21  | $1.16 | 2.7 min |
+| `loop --parallel 3`      | 0/21²  | $2.36 | 30 min  |
+
+² Its build wrote `dist/src/cli.js` instead of `dist/cli.js`, so every case
+failed. With that one path fixed, it scored 20/21.
+
+Each of the 12 waves ran one task, because every tool task also edits
+`src/cli.ts` to register itself. The file guard held the other tasks back.
+
+## Takeaways
+
+- On score, taskgraph ties or trails plain Claude Code on every benchmark.
+- With no interruption, it spent about 40% less on Shell and jq. On JS it
+  spent more.
+- After an interruption, taskgraph resumed from its task statuses and came close
+  to its uninterrupted score. Plain sessions often end early on their own,
+  before the work is complete.
+- `--parallel` doesn't yet help on a plan where the features share an entry
+  file.
