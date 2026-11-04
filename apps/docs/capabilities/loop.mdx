@@ -102,7 +102,7 @@ The loop stops when:
 - The run reaches its last iteration, or spends its budget, right after an iteration that failed: it ends with status `error` and that iteration's error, not `Iteration limit reached` or `--max-budget-usd reached`. Claude Code stopping at `--max-budget-usd` itself isn't a failure: the run ends as `--max-budget-usd reached`, or `Iteration limit reached` when that was the last iteration, and exits 0
 - With the `default` and `tdd` presets, or with `--id`: two iterations in a row finish without changing any task's status or making a commit. The loop stops with status `error` and names the task it is stuck on
 
-Each iteration gets an hour. One that runs longer is stopped and counts as failed, unless it changed a task's status or committed. Set `TASKGRAPH_LOOP_TIMEOUT_MS` (milliseconds) to change it; see [Loop iteration timeout](/best-practices/configuration-advanced#loop-iteration-timeout).
+An iteration that prints nothing for an hour is stopped and counts as failed, unless it changed a task's status or committed. One that keeps working can run longer. Set `TASKGRAPH_LOOP_TIMEOUT_MS` (milliseconds) to change it; see [Loop iteration timeout](/best-practices/configuration-advanced#loop-iteration-timeout).
 
 A marker counts only alone on the last line of the reply, so an agent that quotes one mid-sentence doesn't stop the loop. With the `default` and `tdd` presets, `<loop-complete>` also needs `taskgraph next` to find nothing: if a task is still ready, the loop warns and keeps going.
 

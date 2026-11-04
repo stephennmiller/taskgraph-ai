@@ -13,10 +13,10 @@ import { STREAM_JSON_ARGS } from './stream-events.js';
 const STOP_SIGNALS: NodeJS.Signals[] = ['SIGINT', 'SIGTERM', 'SIGHUP'];
 
 /**
- * Start Claude in its own process group. On timeout the whole group gets
- * SIGTERM, so the processes Claude started stop too, and onTimeout runs.
- * onStop runs on timeout and on a stop signal, for what lives outside the
- * group (the `--sandbox` container, #743).
+ * Start Claude in its own process group. After `timeout` ms with no output
+ * the whole group gets SIGTERM, so the processes Claude started stop too, and
+ * onTimeout runs. onStop runs on timeout and on a stop signal, for what lives
+ * outside the group (the `--sandbox` container, #743).
  */
 export function spawnIteration(
 	command: string,
@@ -42,6 +42,8 @@ export function spawnIteration(
 		child.stdout?.destroy();
 		child.stderr?.destroy();
 	}, timeout);
+	// An idle limit (#977): one session works through the whole backlog, so only silence means it hung
+	child.stdout?.on('data', () => timer.refresh());
 	// Ctrl-C reaches only the terminal's process group, which Claude has
 	// left: stop Claude's group (SIGTERM, since a shell's background jobs
 	// ignore SIGINT), then let the signal stop this process as before
