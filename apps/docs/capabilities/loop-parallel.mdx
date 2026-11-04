@@ -16,7 +16,7 @@ TaskGraph picks the tasks from the graph: wave 1 of `taskgraph graph`, the tasks
 2. Creates a git worktree at `.taskgraph/worktrees/task-<id>` on a new branch `taskgraph/task-<id>`, starting from your current commit.
 3. Starts one Claude Code process in that worktree. Its output goes to `.taskgraph/worktrees/task-<id>.log`, as Claude Code's `stream-json` events (one JSON object per line); the last line is the `result` event with what the task cost.
 
-Claude reads the task with `taskgraph show`, does the work, commits it on the task's branch, and marks the task `review` with `taskgraph set-status`.
+Claude reads the task with `taskgraph show`, does the work, commits it on the task's branch, and marks the task `review` with `taskgraph set-status`, checking off the acceptance criteria it met so the task can be marked `done` once you merge the branch.
 
 Two tasks that list the same file to create or modify in `relevantFiles` (their own or a subtask's) never run at the same time, so their branches don't conflict when you merge them. The run holds the second one back, names it in the summary, and the next run picks it up. A file listed only for reference doesn't count, and a task with no `relevantFiles` runs alongside anything. `parse-prd` fills `relevantFiles` with the files it expects each task to create or modify, so a freshly planned project gets this without editing tasks.
 

@@ -153,7 +153,7 @@ export function buildParallelPrompt(options: {
 		`1. Read the task: \`taskgraph show ${taskId}${tagFlag}\`.`,
 		'2. Implement it here, with the smallest change that does the job, and run the tests and type checks that cover it.',
 		`3. Commit your work on ${branch}. Don't merge, rebase or push; the branch is left for review.`,
-		`4. Mark it ready for review: \`taskgraph set-status --id=${taskId} --status=review${tagFlag}\`.`,
+		`4. Mark it ready for review, checking off by number the acceptance criteria your work meets (\`show\` lists them), so it can be marked done once merged: \`taskgraph set-status --id=${taskId} --status=review --check=<numbers>${tagFlag}\`. Leave out --check if the task has no criteria.`,
 		'',
 		`Work only on task ${taskId}. Don't start another task.`,
 		'',

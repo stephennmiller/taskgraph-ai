@@ -133,8 +133,16 @@ describe('buildParallelPrompt', () => {
 	it('has Claude mark the task review, since its branch is unmerged', () => {
 		const prompt = buildParallelPrompt({ taskId: '7' });
 
-		expect(prompt).toContain('`taskgraph set-status --id=7 --status=review`');
+		expect(prompt).toContain(
+			'`taskgraph set-status --id=7 --status=review --check=<numbers>`'
+		);
 		expect(prompt).not.toContain('--status=done');
+	});
+
+	it('has Claude check off the criteria it met, so the task can be marked done after the merge (#973)', () => {
+		expect(buildParallelPrompt({ taskId: '7' })).toContain(
+			'acceptance criteria'
+		);
 	});
 
 	it("says taskgraph works on the main project's tasks, without a path", () => {
@@ -151,7 +159,9 @@ describe('buildParallelPrompt', () => {
 		expect(prompt).toContain('your own clone');
 		expect(prompt).toContain('a copy of the project');
 		expect(prompt).not.toContain('worktree');
-		expect(prompt).toContain('`taskgraph set-status --id=7 --status=review`');
+		expect(prompt).toContain(
+			'`taskgraph set-status --id=7 --status=review --check=<numbers>`'
+		);
 	});
 
 	it('passes the tag to the taskgraph commands', () => {
