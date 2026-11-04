@@ -215,6 +215,25 @@ describe('LoopService cost and caps', () => {
 		expect(written()).toContain('- Final status: budget_reached');
 	});
 
+	it('stops as budget_reached instead of starting an iteration on a few cents (#971)', async () => {
+		spawn.mockImplementation(spends(0.9, 5));
+
+		const result = await service.run(
+			config({ iterations: 5, maxBudgetUsd: 1 })
+		);
+
+		expect(spawn).toHaveBeenCalledTimes(1);
+		expect(result.finalStatus).toBe('budget_reached');
+	});
+
+	it('still runs a whole budget smaller than the floor', async () => {
+		spawn.mockImplementation(spends(0.05, 1));
+
+		await service.run(config({ iterations: 5, maxBudgetUsd: 0.1 }));
+
+		expect(spawn).toHaveBeenCalledTimes(1);
+	});
+
 	it.each([
 		['quiet', false],
 		['--verbose', true]
