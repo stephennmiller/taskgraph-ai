@@ -14,7 +14,7 @@ import {
 } from '../services/iteration-limits.js';
 
 /** The prompt for one conflict; `commit` is the current branch's commit */
-export function buildResolvePrompt(branch: string, commit: string): string {
+function buildResolvePrompt(branch: string, commit: string): string {
 	return [
 		`Branch ${branch}, checked out here, conflicts with commit ${commit}, which other finished tasks were merged into.`,
 		'',
