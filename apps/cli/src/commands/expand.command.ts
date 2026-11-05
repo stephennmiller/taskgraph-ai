@@ -41,6 +41,7 @@ export interface ExpandCommandOptions {
 	research?: boolean;
 	prompt?: string;
 	force?: boolean;
+	append?: boolean;
 	file?: string;
 	complexityReport?: string;
 	tag?: string;
@@ -88,7 +89,11 @@ export class ExpandCommand extends Command {
 				'Enable research-backed generation (web research via Claude Code)'
 			)
 			.option('--prompt <text>', 'Additional context for subtask generation')
-			.option('-f, --force', 'Force expansion even if subtasks exist')
+			.option('-f, --force', 'Replace the subtasks the task has')
+			.option(
+				'--append',
+				'Keep the subtasks the task has and add new ones after them (with --all, tasks with subtasks are expanded too)'
+			)
 			// -f is --force here, so the legacy flag is --file only
 			.addOption(new Option('--file <file>').hideHelp())
 			.option(
@@ -103,6 +108,7 @@ Examples:
   $ taskgraph expand 3
   $ taskgraph expand --id=3
   $ taskgraph expand --all
+  $ taskgraph expand 3 --append --prompt='Cover the error paths'
 `
 			)
 			.action(async (id: string | undefined, options: ExpandCommandOptions) => {
@@ -136,6 +142,7 @@ Examples:
 				research: options.research,
 				prompt: options.prompt,
 				force: options.force,
+				append: options.append,
 				complexityReportPath:
 					options.complexityReport &&
 					path.resolve(projectRoot, options.complexityReport),

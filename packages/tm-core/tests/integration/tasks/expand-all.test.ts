@@ -134,6 +134,29 @@ describe('tasks.expandAll', () => {
 		expect(readFile().master.tasks[3].subtasks[0].title).toBe('Step');
 	});
 
+	it('with append also adds to the subtasks of tasks that have them (#992)', async () => {
+		const result = await tmCore.tasks.expandAll({ num: 1, append: true });
+
+		expect(result).toMatchObject({
+			expandedCount: 4,
+			tasksToExpand: 4,
+			alreadyExpandedCount: 0
+		});
+		expect(
+			readFile().master.tasks[3].subtasks.map((s: any) => [s.id, s.title])
+		).toEqual([
+			['1', 'Old'],
+			['2', 'Step']
+		]);
+	});
+
+	it('refuses append with force before any AI call (#992)', async () => {
+		await expect(
+			tmCore.tasks.expandAll({ append: true, force: true })
+		).rejects.toThrow("append and force can't be used together");
+		expect(generateObject).not.toHaveBeenCalled();
+	});
+
 	it('counts tasks the complexity report skips, without calling the AI for them', async () => {
 		fs.writeFileSync(
 			path.join(

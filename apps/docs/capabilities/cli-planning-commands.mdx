@@ -92,6 +92,12 @@ taskgraph expand --all
 # Force regeneration of subtasks for tasks that already have them
 taskgraph expand --all --force
 
+# Add subtasks to a task that has some, keeping the ones it has
+taskgraph expand <id> --append
+
+# Expand every pending task, adding to the ones that already have subtasks
+taskgraph expand --all --append
+
 # Research-backed subtask generation for a specific task
 taskgraph expand <id> --research
 
@@ -104,6 +110,8 @@ Each new subtask gets 2-5 acceptance criteria of its own, unchecked. A subtask c
 `expand --all` expands three tasks at a time and ends with one usage line for the whole run. Each task's new subtasks print as it finishes, so they can arrive out of order. Each expansion saves only the subtasks it added, so parallel saves, or changes you make while it runs, aren't lost.
 
 `--force` replaces a task's subtasks. Dependencies and `related` / `discovered-from` links on the old subtasks are dropped first, so they don't end up naming the new subtasks that reuse their IDs.
+
+`--append` keeps a task's subtasks, done ones included, and adds the new ones after them, numbered from the highest subtask ID. The AI is shown the existing subtasks and told not to repeat them. With `--all`, tasks that already have subtasks are expanded too. `--append` and `--force` can't be used together.
 
 ## Clear Subtasks
 

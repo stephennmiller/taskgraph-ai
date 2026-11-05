@@ -44,6 +44,13 @@ const ExpandTaskSchema = z.object({
 		.optional()
 		.default(false)
 		.describe('Force expansion even if subtasks exist'),
+	append: z
+		.boolean()
+		.optional()
+		.default(false)
+		.describe(
+			'Keep the existing subtasks and add new ones after them; not with force'
+		),
 	tag: z.string().optional().describe('Tag context to operate on')
 });
 
@@ -69,6 +76,12 @@ const ExpandAllSchema = z.object({
 		.optional()
 		.describe(
 			'Force regeneration of subtasks for tasks that already have them'
+		),
+	append: z
+		.boolean()
+		.optional()
+		.describe(
+			'Also expand tasks that have subtasks, keeping them and adding new ones after them; not with force'
 		),
 	file: z
 		.string()
@@ -130,6 +143,7 @@ export function registerExpandTaskTool(server: FastMCP) {
 								research: args.research === true,
 								prompt: args.prompt,
 								force: args.force === true,
+								append: args.append === true,
 								tag,
 								session,
 								outputType: 'mcp',
@@ -158,8 +172,7 @@ export function registerExpandTaskTool(server: FastMCP) {
 										}
 									: {
 											task,
-											// Any old subtasks were replaced, so all of them are new
-											subtasksAdded: task.subtasks?.length ?? 0,
+											subtasksAdded: expanded.addedSubtasks.length,
 											hasExistingSubtasks: hadSubtasks,
 											telemetryData: expanded.telemetryData ?? undefined,
 											tagInfo: expanded.tagInfo ?? undefined,
@@ -197,6 +210,7 @@ export function registerExpandAllTool(server: FastMCP) {
 					research: args.research === true,
 					prompt: args.prompt,
 					force: args.force === true,
+					append: args.append === true,
 					tag,
 					session,
 					outputType: 'mcp'

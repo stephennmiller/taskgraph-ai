@@ -27,7 +27,7 @@ export interface ExpandAllSummary {
 	skippedCount: number;
 	/** Tasks whose expansion failed */
 	failedCount: number;
-	/** Tasks that were eligible (pending or in progress, and no subtasks unless --force) */
+	/** Tasks that were eligible (pending or in progress, and no subtasks unless --force or --append) */
 	tasksToExpand: number;
 	/** Pending or in-progress tasks left out because they already have subtasks */
 	alreadyExpandedCount?: number;
@@ -60,8 +60,10 @@ export function formatExpandAll(summary: ExpandAllSummary): string {
 		return [
 			`No pending tasks to expand: ${have}`,
 			theme.muted('Add ') +
+				theme.brand('--append') +
+				theme.muted(' to add more, or ') +
 				theme.brand('--force') +
-				theme.muted(' to replace their subtasks')
+				theme.muted(' to replace them')
 		].join('\n');
 	}
 

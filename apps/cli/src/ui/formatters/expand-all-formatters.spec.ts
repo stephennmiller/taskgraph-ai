@@ -50,7 +50,7 @@ describe('formatExpandAll', () => {
 
 	it('suggests --force when every pending task already has subtasks', () => {
 		expect(plain(formatExpandAll({ ...run, alreadyExpandedCount: 3 }))).toBe(
-			'No pending tasks to expand: 3 already have subtasks\nAdd --force to replace their subtasks'
+			'No pending tasks to expand: 3 already have subtasks\nAdd --append to add more, or --force to replace them'
 		);
 	});
 

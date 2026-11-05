@@ -95,6 +95,15 @@ describe('expand', () => {
 		expect(text).not.toContain('\x1b[31m');
 	});
 
+	it('passes --append to tm-core (#992)', async () => {
+		await run('3', '--append');
+
+		expect(expand).toHaveBeenCalledWith(
+			expect.objectContaining({ id: '3', append: true }),
+			expect.any(Object)
+		);
+	});
+
 	it('help shows expand 3 and expand --id=3 as the same', () => {
 		let help = '';
 		new ExpandCommand()
