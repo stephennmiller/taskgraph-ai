@@ -142,6 +142,25 @@ describe('runMergingWaves', () => {
 		expect(result.setAside).toEqual([{ id: '9', reason: calls.notes[0] }]);
 	});
 
+	it('never counts a failed wave that committed, only ones that added nothing', async () => {
+		const failing = (commits: number) =>
+			task('9', { state: 'failed', finished: false, commits, kept: true });
+		const { calls, deps } = fakeRun([
+			wave([task('1'), failing(1)]),
+			wave([task('2'), failing(2)]),
+			wave([task('3'), failing(3)]),
+			// The same commits as before: no progress, so these count
+			wave([task('4'), failing(3)]),
+			wave([task('5'), failing(3)]),
+			wave([task('6'), failing(3)])
+		]);
+
+		const result = await runMergingWaves({ parallel: 2 }, deps);
+
+		expect(calls.blocked).toEqual(['9']);
+		expect(result.tasks.filter((t) => t.id === '9')).toHaveLength(6);
+	});
+
 	it('blocks a task with no progress in two waves, but never a claimed one', async () => {
 		const idle = () => task('8', { finished: false, kept: false });
 		const kept = () => task('7', { finished: false, claimed: true });

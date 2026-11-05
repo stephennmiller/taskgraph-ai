@@ -67,7 +67,7 @@ export async function runMergingWaves(
 	const notDone: string[] = [];
 	const conflicted = new Set<string>();
 	// Each task's failed and no-progress attempts in a row
-	const attempts = new Map<string, { errors: number; stalled: number }>();
+	const attempts = new Map<string, Attempts>();
 	const setAside: SetAsideTask[] = [];
 	let spent = 0;
 	const resolveAndMerge = async (task: ParallelTask) => {
@@ -136,23 +136,35 @@ export async function runMergingWaves(
 	return total;
 }
 
+/** A task's failed and no-progress attempts in a row, and the work its branch had after the last one */
+type Attempts = { errors: number; stalled: number; work: string };
+
 /**
  * Count each released task's failed or no-progress attempt, and block the
  * ones that reach the serial loop's limits, so later waves don't claim them
  */
 async function blockStuck(
 	tasks: ParallelTask[],
-	attempts: Map<string, { errors: number; stalled: number }>,
+	attempts: Map<string, Attempts>,
 	setAside: SetAsideTask[],
 	block: WaveMergeDeps['block']
 ): Promise<void> {
 	for (const task of tasks) {
 		// Claimed or finished: no later wave claims it again
 		if (task.claimed || task.finished || task.state === 'stopped') continue;
-		const n = attempts.get(task.id) ?? { errors: 0, stalled: 0 };
+		const n = attempts.get(task.id) ?? {
+			errors: 0,
+			stalled: 0,
+			work: '0:false'
+		};
+		// A retry reuses the kept worktree, so only work this attempt added is progress
+		const work = `${task.commits ?? 0}:${!!task.uncommitted}`;
+		const progressed =
+			work !== n.work && (!!task.commits || !!task.uncommitted);
+		n.work = work;
 		const failed = task.state === 'failed';
-		n.errors = failed ? n.errors + 1 : 0;
-		n.stalled = failed ? 0 : n.stalled + 1;
+		n.errors = failed && !progressed ? n.errors + 1 : 0;
+		n.stalled = failed || progressed ? 0 : n.stalled + 1;
 		attempts.set(task.id, n);
 		if (
 			n.errors < MAX_CONSECUTIVE_ERRORS &&

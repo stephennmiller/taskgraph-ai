@@ -50,10 +50,14 @@ export const fit = (text: string, width: number) => {
 		: clean;
 };
 
-/** The stuck tasks a run set to blocked, with how to retry them; none when there are none */
+/**
+ * The stuck tasks a run set to blocked, with how to retry them; none when
+ * there are none. `then` when a Next: line comes before it.
+ */
 export function formatSetAside(
 	aside: ParallelLoopResult['setAside'] = [],
-	width = 80
+	width = 80,
+	then = false
 ): string[] {
 	if (!aside.length) return [];
 	const id = aside.length === 1 ? fit(aside[0].id, 20) : '<id>';
@@ -64,7 +68,7 @@ export function formatSetAside(
 			return theme.text(head) + theme.muted(fit(t.reason, width - head.length));
 		}),
 		theme.muted(
-			`Next: taskgraph show ${id}, then taskgraph set-status --id=${id} --status=pending`
+			`${then ? 'Then' : 'Next'}: taskgraph show ${id}, then taskgraph set-status --id=${id} --status=pending`
 		)
 	];
 }
@@ -239,7 +243,7 @@ export function formatParallelSummary(
 		...rows,
 		...(held ? [held] : []),
 		...(notDone ? [notDone] : []),
-		...formatSetAside(result.setAside),
-		...(next ? [next] : [])
+		...(next ? [next] : []),
+		...formatSetAside(result.setAside, 80, !!next)
 	].join('\n');
 }

@@ -329,6 +329,26 @@ describe('formatParallelSummary', () => {
 		]);
 	});
 
+	it('puts the set-aside hint after the Next: line as Then:, not a second Next:', () => {
+		const reason = 'stuck: 3 failed sessions in a row. Last error: exit 1';
+		const out = summary(
+			result(
+				[
+					task('1', { finished: true, kept: true, commits: 1 }),
+					task('9', { state: 'failed', error: 'exit 1' })
+				],
+				{ waves: 3, setAside: [{ id: '9', reason }] }
+			)
+		);
+
+		expect(out.split('\n').slice(-4)).toEqual([
+			'Next: review with git log -p HEAD..taskgraph/task-1',
+			'Set aside 1 stuck task as blocked',
+			`  9  ${reason}`,
+			'Then: taskgraph show 9, then taskgraph set-status --id=9 --status=pending'
+		]);
+	});
+
 	it('says when nothing is ready', () => {
 		expect(summary(result([]))).toBe(
 			'No tasks are ready to run\nRun taskgraph graph to see what the rest wait on'
