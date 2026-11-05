@@ -4,8 +4,10 @@ import {
 	SubtaskSchema
 } from './base-schemas.js';
 
-// A subtask as expand writes it: the shared shape plus its acceptance criteria
+// A subtask as expand writes it: the shared shape plus its acceptance criteria.
+// status is optional so a subtask the model left it off saves as pending (#1008)
 export const ExpandedSubtaskSchema = SubtaskSchema.extend({
+	status: SubtaskSchema.shape.status.optional(),
 	acceptanceCriteria: GeneratedAcceptanceCriteriaSchema
 }).strict();
 
