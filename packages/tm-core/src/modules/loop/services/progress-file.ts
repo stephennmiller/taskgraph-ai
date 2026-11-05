@@ -96,7 +96,7 @@ export async function appendFinalSummary(
 - Total iterations: ${result.totalIterations}
 - Tasks completed: ${result.tasksCompleted}
 - Final status: ${result.finalStatus}
-${cost.length ? `- Spent: ${cost.join(' · ')}\n` : ''}${result.totalDurationMs !== undefined ? `- Time: ${Math.round(result.totalDurationMs / 60000)} min\n` : ''}`,
+${cost.length ? `- Spent: ${cost.join(' · ')}\n` : ''}${result.totalDurationMs !== undefined ? `- Time: ${Math.round(result.totalDurationMs / 60000)} min\n` : ''}${(result.setAside ?? []).map((t) => `- Set aside task ${t.id} (${t.reason}): run taskgraph show ${t.id}, then taskgraph set-status --id=${t.id} --status=pending\n`).join('')}`,
 		'utf-8'
 	);
 }

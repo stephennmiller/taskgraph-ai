@@ -102,6 +102,17 @@ The loop stops when:
 - The run reaches its last iteration, or spends its budget, right after an iteration that failed: it ends with status `error` and that iteration's error, not `Iteration limit reached` or `--max-budget-usd reached`. Claude Code stopping at `--max-budget-usd` itself isn't a failure: the run ends as `--max-budget-usd reached`, or `Iteration limit reached` when that was the last iteration, and exits 0
 - With the `default` and `tdd` presets, or with `--id`: two iterations in a row finish without changing any task's status or making a commit. The loop stops with status `error` and names the task it is stuck on
 
+With the `default` and `tdd` presets over the whole tag (no `--id`), a stuck task doesn't stop the run while other work is ready. When the task `taskgraph next` picks fails three iterations in a row, or makes no progress in two, the loop sets it to `blocked`, adds a note saying why (`stuck: no progress in 2 sessions`, or the last error), and goes on with the next ready task. `next` skips a blocked task and the tasks that depend on it. The loop still stops as above when no other task is ready, when Claude Code or Docker isn't installed, or when the error that set one task aside comes back on the next one, which points at a broken setup rather than a hard task. The final summary lists the tasks it set aside:
+
+```
+Iteration limit reached · 3 tasks completed in 10 iterations · $4.10
+Set aside 1 stuck task as blocked
+  4  stuck: no progress in 2 sessions
+Next: taskgraph show 4, then taskgraph set-status --id=4 --status=pending
+```
+
+The progress file's summary lists them too. `loop --parallel` doesn't set tasks aside: a task whose Claude Code fails is released, and a later run or wave retries it (see [Run tasks in parallel](/capabilities/loop-parallel)).
+
 An iteration that prints nothing for an hour is stopped and counts as failed, unless it changed a task's status or committed. One that keeps working can run longer. Set `TASKGRAPH_LOOP_TIMEOUT_MS` (milliseconds) to change it; see [Loop iteration timeout](/best-practices/configuration-advanced#loop-iteration-timeout).
 
 A marker counts only alone on the last line of the reply, so an agent that quotes one mid-sentence doesn't stop the loop. With the `default` and `tdd` presets, `<loop-complete>` also needs `taskgraph next` to find nothing: if a task is still ready, the loop warns and keeps going.
@@ -146,88 +157,7 @@ Six built-in presets cover common workflows: `default` (the TaskGraph backlog), 
 
 ## Custom Prompts
 
-You can create custom prompt files for specialized workflows that aren't covered by the built-in presets.
-
-### Specifying a Custom Prompt
-
-Pass the file path to the `--prompt` option:
-
-```bash
-taskgraph loop -n 10 --prompt ./my-custom-loop.md
-```
-
-The path can be absolute or relative to the current directory.
-
-### Required Structure
-
-Custom prompts should follow this structure to work effectively with the loop system:
-
-```markdown
-# Your Loop Title
-
-Brief description of what this loop does.
-
-## Files Available
-
-- @.taskgraph/tasks/tasks.json - Your task backlog
-- @path/to/other/file.ts - Any other files the agent needs
-
-## Process
-
-1. Step one of the workflow
-2. Step two of the workflow
-3. ... more steps
-
-## Important
-
-- Complete ONLY ONE task per session
-- Keep changes small and focused
-- Do NOT start another task after completing one
-- If work is complete, output: <loop-complete>REASON</loop-complete>
-- If blocked, output: <loop-blocked>REASON</loop-blocked>
-```
-
-### File References with @ Syntax
-
-The `@` prefix makes files available to the agent. Claude Code will read these files when processing the prompt:
-
-```markdown
-## Files Available
-
-- @src/index.ts - Main entry point
-- @package.json - Dependencies and scripts
-```
-
-Without the `@` prefix, file paths are just text. With `@`, the agent can actually read and reference the file contents.
-
-### Completion Markers
-
-The loop watches for two special markers in agent output:
-
-| Marker | Purpose | Example |
-| ------ | ------- | ------- |
-| `<loop-complete>REASON</loop-complete>` | Signal that all work is done | `<loop-complete>ALL_TESTS_PASSING</loop-complete>` |
-| `<loop-blocked>REASON</loop-blocked>` | Signal that work cannot proceed | `<loop-blocked>MISSING_ENV_VAR</loop-blocked>` |
-
-When either marker is detected, the loop exits early. The reason text is captured in the final result.
-
-**Example usage in a custom prompt:**
-
-```markdown
-## Important
-
-- If all migrations are complete, output: <loop-complete>MIGRATIONS_DONE</loop-complete>
-- If a migration fails with an unrecoverable error, output: <loop-blocked>MIGRATION_FAILED: describe error</loop-blocked>
-```
-
-### Best Practices
-
-1. **Be specific**: Clearly define what "done" means for your workflow
-2. **One task per iteration**: Instruct agents to complete exactly one unit of work
-3. **Use the progress file**: It is attached to every prompt; tell agents to append a note to it so the next iteration sees what was done
-4. **Include quality checks**: Add steps for running tests or type checks before completing
-5. **Define completion criteria**: Tell agents exactly when to output `<loop-complete>`
-6. **Handle edge cases**: Define when to output `<loop-blocked>` to avoid infinite loops
+You can write your own prompt file for workflows the built-in presets don't cover. See [Loop Custom Prompts](/capabilities/loop-custom-prompts).
 
 ## Progress File
 

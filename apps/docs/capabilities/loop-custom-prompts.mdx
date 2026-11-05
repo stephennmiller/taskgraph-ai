@@ -1,0 +1,88 @@
+---
+title: Loop Custom Prompts
+sidebarTitle: "Loop Custom Prompts"
+description: "Write your own prompt file for taskgraph loop: its structure, the files it can reference, and the completion markers"
+---
+
+You can create custom prompt files for specialized workflows that aren't covered by the built-in presets.
+
+## Specifying a Custom Prompt
+
+Pass the file path to the `--prompt` option:
+
+```bash
+taskgraph loop -n 10 --prompt ./my-custom-loop.md
+```
+
+The path can be absolute or relative to the current directory.
+
+## Required Structure
+
+Custom prompts should follow this structure to work effectively with the loop system:
+
+```markdown
+# Your Loop Title
+
+Brief description of what this loop does.
+
+## Files Available
+
+- @.taskgraph/tasks/tasks.json - Your task backlog
+- @path/to/other/file.ts - Any other files the agent needs
+
+## Process
+
+1. Step one of the workflow
+2. Step two of the workflow
+3. ... more steps
+
+## Important
+
+- Complete ONLY ONE task per session
+- Keep changes small and focused
+- Do NOT start another task after completing one
+- If work is complete, output: <loop-complete>REASON</loop-complete>
+- If blocked, output: <loop-blocked>REASON</loop-blocked>
+```
+
+## File References with @ Syntax
+
+The `@` prefix makes files available to the agent. Claude Code will read these files when processing the prompt:
+
+```markdown
+## Files Available
+
+- @src/index.ts - Main entry point
+- @package.json - Dependencies and scripts
+```
+
+Without the `@` prefix, file paths are just text. With `@`, the agent can actually read and reference the file contents.
+
+## Completion Markers
+
+The loop watches for two special markers in agent output:
+
+| Marker | Purpose | Example |
+| ------ | ------- | ------- |
+| `<loop-complete>REASON</loop-complete>` | Signal that all work is done | `<loop-complete>ALL_TESTS_PASSING</loop-complete>` |
+| `<loop-blocked>REASON</loop-blocked>` | Signal that work cannot proceed | `<loop-blocked>MISSING_ENV_VAR</loop-blocked>` |
+
+When either marker is detected, the loop exits early. The reason text is captured in the final result.
+
+**Example usage in a custom prompt:**
+
+```markdown
+## Important
+
+- If all migrations are complete, output: <loop-complete>MIGRATIONS_DONE</loop-complete>
+- If a migration fails with an unrecoverable error, output: <loop-blocked>MIGRATION_FAILED: describe error</loop-blocked>
+```
+
+## Best Practices
+
+1. **Be specific**: Clearly define what "done" means for your workflow
+2. **One task per iteration**: Instruct agents to complete exactly one unit of work
+3. **Use the progress file**: It is attached to every prompt; tell agents to append a note to it so the next iteration sees what was done
+4. **Include quality checks**: Add steps for running tests or type checks before completing
+5. **Define completion criteria**: Tell agents exactly when to output `<loop-complete>`
+6. **Handle edge cases**: Define when to output `<loop-blocked>` to avoid infinite loops

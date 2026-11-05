@@ -130,6 +130,12 @@ export class LoopDomain {
 			headCommit: () => getHeadCommit(this.projectRoot),
 			taskComplexity: tasks
 				? async (id, tag) => (await tasks.get(id, tag)).task?.complexity
+				: undefined,
+			blockTask: tasks
+				? async (id, note, tag) => {
+						await tasks.updateStatus(id, 'blocked', tag);
+						await tasks.addNote(id, note, { tag });
+					}
 				: undefined
 		});
 		return this.loopService.run(fullConfig);

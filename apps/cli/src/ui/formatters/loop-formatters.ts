@@ -15,6 +15,12 @@
  * and one line at the end:
  *
  *   ✓ All tasks complete · 3 tasks completed in 4 iterations · $1.42 · 61 turns
+ *
+ * followed, when it set stuck tasks aside, by:
+ *
+ *   Set aside 1 stuck task as blocked
+ *     4  stuck: no progress in 2 sessions
+ *   Next: taskgraph show 4, then taskgraph set-status --id=4 --status=pending
  */
 
 import type { LoopIteration, LoopResult, LoopTask } from '@tm/core';
@@ -146,8 +152,8 @@ const STOP_REASON: Record<LoopResult['finalStatus'], string> = {
 };
 
 /**
- * The run's one-line summary: why it stopped, the tasks it completed and
- * what it spent.
+ * The run's summary: why it stopped, the tasks it completed, what it spent,
+ * and the stuck tasks it set aside.
  * @param shown - Errors already printed during the run; result.errorMessage
  *   is added only when it isn't one of them
  */
@@ -163,7 +169,7 @@ export function formatLoopSummary(
 	const counts = theme.muted(
 		` · ${plural(result.tasksCompleted, 'task')} completed in ${plural(result.totalIterations, 'iteration')}`
 	);
-	return wrap(
+	const line = wrap(
 		STOP_REASON[result.finalStatus] +
 			why +
 			counts +
@@ -175,4 +181,18 @@ export function formatLoopSummary(
 			}),
 		width
 	);
+	const aside = result.setAside ?? [];
+	if (!aside.length) return line;
+	const id = aside.length === 1 ? fit(aside[0].id, 20) : '<id>';
+	return [
+		line,
+		chalk.yellow(`Set aside ${plural(aside.length, 'stuck task')} as blocked`),
+		...aside.map((t) => {
+			const head = `  ${fit(t.id, 20)}  `;
+			return theme.text(head) + theme.muted(fit(t.reason, width - head.length));
+		}),
+		theme.muted(
+			`Next: taskgraph show ${id}, then taskgraph set-status --id=${id} --status=pending`
+		)
+	].join('\n');
 }

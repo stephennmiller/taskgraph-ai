@@ -259,4 +259,32 @@ describe('formatLoopSummary', () => {
 			'✗ Loop failed · 3 tasks completed in 4 iterations'
 		);
 	});
+
+	it('lists the stuck tasks it set aside, with how to retry them, within 80 columns', () => {
+		const one = summary({
+			finalStatus: 'max_iterations',
+			setAside: [{ id: '4', reason: 'stuck: no progress in 2 sessions' }]
+		});
+		const two = summary({
+			finalStatus: 'max_iterations',
+			setAside: [
+				{ id: '4', reason: 'stuck: no progress in 2 sessions' },
+				{ id: '7', reason: `stuck: ${'x'.repeat(200)}` }
+			]
+		});
+
+		expect(one.split('\n')).toEqual([
+			'Iteration limit reached · 3 tasks completed in 4 iterations',
+			'Set aside 1 stuck task as blocked',
+			'  4  stuck: no progress in 2 sessions',
+			'Next: taskgraph show 4, then taskgraph set-status --id=4 --status=pending'
+		]);
+		expect(two).toContain('Set aside 2 stuck tasks as blocked');
+		expect(two).toContain(
+			'Next: taskgraph show <id>, then taskgraph set-status --id=<id> --status=pending'
+		);
+		for (const line of two.split('\n')) {
+			expect(line.length).toBeLessThanOrEqual(80);
+		}
+	});
 });
