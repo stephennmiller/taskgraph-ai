@@ -108,9 +108,9 @@ What it costs:
   TaskGraph ties or trails it on score on every benchmark.
 - **More money and time.** With one task per session, the default, the Shell
   and jq builds together scored 79/87 for $7.52 in 48 minutes. Plain scored
-  80/87 for $4.61 in 37 minutes, about 60% less. Most of the gap is calls:
-  TaskGraph made about 135 per build against plain's 19 to 27, and each fresh
-  session reads its prompt and files again.
+  80/87 for $4.61 in 37 minutes, so TaskGraph cost about 60% more. Plain
+  works in a few large calls, while each fresh TaskGraph session reads its
+  prompt and files again.
 - **Slower in parallel.** On 13 independent tools, `loop --parallel
   3 --merge` scored 17/21 for $2.30 in 11 minutes. Plain Claude Code with
   subagents scored 18/21 for $1.16 in under 3 minutes.
