@@ -130,7 +130,11 @@ export class LoopDomain {
 			headCommit: () => getHeadCommit(this.projectRoot),
 			taskComplexity: tasks
 				? async (id, tag) => (await tasks.get(id, tag)).task?.complexity
-				: undefined
+				: undefined,
+			uncommittedFiles: () =>
+				new TaskWorktrees(this.projectRoot).changedFiles(
+					fullConfig.progressFile
+				)
 		});
 		return this.loopService.run(fullConfig);
 	}
