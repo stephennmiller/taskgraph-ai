@@ -223,7 +223,8 @@ export class TaskEditCommands {
 
 	/**
 	 * Move tasks, with their subtasks, to another tag (created if missing),
-	 * keeping their IDs, in one locked write. Dependencies left in the source
+	 * keeping their IDs where the target tag doesn't use them (a taken ID
+	 * becomes the next free one), in one locked write. Dependencies left in the source
 	 * tag block the move unless `withDependencies` or `ignoreDependencies`.
 	 */
 	async moveToTag(

@@ -100,12 +100,7 @@ export class MoveCommand extends Command {
 					}
 				);
 				console.log(
-					formatTagMove(
-						result.movedTasks.length,
-						fromTag,
-						toTag,
-						Boolean(result.tips)
-					)
+					formatTagMove(result.movedTasks, fromTag, toTag, Boolean(result.tips))
 				);
 				return;
 			}

@@ -11,8 +11,9 @@ import {
 } from '../../dependencies/dependency-provenance.js';
 import { resolveSubtaskDependency } from '../../dependencies/subtask-dependency.js';
 import { pruneTaskLinks } from '../../dependencies/task-links.js';
+import { retargetDependents } from '../../dependencies/task-to-subtask.js';
 import { canonicalTaskId, normalizeTaskId } from '../validation/task-id.js';
-import { isArchivedReference, liveOrArchived } from './archive.js';
+import { isArchivedReference, liveOrArchived, nextTaskId } from './archive.js';
 import { assertTagName, isReservedNewTagName } from './tag-names.js';
 import {
 	type CrossTagConflict,
@@ -23,8 +24,7 @@ import {
 	MOVE_ERROR_CODES,
 	fail,
 	findTask,
-	notFound,
-	taken
+	notFound
 } from './task-moves.js';
 
 /**
@@ -72,9 +72,10 @@ function forwardDependencies(sources: Item[], tasks: Item[]): number[] {
 
 /**
  * Move tasks, with their subtasks, from one tag to another, keeping their
- * IDs. A dependency that would point back into the source tag blocks the
- * move unless `withDependencies` brings what they depend on along or
- * `ignoreDependencies` drops it. The target tag is created when missing.
+ * IDs where the target tag doesn't use them; a taken ID becomes the next
+ * free one there. A dependency that would point back into the source tag
+ * blocks the move unless `withDependencies` brings what they depend on along
+ * or `ignoreDependencies` drops it. The target tag is created when missing.
  * @param tags - Every tag's tasks, in file order; changed in place
  * @param archivedIds - Archived task IDs of a tag
  */
@@ -130,6 +131,9 @@ First promote it to a full task using:
 			if (!toMove.some((m) => String(m) === String(id))) toMove.push(id);
 		}
 	}
+	// IDs the moved tasks still name outside the move, which no renumbered
+	// task may take
+	const reserved = new Set<string>();
 	// withDependencies brings only what the tasks depend on, so dependents
 	// left behind and archived dependencies are still checked
 	{
@@ -171,6 +175,7 @@ First promote it to a full task using:
 						: resolveSubtaskDependency(parentId, dep)
 				);
 				if (holderMoved && !isMoved(full)) {
+					reserved.add(full.split('.')[0]);
 					const live = liveInSource(full);
 					const archived = !live && isArchivedReference(full, sourceArchived);
 					const missing = !live && !archived && inTarget(full);
@@ -236,25 +241,44 @@ First promote it to a full task using:
 		}
 	}
 
-	const movedTasks: CrossTagMoveResult['movedTasks'] = [];
-	const targetArchived = archivedIds(targetTag);
-	for (const taskId of toMove) {
+	// Each task keeps its ID unless the target tag uses it, live or archived;
+	// then it takes the next free one there (#984). New IDs are above every ID
+	// in use, so renaming one never touches another moved task's old ID.
+	const inUse = new Set([
+		...target.map((t) => String(t.id)),
+		...archivedIds(targetTag),
+		...reserved
+	]);
+	// "5,5" moves task 5 once
+	toMove = toMove.filter(
+		(taskId, i) =>
+			toMove.findIndex(
+				(other) => normalizeTaskId(other) === normalizeTaskId(taskId)
+			) === i
+	);
+	const ids = toMove.map((taskId) => {
 		const id = normalizeTaskId(taskId);
-		const index = source.findIndex((t) => String(t.id) === id);
-		if (index === -1) {
+		if (!findTask(source, id)) {
 			notFound(`Task ${taskId} not found in source tag "${sourceTag}"`);
 		}
-		if (targetArchived.has(id)) {
-			taken(
-				`Task ${id} is archived in tag "${targetTag}", so its ID is taken. Use a different destination ID.`
-			);
-		}
-		if (findTask(target, id)) {
-			taken(`Task ${taskId} already exists in target tag "${targetTag}"`, {
-				conflictingId: id,
-				targetTag
-			});
-		}
+		return id;
+	});
+	const newIds = new Map<string, string>();
+	for (const id of ids) {
+		if (!inUse.has(id)) newIds.set(id, id);
+		inUse.add(id);
+	}
+	for (const id of ids) {
+		if (newIds.has(id)) continue;
+		const next = String(nextTaskId(inUse));
+		newIds.set(id, next);
+		inUse.add(next);
+	}
+
+	const movedTasks: CrossTagMoveResult['movedTasks'] = [];
+	const moved: Item[] = [];
+	toMove.forEach((taskId, i) => {
+		const index = source.findIndex((t) => String(t.id) === ids[i]);
 		const [task] = source.splice(index, 1);
 		task.metadata ??= {};
 		task.metadata.moveHistory ??= [];
@@ -264,21 +288,42 @@ First promote it to a full task using:
 			timestamp: new Date().toISOString()
 		});
 		target.push(task);
-		movedTasks.push({ id: taskId, fromTag: sourceTag, toTag: targetTag });
-	}
+		moved.push(task);
+		movedTasks.push({
+			id: taskId,
+			newId: newIds.get(ids[i]) as string,
+			fromTag: sourceTag,
+			toTag: targetTag
+		});
+	});
 
 	// Related and discovered-from links don't cross tags: the same ID names a
 	// different task there. Moved tasks keep links among themselves; the
-	// source tag drops its links to them.
-	const movedIds = new Set(movedTasks.map((moved) => String(moved.id)));
-	pruneTaskLinks(
-		target.filter((task) => movedIds.has(String(task.id))),
-		(id) => movedIds.has(id.split('.')[0])
-	);
+	// source tag drops its links to them. Pruned before renumbering, so a link
+	// to an ID a moved task now takes isn't kept.
+	pruneTaskLinks(moved, (id) => newIds.has(id.split('.')[0]));
 	pruneTaskLinks(
 		source,
 		liveOrArchived(source as Task[], () => archivedIds(sourceTag))
 	);
+
+	// Dependencies and links among the moved tasks, and their subtasks'
+	// references to their parent, follow the new IDs
+	for (const task of moved) {
+		const oldId = normalizeTaskId(task.id);
+		const newId = newIds.get(oldId) as string;
+		if (newId === oldId) continue;
+		task.id = newId;
+		retargetDependents(moved, oldId, newId);
+		for (const subtask of task.subtasks ?? []) {
+			if (subtask.parentId !== undefined) subtask.parentId = newId;
+			retargetDependents(
+				moved,
+				`${oldId}.${subtask.id}`,
+				`${newId}.${subtask.id}`
+			);
+		}
+	}
 
 	const result: CrossTagMoveResult = {
 		message: `Successfully moved ${movedTasks.length} tasks from "${sourceTag}" to "${targetTag}"`,

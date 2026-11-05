@@ -224,7 +224,7 @@ describe('add-subtask and move through tasks', () => {
 		const result = await tmCore.tasks.moveToTag(['3'], 'master', 'feature');
 
 		expect(result.movedTasks).toEqual([
-			{ id: '3', fromTag: 'master', toTag: 'feature' }
+			{ id: '3', newId: '3', fromTag: 'master', toTag: 'feature' }
 		]);
 		expect(idsIn('master')).toEqual(['1', '2']);
 		expect(idsIn('feature')).toEqual(['3']);

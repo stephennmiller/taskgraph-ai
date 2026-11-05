@@ -43,6 +43,16 @@ taskgraph move --from=5 --from-tag=backlog --to-tag=in-progress
 taskgraph move --from=5,6,7 --from-tag=backlog --to-tag=done
 ```
 
+A task keeps its ID in the target tag when that tag doesn't use it. When the ID is taken there, by a task or an archived one, the task gets the next free ID, above every ID the target tag has used, and the output says so:
+
+```
+✓ Moved 2 tasks from "backlog" to "sprint"
+  Task 2 is now task 3 (2 was taken in sprint)
+  Task 1 is now task 4 (1 was taken in sprint)
+```
+
+Dependencies among the moved tasks, links between them, and their subtasks' references to them follow the new IDs. The MCP `move_task` reply lists each task in `movedTasks` with its `id` as asked and its `newId` in the target tag, and its `message` names the renumbered ones.
+
 ## Dependency Resolution
 
 When moving tasks between tags, you may encounter cross-tag dependencies. TaskGraph provides several options to handle these:

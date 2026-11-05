@@ -157,7 +157,7 @@ taskgraph move --from=5 --to=25
 # Move multiple tasks at once (same number of IDs; if one pair fails, nothing moves)
 taskgraph move --from=10,11,12 --to=16,17,18
 
-# Move a task to another tag
+# Move a task to another tag (it gets the next free ID there if its own is taken)
 taskgraph move --from=5 --from-tag=backlog --to-tag=in-progress
 ```
 

@@ -30,20 +30,53 @@ describe('formatMoves', () => {
 });
 
 describe('formatTagMove', () => {
+	const moved = (id: string | number, newId: string) => ({
+		id,
+		newId,
+		fromTag: 'backlog',
+		toTag: 'sprint'
+	});
+
 	it('says how many moved, and what to run after dropping dependencies', () => {
-		expect(plain(formatTagMove(1, 'backlog', 'sprint', false))).toBe(
-			'✓ Moved 1 task from "backlog" to "sprint"'
-		);
 		expect(
-			plain(formatTagMove(2, 'backlog', 'sprint', true)).split('\n')
+			plain(formatTagMove([moved('3', '3')], 'backlog', 'sprint', false))
+		).toBe('✓ Moved 1 task from "backlog" to "sprint"');
+		expect(
+			plain(
+				formatTagMove(
+					[moved('3', '3'), moved(4, '4')],
+					'backlog',
+					'sprint',
+					true
+				)
+			).split('\n')
 		).toEqual([
 			'✓ Moved 2 tasks from "backlog" to "sprint"',
 			'Next: taskgraph fix-dependencies --check, then taskgraph fix-dependencies'
 		]);
 	});
 
+	it('names each task that got a new ID because its ID was taken (#984)', () => {
+		expect(
+			plain(
+				formatTagMove(
+					[moved('5', '12'), moved('6', '6'), moved(1, '13')],
+					'backlog',
+					'sprint',
+					false
+				)
+			).split('\n')
+		).toEqual([
+			'✓ Moved 3 tasks from "backlog" to "sprint"',
+			'  Task 5 is now task 12 (5 was taken in sprint)',
+			'  Task 1 is now task 13 (1 was taken in sprint)'
+		]);
+	});
+
 	it('strips escape codes from tag names', () => {
-		expect(formatTagMove(1, 'a\x1b[2Jb', 'c', false)).not.toContain('\x1b[2J');
+		expect(
+			formatTagMove([moved('1', '2')], 'a\x1b[2Jb', 'c\x1b[2Jd', false)
+		).not.toContain('\x1b[2J');
 	});
 });
 
