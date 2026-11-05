@@ -30,13 +30,17 @@ export class StuckTasks {
 
 	/**
 	 * A failed iteration's error means the setup is broken, not the task:
-	 * Claude or Docker is missing, or the error that set a task aside came back
+	 * Claude or Docker is missing, or the next task also failed `inARow` times
+	 * with the error that set one aside. Most errors are generic (`Exit code 1`,
+	 * a timeout), so one repeat alone doesn't count.
 	 */
-	brokenSetup(error: string | undefined): boolean {
+	brokenSetup(error: string | undefined, inARow: boolean): boolean {
 		return (
 			error === CLAUDE_MISSING ||
 			error === DOCKER_MISSING ||
-			(error !== undefined && this.list.some((t) => t.error === error))
+			(inARow &&
+				error !== undefined &&
+				this.list.some((t) => t.error === error))
 		);
 	}
 

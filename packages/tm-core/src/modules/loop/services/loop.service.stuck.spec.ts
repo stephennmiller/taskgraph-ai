@@ -101,7 +101,7 @@ describe('LoopService stuck tasks', () => {
 		expect(result.setAside).toHaveLength(1);
 	});
 
-	it('stops at once when the error that set a task aside comes back on the next task', async () => {
+	it('stops, without setting the next task aside, when it fails 3 times with the error that set one aside', async () => {
 		spawn.mockImplementation(() => fakeClaude({ status: 1 }) as never);
 		const options = project('1', '2', '3');
 
@@ -110,7 +110,34 @@ describe('LoopService stuck tasks', () => {
 			iterations: 10
 		});
 
-		expect(result).toMatchObject({ totalIterations: 4, finalStatus: 'error' });
+		expect(result).toMatchObject({ totalIterations: 6, finalStatus: 'error' });
+		expect(options.blockTask).toHaveBeenCalledExactlyOnceWith(
+			'1',
+			expect.any(String),
+			undefined
+		);
+	});
+
+	it('keeps going when the next task fails once with the same generic error', async () => {
+		// Tasks 1 fails 3 times, task 2 once with the same `Exit code 1`, then works
+		let calls = 0;
+		spawn.mockImplementation(
+			() =>
+				(++calls <= 4
+					? fakeClaude({ status: 1 })
+					: fakeClaude({ stdout: 'Worked on it.\n' })) as never
+		);
+		const options = project('1', '2', '3');
+
+		const result = await new LoopService(options).run({
+			...config,
+			iterations: 5
+		});
+
+		expect(result).toMatchObject({
+			totalIterations: 5,
+			finalStatus: 'max_iterations'
+		});
 		expect(options.blockTask).toHaveBeenCalledOnce();
 	});
 

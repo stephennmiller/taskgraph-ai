@@ -133,8 +133,9 @@ export class LoopDomain {
 				: undefined,
 			blockTask: tasks
 				? async (id, note, tag) => {
-						await tasks.updateStatus(id, 'blocked', tag);
+						// Note first: a failed note write leaves the task unblocked, not blocked with no reason
 						await tasks.addNote(id, note, { tag });
+						await tasks.updateStatus(id, 'blocked', tag);
 					}
 				: undefined
 		});

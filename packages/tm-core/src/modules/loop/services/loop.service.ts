@@ -263,12 +263,12 @@ export class LoopService {
 				iteration.status === 'error' && !statusesMoved && !committed
 					? consecutiveErrors + 1
 					: 0;
+			const erroring = consecutiveErrors >= MAX_CONSECUTIVE_ERRORS;
 			const broken =
 				iteration.status === 'error' &&
-				this.stuck.brokenSetup(iteration.message);
+				this.stuck.brokenSetup(iteration.message, erroring);
 			if (progress.changed || committed) stalled = 0;
 			else if (iteration.status === 'success') stalled++;
-			const erroring = consecutiveErrors >= MAX_CONSECUTIVE_ERRORS;
 			const stalling = watchesTasks && stalled >= MAX_STALLED_ITERATIONS;
 			// Work around a stuck task while another one is ready (#997)
 			const { aside, ready } =
