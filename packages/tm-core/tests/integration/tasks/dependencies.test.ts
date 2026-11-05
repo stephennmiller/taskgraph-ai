@@ -73,6 +73,41 @@ describe('tasks dependency commands', () => {
 		expect(read().master.tasks[2].dependencies).toEqual([]);
 	});
 
+	it('adds and removes a comma-separated list in one write each (#985)', async () => {
+		const added = await tmCore.tasks.addDependency('3', ' 2.1, 1,01 ,');
+
+		expect(added.results.map((r) => [r.dependencyId, r.changed])).toEqual([
+			['2.1', true],
+			['1', true]
+		]);
+		expect(read().master.tasks[2].dependencies).toEqual(['1', '2.1']);
+
+		const removed = await tmCore.tasks.removeDependency('3', '1,2.1,2');
+
+		expect(removed.removed).toBe(true);
+		expect(removed.results.map((r) => r.removed)).toEqual([true, true, false]);
+		expect(read().master.tasks[2].dependencies).toEqual([]);
+	});
+
+	it('writes none of a list when one ID in it is refused (#985)', async () => {
+		const before = fs.readFileSync(tasksPath, 'utf8');
+
+		await expect(tmCore.tasks.addDependency('3', '1,99')).rejects.toThrow(
+			'Task 99 not found'
+		);
+		// 1 -> 3 is fine, 1 -> 2 loops (2 depends on 1), so 3 isn't added either
+		await expect(tmCore.tasks.addDependency('1', '3,2')).rejects.toThrow(
+			'That would make a loop'
+		);
+		await expect(tmCore.tasks.addDependency('3', ' , ')).rejects.toThrow(
+			'has no task IDs in it'
+		);
+		await expect(tmCore.tasks.removeDependency('99', '1,2')).rejects.toThrow(
+			'Task 99 not found'
+		);
+		expect(fs.readFileSync(tasksPath, 'utf8')).toBe(before);
+	});
+
 	it('writes to the tag it is given, leaving the active tag alone', async () => {
 		const before = read().master;
 

@@ -69,8 +69,12 @@ afterEach(() => {
 describe('add-dependency and remove-dependency', () => {
 	it('passes the IDs, tag and type to tm-core and prints the change', async () => {
 		tasks.addDependency.mockResolvedValue({
-			changed: true,
-			message: 'Task 3 now depends on task 1'
+			results: [
+				{
+					changed: true,
+					message: 'Task 3 now depends on task 1'
+				}
+			]
 		});
 
 		await run('add-dependency', '--id=3', '--depends-on=1', '--tag=dev');
@@ -95,12 +99,20 @@ describe('add-dependency and remove-dependency', () => {
 
 	it('prints one dim line on stderr naming the new command', async () => {
 		tasks.addDependency.mockResolvedValue({
-			changed: true,
-			message: 'Task 3 now depends on task 1'
+			results: [
+				{
+					changed: true,
+					message: 'Task 3 now depends on task 1'
+				}
+			]
 		});
 		tasks.removeDependency.mockResolvedValue({
-			removed: true,
-			message: 'Task 3 no longer depends on task 1'
+			results: [
+				{
+					removed: true,
+					message: 'Task 3 no longer depends on task 1'
+				}
+			]
 		});
 
 		await run('add-dependency', '3', '1');
@@ -120,7 +132,9 @@ describe('add-dependency and remove-dependency', () => {
 	});
 
 	it('depend itself prints no alias notice', async () => {
-		tasks.addDependency.mockResolvedValue({ changed: true, message: 'ok' });
+		tasks.addDependency.mockResolvedValue({
+			results: [{ changed: true, message: 'ok' }]
+		});
 
 		await run('depend', '3', '1');
 
@@ -133,8 +147,12 @@ describe('add-dependency and remove-dependency', () => {
 
 	it('a dependency that was not there is not an error', async () => {
 		tasks.removeDependency.mockResolvedValue({
-			removed: false,
-			message: "Task 2 doesn't depend on task 5; nothing changed"
+			results: [
+				{
+					removed: false,
+					message: "Task 2 doesn't depend on task 5; nothing changed"
+				}
+			]
 		});
 
 		await run('remove-dependency', '--id=2', '--depends-on=5');
@@ -146,7 +164,9 @@ describe('add-dependency and remove-dependency', () => {
 
 describe('depend (#882)', () => {
 	it('takes the two IDs as arguments', async () => {
-		tasks.addDependency.mockResolvedValue({ changed: true, message: 'ok' });
+		tasks.addDependency.mockResolvedValue({
+			results: [{ changed: true, message: 'ok' }]
+		});
 
 		await run('depend', '3', '1', '--type=related');
 
@@ -157,7 +177,9 @@ describe('depend (#882)', () => {
 	});
 
 	it('removes with --remove, and still takes --id and --depends-on', async () => {
-		tasks.removeDependency.mockResolvedValue({ removed: true, message: 'ok' });
+		tasks.removeDependency.mockResolvedValue({
+			results: [{ removed: true, message: 'ok' }]
+		});
 
 		await run('depend', '--id=3', '--depends-on=1', '--remove');
 
@@ -165,6 +187,28 @@ describe('depend (#882)', () => {
 			tag: undefined
 		});
 		expect(tasks.addDependency).not.toHaveBeenCalled();
+	});
+
+	it('passes a comma-separated list to tm-core and prints a line per ID (#985)', async () => {
+		tasks.addDependency.mockResolvedValue({
+			results: [
+				{ changed: true, message: 'Task 5 now depends on task 1' },
+				{
+					changed: false,
+					message: 'Task 5 already depends on task 2; nothing changed'
+				}
+			]
+		});
+
+		await run('depend', '5', '1,2');
+
+		expect(tasks.addDependency).toHaveBeenCalledWith('5', '1,2', {
+			tag: undefined,
+			type: undefined
+		});
+		expect(printed()).toBe(
+			'✓ Task 5 now depends on task 1\nTask 5 already depends on task 2; nothing changed'
+		);
 	});
 
 	it('exits 1 before tm-core when an ID is missing', async () => {

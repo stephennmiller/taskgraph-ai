@@ -32,7 +32,11 @@ function withReplyIds<T extends { type: string; taskId: string | number }>(
 
 const AddDependencySchema = z.object({
 	id: z.string().describe('ID of task that will depend on another task'),
-	dependsOn: z.string().describe('ID of task that will become a dependency'),
+	dependsOn: z
+		.string()
+		.describe(
+			'ID of the task that will become a dependency, or comma-separated IDs (1,2,3) to add several in one write; an invalid ID adds none'
+		),
 	type: z
 		.enum(['blocks', 'related', 'discovered-from'])
 		.optional()
@@ -51,7 +55,7 @@ export function registerAddDependencyTool(server: FastMCP) {
 	server.addTool({
 		name: 'add_dependency',
 		description:
-			'Add a dependency between two tasks, or with type related / discovered-from a link that never blocks',
+			'Add one or more dependencies to a task, or with type related / discovered-from links that never block',
 		parameters: AddDependencySchema,
 		annotations: { title: 'Add Dependency', destructiveHint: true },
 		execute: withToolContext(
@@ -62,16 +66,20 @@ export function registerAddDependencyTool(server: FastMCP) {
 						args.dependsOn,
 						{ tag: args.tag, type: args.type }
 					);
+					const ids = result.results.map((r) => r.dependencyId);
+					const type = result.results[0].type;
 					return {
 						tag: result.tag,
 						data: {
 							message:
-								result.type === 'blocks'
-									? `Successfully added dependency: Task ${result.taskId} now depends on ${result.dependencyId}`
-									: `Linked task ${result.taskId} to ${result.dependencyId} as ${result.type}; it doesn't block`,
+								type === 'blocks'
+									? `Successfully added dependency: Task ${result.taskId} now depends on ${ids.join(', ')}`
+									: `Linked task ${result.taskId} to ${ids.join(', ')} as ${type}; it doesn't block`,
 							taskId: replyId(result.taskId),
-							dependencyId: replyId(result.dependencyId),
-							type: result.type
+							// One ID as before (a number when numeric); several as "1,2,3"
+							dependencyId: replyId(ids.join(',')),
+							dependencyIds: ids.map(replyId),
+							type
 						}
 					};
 				})
@@ -81,7 +89,11 @@ export function registerAddDependencyTool(server: FastMCP) {
 
 const RemoveDependencySchema = z.object({
 	id: z.string().describe('Task ID to remove dependency from'),
-	dependsOn: z.string().describe('Task ID to remove as a dependency'),
+	dependsOn: z
+		.string()
+		.describe(
+			'Task ID to remove as a dependency, or comma-separated IDs (1,2,3) to remove several in one write'
+		),
 	file: z
 		.string()
 		.optional()
@@ -108,14 +120,17 @@ export function registerRemoveDependencyTool(server: FastMCP) {
 						args.dependsOn,
 						{ tag: args.tag }
 					);
-					// Says what happened: a dependency the task never had is not removed
+					// Says what happened, one line per ID: one the task never had is not removed
+					const ids = result.results.map((r) => r.dependencyId);
 					return {
 						tag: result.tag,
 						data: {
-							message: result.message,
+							message: result.results.map((r) => r.message).join('\n'),
 							removed: result.removed,
 							taskId: replyId(result.taskId),
-							dependencyId: replyId(result.dependencyId)
+							// One ID as before (a number when numeric); several as "1,2,3"
+							dependencyId: replyId(ids.join(',')),
+							dependencyIds: ids.map(replyId)
 						}
 					};
 				})

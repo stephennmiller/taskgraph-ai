@@ -42,19 +42,29 @@ const ctx = {
 };
 const projectRoot = process.cwd();
 const reply = (result: any) => JSON.parse(result.content[0].text);
+/** What tm-core returns for one dependsOn ID */
+const oneResult = ({ tag, ...r }: any) => ({
+	taskId: r.taskId,
+	changed: r.changed,
+	removed: r.removed,
+	results: [r],
+	tag
+});
 
 beforeEach(() => vi.clearAllMocks());
 
 describe('add_dependency', () => {
 	it('replies with what was added and the tag it was added in', async () => {
-		tasks.addDependency.mockResolvedValue({
-			taskId: '5',
-			dependencyId: '1',
-			type: 'blocks',
-			changed: true,
-			message: 'Task 5 now depends on task 1',
-			tag: 'dev'
-		});
+		tasks.addDependency.mockResolvedValue(
+			oneResult({
+				taskId: '5',
+				dependencyId: '1',
+				type: 'blocks',
+				changed: true,
+				message: 'Task 5 now depends on task 1',
+				tag: 'dev'
+			})
+		);
 
 		const result = await register(registerAddDependencyTool).execute(
 			{ projectRoot, id: '5', dependsOn: '1', tag: 'dev' },
@@ -78,14 +88,16 @@ describe('add_dependency', () => {
 	});
 
 	it('says a link does not block', async () => {
-		tasks.addDependency.mockResolvedValue({
-			taskId: '5',
-			dependencyId: '1',
-			type: 'related',
-			changed: true,
-			message: '',
-			tag: 'master'
-		});
+		tasks.addDependency.mockResolvedValue(
+			oneResult({
+				taskId: '5',
+				dependencyId: '1',
+				type: 'related',
+				changed: true,
+				message: '',
+				tag: 'master'
+			})
+		);
 
 		const result = await register(registerAddDependencyTool).execute(
 			{ projectRoot, id: '5', dependsOn: '1', type: 'related' },
@@ -124,12 +136,14 @@ describe('add_dependency', () => {
 	});
 
 	it('accepts the project tasks file as file', async () => {
-		tasks.addDependency.mockResolvedValue({
-			taskId: '2',
-			dependencyId: '1',
-			type: 'blocks',
-			tag: 'master'
-		});
+		tasks.addDependency.mockResolvedValue(
+			oneResult({
+				taskId: '2',
+				dependencyId: '1',
+				type: 'blocks',
+				tag: 'master'
+			})
+		);
 
 		const result = await register(registerAddDependencyTool).execute(
 			{
@@ -143,17 +157,51 @@ describe('add_dependency', () => {
 
 		expect(result.isError).toBeUndefined();
 	});
+
+	it('adds a comma-separated list in one call and names every ID (#985)', async () => {
+		tasks.addDependency.mockResolvedValue({
+			taskId: '5',
+			changed: true,
+			results: ['1', '2', '3.1'].map((dependencyId) => ({
+				taskId: '5',
+				dependencyId,
+				type: 'blocks',
+				changed: true,
+				message: ''
+			})),
+			tag: 'master'
+		});
+
+		const result = await register(registerAddDependencyTool).execute(
+			{ projectRoot, id: '5', dependsOn: '1,2,3.1' },
+			ctx
+		);
+
+		expect(tasks.addDependency).toHaveBeenCalledWith('5', '1,2,3.1', {
+			tag: undefined,
+			type: undefined
+		});
+		expect(reply(result).data).toEqual({
+			message: 'Successfully added dependency: Task 5 now depends on 1, 2, 3.1',
+			taskId: 5,
+			dependencyId: '1,2,3.1',
+			dependencyIds: [1, 2, '3.1'],
+			type: 'blocks'
+		});
+	});
 });
 
 describe('remove_dependency', () => {
 	it('says whether anything was removed', async () => {
-		tasks.removeDependency.mockResolvedValue({
-			taskId: '2',
-			dependencyId: '5',
-			removed: false,
-			message: "Task 2 doesn't depend on task 5; nothing changed",
-			tag: 'master'
-		});
+		tasks.removeDependency.mockResolvedValue(
+			oneResult({
+				taskId: '2',
+				dependencyId: '5',
+				removed: false,
+				message: "Task 2 doesn't depend on task 5; nothing changed",
+				tag: 'master'
+			})
+		);
 
 		const result = await register(registerRemoveDependencyTool).execute(
 			{ projectRoot, id: '2', dependsOn: '5' },
@@ -164,21 +212,24 @@ describe('remove_dependency', () => {
 			message: "Task 2 doesn't depend on task 5; nothing changed",
 			removed: false,
 			taskId: 2,
-			dependencyId: 5
+			dependencyId: 5,
+			dependencyIds: [5]
 		});
 	});
 });
 
 describe('reply IDs', () => {
 	it('gives a task ID as a number and a subtask ID as a string, as legacy did', async () => {
-		tasks.addDependency.mockResolvedValue({
-			taskId: '2.3',
-			dependencyId: '4',
-			type: 'blocks',
-			changed: true,
-			message: '',
-			tag: 'master'
-		});
+		tasks.addDependency.mockResolvedValue(
+			oneResult({
+				taskId: '2.3',
+				dependencyId: '4',
+				type: 'blocks',
+				changed: true,
+				message: '',
+				tag: 'master'
+			})
+		);
 		tasks.validateDependencies.mockResolvedValue({
 			valid: false,
 			issues: [

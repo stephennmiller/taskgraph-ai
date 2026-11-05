@@ -9,6 +9,10 @@
 import path from 'node:path';
 import { TASKGRAPH_TASKS_FILE } from '../../../common/constants/paths.js';
 import {
+	ERROR_CODES,
+	errorWithHint
+} from '../../../common/errors/taskgraph-error.js';
+import {
 	addDependencyIn,
 	type AddDependencyResult,
 	removeDependencyIn,
@@ -22,7 +26,22 @@ import {
 	validateTaskDependencies
 } from '../../dependencies/dependency-check.js';
 import { checkPrdCoverage } from '../../prd/prd-coverage.js';
+import { splitIds } from '../utils/task-removal.js';
+import { normalizeTaskId } from '../validation/task-id.js';
 import type { TaskService } from './task-service.js';
+
+/** `1, 2,1` as `["1", "2"]`; throws for a list with no IDs in it */
+function dependencyIds(dependsOn: string): string[] {
+	const ids = [...new Set(splitIds(dependsOn).map(normalizeTaskId))];
+	if (ids.length === 0) {
+		throw errorWithHint(
+			ERROR_CODES.VALIDATION_ERROR,
+			`"${dependsOn}" has no task IDs in it`,
+			'Give one ID or a comma-separated list, such as 1,2,3'
+		);
+	}
+	return ids;
+}
 
 export class DependencyService {
 	constructor(
@@ -31,46 +50,59 @@ export class DependencyService {
 	) {}
 
 	/**
-	 * Make a task or subtask depend on another, or with type `related` /
-	 * `discovered-from` link them without blocking. Throws, changing nothing,
-	 * for an unknown or archived ID, a dependency on itself, or one that would
-	 * make a loop. Uses the active tag by default.
+	 * Make a task or subtask depend on each task in `dependsOn` (one ID or a
+	 * comma-separated list), or with type `related` / `discovered-from` link
+	 * them without blocking, in one write. Throws, writing nothing, if any ID
+	 * is unknown or archived, the task itself, or would make a loop. Uses the
+	 * active tag by default.
 	 */
 	async add(
 		taskId: string,
 		dependsOn: string,
 		options: { tag?: string; type?: string } = {}
-	): Promise<AddDependencyResult & { tag: string }> {
+	): Promise<{
+		taskId: string;
+		results: AddDependencyResult[];
+		changed: boolean;
+		tag: string;
+	}> {
 		const { result, tag } = await this.taskService.modifyTasks(
 			(tasks, archivedIds) => {
-				const added = addDependencyIn(
-					tasks,
-					taskId,
-					dependsOn,
-					archivedIds,
-					options.type
+				const results = dependencyIds(dependsOn).map((id) =>
+					addDependencyIn(tasks, taskId, id, archivedIds, options.type)
 				);
-				return { tasks: added.changed ? tasks : null, result: added };
+				const changed = results.some((r) => r.changed);
+				return { tasks: changed ? tasks : null, result: { results, changed } };
 			},
 			options.tag
 		);
-		return { ...result, tag };
+		return { taskId: normalizeTaskId(taskId), ...result, tag };
 	}
 
 	/**
-	 * Remove a dependency, or a related / discovered-from link. One the task
-	 * never had changes nothing (`removed: false`); an unknown task throws.
+	 * Remove each dependency, or related / discovered-from link, in
+	 * `dependsOn` (one ID or a comma-separated list) in one write. One the
+	 * task never had changes nothing (`removed: false`); an unknown task
+	 * throws, writing nothing.
 	 */
 	async remove(
 		taskId: string,
 		dependsOn: string,
 		options: { tag?: string } = {}
-	): Promise<RemoveDependencyResult & { tag: string }> {
+	): Promise<{
+		taskId: string;
+		results: RemoveDependencyResult[];
+		removed: boolean;
+		tag: string;
+	}> {
 		const { result, tag } = await this.taskService.modifyTasks((tasks) => {
-			const outcome = removeDependencyIn(tasks, taskId, dependsOn);
-			return { tasks: outcome.removed ? tasks : null, result: outcome };
+			const results = dependencyIds(dependsOn).map((id) =>
+				removeDependencyIn(tasks, taskId, id)
+			);
+			const removed = results.some((r) => r.removed);
+			return { tasks: removed ? tasks : null, result: { results, removed } };
 		}, options.tag);
-		return { ...result, tag };
+		return { taskId: normalizeTaskId(taskId), ...result, tag };
 	}
 
 	/**
