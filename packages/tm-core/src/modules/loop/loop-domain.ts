@@ -39,6 +39,18 @@ import type { LoopConfig, LoopPreset, LoopResult } from './types.js';
 /** A task ID (`3`) or a subtask ID (`3.2`): no spaces, at most one dot */
 const TASK_ID_PATTERN = /^[^.\s]+(\.[^.\s]+)?$/;
 
+/** Set a stuck task to blocked, with a note saying why */
+async function blockTask(
+	tasks: TasksDomain,
+	id: string,
+	note: string,
+	tag?: string
+): Promise<void> {
+	// Note first: a failed note write leaves the task unblocked, not blocked with no reason
+	await tasks.addNote(id, note, { tag });
+	await tasks.updateStatus(id, 'blocked', tag);
+}
+
 /**
  * Loop Domain - Unified API for loop operations
  * Coordinates LoopService with lazy instantiation
@@ -132,11 +144,7 @@ export class LoopDomain {
 				? async (id, tag) => (await tasks.get(id, tag)).task?.complexity
 				: undefined,
 			blockTask: tasks
-				? async (id, note, tag) => {
-						// Note first: a failed note write leaves the task unblocked, not blocked with no reason
-						await tasks.addNote(id, note, { tag });
-						await tasks.updateStatus(id, 'blocked', tag);
-					}
+				? (id, note, tag) => blockTask(tasks, id, note, tag)
 				: undefined,
 			uncommittedFiles: () =>
 				new TaskWorktrees(this.projectRoot).changedFiles(
@@ -225,7 +233,8 @@ export class LoopDomain {
 					const kept = await git.setAside(worktree, branch);
 					if (kept) await tasks.updateStatus(id, 'pending', options.tag);
 					return kept;
-				}
+				},
+				block: (id, note) => blockTask(tasks, id, note, options.tag)
 			});
 		} finally {
 			// The tasks' own changes (notes, new subtasks) stay approved for the next run

@@ -50,6 +50,25 @@ export const fit = (text: string, width: number) => {
 		: clean;
 };
 
+/** The stuck tasks a run set to blocked, with how to retry them; none when there are none */
+export function formatSetAside(
+	aside: ParallelLoopResult['setAside'] = [],
+	width = 80
+): string[] {
+	if (!aside.length) return [];
+	const id = aside.length === 1 ? fit(aside[0].id, 20) : '<id>';
+	return [
+		chalk.yellow(`Set aside ${plural(aside.length, 'stuck task')} as blocked`),
+		...aside.map((t) => {
+			const head = `  ${fit(t.id, 20)}  `;
+			return theme.text(head) + theme.muted(fit(t.reason, width - head.length));
+		}),
+		theme.muted(
+			`Next: taskgraph show ${id}, then taskgraph set-status --id=${id} --status=pending`
+		)
+	];
+}
+
 /** Paths relative to the project, with forward slashes */
 const rel = (projectRoot: string, p: string) =>
 	path.relative(projectRoot, p).split(path.sep).join('/') || '.';
@@ -220,6 +239,7 @@ export function formatParallelSummary(
 		...rows,
 		...(held ? [held] : []),
 		...(notDone ? [notDone] : []),
+		...formatSetAside(result.setAside),
 		...(next ? [next] : [])
 	].join('\n');
 }

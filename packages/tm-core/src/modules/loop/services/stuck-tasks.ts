@@ -8,7 +8,7 @@ import { CLAUDE_MISSING, DOCKER_MISSING } from './iteration-limits.js';
 import type { LoopServiceOptions } from './loop-service-options.js';
 
 /** The note a stuck task gets: its errors in a row, or the sessions it made no progress in */
-const stuckReason = (errors: number, stalled: number, error?: string) =>
+export const stuckReason = (errors: number, stalled: number, error?: string) =>
 	error === undefined
 		? `stuck: no progress in ${stalled} sessions`
 		: `stuck: ${errors} failed sessions in a row. Last error: ${error}`;
