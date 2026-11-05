@@ -96,8 +96,9 @@ describe('parse-prd prompt: acceptance criteria and PRD sections', () => {
 			);
 			expect(systemPrompt).toContain('12. Set "section"');
 			expect(systemPrompt).toContain('14. List in "files"');
-			expect(systemPrompt.includes('15. For each task')).toBe(research);
-			expect(systemPrompt).not.toContain('14. For each task');
+			expect(systemPrompt).toContain(`15. Score each task's "complexity"`);
+			expect(systemPrompt.includes('16. For each task')).toBe(research);
+			expect(systemPrompt).not.toContain('15. For each task');
 		}
 	);
 

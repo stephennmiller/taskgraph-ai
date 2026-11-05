@@ -27,7 +27,10 @@ const ParsePrdTaskSchema = z.object({
 				action: z.enum(['create', 'modify'])
 			})
 		)
-		.default([])
+		.default([]),
+	// 1-10, stored as the task's complexity so loop picks a model band
+	// without analyze-complexity (#996). A missing or bad score is null
+	complexity: z.number().int().min(1).max(10).nullable().catch(null)
 });
 
 // The whole reply. Tag metadata is written by the code, so the AI isn't asked for any

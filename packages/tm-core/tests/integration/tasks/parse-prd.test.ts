@@ -14,6 +14,10 @@ import {
 	isLoopTrusted,
 	trustLoop
 } from '../../../src/modules/loop/loop-trust.js';
+import {
+	DEFAULT_LOOP_BANDS,
+	pickModelEffort
+} from '../../../src/modules/loop/model-bands.js';
 import { buildPrdSnapshot } from '../../../src/modules/prd/prd-deltas.js';
 import { parsePrdSections } from '../../../src/modules/prd/prd-sections.js';
 import { CURRENT_SCHEMA_VERSION } from '../../../src/modules/storage/adapters/file-storage/index.js';
@@ -154,6 +158,38 @@ describe('tasks.parsePrd', () => {
 		]);
 		expect(saved.metadata.prdSections).toEqual(snapshotOf(PRD_V1).prdSections);
 		expect(saved.metadata.description).toBe('Tasks for master context');
+	});
+
+	it("stores each task's complexity score, which picks loop's band until a report overrides it (#996)", async () => {
+		p.generateObject.mockResolvedValue(
+			reply([
+				generated(1, { complexity: 2 }),
+				generated(2, { complexity: 9 }),
+				generated(3, { complexity: 11 })
+			]) as any
+		);
+
+		await parse();
+
+		const band = async (id: string) =>
+			pickModelEffort(
+				(await p.tmCore.tasks.get(id)).task?.complexity,
+				DEFAULT_LOOP_BANDS
+			);
+		expect(await band('1')).toEqual({ model: 'sonnet', effort: 'low' });
+		expect(await band('2')).toEqual({ effort: 'high' });
+		// Out of range: no score, so Claude Code's defaults
+		expect(tag().tasks[2]).not.toHaveProperty('complexity');
+		const reports = path.join(p.root, '.taskgraph', 'reports');
+		fs.mkdirSync(reports, { recursive: true });
+		fs.writeFileSync(
+			path.join(reports, 'task-complexity-report.json'),
+			JSON.stringify({
+				meta: {},
+				complexityAnalysis: [{ taskId: 1, complexityScore: 8 }]
+			})
+		);
+		expect(await band('1')).toEqual({ effort: 'high' });
 	});
 
 	it('asks again before an unprompted loop once the PRD adds tasks, appended or not', async () => {
