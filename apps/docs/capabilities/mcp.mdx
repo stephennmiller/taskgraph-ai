@@ -171,8 +171,8 @@ Tasks from `parse_prd` and subtasks from `expand_task`/`expand_all` come with un
 
 ### 4. Dependency Management
 
--   **`add_dependency`**: Adds a dependency to a task. With `type: "related"` or `"discovered-from"` it adds a link that never blocks.
--   **`remove_dependency`**: Removes a dependency, or a related / discovered-from link, from a task.
+-   **`add_dependency`**: Adds a dependency to a task, or several in one write when `dependsOn` is a comma-separated list (`"1,2,3"`; an invalid ID adds none). With `type: "related"` or `"discovered-from"` it adds a link that never blocks.
+-   **`remove_dependency`**: Removes a dependency, or a related / discovered-from link, from a task; `dependsOn` takes a comma-separated list too.
 -   **`validate_dependencies`**: Validates the dependencies of all tasks.
 -   **`fix_dependencies`**: Fixes any invalid dependencies.
 -   **`dependency_analysis`**: Shows the bottlenecks, critical path and cycles, and with `id` what blocks one task.

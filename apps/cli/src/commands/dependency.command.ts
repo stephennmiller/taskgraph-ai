@@ -28,7 +28,7 @@ interface DependencyOptions {
 	project?: string;
 }
 
-/** `✓ Task 3 now depends on task 1`; muted when nothing changed */
+/** `✓ Task 3 now depends on task 1`, once per ID; muted when nothing changed */
 function printChange(changed: boolean, message: string): void {
 	const safe = sanitizeForTerminal(message);
 	console.log(changed ? `${chalk.green('✓')} ${safe}` : theme.muted(safe));
@@ -48,7 +48,7 @@ function editCommand(
 		.argument('[id]', idHelp)
 		.argument('[dependsOn]', dependsOnHelp)
 		.option('-i, --id <id>', idHelp)
-		.option('-d, --depends-on <id>', dependsOnHelp)
+		.option('-d, --depends-on <ids>', dependsOnHelp)
 		.option('--tag <tag>', 'Tag to work in (default: the current tag)')
 		.option(
 			'-p, --project <path>',
@@ -92,7 +92,7 @@ function addDependency(options: DependencyOptions) {
 			options.dependsOn as string,
 			{ tag: options.tag, type: options.type }
 		);
-		printChange(result.changed, result.message);
+		for (const r of result.results) printChange(r.changed, r.message);
 	});
 }
 
@@ -103,20 +103,20 @@ function removeDependency(options: DependencyOptions) {
 			options.dependsOn as string,
 			{ tag: options.tag }
 		);
-		printChange(result.removed, result.message);
+		for (const r of result.results) printChange(r.removed, r.message);
 	});
 }
 
-/** `depend 3 1`: task 3 depends on task 1; `--remove` takes it away */
+/** `depend 3 1,2`: task 3 depends on tasks 1 and 2; `--remove` takes them away */
 export class DependCommand {
 	static register(program: Command): void {
 		const command = editCommand(
 			'depend',
-			'Make a task depend on another, or --remove the dependency',
-			'Task that depends on the other',
-			'Task it depends on'
+			'Make a task depend on others, or --remove the dependencies',
+			'Task that depends on the others',
+			'Task or comma-separated tasks it depends on (1,2,3)'
 		)
-			.option('--remove', 'Remove the dependency or link instead')
+			.option('--remove', 'Remove the dependencies or links instead')
 			.option('--type <type>', TYPE_HELP)
 			.action((_id, _dependsOn, options: DependencyOptions) =>
 				options.remove ? removeDependency(options) : addDependency(options)
@@ -132,7 +132,7 @@ export class AddDependencyCommand {
 			'add-dependency',
 			'Add a dependency to a task',
 			'Task ID to add dependency to',
-			'Task ID that will become a dependency',
+			'Task ID, or comma-separated IDs, that will become dependencies',
 			'depend'
 		)
 			.option('--type <type>', TYPE_HELP)
@@ -150,7 +150,7 @@ export class RemoveDependencyCommand {
 			'remove-dependency',
 			'Remove a dependency or a non-blocking link from a task',
 			'Task ID to remove dependency from',
-			'Task ID to remove as a dependency',
+			'Task ID, or comma-separated IDs, to remove as dependencies',
 			'depend --remove'
 		).action((_id, _dependsOn, options: DependencyOptions) =>
 			removeDependency(options)

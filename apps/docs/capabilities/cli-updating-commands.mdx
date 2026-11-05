@@ -107,10 +107,14 @@ taskgraph generate
 # Add a dependency to a task
 taskgraph depend <id> <id>
 
+# Add several in one write (an invalid ID adds none of them)
+taskgraph depend 5 1,2,3
+
 # Link two tasks without making one wait for the other
 taskgraph depend <id> <id> --type=related
 
-# Remove a dependency (or a related / discovered-from link) from a task
+# Remove a dependency (or a related / discovered-from link) from a task;
+# a comma-separated list removes several
 taskgraph depend <id> <id> --remove
 
 # Validate dependencies without fixing them
