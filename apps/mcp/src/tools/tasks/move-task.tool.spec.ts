@@ -64,7 +64,7 @@ describe('move_task', () => {
 		expect(reply(result).note).toBe(TASK_DATA_NOTE);
 	});
 
-	it('says which tasks a cross-tag move renumbered (#984)', async () => {
+	it('says which tasks a cross-tag move renumbered, counting those moved along (#984)', async () => {
 		tasks.moveToTag.mockResolvedValue({
 			message: 'Successfully moved 2 tasks from "feat" to "master"',
 			movedTasks: [
@@ -74,7 +74,13 @@ describe('move_task', () => {
 		});
 
 		const result = await register().execute(
-			{ from: '3,4', fromTag: 'feat', toTag: 'master', projectRoot },
+			{
+				from: '3',
+				fromTag: 'feat',
+				toTag: 'master',
+				withDependencies: true,
+				projectRoot
+			},
 			ctx
 		);
 

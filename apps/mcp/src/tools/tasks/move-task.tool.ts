@@ -125,7 +125,7 @@ export function registerMoveTaskTool(server: FastMCP) {
 								success: true,
 								data: {
 									...result,
-									message: `Successfully moved ${sourceIds.length} task(s) from "${fromTag}" to "${toTag}"${renumbered.length > 0 ? `; renumbered where the ID was taken there: ${renumbered.join(', ')}` : ''}`,
+									message: `Successfully moved ${result.movedTasks.length} task(s) from "${fromTag}" to "${toTag}"${renumbered.length > 0 ? `; renumbered where the ID was taken there: ${renumbered.join(', ')}` : ''}`,
 									moveOptions,
 									sourceTag: fromTag,
 									targetTag: toTag
