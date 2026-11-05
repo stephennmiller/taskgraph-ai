@@ -6,7 +6,7 @@ description: "Run Claude Code in autonomous loops for batch task completion"
 
 # Loop Command
 
-The `loop` command runs Claude Code over your tasks. With the `default` preset, one session works through the ready tasks and commits after each; a new session starts only when one ends early (a crash, the timeout, the budget) and picks up from the task statuses, `.taskgraph/design.md` and the progress file. The other presets do one change per session, the "Ralph Wiggum pattern" (credited to Jeffrey Huntley, popularized by Matt Pocock).
+The `loop` command runs Claude Code over your tasks. Each session does one task (with the `default` and `tdd` presets) or one change (the others), commits and stops, and the next starts fresh from the task statuses and commits. That is the "Ralph Wiggum pattern" (credited to Jeffrey Huntley, popularized by Matt Pocock).
 
 ## Overview
 
@@ -76,7 +76,7 @@ Each iteration runs `claude -p` with permission prompts off (`--dangerously-skip
 
 ### Stop and resume
 
-Stop a run any time (Ctrl-C, a crash, closing the laptop) and run `taskgraph loop` again later. Finished tasks are committed, the task that was in progress is picked first, and the new session reads `.taskgraph/design.md` and the progress file to carry on.
+Stop a run any time (Ctrl-C, a crash, closing the laptop) and run `taskgraph loop` again later. Finished tasks are committed, the task that was in progress is picked first, and the new session carries on from the task statuses and commits.
 
 ### Smoke check
 

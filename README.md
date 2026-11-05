@@ -38,8 +38,8 @@ plan and progress stored in your repo.
 - **Resumable long builds:** on our
   [benchmarks](https://taskgraph-ai.com/best-practices/benchmarks), `taskgraph
   go` scored within 10% of plain Claude Code and resumed cleanly after an
-  interruption. It is not cheaper: in a later recheck it cost about three
-  times as much as plain Claude Code.
+  interruption. It is not cheaper: with one task per session it cost about
+  60% more than plain Claude Code.
 
 <p align="center">
   <a href="images/demo/03-pick-up-where-you-left-off.mp4"><img src="images/demo/03-pick-up-where-you-left-off.svg" alt="A new Claude Code session running /taskgraph:next and resuming from the notes logged last time" width="820"></a>
