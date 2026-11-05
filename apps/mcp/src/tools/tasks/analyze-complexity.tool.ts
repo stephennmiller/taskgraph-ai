@@ -54,7 +54,7 @@ const AnalyzeSchema = z.object({
 		.string()
 		.optional()
 		.describe(
-			'Comma-separated list of task IDs to analyze specifically (e.g., "1,3,5").'
+			'Comma-separated list of task IDs to analyze specifically (e.g., "1,3,5"), even ones with subtasks. Without ids, tasks that already have subtasks are skipped.'
 		),
 	from: z.coerce
 		.number()

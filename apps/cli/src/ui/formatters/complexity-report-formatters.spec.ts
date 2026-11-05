@@ -138,15 +138,40 @@ describe('formatComplexityRun', () => {
 		expect(output).toContain('…');
 	});
 
-	it('says so when nothing was pending', () => {
+	it('says so when nothing was pending, and why tasks were skipped', () => {
 		expect(
 			plain(
 				formatComplexityRun(
-					{ analyses: [], skipped: 3, kept: 0, reportPath: 'report.json' },
+					{
+						analyses: [],
+						skipped: 3,
+						skippedWithSubtasks: 2,
+						kept: 0,
+						reportPath: 'report.json'
+					},
 					80
 				)
 			)
-		).toBe('No pending tasks to analyze');
+		).toBe('No pending tasks to analyze · skipped 1 done, 2 with subtasks');
+	});
+
+	it('counts tasks with subtasks apart from done ones', () => {
+		const first = (skipped: number, skippedWithSubtasks: number) =>
+			plain(
+				formatComplexityRun(
+					{
+						analyses,
+						skipped,
+						skippedWithSubtasks,
+						kept: 0,
+						reportPath: 'report.json'
+					},
+					80
+				)
+			).split('\n')[0];
+
+		expect(first(2, 2)).toBe('✓ Analyzed 3 tasks · skipped 2 with subtasks');
+		expect(first(0, 0)).toBe('✓ Analyzed 3 tasks');
 	});
 });
 

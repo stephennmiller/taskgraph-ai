@@ -123,7 +123,7 @@ Dependencies on the cleared subtasks, and `related` / `discovered-from` links to
 ## Analyze Task Complexity
 
 ```bash
-# Analyze complexity of all tasks
+# Analyze complexity of the tasks not yet broken down
 taskgraph analyze-complexity
 
 # Save report to a custom location
@@ -140,7 +140,12 @@ taskgraph analyze-complexity --file=custom-tasks.json
 
 # Use the research model for research-backed complexity analysis
 taskgraph analyze-complexity --research
+
+# Analyze specific tasks, even ones that already have subtasks
+taskgraph analyze-complexity --id=3,5
 ```
+
+It scores pending, blocked and in-progress tasks that don't have subtasks yet. Done, cancelled and deferred tasks, and tasks already broken into subtasks, are skipped and counted in the summary (`skipped 1 done, 2 with subtasks`); their earlier scores stay in the report. A task you name with `--id` is analyzed even when it has subtasks.
 
 ## View Complexity Report
 

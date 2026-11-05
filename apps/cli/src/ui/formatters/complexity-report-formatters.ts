@@ -2,7 +2,7 @@
  * @fileoverview What `analyze-complexity` found and what `analyze-complexity --report`
  * shows, e.g.
  *
- *   ✓ Analyzed 5 tasks · skipped 1 done
+ *   ✓ Analyzed 5 tasks · skipped 1 done, 2 with subtasks
  *     3  Email and password sign-in with sessions   ● 7  6 subtasks
  *     4  Bookmark CRUD endpoints                    ● 6  5 subtasks
  *     6  Write the README                           ● 2
@@ -49,8 +49,10 @@ export interface ComplexityReport {
 export interface ComplexityRunSummary {
 	/** The analyses from this run */
 	analyses: ComplexityAnalysisItem[];
-	/** Done, cancelled or deferred tasks left out */
+	/** Tasks left out: done, cancelled or deferred, or with subtasks already */
 	skipped: number;
+	/** How many of `skipped` already have subtasks */
+	skippedWithSubtasks?: number;
 	/** Analyses from earlier runs that the report keeps */
 	kept: number;
 	/** The report file, relative to the project */
@@ -152,16 +154,24 @@ export function formatComplexityRun(
 	width = terminalWidth()
 ): string {
 	summary = sanitizeForTerminal(summary);
-	const { skipped, kept, reportPath } = summary;
+	const { skipped, skippedWithSubtasks = 0, kept, reportPath } = summary;
+	const done = skipped - skippedWithSubtasks;
+	const skips = [
+		done > 0 ? `${done} done` : null,
+		skippedWithSubtasks > 0 ? `${skippedWithSubtasks} with subtasks` : null
+	].filter(Boolean);
+	const skippedText = skips.length > 0 ? `skipped ${skips.join(', ')}` : null;
 	if (summary.analyses.length === 0) {
-		return theme.muted('No pending tasks to analyze');
+		return theme.muted(
+			['No pending tasks to analyze', skippedText].filter(Boolean).join(' · ')
+		);
 	}
 	// A placeholder isn't a score; the "Missing analysis" warning names its task
 	const analyses = withoutPlaceholders(summary.analyses);
 
 	const details = [
 		summary.usedResearch ? 'with web research' : null,
-		skipped > 0 ? `skipped ${skipped} done` : null
+		skippedText
 	].filter(Boolean);
 	const lines = [
 		`${chalk.green('✓')} Analyzed ${plural(analyses.length, 'task')}${details.length ? theme.muted(` · ${details.join(' · ')}`) : ''}`,
