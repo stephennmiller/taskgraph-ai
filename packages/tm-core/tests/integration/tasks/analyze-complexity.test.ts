@@ -136,18 +136,20 @@ describe('tasks.analyzeComplexity', () => {
 			const master = { meta: {}, complexityAnalysis: [] };
 			fs.writeFileSync(reportPath(), JSON.stringify(master));
 			vi.spyOn(AiService.prototype, 'generateObject').mockResolvedValue(
-				answer([2, 3, 4]) as any
+				answer([3, 4]) as any
 			);
 			const core = await setUp();
 
 			const result = await core.tasks.analyzeComplexity({ tag: 'feature' });
 
 			expect(result.reportPath).toBe(reportPath('feature'));
-			expect(readReport('feature').complexityAnalysis).toHaveLength(3);
+			expect(readReport('feature').complexityAnalysis).toHaveLength(2);
 			expect(readReport()).toEqual(master);
 			expect(result).toMatchObject({
 				tag: 'feature',
-				skipped: 0,
+				// Task 2 has subtasks
+				skipped: 1,
+				skippedWithSubtasks: 1,
 				kept: 0,
 				unchanged: false,
 				telemetryData: { totalTokens: 2 }

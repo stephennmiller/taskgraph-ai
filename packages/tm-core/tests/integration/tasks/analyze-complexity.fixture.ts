@@ -1,7 +1,8 @@
 /**
  * @fileoverview The tasks, scenarios and AI answers the legacy
  * analyze-complexity prompt inputs were captured from
- * (__snapshots__/analyze-complexity-prompt-inputs.legacy.json)
+ * (__snapshots__/analyze-complexity-prompt-inputs.legacy.json). Since #991
+ * a run without ids leaves out tasks 2 and 5, which have subtasks.
  */
 
 const task = (id: string | number, title: string, extra = {}) => ({
@@ -118,6 +119,8 @@ export const scenarios: Scenario[] = [
 
 const ACTIVE = new Set([2, 3, 4, 5, 8]);
 const FEATURE_ACTIVE = new Set([2, 3, 4]);
+/** Active tasks with subtasks, analyzed only when named with ids (#991) */
+const EXPANDED = new Set([2, 5]);
 
 /** The AI's answer: one entry per task it was asked about, minus `omit` */
 export function answerFor(s: Scenario) {
@@ -125,6 +128,7 @@ export function answerFor(s: Scenario) {
 	const asked = (s.ids ? s.ids.split(',').map(Number) : [...active]).filter(
 		(id) =>
 			active.has(id) &&
+			(s.ids !== undefined || !EXPANDED.has(id)) &&
 			id >= Number(s.from ?? 1) &&
 			id <= Number(s.to ?? 99) &&
 			!(s.omit ?? []).includes(id)

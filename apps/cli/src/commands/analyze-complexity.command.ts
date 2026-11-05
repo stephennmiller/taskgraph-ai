@@ -1,6 +1,6 @@
 /**
  * @fileoverview `taskgraph analyze-complexity`: score the tag's active tasks
- * with the AI and save the tag's complexity report. Thin layer over
+ * that have no subtasks yet (or those named with --id) with the AI and save the tag's complexity report. Thin layer over
  * tm-core's tasks.analyzeComplexity().
  */
 
@@ -66,7 +66,7 @@ export class AnalyzeComplexityCommand extends Command {
 			)
 			.option(
 				'-i, --id <ids>',
-				'Comma-separated list of specific task IDs to analyze (e.g., "1,3,5")'
+				'Comma-separated task IDs to analyze, even ones with subtasks (e.g., "1,3,5")'
 			)
 			.option('--from <id>', 'Starting task ID in a range to analyze')
 			.option('--to <id>', 'Ending task ID in a range to analyze')
@@ -156,6 +156,7 @@ export class AnalyzeComplexityCommand extends Command {
 				formatComplexityRun({
 					analyses: result.analyses,
 					skipped: result.skipped,
+					skippedWithSubtasks: result.skippedWithSubtasks,
 					kept: result.kept,
 					reportPath: displayPath(result.reportPath, projectRoot),
 					usedResearch: options.research === true

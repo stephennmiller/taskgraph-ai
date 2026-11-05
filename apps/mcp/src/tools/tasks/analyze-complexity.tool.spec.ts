@@ -77,6 +77,9 @@ describe('analyze_project_complexity', () => {
 		tasks.analyzeComplexity.mockResolvedValue({
 			report,
 			reportPath: `${project}/.taskgraph/reports/task-complexity-report.json`,
+			analyses: [entry(1, 9)],
+			skipped: 0,
+			skippedWithSubtasks: 0,
 			telemetryData: { totalTokens: 4 },
 			tagInfo: { currentTag: 'master', availableTags: ['master'] }
 		});
@@ -144,7 +147,8 @@ describe('analyze_project_complexity', () => {
 				meta: {},
 				complexityAnalysis: [entry(1, 9), { ...entry(2, 5), placeholder: true }]
 			},
-			reportPath: `${project}/r.json`
+			reportPath: `${project}/r.json`,
+			analyses: [entry(1, 9)]
 		});
 
 		const result = await tool.execute(
@@ -201,6 +205,27 @@ describe('analyze_project_complexity', () => {
 		expect(ctx.log.error).toHaveBeenCalledWith(
 			expect.stringContaining('Error analyzing task complexity: ')
 		);
+	});
+
+	it('says why nothing was analyzed when every task was skipped (#991)', async () => {
+		tasks.analyzeComplexity.mockResolvedValue({
+			report,
+			reportPath: 'r',
+			analyses: [],
+			skipped: 3,
+			skippedWithSubtasks: 2,
+			telemetryData: null,
+			unchanged: false
+		});
+
+		const result = await tool.execute({ projectRoot: project }, ctx);
+
+		expect(reply(result).data).toMatchObject({
+			message:
+				'No task to analyze (skipped 3, 2 of them with subtasks; name one in ids to analyze it). Report at r',
+			skipped: 3,
+			skippedWithSubtasks: 2
+		});
 	});
 
 	it('logs tm-core warnings and sends them in the reply', async () => {
@@ -299,6 +324,7 @@ describe('complexity task text (#779)', () => {
 		tasks.analyzeComplexity.mockResolvedValue({
 			report: { meta: {}, complexityAnalysis: [hostile] },
 			reportPath: '/p/r.json',
+			analyses: [hostile],
 			telemetryData: null,
 			tagInfo: null
 		});

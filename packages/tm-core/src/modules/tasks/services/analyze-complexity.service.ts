@@ -115,8 +115,13 @@ export interface AnalyzeComplexityResult {
 	 * had no real entry for the task.
 	 */
 	analyses: ComplexityAnalysisItem[];
-	/** Done, cancelled or deferred tasks among those asked for */
+	/**
+	 * Tasks among those asked for that weren't analyzed: done, cancelled or
+	 * deferred ones, and those that already have subtasks
+	 */
 	skipped: number;
+	/** How many of `skipped` already have subtasks (not named with `ids`) */
+	skippedWithSubtasks: number;
 	/** Earlier entries kept in the report */
 	kept: number;
 	/** No task matched the IDs or range, so the existing report was left as it was */
@@ -335,11 +340,19 @@ export class AnalyzeComplexityService {
 		} else if (fromId !== undefined || toId !== undefined) {
 			inScope = (task) => idOf(task) >= first && idOf(task) <= last;
 		}
+		const named = Boolean(specificIds);
+		// Already broken down, so expand --all skips it too; --id still scores it
+		const expanded = (task: Task) =>
+			!named && isActive(task) && (task.subtasks?.length ?? 0) > 0;
 		const counts = (task: Task) =>
-			isActive(task) || (input.anyStatus === true && Boolean(specificIds));
+			(isActive(task) && !expanded(task)) ||
+			(input.anyStatus === true && named);
 		const tasks = allTasks.filter((task) => counts(task) && inScope(task));
 		const skipped = allTasks.filter(
 			(task) => inScope(task) && !counts(task)
+		).length;
+		const skippedWithSubtasks = allTasks.filter(
+			(task) => inScope(task) && expanded(task)
 		).length;
 
 		if (specificIds && specificIds.length > 0) {
@@ -353,7 +366,7 @@ export class AnalyzeComplexityService {
 				);
 			}
 		} else if (filtered && tasks.length === 0) {
-			warn(`No active tasks found in range: ${first}-${last}`);
+			warn(`No active tasks without subtasks found in range: ${first}-${last}`);
 		}
 
 		const meta = (extra: Partial<ComplexityReportMetadata> = {}) => ({
@@ -374,6 +387,7 @@ export class AnalyzeComplexityService {
 					tag,
 					analyses: [],
 					skipped,
+					skippedWithSubtasks,
 					kept: 0,
 					unchanged: true,
 					telemetryData: null
@@ -389,6 +403,7 @@ export class AnalyzeComplexityService {
 				tag,
 				analyses: [],
 				skipped,
+				skippedWithSubtasks,
 				kept: 0,
 				unchanged: false,
 				telemetryData: null
@@ -505,6 +520,7 @@ export class AnalyzeComplexityService {
 			tag,
 			analyses,
 			skipped,
+			skippedWithSubtasks,
 			kept,
 			unchanged: false,
 			telemetryData: response.telemetryData,
