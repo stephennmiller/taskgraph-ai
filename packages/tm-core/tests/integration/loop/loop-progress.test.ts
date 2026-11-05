@@ -1,6 +1,6 @@
 /**
  * @fileoverview A loop run against a real project counts a task as completed
- * only when its status moves, and stops when Claude makes no progress (#812)
+ * only when its status moves, and sets aside a task Claude makes no progress on (#812, #997)
  *
  * @integration
  */
@@ -69,15 +69,18 @@ describe.skipIf(process.platform === 'win32')('loop progress', () => {
 			callbacks: { onError: () => {} }
 		});
 
-	it('stops after two iterations that leave every task pending', async () => {
+	it('sets a stuck task aside, then stops when the next one is stuck too (#997)', async () => {
 		const result = await run();
 
 		expect(result).toMatchObject({
-			totalIterations: 2,
+			totalIterations: 4,
 			tasksCompleted: 0,
 			finalStatus: 'error'
 		});
-		expect(result.errorMessage).toContain('Task 1 is stuck');
+		expect(result.errorMessage).toContain('Task 2 is stuck');
+		expect(result.setAside?.map((t) => t.id)).toEqual(['1', '2']);
+		const tasks = (await tmCore.tasks.list()).tasks;
+		expect(tasks.map((t) => t.status)).toEqual(['blocked', 'blocked']);
 	}, 20_000);
 
 	it('counts each task Claude marked done', async () => {
