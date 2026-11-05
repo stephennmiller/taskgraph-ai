@@ -50,6 +50,18 @@ describe('TaskWorktrees.changedFiles', () => {
 		expect(files.sort()).toEqual(['../outside.ts', 'a.ts', 'new.ts']);
 	});
 
+	it('leaves out a .taskgraph folder that was never committed (#1003)', async () => {
+		git('rm', '-rq', '--cached', 'app/.taskgraph');
+		git('commit', '-qm', 'untrack state');
+		write('app/a.ts', 'edited\n');
+
+		const files = await new TaskWorktrees(project).changedFiles(
+			path.join(project, '.taskgraph/progress.txt')
+		);
+
+		expect(files).toEqual(['a.ts']);
+	});
+
 	it('is empty for a clean tree', async () => {
 		expect(
 			await new TaskWorktrees(project).changedFiles(

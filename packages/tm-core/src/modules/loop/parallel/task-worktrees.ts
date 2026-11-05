@@ -79,9 +79,13 @@ export function parseWorktreeList(output: string): Map<string, string | null> {
  */
 const OWN_STATE_PATHS = ['.taskgraph/tasks/', '.taskgraph/state.json'];
 
+/** How `git status` names a `.taskgraph/` folder that was never committed (#1003) */
+const UNTRACKED_STATE_FOLDER = '.taskgraph/';
+
 /** Whether `file` (relative to the repository root) is TaskGraph's own state */
 export function isTaskGraphState(file: string, projectPrefix: string): boolean {
 	const prefix = projectPrefix ? `${projectPrefix}/` : '';
+	if (file === prefix + UNTRACKED_STATE_FOLDER) return true;
 	return OWN_STATE_PATHS.some((own) =>
 		own.endsWith('/') ? file.startsWith(prefix + own) : file === prefix + own
 	);
