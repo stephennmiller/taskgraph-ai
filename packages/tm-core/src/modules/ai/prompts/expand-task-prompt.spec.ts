@@ -134,6 +134,26 @@ describe('expand-task prompt template', () => {
 			expect(item.additionalProperties).toBe(false);
 		});
 
+		test('a subtask without status validates, and the JSON Schema does not require it', () => {
+			const { status: _status, ...withoutStatus } = subtask;
+
+			const result = ExpandTaskResponseSchema.parse({
+				subtasks: [withoutStatus]
+			});
+			const item = (zodSchema(ExpandTaskResponseSchema).jsonSchema as any)
+				.properties.subtasks.items;
+
+			expect(result.subtasks[0].status).toBeUndefined();
+			expect(item.required).not.toContain('status');
+			expect(item.properties.status.enum).toEqual(['pending', 'done']);
+		});
+
+		test('update schemas still require status', () => {
+			expect(
+				SubtaskSchema.safeParse({ ...subtask, status: undefined }).success
+			).toBe(false);
+		});
+
 		test('update keeps the shared subtask schema without criteria', () => {
 			// update/update-task rewrite subtasks; their criteria are copied
 			// back from storage (keepStoredFields), not regenerated
