@@ -155,6 +155,23 @@ describe('expand-task prompt template', () => {
 				'- acceptanceCriteria: 2-5 short statements'
 			);
 		});
+
+		test.each([
+			['default', {}],
+			['research', { useResearch: true }],
+			['complexity-report', { expansionPrompt: 'Focus on security' }]
+		])('the %s variant asks for independent subtasks', (variant, extra) => {
+			const { systemPrompt } = promptManager.loadPrompt(
+				'expand-task',
+				{ ...baseParams, ...extra },
+				variant
+			);
+
+			expect(systemPrompt).toContain(
+				"add a dependency only when a subtask needs another one's output"
+			);
+			expect(systemPrompt).not.toContain('implemented sequentially');
+		});
 	});
 
 	test('complexity-report variant fails without task context regression test', () => {
