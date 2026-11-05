@@ -12,6 +12,14 @@ import {
 	resolveSubtaskDependency
 } from '../../dependencies/subtask-dependency.js';
 
+/** The highest subtask ID, 0 for none; a subtask may be stored as "3.2" rather than 2 */
+export function highestSubtaskId(subtasks: Subtask[]): number {
+	return Math.max(
+		0,
+		...subtasks.map((s) => Number(String(s.id).split('.').pop()) || 0)
+	);
+}
+
 /**
  * Number the new subtasks on from the highest ID the task has now, and point
  * their dependencies on each other at the new IDs. The AI call ran without
@@ -22,11 +30,7 @@ export function renumberSubtasks(
 	existing: Subtask[],
 	added: Subtask[]
 ): void {
-	// A subtask may be stored as "3.2" rather than 2
-	const highest = Math.max(
-		0,
-		...existing.map((s) => Number(String(s.id).split('.').pop()) || 0)
-	);
+	const highest = highestSubtaskId(existing);
 	// A repeated AI ID gets its own new ID; a reference to it means the first
 	const newIds = new Map<string, number>();
 	added.forEach((s, i) => {

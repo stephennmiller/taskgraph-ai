@@ -91,6 +91,7 @@ describe('expand_task', () => {
 				research: true,
 				prompt: 'More',
 				force: true,
+				append: false,
 				tag: 'master',
 				session: ctx.session,
 				outputType: 'mcp',
@@ -129,6 +130,32 @@ describe('expand_task', () => {
 
 		expect(reply(result).data.warnings).toEqual([warning]);
 		expect(ctx.log.warn).toHaveBeenCalledWith(warning);
+	});
+
+	it('with append, passes it on and counts only the subtasks it added (#992)', async () => {
+		tasks.expand.mockResolvedValue({
+			task: { ...savedTask, subtasks: [{ id: 1 }, { id: 2 }, { id: 3 }] },
+			tag: 'master',
+			addedSubtasks: [{ id: 3 }],
+			hadSubtasks: true,
+			telemetryData: null,
+			tagInfo: null
+		});
+
+		const result = await tool().execute(
+			{ id: '3', append: true, projectRoot: project },
+			ctx
+		);
+
+		expect(tasks.expand.mock.calls[0][0]).toMatchObject({
+			append: true,
+			force: false,
+			keepExpanded: true
+		});
+		expect(reply(result).data).toMatchObject({
+			subtasksAdded: 1,
+			hasExistingSubtasks: true
+		});
 	});
 
 	it('replies that expansion was skipped for a task with subtasks', async () => {
@@ -277,6 +304,7 @@ describe('expand_all', () => {
 				research: true,
 				prompt: undefined,
 				force: true,
+				append: false,
 				tag: 'master',
 				session: ctx.session,
 				outputType: 'mcp'

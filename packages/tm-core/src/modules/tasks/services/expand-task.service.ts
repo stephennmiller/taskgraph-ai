@@ -52,8 +52,9 @@ import { getPrdSource } from '../../prd/prd-sections.js';
 import { setGeneratedCriteria } from '../utils/acceptance-criteria.js';
 import { TAG_NAME_PATTERN } from '../utils/tag-names.js';
 import { normalizeTaskId } from '../validation/task-id.js';
+import { appendPromptContext, refuseAppendWithForce } from './expand-append.js';
 import { degenerateReply } from './expand-reply-check.js';
-import { renumberSubtasks } from './expand-subtask-ids.js';
+import { highestSubtaskId, renumberSubtasks } from './expand-subtask-ids.js';
 import type { TaskService } from './task-service.js';
 
 /**
@@ -75,6 +76,8 @@ export interface ExpandOptions {
 	prompt?: string;
 	/** Replace existing subtasks instead of adding to them */
 	force?: boolean;
+	/** Add to the subtasks, shown to the AI; expandAll takes tasks with them too */
+	append?: boolean;
 	/** The tag's report in .taskgraph/reports when left out */
 	complexityReportPath?: string;
 	/** The active tag when left out */
@@ -90,7 +93,7 @@ export interface ExpandTaskInput extends ExpandOptions {
 	id: string | number;
 	/**
 	 * MCP expand_task's rules: refuse a done task, and leave a task that
-	 * already has subtasks as it is unless `force`
+	 * already has subtasks as it is unless `force` or `append`
 	 */
 	keepExpanded?: boolean;
 }
@@ -137,7 +140,7 @@ export interface ExpandAllResult {
 	/** Tasks the complexity report says need no subtasks */
 	skippedCount: number;
 	failedCount: number;
-	/** Pending or in-progress tasks without subtasks (any, with force) */
+	/** Pending or in-progress tasks without subtasks (any, with force or append) */
 	tasksToExpand: number;
 	/** Pending or in-progress tasks left out because they have subtasks */
 	alreadyExpandedCount: number;
@@ -195,6 +198,7 @@ export class ExpandTaskService {
 				ERROR_CODES.VALIDATION_ERROR
 			);
 		}
+		refuseAppendWithForce(input);
 		const num = explicitCount(input.num);
 		const { tasks, tag } = await this.taskService.loadStoredTasks(input.tag);
 		const stored = tasks.find((t) => String(t.id) === taskId);
@@ -221,7 +225,9 @@ export class ExpandTaskService {
 					ERROR_CODES.TASK_STATUS_ERROR
 				);
 			}
-			if (hadSubtasks && !input.force) return skip('has-subtasks');
+			if (hadSubtasks && !input.force && !input.append) {
+				return skip('has-subtasks');
+			}
 		}
 
 		// force: the prompt and the search see the task without its subtasks
@@ -246,22 +252,29 @@ export class ExpandTaskService {
 			(typeof analysis?.expansionPrompt === 'string'
 				? analysis.expansionPrompt
 				: analysis?.expansionPrompt?.text) || undefined;
+		// append: the AI sees the subtasks there are, so it writes only new ones
+		const context = appendPromptContext(
+			taskId,
+			(input.append && stored.subtasks) || [],
+			input.prompt,
+			await this.gatherContext(
+				tasks.map((t) => (t === stored ? task : t)),
+				tasks,
+				task,
+				warn
+			)
+		);
 		const { systemPrompt, userPrompt } = getPromptManager().loadPrompt(
 			'expand-task',
 			{
 				task,
 				subtaskCount,
-				nextSubtaskId: (task.subtasks?.length || 0) + 1,
-				additionalContext: input.prompt || '',
+				// After the highest ID: with IDs 1, 2 and 5, a new 4 and 5 would clash
+				nextSubtaskId: highestSubtaskId(task.subtasks ?? []) + 1,
 				complexityReasoningContext: analysis?.reasoning
 					? `\nComplexity Analysis Reasoning: ${analysis.reasoning}`
 					: '',
-				gatheredContext: await this.gatherContext(
-					tasks.map((t) => (t === stored ? task : t)),
-					tasks,
-					task,
-					warn
-				),
+				...context,
 				useResearch,
 				expansionPrompt,
 				hasCodebaseAnalysis: aiConfig.hasCodebaseAnalysis(
@@ -411,9 +424,9 @@ export class ExpandTaskService {
 	}
 
 	/**
-	 * Expand every pending or in-progress task without subtasks (with force,
-	 * with them too), a few at a time. A task that fails is counted and the
-	 * rest go on.
+	 * Expand every pending or in-progress task without subtasks (with force
+	 * or append, with them too), a few at a time. A task that fails is
+	 * counted and the rest go on.
 	 */
 	async expandAll(
 		options: ExpandOptions,
@@ -421,12 +434,14 @@ export class ExpandTaskService {
 	): Promise<ExpandAllResult> {
 		// A bad count would fail every task the same way
 		explicitCount(options.num);
+		refuseAppendWithForce(options);
 		const { tasks, tag } = await this.taskService.loadStoredTasks(options.tag);
 		const open = tasks.filter(
 			(t) => t.status === 'pending' || t.status === 'in-progress'
 		);
+		const every = options.force || options.append;
 		const eligible = open.filter(
-			(t) => !t.subtasks || t.subtasks.length === 0 || options.force
+			(t) => !t.subtasks || t.subtasks.length === 0 || every
 		);
 		const result: ExpandAllResult = {
 			tag,
@@ -434,7 +449,7 @@ export class ExpandTaskService {
 			skippedCount: 0,
 			failedCount: 0,
 			tasksToExpand: eligible.length,
-			alreadyExpandedCount: options.force ? 0 : open.length - eligible.length,
+			alreadyExpandedCount: every ? 0 : open.length - eligible.length,
 			telemetryData: null
 		};
 		if (eligible.length === 0) return result;

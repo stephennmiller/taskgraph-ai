@@ -199,7 +199,9 @@ describe.skipIf(!built)('AI command output (fake claude)', () => {
 		expect(res.stdout).toContain(
 			'No pending tasks to expand: 1 already has subtasks'
 		);
-		expect(res.stdout).toContain('Add --force to replace their subtasks');
+		expect(res.stdout).toContain(
+			'Add --append to add more, or --force to replace them'
+		);
 	});
 
 	it('expand --all exits 1 when a task fails, and says which', () => {
