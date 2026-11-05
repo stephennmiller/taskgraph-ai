@@ -156,8 +156,12 @@ export function registerAnalyzeComplexityTool(server: FastMCP) {
 							data: neutralizeTaskData({
 								message: result.unchanged
 									? `No active task matched, so the report at ${result.reportPath} is unchanged`
-									: `Task complexity analysis complete. Report saved to ${result.reportPath}`,
+									: result.analyses.length === 0
+										? `No task to analyze (skipped ${result.skipped}, ${result.skippedWithSubtasks} of them with subtasks; name one in ids to analyze it). Report at ${result.reportPath}`
+										: `Task complexity analysis complete. Report saved to ${result.reportPath}`,
 								reportPath: result.reportPath,
+								skipped: result.skipped,
+								skippedWithSubtasks: result.skippedWithSubtasks,
 								reportSummary: countComplexity(
 									result.report.complexityAnalysis ?? []
 								),
