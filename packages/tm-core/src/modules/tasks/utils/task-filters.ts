@@ -229,6 +229,40 @@ export function filterByAssignee<T extends Task>(
 	return tasks.filter((task) => mine(task) || task.subtasks?.some(mine));
 }
 
+type Searchable = {
+	title?: unknown;
+	description?: unknown;
+	details?: unknown;
+	testStrategy?: unknown;
+};
+
+/** Whether `text` (lowercase) is in the item's title, description, details or test strategy */
+function hasText(item: Searchable, text: string): boolean {
+	return [item.title, item.description, item.details, item.testStrategy].some(
+		(field) => typeof field === 'string' && field.toLowerCase().includes(text)
+	);
+}
+
+/**
+ * The tasks whose title, description, details or test strategy hold `search`
+ * (any case), or with a subtask that does; all of them without a search
+ */
+export function filterBySearch<T extends Searchable & { subtasks?: unknown }>(
+	tasks: T[],
+	search?: string
+): T[] {
+	if (!search) return tasks;
+	const text = search.toLowerCase();
+	return tasks.filter(
+		(task) =>
+			hasText(task, text) ||
+			(Array.isArray(task.subtasks) &&
+				task.subtasks.some(
+					(subtask) => !!subtask && hasText(subtask as Searchable, text)
+				))
+	);
+}
+
 /**
  * The statuses a `--status` value names (`pending` or `pending,review`), or
  * undefined for `all` or no value. Throws a VALIDATION_ERROR naming the valid

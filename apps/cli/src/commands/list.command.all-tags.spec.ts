@@ -31,6 +31,7 @@ vi.mock('../utils/ui.js', () => ({
 }));
 
 import { ListTasksCommand } from './list.command.js';
+import { validateListOptions } from './list.validate.js';
 
 describe('ListTasksCommand', () => {
 	let consoleLogSpy: any;
@@ -266,9 +267,8 @@ describe('ListTasksCommand', () => {
 			const consoleErrorSpy = vi
 				.spyOn(console, 'error')
 				.mockImplementation(() => {});
-			const command = new ListTasksCommand();
 
-			const isValid = (command as any).validateOptions({
+			const isValid = validateListOptions({
 				allTags: true,
 				watch: true
 			});

@@ -4,16 +4,15 @@
  */
 
 import {
-	OUTPUT_FORMATS,
 	buildBlocksMap,
 	createTmCore,
 	filterBlockingTasks,
 	filterByAssignee,
+	filterBySearch,
 	filterByStatus,
 	filterReadyTasks,
 	formatTaskData,
 	neutralizeTaskData,
-	parseStatusFilter,
 	sanitizeForTerminal,
 	satisfyArchivedDependencies,
 	type InvalidDependency,
@@ -36,7 +35,7 @@ import {
 	oneLine
 } from '../ui/index.js';
 import { displayCommandHeader } from '../utils/display-helpers.js';
-import { displayError, printError } from '../utils/error-handler.js';
+import { displayError } from '../utils/error-handler.js';
 import { jsonOption, printJson } from '../utils/json-output.js';
 import { getProjectRoot } from '../utils/project-root.js';
 import { shellOptsOutOfTaskDataFence } from '../ui/layout/helpers.js';
@@ -48,6 +47,7 @@ import {
 	type TaskWithTag,
 	shouldPrintPlainList
 } from './list.types.js';
+import { validateListOptions } from './list.validate.js';
 
 /**
  * ListTasksCommand extending Commander's Command class
@@ -86,6 +86,10 @@ export class ListTasksCommand extends Command {
 			.option('--blocking', 'Only tasks that block other tasks')
 			.option('--mine', 'Only tasks assigned to you')
 			.option(
+				'--search <text>',
+				"Only tasks whose title, description, details or test strategy (or a subtask's) hold the text, any case"
+			)
+			.option(
 				'--all-tags',
 				'Tasks from every tag (with --ready, the ones you can start)'
 			)
@@ -120,7 +124,7 @@ export class ListTasksCommand extends Command {
 	private async executeCommand(options: ListCommandOptions): Promise<void> {
 		try {
 			// Validate options
-			if (!this.validateOptions(options)) {
+			if (!validateListOptions(options)) {
 				process.exit(1);
 			}
 
@@ -220,48 +224,6 @@ export class ListTasksCommand extends Command {
 	}
 
 	/**
-	 * Validate command options
-	 */
-	private validateOptions(options: ListCommandOptions): boolean {
-		// Validate format
-		if (
-			options.format &&
-			!OUTPUT_FORMATS.includes(options.format as OutputFormat)
-		) {
-			console.error(chalk.red(`Invalid format: ${options.format}`));
-			console.error(theme.muted(`Valid formats: ${OUTPUT_FORMATS.join(', ')}`));
-			return false;
-		}
-
-		// Validate status
-		try {
-			parseStatusFilter(options.status);
-		} catch (error) {
-			// "isn't a status. Use one of: …" is one sentence; the printer
-			// wants the problem and the fix on their own lines (#928)
-			const raw = (error as Error).message;
-			const marker = ' Use one of: ';
-			const at = raw.indexOf(marker);
-			if (at === -1) printError(raw);
-			else printError(raw.slice(0, at), raw.slice(at + 1));
-			return false;
-		}
-
-		// Validate --all-tags cannot be used with --watch
-		if (options.allTags && options.watch) {
-			console.error(chalk.red('--all-tags cannot be used with --watch mode'));
-			console.error(
-				theme.muted(
-					'Use --all-tags without --watch, or --watch without --all-tags'
-				)
-			);
-			return false;
-		}
-
-		return true;
-	}
-
-	/**
 	 * Initialize TmCore
 	 */
 	private async initializeCore(projectRoot: string): Promise<void> {
@@ -325,6 +287,7 @@ export class ListTasksCommand extends Command {
 
 		filteredTasks = filterByStatus(filteredTasks, options.status);
 		filteredTasks = filterByAssignee(filteredTasks, await this.mine(options));
+		filteredTasks = filterBySearch(filteredTasks, options.search);
 		if (!options.withSubtasks) {
 			filteredTasks = filteredTasks.map((task) => ({ ...task, subtasks: [] }));
 		}
@@ -400,11 +363,8 @@ export class ListTasksCommand extends Command {
 				const ready: TaskWithTag[] = options.ready
 					? (filterReadyTasks(enrichedTasks, archivedIds) as TaskWithTag[])
 					: enrichedTasks;
-				const tasksToAdd = options.withSubtasks
-					? ready
-					: ready.map((task) => ({ ...task, subtasks: [] }));
 
-				allTaggedTasks.push(...tasksToAdd);
+				allTaggedTasks.push(...ready);
 			} catch (tagError: unknown) {
 				const errorMessage =
 					tagError instanceof Error ? tagError.message : String(tagError);
@@ -446,6 +406,11 @@ export class ListTasksCommand extends Command {
 
 		filteredTasks = filterByStatus(filteredTasks, options.status);
 		filteredTasks = filterByAssignee(filteredTasks, await this.mine(options));
+		filteredTasks = filterBySearch(filteredTasks, options.search);
+		// Subtasks go last: --mine and --search match on them too
+		if (!options.withSubtasks) {
+			filteredTasks = filteredTasks.map((task) => ({ ...task, subtasks: [] }));
+		}
 
 		return {
 			tasks: filteredTasks,
@@ -612,7 +577,8 @@ export class ListTasksCommand extends Command {
 	/** What an empty list says: `No ready tasks found`, `Nothing assigned to steve` */
 	private emptyList(options: ListCommandOptions): string {
 		return formatEmptyList(this.emptyListFilter(options), {
-			assignee: this.login
+			assignee: this.login,
+			search: options.search
 		});
 	}
 

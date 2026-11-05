@@ -35,6 +35,11 @@ taskgraph list --no-header
 
 # Only the tasks assigned to you (your GitHub login, from gh)
 taskgraph list --mine
+
+# Tasks whose title, description, details or test strategy contain the
+# text, in any case, or with a subtask that does. Combines with the
+# other filters: taskgraph list --search auth --status=pending
+taskgraph list --search auth
 ```
 
 ## Show Next Task

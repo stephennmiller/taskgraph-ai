@@ -293,20 +293,24 @@ export function formatListNextStep(
  *
  * @param filter - The status or view asked for (`pending`, `ready`), if any
  * @param options.assignee - The login `--mine` matched
+ * @param options.search - The `--search` text, named as `No tasks match "auth"`
  */
 export function formatEmptyList(
 	filter?: string,
-	options: ListSummaryOptions & { assignee?: string } = {}
+	options: ListSummaryOptions & { assignee?: string; search?: string } = {}
 ): string {
 	const width = resolveWidth(options.width);
 	const assignee = sanitizeForTerminal(options.assignee);
-	const message = filter
-		? `No ${filter} tasks found`
-		: assignee
-			? `Nothing assigned to ${assignee}`
-			: 'No tasks found';
+	const search = options.search && oneLine(options.search);
+	const message = search
+		? `No ${filter ? `${filter} ` : ''}tasks match "${search}"`
+		: filter
+			? `No ${filter} tasks found`
+			: assignee
+				? `Nothing assigned to ${assignee}`
+				: 'No tasks found';
 	const action =
-		filter || assignee
+		filter || assignee || search
 			? { command: 'taskgraph list', description: 'to see every task' }
 			: {
 					command: "taskgraph add-task --prompt='...'",
@@ -314,7 +318,7 @@ export function formatEmptyList(
 				};
 	const lines = [theme.text(message), ...formatNextStep(action, width)];
 	// The prompt and parse-prd paths need Claude. -t/-d does not (#924).
-	if (!filter && !assignee) {
+	if (!filter && !assignee && !search) {
 		lines.push(
 			...wrapLine(
 				`      or ${theme.brand("taskgraph add-task -t 'Title' -d 'What'")}`,

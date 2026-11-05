@@ -4,6 +4,7 @@ import { createSubtask, createTask } from '../../../testing/task-fixtures.js';
 import {
 	buildBlocksMap,
 	filterByAssignee,
+	filterBySearch,
 	filterByStatus,
 	filterReadyTasks,
 	parseStatusFilter
@@ -74,6 +75,48 @@ describe('parseStatusFilter', () => {
 		expect(() => parseStatusFilter('pending,bogus')).toThrow(
 			'"bogus" isn\'t a status. Use one of: pending, in-progress'
 		);
+	});
+});
+
+describe('filterBySearch', () => {
+	const tasks = [
+		createTask({ id: 1, title: 'Build the LOGIN api' }),
+		createTask({ id: 2, title: 'Dashboard', description: 'Login stats' }),
+		createTask({ id: 3, title: 'Schema', details: 'login table' }),
+		createTask({ id: 4, title: 'Tests', testStrategy: 'Check LOGIN' }),
+		createTask({
+			id: 5,
+			title: 'Settings page',
+			subtasks: [createSubtask({ id: 1, parentId: '5', title: 'Login form' })]
+		}),
+		createTask({ id: 6, title: 'Write the README' })
+	];
+	const ids = (filtered: typeof tasks) => filtered.map((task) => task.id);
+
+	it('keeps tasks whose title, description, details, test strategy or a subtask hold the text, any case', () => {
+		expect(ids(filterBySearch(tasks, 'login'))).toEqual([
+			'1',
+			'2',
+			'3',
+			'4',
+			'5'
+		]);
+		expect(ids(filterBySearch(tasks, 'READme'))).toEqual(['6']);
+	});
+
+	it('keeps every task without a search, and none when nothing matches', () => {
+		expect(filterBySearch(tasks)).toHaveLength(6);
+		expect(filterBySearch(tasks, '')).toHaveLength(6);
+		expect(filterBySearch(tasks, 'oauth')).toEqual([]);
+	});
+
+	it('skips fields that are not strings, as older files may hold', () => {
+		const odd = [
+			{ id: '1', title: 7, details: null, subtasks: [null, { title: {} }] },
+			{ id: '2', title: 'seven', subtasks: 'none' }
+		] as unknown as Task[];
+
+		expect(filterBySearch(odd, 'seven').map((t) => t.id)).toEqual(['2']);
 	});
 });
 
