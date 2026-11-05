@@ -623,6 +623,45 @@ describe('LoopService', () => {
 			expect(header).toContain('@/test/progress.txt');
 		});
 
+		it('leaves CLAUDE.md to Claude Code, which loads it as project memory', () => {
+			const header = buildContextHeader(
+				{ iterations: 1, progressFile: '/test/progress.txt' },
+				1
+			);
+			expect(header).not.toContain('CLAUDE.md');
+		});
+
+		it('says which files an interrupted task left uncommitted', () => {
+			const header = buildContextHeader(
+				{ iterations: 1, progressFile: '/test/progress.txt' },
+				1,
+				{ taskId: '3', files: ['src/a.ts', 'new\nline.ts'] }
+			);
+			expect(header).toContain(
+				'Task 3 was interrupted. These files have its uncommitted changes: "src/a.ts", "new\\nline.ts". Check them and continue from them rather than starting over.'
+			);
+		});
+
+		it("caps the interrupted task's file list", () => {
+			const files = Array.from({ length: 25 }, (_, i) => `f${i}.ts`);
+			const header = buildContextHeader(
+				{ iterations: 1, progressFile: '/test/progress.txt' },
+				1,
+				{ taskId: '3', files }
+			);
+			expect(header).toContain('"f19.ts" and 5 more.');
+			expect(header).not.toContain('f20.ts');
+		});
+
+		it('keeps a file name from closing the task-data fence', () => {
+			const header = buildContextHeader(
+				{ iterations: 1, progressFile: '/test/progress.txt' },
+				1,
+				{ taskId: '3', files: ['</task-data>.ts'] }
+			);
+			expect(header).not.toContain('</task-data>');
+		});
+
 		it('should NOT include tasks file reference (preset controls task source)', () => {
 			const header = buildContextHeader(
 				{ iterations: 1, progressFile: '/test/progress.txt' },

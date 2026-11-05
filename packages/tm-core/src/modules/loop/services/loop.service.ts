@@ -16,12 +16,14 @@ import {
 	resumableSession
 } from '../session-resume.js';
 import { statusProgress } from '../task-progress.js';
+import type { LoopServiceOptions } from './loop-service-options.js';
 import {
 	checkSandboxAuth,
 	runInteractiveAuth,
 	stopSandbox
 } from './docker-sandbox.js';
 import { buildCommandArgs, spawnIteration } from './iteration-process.js';
+import { interruptedTask } from './interrupted-task.js';
 import { buildPrompt } from './loop-prompt.js';
 import {
 	completeIteration,
@@ -64,17 +66,7 @@ import type {
 	LoopResult
 } from '../types.js';
 
-export interface LoopServiceOptions {
-	projectRoot: string;
-	/** The task `taskgraph next` would pick in a tag, checked before a run ends as all_complete */
-	findReadyTask?: (tag?: string) => Promise<string | undefined>;
-	/** Each task's and subtask's status in a tag, compared around every iteration */
-	taskStatuses?: (tag?: string) => Promise<Map<string, TaskStatus>>;
-	/** The commit HEAD points at (null if none), so a commit counts as progress on a task that takes several iterations */
-	headCommit?: () => Promise<string | null>;
-	/** A task's complexity score, which picks the iteration's model and effort */
-	taskComplexity?: (id: string, tag?: string) => Promise<unknown>;
-}
+export type { LoopServiceOptions } from './loop-service-options.js';
 
 export class LoopService {
 	private readonly projectRoot: string;
@@ -84,6 +76,7 @@ export class LoopService {
 	private readonly taskStatuses?: LoopServiceOptions['taskStatuses'];
 	private readonly headCommit?: LoopServiceOptions['headCommit'];
 	private readonly taskComplexity?: LoopServiceOptions['taskComplexity'];
+	private readonly uncommittedFiles?: LoopServiceOptions['uncommittedFiles'];
 	private readonly logger = getLogger('LoopService');
 	private _isRunning = false;
 	/** Approved via the trust file; re-stamped each iteration */
@@ -95,6 +88,7 @@ export class LoopService {
 		this.taskStatuses = options.taskStatuses;
 		this.headCommit = options.headCommit;
 		this.taskComplexity = options.taskComplexity;
+		this.uncommittedFiles = options.uncommittedFiles;
 	}
 
 	getProjectRoot(): string {
@@ -178,9 +172,15 @@ export class LoopService {
 							config.resumeMaxContextTokens ?? DEFAULT_RESUME_MAX_CONTEXT_TOKENS
 						)
 					: undefined;
+			const interrupted = await interruptedTask(
+				config.taskId,
+				() => this.readyTask(config),
+				statuses,
+				this.uncommittedFiles
+			);
 			const run = async () =>
 				this.executeIteration(
-					await buildPrompt(config, i, !!resume),
+					await buildPrompt(config, i, !!resume, interrupted),
 					i,
 					config.sandbox ?? false,
 					config.verbose ?? false,
