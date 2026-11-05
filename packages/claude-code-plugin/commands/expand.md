@@ -16,7 +16,7 @@ Arguments: $ARGUMENTS (task ID or `all`, then optional modifiers)
      taskgraph expand <id>
      ```
 
-     Add flags from the arguments: a number → `--num=<n>`; any other words → `--prompt='<words>'` (single quotes, any `'` written as `'\''`). If the task already has subtasks, add `--append`: the new ones go after them, and the AI sees the existing ones so it doesn't repeat them.
+     Add flags from the arguments: a number → `--num=<n>`; any other words → `--prompt='<words>'` (single quotes, any `'` written as `'\''`). If the task already has subtasks, the new ones are added after them.
    - `all` or `--all`: run:
 
      ```bash
@@ -26,6 +26,6 @@ Arguments: $ARGUMENTS (task ID or `all`, then optional modifiers)
      It expands every pending or in-progress task that has no subtasks yet, using the scores from `/taskgraph:analyze-complexity` when a report exists.
    - neither: ask which task, or whether to expand all of them.
 
-   Add `--research` if the arguments say `research`. `--force` replaces existing subtasks (with `--all`, it re-expands tasks that already have them), so add it only when the user asks. With `all`, add `--append` only when the user asks to add to tasks that already have subtasks too; never `--append` with `--force`.
+   Add `--research` if the arguments say `research`. `--force` replaces existing subtasks (with `--all`, it re-expands tasks that already have them), so add it only when the user asks.
 2. Show the subtask lines it printed, or, for `all`, the summary: tasks expanded and subtasks added. Each subtask has 2-5 acceptance criteria of its own, all unchecked; `/taskgraph:to-done <id>` checks them against your changes.
 3. Then suggest starting the first subtask: `taskgraph next`.
