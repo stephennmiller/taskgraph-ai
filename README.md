@@ -95,8 +95,10 @@ What you get:
   `.taskgraph/tasks/tasks.json`, so you can read, edit and review them like
   code.
 - **Clean resume.** After an interruption `taskgraph loop` picks up from the
-  task statuses and comes close to its uninterrupted score. A fresh plain
-  session often stops early instead.
+  task statuses and comes close to its uninterrupted score. Stopped 8 minutes
+  in and resumed, the Shell and jq builds cost 14% more than uninterrupted with
+  TaskGraph, and almost three times as much with plain `claude --continue`, at
+  the same score.
 - **A dependency graph you can inspect.** `taskgraph next` shows the first
   unblocked task, `graph` draws the tree and `why 7` says what blocks task 7.
 - **Unattended parallel builds.** `loop --parallel --merge` runs independent
