@@ -4,7 +4,7 @@ sidebarTitle: "Loop Presets"
 description: "The built-in prompts taskgraph loop runs: the backlog, test-first TDD, test coverage, linting, duplication and code smells"
 ---
 
-The loop command includes six built-in presets for common development workflows. The `default` preset works through ready tasks in one session, committing after each; the others do one focused change per iteration.
+The loop command includes six built-in presets for common development workflows. Each preset does one task or one focused change per session, then the loop starts a fresh session for the next.
 
 | Preset | Purpose | Completion Marker |
 | ------ | ------- | ----------------- |
@@ -17,25 +17,22 @@ The loop command includes six built-in presets for common development workflows.
 
 ## default
 
-The standard task completion workflow. Agents work through your TaskGraph backlog, one task at a time in the same session, committing after each. A new iteration starts only when the session ends (a crash, the timeout, or the budget), and it picks up from the task statuses and `.taskgraph/design.md`.
+The standard task completion workflow. Each session finishes one task from your TaskGraph backlog, commits it and stops, and the loop starts a fresh session for the next. Short sessions keep each call's context small: on the [benchmarks](/best-practices/benchmarks#one-task-per-session) this cost 45% less than one session over every task, at the same score.
 
 ```bash
 taskgraph loop -n 10 --prompt default
 ```
 
 **What it does:**
-1. Reads `.taskgraph/design.md`, the project's design notes, if it exists
-2. Runs `taskgraph next` to get the highest priority available task
-3. Reads task details with `taskgraph show <id>`
-4. Implements the task with the smallest possible change
-5. Runs tests and type checks, then runs the app through its real entry point (the CLI, server or UI) on an input the task should handle. If the entry point can't reach the task's code yet and no task wires it in, it adds that task
-6. Marks the task complete with `taskgraph set-status --id=<id> --status=done`
-7. Updates `.taskgraph/design.md` with what later tasks need to know, so each fresh session starts from the design instead of rediscovering it
-8. Commits work with a descriptive message
+1. Runs `taskgraph next` to pick the task, then `taskgraph show <id>` for its criteria and PRD section
+2. Builds it in as few steps as it can, writing whole files with tests alongside
+3. Runs tests and type checks, then runs the app through its real entry point (the CLI, server or UI) on an input the task should handle. If the entry point can't reach the task's code yet and no task wires it in, it adds that task
+4. Commits and marks the task done in one command, checking off its criteria (`set-status <id> done --check <numbers>`)
+5. Stops, so the next task starts in a fresh session
 
 **Completion criteria:** All pending tasks are complete.
 
-**When a task needs unfinished work:** the agent makes it depend on that task (`taskgraph depend`), notes why, commits and ends the iteration, so the next one picks other work. It ends with `<loop-blocked>` only when no task can proceed, such as missing credentials. Even then, if the iteration changed a task or committed, the loop warns and keeps going while `taskgraph next` finds a task.
+**When a task needs unfinished work:** the agent makes it depend on that task (`taskgraph depend`), notes why and ends the session, so the next one picks other work. It ends with `<loop-blocked>` only when no task can proceed, such as missing credentials. Even then, if the iteration changed a task or committed, the loop warns and keeps going while `taskgraph next` finds a task.
 
 ## tdd
 

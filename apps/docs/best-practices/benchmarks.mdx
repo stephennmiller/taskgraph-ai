@@ -118,6 +118,23 @@ whole session again, and on jq it wrote 2.6 times the output tokens.
 Taskgraph at Claude Code's default effort, run earlier the same day, cost
 $7.19 on Shell and $6.37 on jq.
 
+## One task per session
+
+The loop's prompt then changed so each session builds one task in a few large
+steps, commits it, marks it done and stops, and the loop starts a fresh
+session for the next. That is now the `default` preset. Same plans, Claude
+Code's default effort:
+
+| Bench | Plain | Cost  | Time   | Taskgraph | Cost  | Time   |
+| ----- | ----- | ----- | ------ | --------- | ----- | ------ |
+| Shell | 42/45 | $2.38 | 18 min | 43/45     | $3.74 | 25 min |
+| jq    | 38/42 | $2.23 | 18 min | 36/42     | $3.78 | 23 min |
+
+No session went past 81K tokens. Both benches together cost $7.52, against
+$13.56 for one session over every task and $4.61 for plain: 45% less than
+before, and still about 60% more than plain. Most of what is left is each
+fresh session reading its prompt and files again.
+
 ## Takeaways
 
 - Uninterrupted, taskgraph ties or trails plain Claude Code on score on every
@@ -126,7 +143,8 @@ $7.19 on Shell and $6.37 on jq.
 - With no interruption, it spent about 40% less on Shell and jq in these
   runs, and more on JS. The [cost recheck](#cost-recheck) didn't hold that up:
   costs swing a lot between runs, and there taskgraph cost about three times
-  as much as plain.
+  as much as plain. With [one task per session](#one-task-per-session) it
+  costs about 60% more than plain.
 - After an interruption, taskgraph resumed from its task statuses and came close
   to its uninterrupted score. Plain sessions often end early on their own,
   before the work is complete.
