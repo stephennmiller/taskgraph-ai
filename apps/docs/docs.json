@@ -77,6 +77,7 @@
 							"capabilities/loop",
 							"capabilities/loop-parallel",
 							"capabilities/loop-cost",
+							"capabilities/loop-trust",
 							"capabilities/loop-presets",
 							"capabilities/loop-custom-prompts",
 							"capabilities/research",

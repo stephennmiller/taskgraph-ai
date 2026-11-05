@@ -1,5 +1,6 @@
 /**
- * @fileoverview The lookups LoopService takes from the domain: tasks, git and complexity scores, each optional
+ * @fileoverview The lookups LoopService takes from the domain: tasks, git
+ * and complexity scores, each optional
  */
 
 import type { TaskStatus } from '../../../common/types/index.js';
@@ -16,4 +17,6 @@ export interface LoopServiceOptions {
 	taskComplexity?: (id: string, tag?: string) => Promise<unknown>;
 	/** Set a stuck task to blocked with a note saying why, so the run can move on */
 	blockTask?: (id: string, note: string, tag?: string) => Promise<void>;
+	/** Files with uncommitted changes, which an interrupted task may have left */
+	uncommittedFiles?: () => Promise<string[]>;
 }

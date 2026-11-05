@@ -137,7 +137,11 @@ export class LoopDomain {
 						await tasks.addNote(id, note, { tag });
 						await tasks.updateStatus(id, 'blocked', tag);
 					}
-				: undefined
+				: undefined,
+			uncommittedFiles: () =>
+				new TaskWorktrees(this.projectRoot).changedFiles(
+					fullConfig.progressFile
+				)
 		});
 		return this.loopService.run(fullConfig);
 	}

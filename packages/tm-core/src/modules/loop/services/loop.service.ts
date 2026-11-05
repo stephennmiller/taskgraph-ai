@@ -23,6 +23,7 @@ import {
 	stopSandbox
 } from './docker-sandbox.js';
 import { buildCommandArgs, spawnIteration } from './iteration-process.js';
+import { interruptedTask } from './interrupted-task.js';
 import { buildPrompt } from './loop-prompt.js';
 import { StuckTasks, stalledMessage } from './stuck-tasks.js';
 import { executeVerboseIteration } from './verbose-iteration.js';
@@ -71,6 +72,7 @@ export class LoopService {
 	private readonly taskComplexity?: LoopServiceOptions['taskComplexity'];
 	private readonly blockTask?: LoopServiceOptions['blockTask'];
 	private stuck?: StuckTasks;
+	private readonly uncommittedFiles?: LoopServiceOptions['uncommittedFiles'];
 	private readonly logger = getLogger('LoopService');
 	private _isRunning = false;
 	/** Approved via the trust file; re-stamped each iteration */
@@ -83,6 +85,7 @@ export class LoopService {
 		this.headCommit = options.headCommit;
 		this.taskComplexity = options.taskComplexity;
 		this.blockTask = options.blockTask;
+		this.uncommittedFiles = options.uncommittedFiles;
 	}
 
 	getProjectRoot(): string {
@@ -172,9 +175,15 @@ export class LoopService {
 							config.resumeMaxContextTokens ?? DEFAULT_RESUME_MAX_CONTEXT_TOKENS
 						)
 					: undefined;
+			const interrupted = await interruptedTask(
+				config.taskId,
+				() => this.readyTask(config),
+				statuses,
+				this.uncommittedFiles
+			);
 			const run = async () =>
 				this.executeIteration(
-					await buildPrompt(config, i, !!resume),
+					await buildPrompt(config, i, !!resume, interrupted),
 					i,
 					config.sandbox ?? false,
 					config.verbose ?? false,

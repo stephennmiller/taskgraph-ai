@@ -144,6 +144,29 @@ export class TaskWorktrees {
 	 * claims and status changes write there.
 	 */
 	async uncommittedFiles(): Promise<string[]> {
+		return (await this.changes('no')).files;
+	}
+
+	/**
+	 * Uncommitted changes, untracked files included, relative to the project
+	 * folder. Leaves out TaskGraph's state and `except` (the loop's progress
+	 * file), which the loop writes itself.
+	 */
+	async changedFiles(except: string): Promise<string[]> {
+		const { top, files } = await this.changes('normal');
+		const skip = canonical(except);
+		return files
+			.map((file) => path.join(top, file))
+			.filter((file) => file !== skip)
+			.map((file) =>
+				path.relative(this.projectRoot, file).split(path.sep).join('/')
+			);
+	}
+
+	/** `git status` paths relative to the repository root, TaskGraph's state left out */
+	private async changes(
+		untracked: 'no' | 'normal'
+	): Promise<{ top: string; files: string[] }> {
 		const top = canonical(
 			(await this.git(['rev-parse', '--show-toplevel'])).trim()
 		);
@@ -155,11 +178,12 @@ export class TaskWorktrees {
 			'status',
 			'--porcelain=v1',
 			'-z',
-			'--untracked-files=no'
+			`--untracked-files=${untracked}`
 		]);
-		return parsePorcelainPaths(output).filter(
+		const files = parsePorcelainPaths(output).filter(
 			(file) => !isTaskGraphState(file, project)
 		);
+		return { top, files };
 	}
 
 	/**
