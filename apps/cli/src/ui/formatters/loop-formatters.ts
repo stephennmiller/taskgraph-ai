@@ -28,7 +28,7 @@ import chalk from 'chalk';
 import { wrapLine } from '../layout/helpers.js';
 import { theme } from '../theme.js';
 import { terminalSafe } from './markdown-formatters.js';
-import { fit, plural } from './parallel-loop-formatters.js';
+import { fit, formatSetAside, plural } from './parallel-loop-formatters.js';
 import { formatLoopSpend } from './usage-formatters.js';
 
 /** A line that can carry an error's text, wrapped at spaces with a hanging indent */
@@ -181,18 +181,5 @@ export function formatLoopSummary(
 			}),
 		width
 	);
-	const aside = result.setAside ?? [];
-	if (!aside.length) return line;
-	const id = aside.length === 1 ? fit(aside[0].id, 20) : '<id>';
-	return [
-		line,
-		chalk.yellow(`Set aside ${plural(aside.length, 'stuck task')} as blocked`),
-		...aside.map((t) => {
-			const head = `  ${fit(t.id, 20)}  `;
-			return theme.text(head) + theme.muted(fit(t.reason, width - head.length));
-		}),
-		theme.muted(
-			`Next: taskgraph show ${id}, then taskgraph set-status --id=${id} --status=pending`
-		)
-	].join('\n');
+	return [line, ...formatSetAside(result.setAside, width)].join('\n');
 }

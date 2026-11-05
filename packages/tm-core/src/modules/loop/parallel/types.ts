@@ -4,6 +4,7 @@
 
 import type { ChildProcess, SpawnOptions } from 'node:child_process';
 import type { ModelChoice } from '../model-bands.js';
+import type { SetAsideTask } from '../types.js';
 
 /** Starts one Claude Code process; `child_process.spawn` by default */
 type AgentSpawner = (
@@ -136,4 +137,6 @@ export interface ParallelLoopResult {
 	conflictBranch?: string;
 	/** --merge: merged tasks left in review because done was refused (unchecked criteria) */
 	notDoneIds?: string[];
+	/** --merge: tasks that kept failing, set to blocked and left out of later waves */
+	setAside?: SetAsideTask[];
 }

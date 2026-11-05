@@ -63,6 +63,14 @@ After each wave it merges every finished task's branch into your current branch 
 - `--max-budget-usd` has less than $0.25 left; each wave gets what's left
 - you press Ctrl-C
 
+A task whose Claude Code fails is released, so the next wave retries it. Once it has failed three waves in a row, or exited without marking the task or leaving any work in two, the run sets it to `blocked` with a note saying why (`stuck: 3 failed sessions in a row. Last error: exit 1`), as the [serial loop](/capabilities/loop) does, and later waves leave it out. The summary lists it:
+
+```
+Set aside 1 stuck task as blocked
+  9  stuck: 3 failed sessions in a row. Last error: exit 1
+Next: taskgraph show 9, then taskgraph set-status --id=9 --status=pending
+```
+
 A task whose acceptance criteria aren't all checked off is still merged but stays in `review`, since `done` refuses it; the summary lists it. Its dependents wait until you check the criteria (`taskgraph set-status --check`) and mark it done.
 
 With `--merge`, tasks that edit the same file run side by side: a conflict between them is resolved when the second one merges, so a plan where every feature registers itself in one entry file isn't held to one task per wave.

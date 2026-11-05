@@ -111,7 +111,7 @@ Set aside 1 stuck task as blocked
 Next: taskgraph show 4, then taskgraph set-status --id=4 --status=pending
 ```
 
-The progress file's summary lists them too. `loop --parallel` doesn't set tasks aside: a task whose Claude Code fails is released, and a later run or wave retries it (see [Run tasks in parallel](/capabilities/loop-parallel)).
+The progress file's summary lists them too. `loop --parallel --merge` sets stuck tasks aside the same way across its waves; without `--merge`, a task whose Claude Code fails is released and the next run retries it (see [Run tasks in parallel](/capabilities/loop-parallel)).
 
 An iteration that prints nothing for an hour is stopped and counts as failed, unless it changed a task's status or committed. One that keeps working can run longer. Set `TASKGRAPH_LOOP_TIMEOUT_MS` (milliseconds) to change it; see [Loop iteration timeout](/best-practices/configuration-advanced#loop-iteration-timeout).
 

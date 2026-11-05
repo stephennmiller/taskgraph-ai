@@ -46,7 +46,9 @@ function fakeRun(
 		removed: [] as string[],
 		done: [] as string[],
 		setAside: [] as string[],
-		resolved: [] as string[]
+		resolved: [] as string[],
+		blocked: [] as string[],
+		notes: [] as string[]
 	};
 	const fixed = new Set<string>();
 	let i = 0;
@@ -55,7 +57,12 @@ function fakeRun(
 		deps: {
 			runWave: async (o: ParallelLoopOptions) => {
 				calls.budgets.push(o.maxBudgetUsd);
-				return waves[i++] ?? wave([]);
+				// A blocked task isn't ready, so the runner never claims it
+				const next = waves[i++] ?? wave([]);
+				return {
+					...next,
+					tasks: next.tasks.filter((t) => !calls.blocked.includes(t.id))
+				};
 			},
 			merge: async (branch: string) => {
 				if (conflicts.includes(branch) && !fixed.has(branch)) return false;
@@ -79,6 +86,10 @@ function fakeRun(
 			markDone: async (id: string) => {
 				if (id === 'refused') throw new Error('criteria unchecked');
 				calls.done.push(id);
+			},
+			block: async (id: string, note: string) => {
+				calls.blocked.push(id);
+				calls.notes.push(note);
 			}
 		}
 	};
@@ -107,6 +118,63 @@ describe('runMergingWaves', () => {
 			['2', true],
 			['3', true]
 		]);
+	});
+
+	it('blocks a task that fails three waves in a row and keeps merging the others', async () => {
+		const failing = () =>
+			task('9', { state: 'failed', finished: false, error: 'exit 1' });
+		const { calls, deps } = fakeRun([
+			wave([task('1'), failing()]),
+			wave([task('2'), failing()]),
+			wave([task('3'), failing()]),
+			wave([task('4'), failing()])
+		]);
+
+		const result = await runMergingWaves({ parallel: 2 }, deps);
+
+		expect(calls.blocked).toEqual(['9']);
+		expect(calls.notes).toEqual([
+			'stuck: 3 failed sessions in a row. Last error: exit 1'
+		]);
+		// Not run in the fourth wave, which still merged task 4
+		expect(result.tasks.filter((t) => t.id === '9')).toHaveLength(3);
+		expect(calls.merged).toContain('taskgraph/task-4');
+		expect(result.setAside).toEqual([{ id: '9', reason: calls.notes[0] }]);
+	});
+
+	it('never counts a failed wave that committed, only ones that added nothing', async () => {
+		const failing = (commits: number) =>
+			task('9', { state: 'failed', finished: false, commits, kept: true });
+		const { calls, deps } = fakeRun([
+			wave([task('1'), failing(1)]),
+			wave([task('2'), failing(2)]),
+			wave([task('3'), failing(3)]),
+			// The same commits as before: no progress, so these count
+			wave([task('4'), failing(3)]),
+			wave([task('5'), failing(3)]),
+			wave([task('6'), failing(3)])
+		]);
+
+		const result = await runMergingWaves({ parallel: 2 }, deps);
+
+		expect(calls.blocked).toEqual(['9']);
+		expect(result.tasks.filter((t) => t.id === '9')).toHaveLength(6);
+	});
+
+	it('blocks a task with no progress in two waves, but never a claimed one', async () => {
+		const idle = () => task('8', { finished: false, kept: false });
+		const kept = () => task('7', { finished: false, claimed: true });
+		const { calls, deps } = fakeRun([
+			wave([task('1'), idle(), kept()]),
+			wave([task('2'), idle(), kept()])
+		]);
+
+		const result = await runMergingWaves({ parallel: 3 }, deps);
+
+		expect(calls.blocked).toEqual(['8']);
+		expect(result.setAside?.[0].reason).toBe(
+			'stuck: no progress in 2 sessions'
+		);
 	});
 
 	it('leaves unfinished and empty tasks unmerged', async () => {
