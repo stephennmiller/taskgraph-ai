@@ -36,10 +36,26 @@ export interface InterruptedTask {
 /** The most file names the header lists */
 const MAX_LISTED_FILES = 20;
 
+/**
+ * JSON-quoted, so a file name can't add a line or a comma to the list. Also
+ * escapes what JSON.stringify leaves raw: DEL, C1 controls (NEL), the
+ * U+2028/U+2029 line breaks and format characters (bidi overrides,
+ * zero-width), keeping the name findable
+ */
+const quoteFileName = (name: string): string =>
+	JSON.stringify(name).replace(
+		/[\u007f-\u009f\u2028\u2029\p{Cf}]/gu,
+		// Per UTF-16 unit, so an astral one (a Unicode tag character) stays valid JSON
+		(c) =>
+			c
+				.split('')
+				.map((unit) => `\\u${unit.charCodeAt(0).toString(16).padStart(4, '0')}`)
+				.join('')
+	);
+
 /** Tells the session where the interrupted task's work is, so it doesn't start over */
 function interruptedLine({ taskId, files }: InterruptedTask): string {
-	// Quoted, so a file name can't add a line or a comma to the list
-	const listed = files.slice(0, MAX_LISTED_FILES).map((f) => JSON.stringify(f));
+	const listed = files.slice(0, MAX_LISTED_FILES).map(quoteFileName);
 	const more =
 		files.length > MAX_LISTED_FILES
 			? ` and ${files.length - MAX_LISTED_FILES} more`

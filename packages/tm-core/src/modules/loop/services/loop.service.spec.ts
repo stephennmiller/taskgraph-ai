@@ -642,6 +642,20 @@ describe('LoopService', () => {
 			);
 		});
 
+		it('escapes the line breaks and hidden characters JSON.stringify leaves raw', () => {
+			const name = 'a\u2028b\u2029c\u0085d\u202ee\u200bf\u{e0041}.ts';
+			const header = buildContextHeader(
+				{ iterations: 1, progressFile: '/test/progress.txt' },
+				1,
+				{ taskId: '3', files: [name] }
+			);
+			const quoted =
+				'"a\\u2028b\\u2029c\\u0085d\\u202ee\\u200bf\\udb40\\udc41.ts"';
+			expect(header).toContain(`uncommitted changes: ${quoted}.`);
+			// Still the same name for a session that reads it as JSON
+			expect(JSON.parse(quoted)).toBe(name);
+		});
+
 		it("caps the interrupted task's file list", () => {
 			const files = Array.from({ length: 25 }, (_, i) => `f${i}.ts`);
 			const header = buildContextHeader(
