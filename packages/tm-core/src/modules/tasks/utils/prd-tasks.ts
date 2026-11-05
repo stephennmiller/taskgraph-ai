@@ -20,6 +20,7 @@ export interface GeneratedPrdTask {
 	title?: string;
 	section?: string | null;
 	files?: { path: string; action: 'create' | 'modify' }[];
+	complexity?: number | null;
 	dependencies?: unknown;
 	[key: string]: any;
 }
@@ -141,7 +142,7 @@ export function prepareGeneratedTasks(
 		existingIds
 	});
 
-	return rawTasks.map(({ section, files, ...task }, index) => {
+	return rawTasks.map(({ section, files, complexity, ...task }, index) => {
 		// Only a section the PRD has; an invented slug would point nowhere.
 		// The section's hash lets a later --append tell whether it changed
 		const source = prd
@@ -170,6 +171,13 @@ export function prepareGeneratedTasks(
 							action: f.action
 						}))
 					}
+				: {}),
+			// The score loop's model bands read; a complexity report still wins (#996)
+			...(typeof complexity === 'number' &&
+			Number.isInteger(complexity) &&
+			complexity >= 1 &&
+			complexity <= 10
+				? { complexity }
 				: {})
 		});
 		// The AI invented these dependencies, so record them as inferred

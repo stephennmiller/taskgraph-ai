@@ -159,6 +159,20 @@ describe('prepareGeneratedTasks', () => {
 		expect(tasks[1]).not.toHaveProperty('relevantFiles');
 	});
 
+	it('stores a 1-10 complexity score, and no field for a missing or bad one (#996)', () => {
+		const tasks = prepare([
+			raw(1, { complexity: 4 }),
+			raw(2, { complexity: null }),
+			raw(3, { complexity: 0 }),
+			raw(4, { complexity: 6.5 })
+		]);
+
+		expect(tasks[0].complexity).toBe(4);
+		for (const task of tasks.slice(1)) {
+			expect(task).not.toHaveProperty('complexity');
+		}
+	});
+
 	it('fills in the defaults the model left out', () => {
 		const [task] = prepare([
 			{ ...raw(1), priority: '', status: '', details: undefined } as any

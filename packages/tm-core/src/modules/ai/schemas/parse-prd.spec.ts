@@ -58,10 +58,28 @@ describe('ParsePrdResponseSchema', () => {
 		expect(result.tasks.map((t) => t.acceptanceCriteria)).toEqual([null, null]);
 	});
 
+	it('keeps a 1-10 complexity score and reads a missing or bad one as null (#996)', () => {
+		const result = ParsePrdResponseSchema.parse({
+			tasks: [
+				task(1, { complexity: 3 }),
+				task(2),
+				task(3, { complexity: 11 }),
+				task(4, { complexity: 'high' })
+			]
+		});
+		expect(result.tasks.map((t) => t.complexity)).toEqual([
+			3,
+			null,
+			null,
+			null
+		]);
+	});
+
 	it('lists every property as required in the JSON Schema sent to the model', () => {
 		// OpenAI's Structured Outputs needs every property in `required`
 		const items = (zodSchema(ParsePrdResponseSchema).jsonSchema as any)
 			.properties.tasks.items;
 		expect(items.required).toContain('acceptanceCriteria');
+		expect(items.required).toContain('complexity');
 	});
 });

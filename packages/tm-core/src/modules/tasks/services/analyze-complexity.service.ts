@@ -419,7 +419,8 @@ export class AnalyzeComplexityService {
 		const { systemPrompt, userPrompt } = getPromptManager().loadPrompt(
 			'analyze-complexity',
 			{
-				tasks,
+				// Without the score parse-prd stored (#996), so the report is a second opinion, not an echo
+				tasks: tasks.map(({ complexity: _score, ...task }) => task),
 				gatheredContext,
 				useResearch,
 				hasCodebaseAnalysis: aiConfig.hasCodebaseAnalysis(

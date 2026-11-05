@@ -1,8 +1,8 @@
 /**
  * @fileoverview The model and effort each loop iteration runs at, picked
- * from the complexity score of the task it works on (#838). Scores come from
- * `analyze-complexity` (1-10). Bands live under `loop.bands` in
- * .taskgraph/config.json:
+ * from the complexity score of the task it works on (#838). Scores (1-10)
+ * come from parse-prd (#996) or an `analyze-complexity` report, which wins.
+ * Bands live under `loop.bands` in .taskgraph/config.json:
  *
  *   "loop": { "bands": [
  *     { "maxScore": 3, "model": "sonnet", "effort": "low" },

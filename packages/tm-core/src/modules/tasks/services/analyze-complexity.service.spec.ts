@@ -61,7 +61,11 @@ describe('AnalyzeComplexityService.analyze, tasks with subtasks (#991)', () => {
 		const vars = load.mock.calls.find(
 			(c) => c[0] === 'analyze-complexity'
 		)?.[1];
-		return { result, asked: vars?.tasks.map((t: { id: number }) => t.id) };
+		return {
+			result,
+			asked: vars?.tasks.map((t: { id: number }) => t.id),
+			sent: vars?.tasks
+		};
 	};
 
 	beforeEach(() => {
@@ -105,6 +109,18 @@ describe('AnalyzeComplexityService.analyze, tasks with subtasks (#991)', () => {
 		expect(result).toMatchObject({ skipped: 2, skippedWithSubtasks: 1 });
 		const saved = JSON.parse(fs.readFileSync(reportFile(), 'utf8'));
 		expect(saved.complexityAnalysis).toEqual([entry(2, 9), entry(1, 6)]);
+	});
+
+	it("leaves the task's stored complexity out of the prompt (#996)", async () => {
+		const file = path.join(projectDir, '.taskgraph', 'tasks', 'tasks.json');
+		const data = JSON.parse(fs.readFileSync(file, 'utf8'));
+		data.master.tasks[0].complexity = 2;
+		fs.writeFileSync(file, JSON.stringify(data));
+
+		const { sent } = await analyze([1]);
+
+		expect(sent[0]).not.toHaveProperty('complexity');
+		expect(sent[0]).toMatchObject({ id: 1, title: 'Task 1' });
 	});
 
 	it('still analyzes one named with ids', async () => {

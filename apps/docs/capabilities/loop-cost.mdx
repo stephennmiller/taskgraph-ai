@@ -32,7 +32,7 @@ Both work with `--sandbox` and `--parallel` (see [Run tasks in parallel](/capabi
 
 ## Model and effort by complexity
 
-When the task an iteration works on has a complexity score from [`analyze-complexity`](/capabilities/cli-planning-commands#analyze-task-complexity) (1 to 10), `loop` picks the model and effort for that iteration from it, so a one-line fix doesn't cost as much as a refactor. The task is the one `--id` names, or the one `taskgraph next` picks with the `default` and `tdd` presets. It passes `--model` and `--effort` to `claude -p`, which take precedence over the `model` and `effortLevel` in your Claude Code settings:
+When the task an iteration works on has a complexity score (1 to 10), `loop` picks the model and effort for that iteration from it, so a one-line fix doesn't cost as much as a refactor. The task is the one `--id` names, or the one `taskgraph next` picks with the `default` and `tdd` presets. It passes `--model` and `--effort` to `claude -p`, which take precedence over the `model` and `effortLevel` in your Claude Code settings:
 
 | Score | Model | Effort |
 | ----- | ----- | ------ |
@@ -40,9 +40,9 @@ When the task an iteration works on has a complexity score from [`analyze-comple
 | 4-6   | Claude Code's default | Claude Code's default |
 | 7-10  | Claude Code's default | `high` |
 
-Each iteration reads the score from the report as it is then, so a task re-scored during the run (by `scope` or `analyze-complexity`) runs at its new band from the next iteration.
+`parse-prd` gives each task it writes a score, so a freshly planned project (including one `taskgraph go` planned) gets these bands with no extra step. A report from [`analyze-complexity`](/capabilities/cli-planning-commands#analyze-task-complexity) wins over that score for the tasks it covers. Each iteration reads the score as it is then, so a task re-scored during the run (by `scope` or `analyze-complexity`) runs at its new band from the next iteration.
 
-A task without a score (a subtask, a task `analyze-complexity` hasn't scored, or a preset that picks its own work such as `linting`) runs as before, with Claude Code's own model and effort. The status line and the progress file show what each iteration ran at, next to its cost:
+A task without a score (a subtask, a task added some other way that `analyze-complexity` hasn't scored, or a preset that picks its own work such as `linting`) runs as before, with Claude Code's own model and effort. The status line and the progress file show what each iteration ran at, next to its cost:
 
 ```
 ✓ Iteration 1 · sonnet, low effort · $0.12 · 6 turns · 48s
