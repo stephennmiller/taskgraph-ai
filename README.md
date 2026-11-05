@@ -35,11 +35,9 @@ plan and progress stored in your repo.
   language. Slash commands (`/taskgraph:next`) and the `taskgraph` CLI do
   the same things when you'd rather type them.
 - **No API keys:** every AI call runs through your signed-in Claude Code.
-- **Resumable long builds:** on our
-  [benchmarks](https://taskgraph-ai.com/best-practices/benchmarks), `taskgraph
-  go` scored within 10% of plain Claude Code and resumed cleanly after an
-  interruption. It is not cheaper: with one task per session it cost about
-  60% more than plain Claude Code.
+- **Resumable long builds:** stop a build partway and `taskgraph loop` picks
+  up from the task statuses. See [Pros and cons](#pros-and-cons) for what it
+  costs.
 
 <p align="center">
   <a href="images/demo/03-pick-up-where-you-left-off.mp4"><img src="images/demo/03-pick-up-where-you-left-off.svg" alt="A new Claude Code session running /taskgraph:next and resuming from the notes logged last time" width="820"></a>
@@ -85,13 +83,49 @@ plan and progress stored in your repo.
 > [Licensing](#licensing)). Coming from Task Master, or already using
 > TaskGraph's earlier slash commands? See [Upgrading](#upgrading).
 
+## Pros and cons
+
+Compared with giving the same PRD to plain Claude Code, measured on our
+[benchmarks](https://taskgraph-ai.com/best-practices/benchmarks): long builds
+scored by hidden tests against a real tool, one run per row.
+
+What you get:
+
+- **A plan on disk.** Tasks, dependencies and progress notes live in
+  `.taskgraph/tasks/tasks.json`, so you can read, edit and review them like
+  code.
+- **Clean resume.** After an interruption `taskgraph loop` picks up from the
+  task statuses and comes close to its uninterrupted score. A fresh plain
+  session often stops early instead.
+- **A dependency graph you can inspect.** `taskgraph next` shows the first
+  unblocked task, `graph` draws the tree and `why 7` says what blocks task 7.
+- **Unattended parallel builds.** `loop --parallel --merge` runs independent
+  tasks side by side and merges each wave itself.
+
+What it costs:
+
+- **No better results.** Plain Claude Code already passes nearly every case.
+  TaskGraph ties or trails it on score on every benchmark.
+- **More money and time.** With one task per session, the default, the Shell
+  and jq builds together scored 79/87 for $7.52 in 48 minutes. Plain scored
+  80/87 for $4.61 in 37 minutes, so TaskGraph cost about 60% more. Plain
+  works in a few large calls, while each fresh TaskGraph session reads its
+  prompt and files again.
+- **Slower in parallel.** On 13 independent tools, `loop --parallel
+  3 --merge` scored 17/21 for $2.30 in 11 minutes. Plain Claude Code with
+  subagents scored 18/21 for $1.16 in under 3 minutes.
+
+Use TaskGraph when a build is long enough that you will stop and resume it,
+or when you want the plan and its progress kept in the repo. For a build that
+fits in one sitting, plain Claude Code is cheaper and just as good.
+
 ## Contents
 
-[Set up in Claude Code](#set-up-in-claude-code) · [How to use
-it](#how-to-use-it) · [Commands](#commands) · [MCP tool tiers](#mcp-tool-tiers)
-· [Models](#models) · [Upgrading](#upgrading) ·
-[Troubleshooting](#troubleshooting) · [Privacy](#privacy) ·
-[Docs](#documentation) · [Licensing](#licensing)
+[Pros and cons](#pros-and-cons) · [Set up in Claude
+Code](#set-up-in-claude-code) · [How to use it](#how-to-use-it) ·
+[Commands](#commands) · [MCP tool tiers](#mcp-tool-tiers) · [Models](#models)
+· [Upgrading](#upgrading) · [Troubleshooting](#troubleshooting) ·
+[Privacy](#privacy) · [Docs](#documentation) · [Licensing](#licensing)
 
 ## Set up in Claude Code
 
