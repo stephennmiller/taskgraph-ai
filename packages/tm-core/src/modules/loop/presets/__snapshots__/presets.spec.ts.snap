@@ -10,7 +10,7 @@ PROCESS:
 2. Build it the way you would without TaskGraph: write whole files at a time, in as few steps as you can, with tests alongside.
 3. When the work is in place, run the type check and tests, then run the app through its real entry point (the CLI, server or UI the PRD describes) on an input this task should handle, and fix what is wrong. If nothing wires this task into the entry point yet and no pending task does, add one (taskgraph add-task --priority=high -t '<wire what into the entry point>' -d '<what and why>').
 4. Record it with ONE command, checking off every criterion the task meets:
-   git add -A && git commit -qm 'feat(<scope>): <what was implemented> [task <id>]' && taskgraph set-status <id> done --check <criteria numbers>
+   git add <the files you changed> && git commit -qm 'feat(<scope>): <what was implemented> [task <id>]' && taskgraph set-status <id> done --check <criteria numbers>
    The tag links the commit to the task in taskgraph show.
 5. Stop. If taskgraph next now reports no task left, end with <loop-complete>ALL_DONE</loop-complete>.
 
