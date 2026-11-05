@@ -147,6 +147,18 @@ function unescapeStored(content: string): string {
 		.replace(/\\"/g, '"');
 }
 
+// Tags tiptap writes. Anything else in angle brackets (`Promise<void>`, JSX,
+// `<id>` placeholders) is markdown, which turndown would flatten (#983).
+const HTML_TAG =
+	/<\/?(?:p|h[1-6]|ul|ol|li|pre|code|br|div|blockquote|strong|em)(?=[\s/>])[^>]*>/i;
+
+/** Whether text is HTML, ignoring code fences and code spans. */
+function isHtml(text: string): boolean {
+	return HTML_TAG.test(
+		text.replace(/(`{3,}|~{3,})[\s\S]*?(?:\1|$)/g, '').replace(/`[^`\n]*`/g, '')
+	);
+}
+
 /**
  * Turn stored task text into markdown: undo escaped newlines, tabs and
  * quotes, and convert HTML (tiptap) to markdown.
@@ -156,9 +168,8 @@ export function toMarkdown(content: string): string {
 
 	const cleaned = unescapeStored(content);
 
-	// Check if content has HTML tags - if so, convert to markdown first.
 	// turndown decodes entities, so `&#27;[2J` becomes an escape sequence here
-	return /<[^>]+>/.test(cleaned)
+	return isHtml(cleaned)
 		? terminalSafe(getTurndownService().turndown(cleaned))
 		: cleaned;
 }

@@ -26,6 +26,27 @@ describe.each([
 	});
 });
 
+// #983: any `<...>` sent markdown through turndown, which flattened it
+describe('toMarkdown', () => {
+	it.each([
+		'## Plan\n\n- Return `Promise<void>`\n\n```ts\nasync function save(): Promise<void> {}\n```',
+		'Render `<p>` or `<div>` from the component',
+		'```html\n<p>Hello</p>\n```',
+		'Replace <task-id> with the ID, and Map<K, V> stays generic',
+		'Use <Button onClick={save} /> or <p-card> in the form'
+	])('leaves markdown with angle brackets as written: %s', (text) => {
+		expect(toMarkdown(text)).toBe(text);
+	});
+
+	it.each([
+		['<p>Hello <strong>world</strong></p>', 'Hello **world**'],
+		['<h2>Plan</h2><ul><li>One</li></ul>', '## Plan\n\n-   One'],
+		['<p>Return <code>Promise&lt;void&gt;</code></p>', 'Return `Promise<void>`']
+	])('converts HTML to markdown: %s', (html, markdown) => {
+		expect(toMarkdown(html)).toBe(markdown);
+	});
+});
+
 describe('formatMarkdown', () => {
 	// Plain prose skips marked-terminal (#248), so it must come out exactly
 	// as marked-terminal would print it
