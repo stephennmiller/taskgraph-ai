@@ -131,6 +131,13 @@ export class LoopDomain {
 			taskComplexity: tasks
 				? async (id, tag) => (await tasks.get(id, tag)).task?.complexity
 				: undefined,
+			blockTask: tasks
+				? async (id, note, tag) => {
+						// Note first: a failed note write leaves the task unblocked, not blocked with no reason
+						await tasks.addNote(id, note, { tag });
+						await tasks.updateStatus(id, 'blocked', tag);
+					}
+				: undefined,
 			uncommittedFiles: () =>
 				new TaskWorktrees(this.projectRoot).changedFiles(
 					fullConfig.progressFile

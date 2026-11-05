@@ -173,4 +173,13 @@ export interface LoopResult {
 	totalDurationMs?: number;
 	/** Error message when finalStatus is 'error' (optional) */
 	errorMessage?: string;
+	/** Stuck tasks the run set to blocked so it could keep going */
+	setAside?: SetAsideTask[];
+}
+
+/** A task the run set to blocked because it was stuck, and why (#997) */
+export interface SetAsideTask {
+	id: string;
+	/** The note added to the task */
+	reason: string;
 }

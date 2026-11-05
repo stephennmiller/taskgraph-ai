@@ -25,6 +25,8 @@ import {
 import { buildCommandArgs, spawnIteration } from './iteration-process.js';
 import { interruptedTask } from './interrupted-task.js';
 import { buildPrompt } from './loop-prompt.js';
+import { StuckTasks, stalledMessage } from './stuck-tasks.js';
+import { executeVerboseIteration } from './verbose-iteration.js';
 import {
 	completeIteration,
 	createErrorIteration,
@@ -39,21 +41,13 @@ import {
 	initProgressFile
 } from './progress-file.js';
 import {
-	type ClaudeRunResult,
-	contextTokens,
 	findResultEvent,
-	handleStreamEvent,
 	hasStreamEvent,
-	isValidStreamEvent,
-	processBufferedLines,
-	readResultEvent,
 	withoutEvents
 } from './stream-events.js';
 import {
 	budgetSpent,
-	CLAUDE_MISSING,
 	capArgs,
-	DOCKER_MISSING,
 	MAX_CONSECUTIVE_ERRORS,
 	MAX_STALLED_ITERATIONS,
 	loopIterationTimeoutMs,
@@ -76,6 +70,8 @@ export class LoopService {
 	private readonly taskStatuses?: LoopServiceOptions['taskStatuses'];
 	private readonly headCommit?: LoopServiceOptions['headCommit'];
 	private readonly taskComplexity?: LoopServiceOptions['taskComplexity'];
+	private readonly blockTask?: LoopServiceOptions['blockTask'];
+	private stuck?: StuckTasks;
 	private readonly uncommittedFiles?: LoopServiceOptions['uncommittedFiles'];
 	private readonly logger = getLogger('LoopService');
 	private _isRunning = false;
@@ -88,6 +84,7 @@ export class LoopService {
 		this.taskStatuses = options.taskStatuses;
 		this.headCommit = options.headCommit;
 		this.taskComplexity = options.taskComplexity;
+		this.blockTask = options.blockTask;
 		this.uncommittedFiles = options.uncommittedFiles;
 	}
 
@@ -126,6 +123,12 @@ export class LoopService {
 		}
 
 		this._isRunning = true;
+		this.stuck = new StuckTasks(
+			this.blockTask,
+			() => this.readyTask(config),
+			(m) => this.reportError(config.callbacks, m, 'warning'),
+			config.tag
+		);
 		const iterations: LoopIteration[] = [];
 		let tasksCompleted = 0;
 		let consecutiveErrors = 0;
@@ -269,10 +272,30 @@ export class LoopService {
 				iteration.status === 'error' && !statusesMoved && !committed
 					? consecutiveErrors + 1
 					: 0;
-			const missing =
-				iteration.message === CLAUDE_MISSING ||
-				iteration.message === DOCKER_MISSING;
-			if (missing || consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) {
+			const erroring = consecutiveErrors >= MAX_CONSECUTIVE_ERRORS;
+			const broken =
+				iteration.status === 'error' &&
+				this.stuck.brokenSetup(iteration.message, erroring);
+			if (progress.changed || committed) stalled = 0;
+			else if (iteration.status === 'success') stalled++;
+			const stalling = watchesTasks && stalled >= MAX_STALLED_ITERATIONS;
+			// Work around a stuck task while another one is ready (#997)
+			const { aside, ready } =
+				!broken && (erroring || stalling)
+					? await this.stuck.setAside(
+							consecutiveErrors,
+							stalled,
+							erroring ? iteration.message : undefined
+						)
+					: {};
+			if (ready) {
+				// Its new status isn't progress on the next task
+				statuses = await this.readStatuses(config);
+				consecutiveErrors = 0;
+				stalled = 0;
+				resumeFrom = undefined;
+			}
+			if (!ready && (broken || erroring)) {
 				return this.finalize(
 					config,
 					iterations,
@@ -281,11 +304,9 @@ export class LoopService {
 					iteration.message
 				);
 			}
-			if (progress.changed || committed) stalled = 0;
-			else if (iteration.status === 'success') stalled++;
-			if (watchesTasks && stalled >= MAX_STALLED_ITERATIONS) {
-				const stuck = config.taskId ?? (await this.readyTask(config));
-				const msg = `${stuck ? `Task ${stuck} is stuck: no` : 'No'} task changed status and nothing was committed in ${stalled} iterations in a row. Check the progress file and the task, then run loop again.`;
+			if (!ready && stalling) {
+				const stuck = config.taskId ?? aside ?? (await this.readyTask(config));
+				const msg = stalledMessage(stuck, stalled);
 				this.reportError(config.callbacks, msg);
 				return this.finalize(config, iterations, tasksCompleted, 'error', msg);
 			}
@@ -382,6 +403,8 @@ export class LoopService {
 			finalStatus,
 			errorMessage
 		);
+		const setAside = this.stuck?.tasks;
+		if (setAside) result.setAside = setAside;
 		await appendFinalSummary(config.progressFile, result);
 		return result;
 	}
@@ -417,7 +440,9 @@ export class LoopService {
 		const args = buildCommandArgs(this.projectRoot, prompt, sandbox, extra);
 
 		if (verbose) {
-			return this.executeVerboseIteration(
+			return executeVerboseIteration(
+				this.projectRoot,
+				(message, severity) => this.reportError(callbacks, message, severity),
 				args,
 				iterationNum,
 				command,
@@ -492,175 +517,6 @@ export class LoopService {
 						exitCode,
 						run,
 						hasStreamEvent(stdout)
-					)
-				);
-			});
-		});
-	}
-
-	/**
-	 * Execute an iteration with verbose output (shows Claude's work in real-time).
-	 * Uses Claude's stream-json format to display assistant messages as they
-	 * arrive. `args` come from buildCommandArgs; `startTime` times the iteration.
-	 */
-	private executeVerboseIteration(
-		args: string[],
-		iterationNum: number,
-		command: string,
-		sandbox: boolean,
-		startTime: number,
-		callbacks?: LoopOutputCallbacks
-	): Promise<LoopIteration> {
-		return new Promise((resolve) => {
-			// Prevent multiple resolutions from race conditions between error/close events
-			let isResolved = false;
-			const resolveOnce = (result: LoopIteration): void => {
-				if (!isResolved) {
-					isResolved = true;
-					resolve(result);
-				}
-			};
-
-			const timeout = loopIterationTimeoutMs();
-			let timedOut = false;
-			const child = spawnIteration(
-				command,
-				args,
-				this.projectRoot,
-				timeout,
-				() => {
-					timedOut = true;
-				},
-				sandbox ? () => stopSandbox(this.projectRoot) : undefined
-			);
-
-			// Track stdout completion to handle race between data and close events
-			let stdoutEnded = false;
-			let started = false;
-			let run: ClaudeRunResult | undefined;
-			let context: number | undefined;
-			let buffer = '';
-
-			const processLine = (line: string): void => {
-				if (!line.startsWith('{')) return;
-
-				try {
-					const event = JSON.parse(line);
-
-					if (!isValidStreamEvent(event)) {
-						return;
-					}
-					started = true;
-
-					handleStreamEvent(event, callbacks);
-
-					const tokens = contextTokens(event as Record<string, unknown>);
-					if (tokens !== undefined) context = tokens;
-					// Final result: its text is checked for completion markers
-					if (event.type === 'result') {
-						run = readResultEvent(event as Record<string, unknown>);
-						if (context !== undefined) run.contextTokens = context;
-					}
-				} catch (error) {
-					// Log malformed JSON for debugging (non-JSON lines like system output are expected)
-					if (line.trim().startsWith('{')) {
-						const parseError = `Failed to parse JSON event: ${error instanceof Error ? error.message : 'Unknown error'}. Line: ${line.substring(0, 100)}...`;
-						this.reportError(callbacks, parseError, 'warning');
-					}
-				}
-			};
-
-			// Handle null stdout (shouldn't happen with pipe, but be defensive)
-			if (!child.stdout) {
-				resolveOnce(
-					createErrorIteration(
-						iterationNum,
-						startTime,
-						'Failed to capture stdout from child process'
-					)
-				);
-				return;
-			}
-
-			// Decoded as a stream, so a character split across chunks stays whole
-			child.stdout.setEncoding('utf-8').on('data', (data: string) => {
-				try {
-					const lines = processBufferedLines(buffer, data);
-					buffer = lines.remaining;
-					for (const line of lines.complete) {
-						processLine(line);
-					}
-				} catch (error) {
-					this.reportError(
-						callbacks,
-						`Failed to process stdout data: ${error instanceof Error ? error.message : 'Unknown error'}`,
-						'warning'
-					);
-				}
-			});
-
-			child.stdout.on('end', () => {
-				stdoutEnded = true;
-				if (buffer) {
-					processLine(buffer);
-					buffer = '';
-				}
-			});
-
-			child.stderr?.setEncoding('utf-8').on('data', (data: string) => {
-				callbacks?.onStderr?.(iterationNum, data);
-			});
-
-			child.on('error', (error: NodeJS.ErrnoException) => {
-				const errorMessage = formatCommandError(error, command, sandbox);
-				this.reportError(callbacks, errorMessage);
-
-				// Cleanup: remove listeners and kill process if still running
-				child.stdout?.removeAllListeners();
-				child.stderr?.removeAllListeners();
-				if (!child.killed) {
-					try {
-						child.kill('SIGTERM');
-					} catch {
-						// Process may have already exited
-					}
-				}
-
-				resolveOnce(
-					createErrorIteration(iterationNum, startTime, errorMessage)
-				);
-			});
-
-			child.on('close', (exitCode: number | null) => {
-				// Process remaining buffer only if stdout hasn't already ended
-				if (!stdoutEnded && buffer) {
-					processLine(buffer);
-				}
-
-				if (timedOut || exitCode === null) {
-					const errorMsg = timedOut
-						? silenceMessage(timeout)
-						: 'Command terminated abnormally (no exit code)';
-					this.reportError(callbacks, errorMsg);
-					resolveOnce(
-						createErrorIteration(
-							iterationNum,
-							startTime,
-							errorMsg,
-							runSpend(run)
-						)
-					);
-					return;
-				}
-
-				resolveOnce(
-					completeIteration(
-						iterationNum,
-						startTime,
-						run?.text ?? '',
-						exitCode,
-						run,
-						started
 					)
 				);
 			});

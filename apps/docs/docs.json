@@ -79,6 +79,7 @@
 							"capabilities/loop-cost",
 							"capabilities/loop-trust",
 							"capabilities/loop-presets",
+							"capabilities/loop-custom-prompts",
 							"capabilities/research",
 							"capabilities/github-sync",
 							"capabilities/merge-driver",

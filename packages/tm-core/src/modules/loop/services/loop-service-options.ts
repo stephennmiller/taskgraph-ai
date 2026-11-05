@@ -15,6 +15,8 @@ export interface LoopServiceOptions {
 	headCommit?: () => Promise<string | null>;
 	/** A task's complexity score, which picks the iteration's model and effort */
 	taskComplexity?: (id: string, tag?: string) => Promise<unknown>;
+	/** Set a stuck task to blocked with a note saying why, so the run can move on */
+	blockTask?: (id: string, note: string, tag?: string) => Promise<void>;
 	/** Files with uncommitted changes, which an interrupted task may have left */
 	uncommittedFiles?: () => Promise<string[]>;
 }
