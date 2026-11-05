@@ -135,6 +135,34 @@ $13.56 for one session over every task and $4.61 for plain: 45% less than
 before, and still about 60% more than plain. Most of what is left is each
 fresh session reading its prompt and files again.
 
+## Interrupted at 8 minutes
+
+The same Shell and jq builds, stopped 8 minutes in with SIGTERM (what Ctrl-C
+does), then resumed:
+
+- **Plain**: `claude -p --continue` in the same folder, told it was
+  interrupted and to carry on.
+- **Taskgraph**: `taskgraph loop` again, one task per session.
+
+| Bench | Plain | Cost  | Time   | Taskgraph | Cost  | Time   |
+| ----- | ----- | ----- | ------ | --------- | ----- | ------ |
+| Shell | 40/45 | $3.98 | 36 min | 43/45     | $4.45 | 50 min |
+| jq    | 40/42 | $8.46 | 87 min | 36/42     | $4.15 | 35 min |
+
+Both benches together, against the uninterrupted runs above:
+
+| Arm       | Score | Cost   | vs uninterrupted | Time    |
+| --------- | ----- | ------ | ---------------- | ------- |
+| Plain     | 80/87 | $12.44 | +170%            | 124 min |
+| Taskgraph | 79/87 | $8.60  | +14%             | 86 min  |
+
+The score held for both. The cost didn't for plain: `--continue` carries the
+whole conversation, so every later call re-reads it. On jq the resumed session
+reached 430K tokens and read 34M cached tokens, and it was still polishing when
+it was killed at 87 minutes. Taskgraph's sessions stayed under 72K tokens: the
+next one started on the interrupted task from its status and its uncommitted
+files. One run per row, on a different day from the uninterrupted runs.
+
 ## Takeaways
 
 - Uninterrupted, taskgraph ties or trails plain Claude Code on score on every
@@ -147,6 +175,8 @@ fresh session reading its prompt and files again.
   costs about 60% more than plain.
 - After an interruption, taskgraph resumed from its task statuses and came close
   to its uninterrupted score. Plain sessions often end early on their own,
-  before the work is complete.
+  before the work is complete. Resumed with `--continue`, plain kept its score
+  but cost almost three times as much; taskgraph cost 14% more, which made it
+  about 30% cheaper than plain [after an interruption](#interrupted-at-8-minutes).
 - On independent parts, `loop --parallel --merge` came within a case of plain
   subagents, at twice the cost and four times the time.
