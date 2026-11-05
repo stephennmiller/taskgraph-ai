@@ -27,6 +27,12 @@ const GetTasksSchema = z.object({
 		.describe(
 			"Filter tasks by status (e.g., 'pending', 'done') or multiple statuses separated by commas (e.g., 'blocked,deferred')"
 		),
+	search: z
+		.string()
+		.optional()
+		.describe(
+			'Only tasks whose title, description, details or testStrategy contain this text (any case), or with a subtask that does'
+		),
 	fields: z
 		.string()
 		.optional()
@@ -51,7 +57,7 @@ export function registerGetTasksTool(server: FastMCP) {
 	server.addTool({
 		name: 'get_tasks',
 		description:
-			'List tasks as compact JSON: id, title, status, priority and dependencies by default. Ask for more with fields, filter with status, add subtasks with withSubtasks. Use get_task for one task in full.',
+			'List tasks as compact JSON: id, title, status, priority and dependencies by default. Ask for more with fields, filter with status or search, add subtasks with withSubtasks. Use get_task for one task in full.',
 		parameters: GetTasksSchema,
 		annotations: {
 			title: 'Get Tasks',
@@ -59,7 +65,7 @@ export function registerGetTasksTool(server: FastMCP) {
 		},
 		execute: withToolContext(
 			async (args: GetTasksArgs, { log, tmCore }: ToolContext) => {
-				const { projectRoot, status, fields, withSubtasks, tag } = args;
+				const { projectRoot, status, search, fields, withSubtasks, tag } = args;
 
 				try {
 					const selected = parseTaskFields(fields, { withSubtasks });
@@ -69,7 +75,8 @@ export function registerGetTasksTool(server: FastMCP) {
 					);
 
 					const statuses = parseStatusFilter(status);
-					const filter = statuses && { status: statuses };
+					const filter =
+						statuses || search ? { status: statuses, search } : undefined;
 
 					// Call tm-core tasks.list()
 					const result = await tmCore.tasks.list({

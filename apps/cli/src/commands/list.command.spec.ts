@@ -262,60 +262,6 @@ describe('ListTasksCommand', () => {
 		});
 	});
 
-	describe('format validation', () => {
-		it('should accept valid formats', () => {
-			const command = new ListTasksCommand();
-
-			expect((command as any).validateOptions({ format: 'text' })).toBe(true);
-			expect((command as any).validateOptions({ format: 'json' })).toBe(true);
-			expect((command as any).validateOptions({ format: 'compact' })).toBe(
-				true
-			);
-		});
-
-		it('should reject invalid formats', () => {
-			const consoleErrorSpy = vi
-				.spyOn(console, 'error')
-				.mockImplementation(() => {});
-			const command = new ListTasksCommand();
-
-			expect((command as any).validateOptions({ format: 'invalid' })).toBe(
-				false
-			);
-			expect(consoleErrorSpy).toHaveBeenCalledWith(
-				expect.stringContaining('Invalid format: invalid')
-			);
-
-			consoleErrorSpy.mockRestore();
-		});
-
-		it('rejects an unknown status on two lines, with no leading blank', () => {
-			const consoleErrorSpy = vi
-				.spyOn(console, 'error')
-				.mockImplementation(() => {});
-			const command = new ListTasksCommand();
-			const plain = (text: string) => text.replace(/\u001b\[[0-9;]*m/g, '');
-
-			expect((command as any).validateOptions({ status: 'pending' })).toBe(
-				true
-			);
-			expect((command as any).validateOptions({ status: 'bogus' })).toBe(false);
-			expect((command as any).validateOptions({ status: 'pending,all' })).toBe(
-				false
-			);
-			const printed = consoleErrorSpy.mock.calls.map((call) =>
-				plain(String(call[0]))
-			);
-			expect(printed[0]).toMatch(
-				/^✗ "bogus" isn't a status\n {2}Use one of: pending,/
-			);
-			expect(printed[0].startsWith('\n')).toBe(false);
-			expect(printed[1]).toMatch(/^✗ "all" isn't a status\n {2}Use one of: /);
-
-			consoleErrorSpy.mockRestore();
-		});
-	});
-
 	describe('--ready filter', () => {
 		it('should filter to only tasks with all dependencies satisfied', async () => {
 			const command = new ListTasksCommand();

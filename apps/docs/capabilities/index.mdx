@@ -197,7 +197,7 @@ The MCP tools can be categorized in the same way as the core functionalities:
 
 ### 2. Task Information and Status
 
--   **`get_tasks`**: Lists tasks as compact JSON with `id`, `title`, `status`, `priority` and `dependencies`. `fields` asks for more (`"title,details"`, or `"all"`), `status` filters (`"pending,review"`; an unknown status is an error), and `withSubtasks` nests subtasks with the same fields. There is no stats block; count the `tasks` array.
+-   **`get_tasks`**: Lists tasks as compact JSON with `id`, `title`, `status`, `priority` and `dependencies`. `fields` asks for more (`"title,details"`, or `"all"`), `status` filters (`"pending,review"`; an unknown status is an error), `search` keeps the tasks whose title, description, details or test strategy contain the text in any case (or with a subtask that does), and `withSubtasks` nests subtasks with the same fields. There is no stats block; count the `tasks` array.
 -   **`get_task`**: Shows the details of a specific task.
 -   **`next_task`**: Shows the next task to work on, with a `nextSteps` line naming the `set_task_status` call that starts it.
 -   **`set_task_status`**: Sets the status of a task or subtask.

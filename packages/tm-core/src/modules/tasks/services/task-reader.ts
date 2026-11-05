@@ -17,6 +17,7 @@ import {
 	withStoredDependencies
 } from '../utils/archive.js';
 import { selectNextTask } from '../utils/next-task.js';
+import { filterBySearch } from '../utils/task-filters.js';
 import { TaskEntity } from '../entities/task.entity.js';
 import { normalizeTaskIds } from '../utils/task-ids.js';
 import { promotedSubtaskDescription } from '../utils/promoted-subtask.js';
@@ -118,8 +119,10 @@ export class TaskReader {
 				}
 			}
 
-			// Push subtask exclusion to storage
-			if (options.includeSubtasks === false) {
+			// Push subtask exclusion to storage, unless the search must read
+			// subtasks first: a task matches when one of its subtasks does
+			const excludeSubtasks = options.includeSubtasks === false;
+			if (excludeSubtasks && !options.filter?.search) {
 				storageOptions.excludeSubtasks = true;
 			}
 
@@ -154,7 +157,9 @@ export class TaskReader {
 			}
 
 			// Convert back to plain objects
-			const tasks = filteredEntities.map((entity) => entity.toJSON());
+			const tasks = filteredEntities.map((entity) =>
+				excludeSubtasks ? { ...entity.toJSON(), subtasks: [] } : entity.toJSON()
+			);
 
 			return {
 				tasks,
@@ -375,7 +380,7 @@ export class TaskReader {
 	 * Apply filters to task entities
 	 */
 	private applyFilters(tasks: TaskEntity[], filter: TaskFilter): TaskEntity[] {
-		return tasks.filter((task) => {
+		const filtered = tasks.filter((task) => {
 			// Status filter
 			if (filter.status) {
 				const statuses = Array.isArray(filter.status)
@@ -413,20 +418,6 @@ export class TaskReader {
 				}
 			}
 
-			// Search filter
-			if (filter.search) {
-				const searchLower = filter.search.toLowerCase();
-				const inTitle = task.title.toLowerCase().includes(searchLower);
-				const inDescription = task.description
-					.toLowerCase()
-					.includes(searchLower);
-				const inDetails = task.details.toLowerCase().includes(searchLower);
-
-				if (!inTitle && !inDescription && !inDetails) {
-					return false;
-				}
-			}
-
 			// Has subtasks filter
 			if (filter.hasSubtasks !== undefined) {
 				const hasSubtasks = task.subtasks.length > 0;
@@ -437,6 +428,7 @@ export class TaskReader {
 
 			return true;
 		});
+		return filterBySearch(filtered, filter.search);
 	}
 
 	/**

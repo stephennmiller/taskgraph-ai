@@ -14,6 +14,7 @@ Arguments: $ARGUMENTS
    - a status (pending, in-progress, done, review, deferred, cancelled, blocked): `taskgraph list --status=<status>`. `blocked` means the task's status is `blocked`: `taskgraph list --status=blocked`
    - `subtasks` or `--subtasks`: add `--with-subtasks`, as in `taskgraph list --with-subtasks`
    - `ready`: `taskgraph list --ready`, the tasks whose dependencies are all done
+   - `search <text>` or "tasks about <text>": `taskgraph list --search '<text>'`, the tasks (or tasks with a subtask) whose title, description, details or test strategy contain the text, any case. Write any `'` in the text as `'\''`
    - `waiting` or "unmet dependencies": tasks that wait on another task, a different question from the `blocked` status. Run `taskgraph graph` instead; it draws each task under what it waits on.
    - task IDs like `1,3,5` (digits, dots and commas only): `taskgraph show 1,3,5`
 2. Show the output unchanged in a code block.

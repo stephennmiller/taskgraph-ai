@@ -150,6 +150,19 @@ describe('get_tasks', () => {
 		);
 	});
 
+	it('passes the search to tm-core, with the status filter', async () => {
+		await register().execute(
+			{ projectRoot: project, status: 'pending', search: 'login' },
+			ctx
+		);
+
+		expect(tasks.list).toHaveBeenCalledWith(
+			expect.objectContaining({
+				filter: { status: ['pending'], search: 'login' }
+			})
+		);
+	});
+
 	it('refuses an unknown status, naming the valid ones', async () => {
 		const result = await register().execute(
 			{ projectRoot: project, status: 'bogus' },

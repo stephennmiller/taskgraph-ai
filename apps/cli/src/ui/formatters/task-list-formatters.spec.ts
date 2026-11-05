@@ -233,6 +233,20 @@ describe('formatEmptyList', () => {
 		expect(out[1]).toBe('Next: taskgraph list to see every task');
 	});
 
+	it('names the search that matched nothing, with any filter (#986)', () => {
+		expect(
+			lines(formatEmptyList(undefined, { width: 80, search: 'auth' }))
+		).toEqual([
+			'No tasks match "auth"',
+			'Next: taskgraph list to see every task'
+		]);
+		expect(
+			lines(
+				formatEmptyList('pending', { width: 80, search: 'a\u001b[31mb' })
+			)[0]
+		).toBe('No pending tasks match "ab"');
+	});
+
 	it('names the login --mine matched (#877)', () => {
 		const out = lines(
 			formatEmptyList(undefined, { width: 80, assignee: 'stephennmiller' })
