@@ -56,7 +56,7 @@ describe('moveTasksBetweenTags', () => {
 		const moved = tags.get('feature')?.find((t) => String(t.id) === '4');
 		expect(moved?.dependencies).toEqual([]);
 		expect(result.movedTasks).toEqual([
-			{ id: '4', fromTag: 'master', toTag: 'feature' }
+			{ id: '4', newId: '4', fromTag: 'master', toTag: 'feature' }
 		]);
 		expect(result.tips).toHaveLength(2);
 		expect(ids(tags.get('master') ?? [])).toEqual(['1', '2', '3', '5']);
@@ -486,7 +486,7 @@ describe('moveTasksBetweenTags', () => {
 		expect(tags.has('x/../y')).toBe(false);
 	});
 
-	it('refuses a subtask and an ID the target tag has', () => {
+	it('refuses a subtask', () => {
 		expect(() =>
 			moveTasksBetweenTags(
 				tagsWith(),
@@ -497,15 +497,79 @@ describe('moveTasksBetweenTags', () => {
 				archived
 			)
 		).toThrow('Cannot move subtask 2.1 directly between tags');
-		expect(() =>
-			moveTasksBetweenTags(
-				tagsWith(),
-				['1'],
-				'master',
-				'feature',
-				{ ignoreDependencies: true },
-				archived
-			)
-		).toThrow('Task 1 already exists in target tag "feature"');
+	});
+
+	it('gives a task whose ID the target tag uses, live or archived, the next free ID', () => {
+		const tags = tagsWith();
+
+		const result = moveTasksBetweenTags(
+			tags,
+			['1'],
+			'master',
+			'feature',
+			{ ignoreDependencies: true },
+			() => new Set(['7'])
+		);
+
+		expect(result.movedTasks).toEqual([
+			{ id: '1', newId: '8', fromTag: 'master', toTag: 'feature' }
+		]);
+		expect(ids(tags.get('feature') ?? [])).toEqual(['1', '8']);
+		expect(tags.get('feature')?.[0].title).toBe('Layout');
+		expect(ids(tags.get('master') ?? [])).toEqual(['2', '3', '4', '5']);
+	});
+
+	it('renumbers tasks moved together apart, and their references follow', () => {
+		const tags = tagsWith();
+		const master = tags.get('master') as any[];
+		master[1].subtasks[1].dependencies = [1, '2.1', '2'];
+		master[1].subtasks[0].parentId = '2';
+		master[0].metadata = { taskLinks: { '2': 'related', '2.1': 'related' } };
+		tags.get('feature')?.push({ id: '2', title: 'Theme' } as any);
+
+		const result = moveTasksBetweenTags(
+			tags,
+			['2'],
+			'master',
+			'feature',
+			{ withDependencies: true, ignoreDependencies: true },
+			archived
+		);
+
+		expect(result.movedTasks.map((m) => [String(m.id), m.newId])).toEqual([
+			['2', '3'],
+			['1', '4']
+		]);
+		const [, , parser, setUp] = tags.get('feature') as any[];
+		expect(parser.id).toBe('3');
+		expect(parser.dependencies).toEqual(['4']);
+		expect(parser.subtasks[0].parentId).toBe('3');
+		expect(parser.subtasks[1].dependencies).toEqual([1, '3.1', '3']);
+		expect(setUp.id).toBe('4');
+		expect(setUp.metadata.taskLinks).toEqual({
+			'3': 'related',
+			'3.1': 'related'
+		});
+		// Task 4 stayed behind and loses its dependency on the moved 2
+		expect(master.find((t) => String(t.id) === '4').dependencies).toEqual([3]);
+	});
+
+	it("doesn't renumber a task to an ID it still names", () => {
+		const tags = new Map<string, Task[]>([
+			['master', [{ id: '1', title: 'A', dependencies: ['2'] }] as any],
+			['feature', [{ id: '1', title: 'B', dependencies: [] }] as any]
+		]);
+
+		const result = moveTasksBetweenTags(
+			tags,
+			['1'],
+			'master',
+			'feature',
+			{},
+			archived
+		);
+
+		expect(result.movedTasks[0].newId).toBe('3');
+		expect(tags.get('feature')?.[1].dependencies).toEqual(['2']);
 	});
 });

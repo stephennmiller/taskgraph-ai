@@ -64,6 +64,38 @@ describe('move_task', () => {
 		expect(reply(result).note).toBe(TASK_DATA_NOTE);
 	});
 
+	it('says which tasks a cross-tag move renumbered, counting those moved along (#984)', async () => {
+		tasks.moveToTag.mockResolvedValue({
+			message: 'Successfully moved 2 tasks from "feat" to "master"',
+			movedTasks: [
+				{ id: '3', newId: '12', fromTag: 'feat', toTag: 'master' },
+				{ id: '4', newId: '4', fromTag: 'feat', toTag: 'master' }
+			]
+		});
+
+		const result = await register().execute(
+			{
+				from: '3',
+				fromTag: 'feat',
+				toTag: 'master',
+				withDependencies: true,
+				projectRoot
+			},
+			ctx
+		);
+
+		const { data } = reply(result);
+		expect(data.message).toBe(
+			'Successfully moved 2 task(s) from "feat" to "master"; renumbered where the ID was taken there: task 3 is now 12'
+		);
+		expect(data.movedTasks[0]).toEqual({
+			id: '3',
+			newId: '12',
+			fromTag: 'feat',
+			toTag: 'master'
+		});
+	});
+
 	describe('a cross-tag move refused for dependency conflicts (#819)', () => {
 		const refuse = (conflicts: Record<string, unknown>[]) =>
 			tasks.moveToTag.mockRejectedValue(

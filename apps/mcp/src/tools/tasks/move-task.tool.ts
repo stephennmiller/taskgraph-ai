@@ -29,7 +29,7 @@ const MoveTaskSchema = z.object({
 		.string()
 		.optional()
 		.describe(
-			'ID of the destination (e.g., "7" or "7.3"). Required for within-tag moves. For cross-tag moves, if omitted, task will be moved to the target tag maintaining its ID'
+			'ID of the destination (e.g., "7" or "7.3"). Required for within-tag moves. Not used for cross-tag moves: a task keeps its ID in the target tag, or gets the next free one there when that ID is taken'
 		),
 	file: z.string().optional().describe('Custom path to tasks.json file'),
 	projectRoot: z
@@ -102,7 +102,7 @@ export function registerMoveTaskTool(server: FastMCP) {
 				if (fromTag && toTag && fromTag !== toTag) {
 					if (to) {
 						log.warn(
-							'The "to" parameter is not used for cross-tag moves and will be ignored. Tasks retain their original IDs in the target tag.'
+							'The "to" parameter is not used for cross-tag moves and will be ignored. Tasks keep their IDs in the target tag, or get the next free one when taken.'
 						);
 					}
 					const moveOptions = {
@@ -117,12 +117,15 @@ export function registerMoveTaskTool(server: FastMCP) {
 							toTag,
 							moveOptions
 						);
+						const renumbered = result.movedTasks
+							.filter((moved) => String(moved.id) !== moved.newId)
+							.map((moved) => `task ${moved.id} is now ${moved.newId}`);
 						return handleApiResult({
 							result: {
 								success: true,
 								data: {
 									...result,
-									message: `Successfully moved ${sourceIds.length} task(s) from "${fromTag}" to "${toTag}"`,
+									message: `Successfully moved ${result.movedTasks.length} task(s) from "${fromTag}" to "${toTag}"${renumbered.length > 0 ? `; renumbered where the ID was taken there: ${renumbered.join(', ')}` : ''}`,
 									moveOptions,
 									sourceTag: fromTag,
 									targetTag: toTag

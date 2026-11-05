@@ -102,8 +102,16 @@ export interface CrossTagMoveOptions {
 
 export interface CrossTagMoveResult {
 	message: string;
-	/** IDs as asked for; ones moved along as dependencies are numbers */
-	movedTasks: Array<{ id: DependencyId; fromTag: string; toTag: string }>;
+	/**
+	 * `id` as asked for (ones moved along as dependencies are numbers);
+	 * `newId` is its ID in the target tag, a different one when `id` was taken
+	 */
+	movedTasks: Array<{
+		id: DependencyId;
+		newId: string;
+		fromTag: string;
+		toTag: string;
+	}>;
 	/** After ignoreDependencies dropped some: how to check what's left */
 	tips?: string[];
 }

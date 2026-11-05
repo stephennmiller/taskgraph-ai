@@ -6,6 +6,7 @@
  *   Skipped 8 → 8 (same ID)
  *
  *   ✓ Moved 2 tasks from "backlog" to "sprint"
+ *     Task 5 is now task 12 (5 was taken in sprint)
  *   Next: taskgraph fix-dependencies --check, then fix-dependencies
  *
  *   ✗ Can't move tasks from "backlog" to "sprint": 1 dependency conflict
@@ -34,16 +35,24 @@ export function formatMoves(
 	].join('\n');
 }
 
-/** A move to another tag */
+/** A move to another tag, with a row for each task that got a new ID */
 export function formatTagMove(
-	count: number,
+	movedTasks: Array<{ id: string | number; newId: string }>,
 	fromTag: string,
 	toTag: string,
 	droppedDependencies: boolean
 ): string {
+	const count = movedTasks.length;
 	const lines = [
 		`${chalk.green('✓')} Moved ${count} ${count === 1 ? 'task' : 'tasks'} from "${terminalSafe(fromTag)}" to "${terminalSafe(toTag)}"`
 	];
+	for (const { id, newId } of movedTasks) {
+		const oldId = String(id);
+		if (oldId === newId) continue;
+		lines.push(
+			`  Task ${terminalSafe(oldId)} is now task ${terminalSafe(newId)} ${theme.muted(`(${terminalSafe(oldId)} was taken in ${terminalSafe(toTag)})`)}`
+		);
+	}
 	if (droppedDependencies) {
 		lines.push(
 			theme.muted('Next: ') +
