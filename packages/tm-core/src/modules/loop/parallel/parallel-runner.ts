@@ -252,6 +252,7 @@ export class ParallelLoopRunner {
 					const prompt = buildParallelPrompt({
 						taskId: id,
 						tag,
+						activeTag: this.activeTag(),
 						container: !!workers
 					});
 					const choice = await this.chooseModel(id, tag, options.model);
