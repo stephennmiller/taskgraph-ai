@@ -137,14 +137,8 @@ taskgraph analyze-complexity
 # Save report to a custom location
 taskgraph analyze-complexity --output=my-report.json
 
-# Use a specific LLM model
-taskgraph analyze-complexity --model=claude-3-opus-20240229
-
 # Set a custom complexity threshold (1-10)
 taskgraph analyze-complexity --threshold=6
-
-# Use an alternative tasks file
-taskgraph analyze-complexity --file=custom-tasks.json
 
 # Use the research model for research-backed complexity analysis
 taskgraph analyze-complexity --research
@@ -153,7 +147,7 @@ taskgraph analyze-complexity --research
 taskgraph analyze-complexity --id=3,5
 ```
 
-It scores pending, blocked and in-progress tasks that don't have subtasks yet. Done, cancelled and deferred tasks, and tasks already broken into subtasks, are skipped and counted in the summary (`skipped 1 done, 2 with subtasks`); their earlier scores stay in the report. A task you name with `--id` is analyzed even when it has subtasks.
+It scores pending, blocked and in-progress tasks that don't have subtasks yet. Done, cancelled and deferred tasks, and tasks already broken into subtasks, are skipped and counted in the summary (`skipped 1 done, 2 with subtasks`); their earlier scores stay in the report. A task you name with `--id` is analyzed even when it has subtasks. It uses the main model; change that with `taskgraph models --set-main <model>`.
 
 ## View Complexity Report
 
