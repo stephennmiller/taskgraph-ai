@@ -241,9 +241,13 @@ export function formatParallelSummary(
 	const unmergedIds = result.unmergedIds ?? [];
 	const why = (id: string) => {
 		const t = tasks.find((t) => t.id === id);
-		return t?.uncommitted
-			? `uncommitted changes in ${rel(projectRoot, t.worktree)}`
-			: `Claude Code failed after setting it to ${t?.status}`;
+		if (t?.uncommitted) {
+			return `uncommitted changes in ${rel(projectRoot, t.worktree)}`;
+		}
+		// A second branch in the wave that still conflicted after a redo (#1025)
+		return t?.state === 'failed'
+			? `Claude Code failed after setting it to ${t.status}`
+			: `${plain(t?.branch ?? id)} conflicts`;
 	};
 	const unmerged = unmergedIds.length
 		? `Not merged, so tasks that depend on them wait: ${unmergedIds.map((id) => `${plain(id)} (${why(id)})`).join(', ')}. Commit or check the work, merge the branch, then ${theme.brand(`taskgraph set-status --id=${plain(unmergedIds[0])} --status=done`)}`

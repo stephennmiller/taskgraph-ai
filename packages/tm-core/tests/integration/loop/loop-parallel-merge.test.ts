@@ -2,7 +2,8 @@
  * @fileoverview `loop --parallel --merge` against a real git repository and
  * tasks.json, with the fake Claude Code from loop-parallel-fixture.ts: what
  * becomes of a task Claude set to review without committing its work (#1012)
- * or with nothing to commit (#1013).
+ * or with nothing to commit (#1013), and of a resolved conflict whose fixes
+ * Claude left uncommitted (#1026).
  *
  * @integration
  */
@@ -139,5 +140,25 @@ describe('loop --parallel --merge', () => {
 		expect(status('4')).toBe('done');
 		expect(fs.existsSync(path.join(root, 'work-4.txt'))).toBe(true);
 		expect(result.unmergedIds).toBeUndefined();
+	}, 120_000);
+
+	it("doesn't merge a resolved conflict whose fixes Claude left uncommitted, or mark it done (#1026)", async () => {
+		const result = await run({
+			'task-1': 'merge-conflict-uncommitted',
+			'task-2': 'merge-conflict-uncommitted',
+			'task-3': 'merge-commit'
+		});
+
+		expect(status('1')).toBe('done');
+		expect(result.unmergedIds).toEqual(['2']);
+		expect(status('2')).toBe('review');
+		expect(status('4')).toBe('pending');
+		expect(fs.readFileSync(path.join(root, 'shared.txt'), 'utf8')).toBe('1\n');
+		// The fix is still in its worktree
+		const two = result.tasks.find((t) => t.id === '2');
+		expect(two?.uncommitted).toBe(true);
+		expect(
+			fs.readFileSync(path.join(two?.worktree ?? '', 'shared.txt'), 'utf8')
+		).toBe('both, fixed\n');
 	}, 120_000);
 });
