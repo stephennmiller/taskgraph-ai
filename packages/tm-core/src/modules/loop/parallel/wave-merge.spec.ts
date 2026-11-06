@@ -38,7 +38,8 @@ function fakeRun(
 	waves: ParallelLoopResult[],
 	conflicts: string[] = [],
 	cantSetAside = false,
-	resolves: string[] = []
+	resolves: string[] = [],
+	leftUncommitted: string[] = []
 ) {
 	const calls = {
 		budgets: [] as (number | undefined)[],
@@ -76,7 +77,11 @@ function fakeRun(
 				calls.resolved.push(`${t.id}:${budgetUsd}`);
 				const ok = resolves.includes(t.branch);
 				if (ok) fixed.add(t.branch);
-				return { ok, costUsd: 0.1 };
+				return {
+					ok,
+					costUsd: 0.1,
+					uncommitted: leftUncommitted.includes(t.branch)
+				};
 			},
 			setAside: async (id: string, _worktree: string, branch: string) => {
 				if (cantSetAside) return undefined;
@@ -297,8 +302,54 @@ describe('runMergingWaves', () => {
 
 		const result = await runMergingWaves({ parallel: 3 }, deps);
 
-		expect(calls.merged).toEqual(['taskgraph/task-1']);
+		expect(calls.merged).toEqual(['taskgraph/task-1', 'taskgraph/task-3']);
 		expect(result.conflictBranch).toBe('taskgraph/task-2');
+		expect(result.waves).toBe(1);
+	});
+
+	it('still merges, marks done or reports the rest of the wave after a conflict that stops the run (#1025)', async () => {
+		const { calls, deps } = fakeRun(
+			[
+				wave([
+					task('1'),
+					task('2'),
+					task('3'),
+					task('4', { kept: false }),
+					task('5', { uncommitted: true }),
+					task('6')
+				])
+			],
+			['taskgraph/task-2', 'taskgraph/task-6'],
+			true
+		);
+
+		const result = await runMergingWaves({ parallel: 6 }, deps);
+
+		expect(calls.merged).toEqual(['taskgraph/task-1', 'taskgraph/task-3']);
+		expect(calls.done).toEqual(['1', '3', '4']);
+		expect(result.conflictBranch).toBe('taskgraph/task-2');
+		// A second branch that conflicts is reported, not dropped
+		expect(result.unmergedIds).toEqual(['5', '6']);
+		expect(result.waves).toBe(1);
+	});
+
+	it("doesn't merge a resolved branch whose worktree has uncommitted changes, and reports it (#1026)", async () => {
+		const { calls, deps } = fakeRun(
+			[wave([task('1'), task('2')])],
+			['taskgraph/task-2'],
+			false,
+			['taskgraph/task-2'],
+			['taskgraph/task-2']
+		);
+
+		const result = await runMergingWaves({ parallel: 2 }, deps);
+
+		expect(calls.merged).toEqual(['taskgraph/task-1']);
+		expect(calls.done).toEqual(['1']);
+		expect(calls.removed).toEqual(['/repo/.taskgraph/worktrees/task-1']);
+		expect(result.unmergedIds).toEqual(['2']);
+		expect(result.tasks[1].uncommitted).toBe(true);
+		expect(result.conflictBranch).toBeUndefined();
 	});
 
 	it('keeps going when done is refused, and lists the task', async () => {

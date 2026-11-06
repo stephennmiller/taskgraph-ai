@@ -321,14 +321,15 @@ describe('formatParallelSummary', () => {
 						kept: true,
 						commits: 1,
 						status: 'review'
-					})
+					}),
+					task('3', { finished: true, kept: true, commits: 1 })
 				],
-				{ waves: 1, unmergedIds: ['1', '2'] }
+				{ waves: 1, unmergedIds: ['1', '2', '3'] }
 			)
 		);
 
 		expect(out).toContain(
-			'Not merged, so tasks that depend on them wait: 1 (uncommitted changes in .taskgraph/worktrees/task-1), 2 (Claude Code failed after setting it to review)'
+			'Not merged, so tasks that depend on them wait: 1 (uncommitted changes in .taskgraph/worktrees/task-1), 2 (Claude Code failed after setting it to review), 3 (taskgraph/task-3 conflicts)'
 		);
 	});
 

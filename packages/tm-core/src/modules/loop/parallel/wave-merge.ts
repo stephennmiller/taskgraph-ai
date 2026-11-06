@@ -4,7 +4,9 @@
  * dependents become ready, and run the next wave. A branch that conflicts
  * goes to Claude Code to resolve in its worktree. If that fails, the branch
  * is set aside and its task goes back to pending, so the next wave redoes it
- * on top of what merged; failing again on the same task stops the run.
+ * on top of what merged; failing again on the same task stops the run after
+ * the rest of that wave merges. A resolve that leaves uncommitted changes is
+ * left unmerged and reported.
  * A task whose Claude Code fails 3 waves in a row, or makes no progress in
  * 2, is set to blocked with a note, as in the serial loop (#1002).
  * A finished task with no changes is marked done; one with uncommitted
@@ -31,11 +33,14 @@ import type {
 export interface WaveMergeDeps {
 	runWave: (options: ParallelLoopOptions) => Promise<ParallelLoopResult>;
 	merge: (branch: string) => Promise<boolean>;
-	/** Have Claude Code resolve a conflicting branch in its worktree, within this budget */
+	/**
+	 * Have Claude Code resolve a conflicting branch in its worktree, within
+	 * this budget; `uncommitted` when it left changes there uncommitted
+	 */
 	resolve: (
 		task: ParallelTask,
 		budgetUsd?: number
-	) => Promise<{ ok: boolean; costUsd: number }>;
+	) => Promise<{ ok: boolean; costUsd: number; uncommitted?: boolean }>;
 	remove: (worktree: string, branch: string) => Promise<unknown>;
 	/** Mark a merged task done; throws when done is refused (unchecked criteria, smoke check) */
 	markDone: (id: string) => Promise<unknown>;
@@ -79,9 +84,11 @@ export async function runMergingWaves(
 			options.maxBudgetUsd === undefined
 				? undefined
 				: Math.max(0, options.maxBudgetUsd - spent) / options.parallel;
-		const { ok, costUsd } = await deps.resolve(task, share);
+		const { ok, costUsd, uncommitted } = await deps.resolve(task, share);
 		spent += costUsd;
 		if (costUsd) total.totalCostUsd = spent;
+		// Fixes it left uncommitted wouldn't merge, and remove() would fail (#1026)
+		if (ok && uncommitted) return 'uncommitted';
 		return ok && (await deps.merge(task.branch));
 	};
 
@@ -141,13 +148,22 @@ export async function runMergingWaves(
 				await deps.markDone(task.id).catch(() => notDone.push(task.id));
 				continue;
 			}
-			if (!(await deps.merge(task.branch)) && !(await resolveAndMerge(task))) {
+			const resolved =
+				(await deps.merge(task.branch)) || (await resolveAndMerge(task));
+			if (resolved === 'uncommitted') {
+				task.uncommitted = true;
+				unmerged.push(task.id);
+				continue;
+			}
+			if (!resolved) {
 				const kept =
 					!conflicted.has(task.id) &&
 					(await deps.setAside(task.id, task.worktree, task.branch));
+				// The run stops after this wave, but the rest of it still merges (#1025)
 				if (!kept) {
-					total.conflictBranch = task.branch;
-					break;
+					if (total.conflictBranch) unmerged.push(task.id);
+					else total.conflictBranch = task.branch;
+					continue;
 				}
 				conflicted.add(task.id);
 				task.setAsideAs = kept;
