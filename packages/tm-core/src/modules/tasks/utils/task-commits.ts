@@ -20,7 +20,7 @@ export interface TaskCommit {
  * from before tags were in the marker still link, `<tag>/<id>` in any other
  * tag, since every tag numbers its tasks from 1 (#1015)
  */
-export const taskCommitRef = (id: string, tag?: string): string =>
+const taskCommitRef = (id: string, tag?: string): string =>
 	!tag || tag === 'master' ? id : `${tag}/${id}`;
 
 /** What a commit message carries to link it to task `id` in `tag` */
