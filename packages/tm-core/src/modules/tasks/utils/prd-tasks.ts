@@ -142,6 +142,7 @@ export function prepareGeneratedTasks(
 		existingIds
 	});
 
+	const now = new Date().toISOString();
 	return rawTasks.map(({ section, files, complexity, ...task }, index) => {
 		// Only a section the PRD has; an invented slug would point nowhere.
 		// The section's hash lets a later --append tell whether it changed
@@ -155,6 +156,8 @@ export function prepareGeneratedTasks(
 			...(source ? { metadata: { ...task.metadata, ...source } } : {}),
 			...numbered[index],
 			status: task.status || 'pending',
+			// show's commit lookup starts here, so a reused ID skips the old task's commits (#1015)
+			createdAt: now,
 			priority: task.priority || defaultPriority,
 			subtasks: task.subtasks || [],
 			// Ensure all required fields have values

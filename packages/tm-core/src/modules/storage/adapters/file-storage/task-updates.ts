@@ -312,11 +312,13 @@ export function withFreeIds(
 ): { tasks: Task[]; result: Task[] } {
 	const { highestId } = archiveTag(archive, tag).metadata;
 	const taken = new Set(existing.map((t) => String(t.id)));
+	const now = new Date().toISOString();
 	const added = tasks.map((task) => {
 		const free = !taken.has(String(task.id)) && !(Number(task.id) <= highestId);
 		const id = free ? task.id : String(nextTaskId(taken, highestId));
 		taken.add(String(id));
-		return id === task.id ? task : { ...task, id };
+		// show's commit lookup starts here, so a reused ID skips the old task's commits (#1015)
+		return { ...task, id, createdAt: task.createdAt || now };
 	});
 	return { tasks: [...existing, ...added], result: added };
 }
