@@ -126,7 +126,11 @@ export class LoopDomain {
 			}
 		}
 
-		const fullConfig = this.buildConfig(config);
+		// The tag the sessions work in, so the prompt names it in the commit marker
+		const fullConfig = this.buildConfig({
+			...config,
+			tag: config.tag || this.configManager.getActiveTag()
+		});
 		const tasks = this.tasks;
 		this.loopService = new LoopService({
 			projectRoot: this.projectRoot,

@@ -25,7 +25,8 @@ it('leaves the task unblocked when its note fails to save', async () => {
 	const domain = new LoopDomain(
 		{
 			getProjectRoot: () => '/p',
-			getConfig: () => ({})
+			getConfig: () => ({}),
+			getActiveTag: () => 'master'
 		} as unknown as ConfigManager,
 		tasks as unknown as TasksDomain
 	);

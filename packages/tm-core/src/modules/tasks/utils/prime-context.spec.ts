@@ -22,6 +22,18 @@ describe('buildPrimeContext', () => {
 		});
 	});
 
+	it('names the tag in the commit marker outside master (#1015)', () => {
+		const commit = (tag: string) =>
+			buildPrimeContext([], { tag }).rules.at(-1)?.command;
+
+		expect(commit('master')).toBe(
+			"git commit -m '<type>: <change> [task <id>]'"
+		);
+		expect(commit('billing')).toBe(
+			"git commit -m '<type>: <change> [task billing/<id>]'"
+		);
+	});
+
 	it('lists the top three ready tasks in next order when nothing is in progress', () => {
 		const tasks = [
 			createTask({ id: 1, title: 'Low', priority: 'low' }),

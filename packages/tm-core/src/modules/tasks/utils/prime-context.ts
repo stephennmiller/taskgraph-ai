@@ -11,6 +11,7 @@ import type { AcceptanceCriterion, Task } from '../../../common/types/index.js';
 import { normalizeAcceptanceCriteria } from './acceptance-criteria.js';
 import { rankNextTasks } from './next-task.js';
 import { hasNoteSince } from './notes.js';
+import { withTagMarker } from './task-commits.js';
 
 /** One workflow rule: what to do, and the command that does it */
 export interface PrimeRule {
@@ -49,6 +50,13 @@ export const PRIME_RULES: readonly PrimeRule[] = [
 		command: "git commit -m '<type>: <change> [task <id>]'"
 	}
 ];
+
+/** PRIME_RULES with the commit marker naming the tag outside master (#1015) */
+const rulesForTag = (tag: string): readonly PrimeRule[] =>
+	PRIME_RULES.map((rule) => ({
+		...rule,
+		command: withTagMarker(rule.command, tag)
+	}));
 
 /** A task or subtask as prime shows it. Subtask IDs are dotted ("3.2"). */
 export interface PrimeTask {
@@ -170,7 +178,7 @@ export function buildPrimeContext(
 		},
 		inProgress: [...inProgressSubtasks, ...inProgressTasks],
 		ready,
-		rules: PRIME_RULES
+		rules: rulesForTag(options.tag)
 	};
 }
 
