@@ -238,11 +238,23 @@ export function formatParallelSummary(
 		? `Merged but not done (unchecked criteria): ${result.notDoneIds.join(', ')}. See ${theme.brand(`taskgraph show ${result.notDoneIds[0]}`)}`
 		: null;
 
+	const unmergedIds = result.unmergedIds ?? [];
+	const why = (id: string) => {
+		const t = tasks.find((t) => t.id === id);
+		return t?.uncommitted
+			? `uncommitted changes in ${rel(projectRoot, t.worktree)}`
+			: `Claude Code failed after setting it to ${t?.status}`;
+	};
+	const unmerged = unmergedIds.length
+		? `Not merged, so tasks that depend on them wait: ${unmergedIds.map((id) => `${plain(id)} (${why(id)})`).join(', ')}. Commit or check the work, merge the branch, then ${theme.brand(`taskgraph set-status --id=${plain(unmergedIds[0])} --status=done`)}`
+		: null;
+
 	return [
 		lead,
 		...rows,
 		...(held ? [held] : []),
 		...(notDone ? [notDone] : []),
+		...(unmerged ? [unmerged] : []),
 		...(next ? [next] : []),
 		...formatSetAside(result.setAside, 80, !!next)
 	].join('\n');

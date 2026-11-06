@@ -310,6 +310,28 @@ describe('formatParallelSummary', () => {
 		);
 	});
 
+	it('with --merge, says which finished tasks it left unmerged and why (#1012, #1013)', () => {
+		const out = summary(
+			result(
+				[
+					task('1', { finished: true, kept: true, uncommitted: true }),
+					task('2', {
+						state: 'failed',
+						error: 'exit 1',
+						kept: true,
+						commits: 1,
+						status: 'review'
+					})
+				],
+				{ waves: 1, unmergedIds: ['1', '2'] }
+			)
+		);
+
+		expect(out).toContain(
+			'Not merged, so tasks that depend on them wait: 1 (uncommitted changes in .taskgraph/worktrees/task-1), 2 (Claude Code failed after setting it to review)'
+		);
+	});
+
 	it('with --merge, lists the stuck tasks it set aside and how to retry them (#1002)', () => {
 		const reason = 'stuck: 3 failed sessions in a row. Last error: exit 1';
 		const out = summary(
