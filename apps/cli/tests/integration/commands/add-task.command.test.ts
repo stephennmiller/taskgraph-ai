@@ -90,6 +90,38 @@ describe.skipIf(!built)('add-task command output', () => {
 		expect(res.stdout).not.toContain('Using manually provided task data');
 	});
 
+	it.skipIf(process.platform === 'win32')(
+		'exits 0 without a stack trace when stdout closes early (#1017)',
+		() => {
+			// A second tag prints the [tag] header before the save; its EPIPE then
+			// surfaces while add-task awaits the save instead of after the exit
+			const file = JSON.parse(fs.readFileSync(tasksFile(), 'utf8'));
+			fs.writeFileSync(
+				tasksFile(),
+				JSON.stringify({ ...file, other: createTasksFile().master })
+			);
+
+			// `true` exits without reading, so every line hits a closed pipe
+			const res = spawnSync(
+				'bash',
+				[
+					'-c',
+					'"$0" "$1" add-task --title=Piped --description=d | true; exit "${PIPESTATUS[0]}"',
+					process.execPath,
+					binPath
+				],
+				{ cwd: project, encoding: 'utf8', timeout: 25000, env }
+			);
+
+			expect(res.stderr).not.toContain('EPIPE');
+			expect(res.status).toBe(0);
+			const saved = JSON.parse(fs.readFileSync(tasksFile(), 'utf8'));
+			expect(
+				saved.master.tasks.map((t: { title: string }) => t.title)
+			).toContain('Piped');
+		}
+	);
+
 	it('exits 1 and adds nothing for a dependency that does not exist (#710)', () => {
 		const before = fs.readFileSync(tasksFile(), 'utf8');
 		const res = addTask(
