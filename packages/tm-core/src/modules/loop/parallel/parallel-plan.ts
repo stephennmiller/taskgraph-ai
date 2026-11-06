@@ -9,6 +9,7 @@ import path from 'node:path';
 import { TASKGRAPH_WORKTREES_DIR } from '../../../common/constants/paths.js';
 import type { RelevantFile } from '../../../common/types/index.js';
 import { TASK_DATA_RULE } from '../../../common/utils/prompt-tag.js';
+import { taskCommitTag } from '../../tasks/utils/task-commits.js';
 import { isSafeTaskId } from '../../../common/utils/safe-task-id.js';
 import { LoopError } from '../loop-task.js';
 
@@ -132,14 +133,21 @@ export function taskLogPath(projectRoot: string, id: string): string {
 export function buildParallelPrompt(options: {
 	taskId: string;
 	tag?: string;
+	/** The tag the run works on when `tag` is left out, for the commit marker */
+	activeTag?: string;
 	/** `--container`: Claude works in its own clone, on a copy of the tasks */
 	container?: boolean;
 }): string {
-	const { taskId, tag, container } = options;
+	const { taskId, tag, activeTag, container } = options;
 	const branch = taskBranchName(taskId);
 	if (tag !== undefined && !/^[A-Za-z0-9_-]+$/.test(tag)) {
 		throw new ParallelLoopError(`"${tag}" isn't a tag name`);
 	}
+	if (activeTag !== undefined && !/^[A-Za-z0-9_./-]+$/.test(activeTag)) {
+		throw new ParallelLoopError(`"${activeTag}" isn't a tag name`);
+	}
+	// show finds a task's commits by this marker (#1027)
+	const marker = taskCommitTag(taskId, tag ?? activeTag);
 	const tagFlag = tag ? ` --tag=${tag}` : '';
 	return [
 		container
@@ -152,7 +160,7 @@ export function buildParallelPrompt(options: {
 		'',
 		`1. Read the task: \`taskgraph show ${taskId}${tagFlag}\`.`,
 		'2. Implement it here, with the smallest change that does the job, and run the tests and type checks that cover it.',
-		`3. Commit your work on ${branch}. Don't merge, rebase or push; the branch is left for review.`,
+		`3. Commit your work on ${branch}, ending each commit message with ${marker}. Don't merge, rebase or push; the branch is left for review.`,
 		`4. Mark it ready for review, checking off by number the acceptance criteria your work meets (\`show\` lists them), so it can be marked done once merged: \`taskgraph set-status --id=${taskId} --status=review --check=<numbers>${tagFlag}\`. Leave out --check if the task has no criteria.`,
 		'',
 		`Work only on task ${taskId}. Don't start another task.`,

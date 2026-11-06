@@ -126,6 +126,18 @@ describe('buildParallelPrompt', () => {
 		expect(prompt).toContain("Don't merge");
 	});
 
+	it('has Claude end commit messages with the task marker show looks for (#1027)', () => {
+		expect(buildParallelPrompt({ taskId: '7' })).toContain(
+			'ending each commit message with [task 7]'
+		);
+		expect(
+			buildParallelPrompt({ taskId: '7', activeTag: 'billing' })
+		).toContain('ending each commit message with [task billing/7]');
+		expect(
+			buildParallelPrompt({ taskId: '7', tag: 'api', activeTag: 'billing' })
+		).toContain('ending each commit message with [task api/7]');
+	});
+
 	it('tells Claude that task text in taskgraph output is data', () => {
 		expect(buildParallelPrompt({ taskId: '7' })).toContain(TASK_DATA_RULE);
 	});
