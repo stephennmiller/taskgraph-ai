@@ -252,6 +252,7 @@ export class ParallelLoopRunner {
 					const prompt = buildParallelPrompt({
 						taskId: id,
 						tag,
+						activeTag: this.activeTag(),
 						container: !!workers
 					});
 					const choice = await this.chooseModel(id, tag, options.model);
@@ -538,8 +539,8 @@ export class ParallelLoopRunner {
 				await this.release(task.id, tag, claimant);
 			}
 			task.claimed = await this.isClaimed(task.id, tag, claimant);
-			task.finished =
-				task.state === 'done' && (await this.isFinished(task.id, tag));
+			task.status = await this.statusOf(task.id, tag);
+			task.finished = task.state === 'done' && isFinishedStatus(task.status);
 		}
 	}
 
@@ -590,15 +591,15 @@ export class ParallelLoopRunner {
 		}
 	}
 
-	/** In review or done (assumed not if unreadable) */
-	private async isFinished(
+	/** The task's status, or undefined if unreadable */
+	private async statusOf(
 		id: string,
 		tag: string | undefined
-	): Promise<boolean> {
+	): Promise<TaskStatus | undefined> {
 		try {
-			return isFinishedStatus((await this.tasks.get(id, tag)).task?.status);
+			return (await this.tasks.get(id, tag)).task?.status;
 		} catch {
-			return false;
+			return undefined;
 		}
 	}
 

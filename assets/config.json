@@ -25,7 +25,6 @@
 		"defaultSubtasks": 5,
 		"defaultPriority": "medium",
 		"projectName": "TaskGraph",
-		"defaultTag": "master",
 		"responseLanguage": "English"
 	}
 }

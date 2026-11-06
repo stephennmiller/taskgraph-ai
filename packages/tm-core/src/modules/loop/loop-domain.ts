@@ -126,7 +126,11 @@ export class LoopDomain {
 			}
 		}
 
-		const fullConfig = this.buildConfig(config);
+		// The tag the sessions work in, so the prompt names it in the commit marker
+		const fullConfig = this.buildConfig({
+			...config,
+			tag: config.tag || this.configManager.getActiveTag()
+		});
 		const tasks = this.tasks;
 		this.loopService = new LoopService({
 			projectRoot: this.projectRoot,
@@ -215,18 +219,25 @@ export class LoopDomain {
 				runWave: (o) => runner.run(o),
 				merge: (branch) => git.merge(branch),
 				// A --container task's work comes back as a branch, with no local worktree to resolve in
-				resolve: async (task, budgetUsd) =>
-					options.container
-						? { ok: false, costUsd: 0 }
-						: resolveConflict({
-								projectRoot: this.projectRoot,
-								worktree: task.worktree,
-								branch: task.branch,
-								commit: await git.head(),
-								command: options.command,
-								maxBudgetUsd: budgetUsd,
-								model: options.model
-							}),
+				resolve: async (task, budgetUsd) => {
+					if (options.container) return { ok: false, costUsd: 0 };
+					const commit = await git.head();
+					const resolved = await resolveConflict({
+						projectRoot: this.projectRoot,
+						worktree: task.worktree,
+						branch: task.branch,
+						commit,
+						command: options.command,
+						maxBudgetUsd: budgetUsd,
+						model: options.model
+					});
+					const { uncommitted } = await git.work(
+						task.worktree,
+						task.branch,
+						commit
+					);
+					return { ...resolved, uncommitted };
+				},
 				remove: (worktree, branch) => git.remove(worktree, branch, true),
 				markDone: (id) => tasks.updateStatus(id, 'done', options.tag),
 				setAside: async (id, worktree, branch) => {

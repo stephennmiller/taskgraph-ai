@@ -206,7 +206,7 @@ export class ShowCommand extends Command {
 			this.blocked = (
 				await this.tmCore.tasks.explainBlockers(taskId, { tag: options.tag })
 			).blocked;
-			this.commits = await this.tmCore.tasks.getCommits(taskId);
+			this.commits = await this.tmCore.tasks.getCommits(taskId, options.tag);
 		}
 
 		return {

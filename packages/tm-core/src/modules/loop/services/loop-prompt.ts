@@ -9,6 +9,7 @@ import {
 	TASK_DATA_TAG,
 	neutralizeTag
 } from '../../../common/utils/prompt-tag.js';
+import { withTagMarker } from '../../tasks/utils/task-commits.js';
 import { PRESETS, isPreset } from '../presets/index.js';
 import type { LoopConfig } from '../types.js';
 
@@ -16,9 +17,10 @@ import type { LoopConfig } from '../types.js';
 const SIGNAL_RULE =
 	'To stop the loop, end your reply with the <loop-complete> or <loop-blocked> marker alone on the last line. A marker anywhere else is ignored.';
 
-async function resolvePrompt(prompt: string): Promise<string> {
+async function resolvePrompt(prompt: string, tag?: string): Promise<string> {
 	if (isPreset(prompt)) {
-		return PRESETS[prompt];
+		// Every tag numbers from 1, so outside master the marker names the tag (#1015)
+		return withTagMarker(PRESETS[prompt], tag);
 	}
 	const content = await readFile(prompt, 'utf-8');
 	if (!content.trim()) {
@@ -93,7 +95,7 @@ export async function buildPrompt(
 	resumed = false,
 	interrupted?: InterruptedTask
 ): Promise<string> {
-	const basePrompt = await resolvePrompt(config.prompt);
+	const basePrompt = await resolvePrompt(config.prompt, config.tag);
 	const header = buildContextHeader(config, iteration, interrupted);
 	return `${resumed ? `${RESUMED_NOTE}\n\n` : ''}${header}\n\n${basePrompt}\n\n${TASK_DATA_RULE}\n\n${SIGNAL_RULE}`;
 }

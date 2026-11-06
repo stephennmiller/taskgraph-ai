@@ -242,6 +242,12 @@ describe('LoopCommand --parallel', () => {
 		await execute({ parallel: '1', trust: true });
 		expect(process.exitCode).toBe(1);
 
+		// --merge left a finished task unmerged, so its dependents never ran
+		process.exitCode = undefined;
+		runParallel.mockResolvedValueOnce(parallelResult({ unmergedIds: ['3'] }));
+		await execute({ parallel: '1', trust: true, merge: true });
+		expect(process.exitCode).toBe(1);
+
 		process.exitCode = undefined;
 		runParallel.mockResolvedValueOnce(parallelResult({ aborted: true }));
 		await execute({ parallel: '1', trust: true });

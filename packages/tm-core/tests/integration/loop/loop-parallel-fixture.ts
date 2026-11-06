@@ -1,6 +1,6 @@
 /**
  * @fileoverview The fake Claude Code and `taskgraph` that loop-parallel.test.ts
- * runs, and the helpers its tests share
+ * and loop-parallel-merge.test.ts run, and the helpers their tests share
  */
 
 import { execFileSync } from 'node:child_process';
@@ -35,6 +35,37 @@ if (mode === 'commit' || mode === 'commit-fail') {
 	// stream-json's last event: what the run cost
 	console.log(JSON.stringify({ type: 'result', subtype: 'success', result: 'done', total_cost_usd: 0.25, num_turns: 3 }));
 	process.exit(mode === 'commit' ? 0 : 1);
+}
+// --merge: both tasks commit the same file, so the second conflicts. Asked to
+// resolve it, commit the merge but leave the fix it made uncommitted (#1026)
+if (mode === 'merge-conflict-uncommitted') {
+	const id = name.slice('task-'.length);
+	const commit = /conflicts with commit (\\w+)/.exec(process.argv.join(' '))?.[1];
+	if (commit) {
+		try {
+			execFileSync('git', ['merge', '--no-edit', commit], { stdio: 'ignore' });
+		} catch {}
+		fs.writeFileSync('shared.txt', 'both\\n');
+		execFileSync('git', ['commit', '-q', '-am', 'merge']);
+		fs.writeFileSync('shared.txt', 'both, fixed\\n');
+		process.exit(0);
+	}
+	fs.writeFileSync('shared.txt', id + '\\n');
+	execFileSync('git', ['add', 'shared.txt']);
+	execFileSync('git', ['commit', '-q', '-m', 'work on ' + name]);
+	taskgraph('set-status', '--id=' + id, '--status=review');
+	process.exit(0);
+}
+// --merge: a file of its own, committed, left uncommitted, or none at all
+if (mode.startsWith('merge-')) {
+	const id = name.slice('task-'.length);
+	if (mode !== 'merge-nothing') fs.writeFileSync('work-' + id + '.txt', 'done\\n');
+	if (mode === 'merge-commit') {
+		execFileSync('git', ['add', 'work-' + id + '.txt']);
+		execFileSync('git', ['commit', '-q', '-m', 'work on ' + name]);
+	}
+	taskgraph('set-status', '--id=' + id, '--status=review');
+	process.exit(0);
 }
 if (mode === 'fail') process.exit(1);
 if (mode === 'sleep' || mode === 'dirty-sleep') {

@@ -173,6 +173,14 @@ describe('prepareGeneratedTasks', () => {
 		}
 	});
 
+	it('stamps createdAt, so show skips commits for an earlier task with the ID (#1015)', () => {
+		const [task] = prepare([{ ...raw(1), createdAt: '2020-01-01' } as any]);
+
+		expect(Date.parse(task.createdAt)).toBeGreaterThan(
+			Date.parse('2026-01-01')
+		);
+	});
+
 	it('fills in the defaults the model left out', () => {
 		const [task] = prepare([
 			{ ...raw(1), priority: '', status: '', details: undefined } as any

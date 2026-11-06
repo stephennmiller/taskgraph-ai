@@ -72,19 +72,13 @@ TaskGraph gives up on an AI request that has not answered after 10 minutes. When
 
 ## Loop iteration timeout
 
-`taskgraph loop` stops a Claude Code run that has printed nothing for 60 minutes, together with the processes it started, and counts it as a failed iteration; three failed iterations in a row end the loop. A run that keeps printing is never cut off, since one session can work through the whole backlog. Set `TASKGRAPH_LOOP_TIMEOUT_MS` (milliseconds) to change it, for example `TASKGRAPH_LOOP_TIMEOUT_MS=7200000` for two hours. Values above about 24 days are capped there. With `loop --parallel` the limit is on each task's whole Claude Code run: one that runs past it is stopped and marked failed, its worktree is kept and its claim released.
+`taskgraph loop` stops a Claude Code run that has printed nothing for 60 minutes, together with the processes it started, and counts it as a failed iteration; three failed iterations in a row end the loop. A run that keeps printing is never cut off, however long its task takes. Set `TASKGRAPH_LOOP_TIMEOUT_MS` (milliseconds) to change it, for example `TASKGRAPH_LOOP_TIMEOUT_MS=7200000` for two hours. Values above about 24 days are capped there. With `loop --parallel` the limit is on each task's whole Claude Code run: one that runs past it is stopped and marked failed, its worktree is kept and its claim released.
 
 ## Tagged task lists
 
 Tags keep separate task lists for branches, features or experiments.
 
-```json
-"global": {
-  "defaultTag": "master"
-}
-```
-
-- **`defaultTag`**: the tag used when none is specified (default `master`).
+- **Current tag:** commands use the current tag (`master` in a new project) unless you pass `--tag`. Switch it with `taskgraph tags use <name>`.
 - **Branch-based tags:** `taskgraph tags add <name> --from-branch` creates a tag named after the current git branch. Tags are never switched automatically; you decide when to create and use them.
 
 ## State file
