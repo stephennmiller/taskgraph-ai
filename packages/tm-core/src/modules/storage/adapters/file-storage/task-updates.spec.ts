@@ -24,6 +24,19 @@ describe('withFreeIds', () => {
 		expect(result.map((t) => t.id)).toEqual(['5', '6', '9']);
 		expect(tasks.map((t) => t.id)).toEqual(['1', '2', '5', '6', '9']);
 	});
+
+	it('stamps createdAt on a new task and keeps one it already has (#1015)', () => {
+		const moved = createTask({
+			id: '2',
+			title: 'Moved',
+			createdAt: '2020-01-01T00:00:00.000Z'
+		});
+
+		const { result } = withFreeIds([], [task('1'), moved], {}, 'master');
+
+		expect(Date.parse(result[0].createdAt ?? '')).not.toBeNaN();
+		expect(result[1].createdAt).toBe('2020-01-01T00:00:00.000Z');
+	});
 });
 
 describe('setTaskStatusIn parent auto-status', () => {

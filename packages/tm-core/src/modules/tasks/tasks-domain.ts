@@ -402,11 +402,17 @@ export class TasksDomain {
 	}
 
 	/**
-	 * The commits whose message names this task (`[task <id>]`), newest
-	 * first; empty outside git (#954)
+	 * The commits whose message names this task or its subtasks in the tag
+	 * (`[task <id>]`, `[task <tag>/<id>]` outside master) made since the task
+	 * was created, newest first; empty outside git (#954, #1015)
 	 */
-	getCommits(taskId: string): Promise<TaskCommit[]> {
-		return findTaskCommits(this.projectRoot, normalizeTaskId(taskId));
+	async getCommits(taskId: string, tag?: string): Promise<TaskCommit[]> {
+		const resolvedTag = tag || this.configManager.getActiveTag();
+		const { task } = await this.get(taskId, resolvedTag);
+		return findTaskCommits(this.projectRoot, normalizeTaskId(taskId), {
+			tag: resolvedTag,
+			since: task?.createdAt
+		});
 	}
 
 	/**
