@@ -16,6 +16,14 @@ import nodeModule from 'node:module';
 // would fail to link on a Node without it, before engines can be reported.
 nodeModule.enableCompileCache?.();
 
+// A reader that exits early (`| head -1`) closes the pipe: drop the rest of
+// the output and keep the command's own exit code instead of crashing (#1017)
+for (const stream of [process.stdout, process.stderr]) {
+	stream.on('error', (err) => {
+		if (err.code !== 'EPIPE') throw err;
+	});
+}
+
 const args = process.argv.slice(2);
 const version = process.env.TM_PUBLIC_VERSION || 'unknown';
 
