@@ -3,6 +3,7 @@
  */
 
 import type { ChildProcess, SpawnOptions } from 'node:child_process';
+import type { TaskStatus } from '../../../common/types/index.js';
 import type { ModelChoice } from '../model-bands.js';
 import type { SetAsideTask } from '../types.js';
 
@@ -60,6 +61,8 @@ export interface ParallelTask extends ModelChoice {
 	setAsideAs?: string;
 	/** The task is still claimed (in-progress) after the run (set at the end) */
 	claimed?: boolean;
+	/** The task's status after the run, if readable (set at the end) */
+	status?: TaskStatus;
 	/**
 	 * Claude Code exited 0 and the task is in review or done: what the
 	 * summary counts as done, like the sequential loop (set at the end)
@@ -137,6 +140,11 @@ export interface ParallelLoopResult {
 	conflictBranch?: string;
 	/** --merge: merged tasks left in review because done was refused (unchecked criteria) */
 	notDoneIds?: string[];
+	/**
+	 * --merge: finished tasks not merged because their worktree has
+	 * uncommitted work, or Claude Code failed after setting review or done
+	 */
+	unmergedIds?: string[];
 	/** --merge: tasks that kept failing, set to blocked and left out of later waves */
 	setAside?: SetAsideTask[];
 }

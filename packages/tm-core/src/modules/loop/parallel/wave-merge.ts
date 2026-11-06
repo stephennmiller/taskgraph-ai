@@ -7,8 +7,10 @@
  * on top of what merged; failing again on the same task stops the run.
  * A task whose Claude Code fails 3 waves in a row, or makes no progress in
  * 2, is set to blocked with a note, as in the serial loop (#1002).
- * Stops too when a wave merges nothing, the run is aborted, or the budget is
- * spent.
+ * A finished task with no changes is marked done; one with uncommitted
+ * work, or whose Claude Code failed after finishing it, is left unmerged
+ * and reported. Stops too when a wave merges nothing, the run is aborted,
+ * or the budget is spent.
  */
 
 import { getLogger } from '../../../common/logger/index.js';
@@ -17,6 +19,7 @@ import {
 	MAX_STALLED_ITERATIONS
 } from '../services/iteration-limits.js';
 import { stuckReason } from '../services/stuck-tasks.js';
+import { isFinishedStatus } from '../task-progress.js';
 import type { SetAsideTask } from '../types.js';
 import type {
 	ParallelLoopOptions,
@@ -65,6 +68,7 @@ export async function runMergingWaves(
 		waves: 0
 	};
 	const notDone: string[] = [];
+	const unmerged: string[] = [];
 	const conflicted = new Set<string>();
 	// Each task's failed and no-progress attempts in a row
 	const attempts = new Map<string, Attempts>();
@@ -96,20 +100,47 @@ export async function runMergingWaves(
 		const wave = await deps.runWave({ ...options, maxBudgetUsd: left });
 		if (!total.waves) total.readyCount = wave.readyCount;
 		total.waves = (total.waves ?? 0) + 1;
-		total.tasks.push(...wave.tasks);
+		// A retry replaces the task's earlier attempt, so a fixed failure doesn't fail the run;
+		// a set-aside one stays, as it names the branch its work was kept on
+		const ran = new Set(wave.tasks.map((t) => t.id));
+		total.tasks = [
+			...total.tasks.filter((t) => t.setAsideAs || !ran.has(t.id)),
+			...wave.tasks
+		];
 		total.skippedIds = wave.skippedIds;
 		total.heldBackIds = wave.heldBackIds;
 		total.aborted = wave.aborted;
 		if (wave.costPartial) total.costPartial = true;
-		if (wave.totalCostUsd !== undefined) {
-			spent += wave.totalCostUsd;
+		// Killed or crashed before reporting a cost: charge the share it was capped at (#855)
+		const unknown =
+			left === undefined
+				? 0
+				: (wave.tasks.filter((t) => t.costUnknown).length * left) /
+					options.parallel;
+		if (wave.totalCostUsd !== undefined || unknown) {
+			spent += (wave.totalCostUsd ?? 0) + unknown;
 			total.totalCostUsd = spent;
 		}
 		if (wave.aborted) break;
 
+		// Tasks merged or done this wave: none means the next wave would find the same
 		let merged = 0;
 		for (const task of wave.tasks) {
-			if (!task.finished || !task.kept) continue;
+			// Merging would drop uncommitted work, or work Claude Code didn't finish cleanly
+			if (
+				(task.finished && task.uncommitted) ||
+				(task.state === 'failed' && isFinishedStatus(task.status))
+			) {
+				unmerged.push(task.id);
+				continue;
+			}
+			if (!task.finished) continue;
+			if (!task.kept) {
+				// No changes, so nothing to merge: done, so its dependents run
+				merged++;
+				await deps.markDone(task.id).catch(() => notDone.push(task.id));
+				continue;
+			}
 			if (!(await deps.merge(task.branch)) && !(await resolveAndMerge(task))) {
 				const kept =
 					!conflicted.has(task.id) &&
@@ -132,6 +163,7 @@ export async function runMergingWaves(
 	}
 
 	if (notDone.length) total.notDoneIds = notDone;
+	if (unmerged.length) total.unmergedIds = unmerged;
 	if (setAside.length) total.setAside = setAside;
 	return total;
 }

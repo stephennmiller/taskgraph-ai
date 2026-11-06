@@ -345,6 +345,7 @@ export class LoopCommand extends Command {
 			if (result.aborted) process.exitCode = 130;
 			else if (
 				result.conflictBranch ||
+				result.unmergedIds?.length ||
 				result.tasks.some((t) => t.state === 'failed')
 			) {
 				process.exitCode = 1;

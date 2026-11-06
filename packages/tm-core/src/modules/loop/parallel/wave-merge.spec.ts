@@ -42,6 +42,7 @@ function fakeRun(
 ) {
 	const calls = {
 		budgets: [] as (number | undefined)[],
+		ran: [] as string[],
 		merged: [] as string[],
 		removed: [] as string[],
 		done: [] as string[],
@@ -59,10 +60,9 @@ function fakeRun(
 				calls.budgets.push(o.maxBudgetUsd);
 				// A blocked task isn't ready, so the runner never claims it
 				const next = waves[i++] ?? wave([]);
-				return {
-					...next,
-					tasks: next.tasks.filter((t) => !calls.blocked.includes(t.id))
-				};
+				const tasks = next.tasks.filter((t) => !calls.blocked.includes(t.id));
+				calls.ran.push(...tasks.map((t) => t.id));
+				return { ...next, tasks };
 			},
 			merge: async (branch: string) => {
 				if (conflicts.includes(branch) && !fixed.has(branch)) return false;
@@ -137,7 +137,7 @@ describe('runMergingWaves', () => {
 			'stuck: 3 failed sessions in a row. Last error: exit 1'
 		]);
 		// Not run in the fourth wave, which still merged task 4
-		expect(result.tasks.filter((t) => t.id === '9')).toHaveLength(3);
+		expect(calls.ran.filter((id) => id === '9')).toHaveLength(3);
 		expect(calls.merged).toContain('taskgraph/task-4');
 		expect(result.setAside).toEqual([{ id: '9', reason: calls.notes[0] }]);
 	});
@@ -155,10 +155,10 @@ describe('runMergingWaves', () => {
 			wave([task('6'), failing(3)])
 		]);
 
-		const result = await runMergingWaves({ parallel: 2 }, deps);
+		await runMergingWaves({ parallel: 2 }, deps);
 
 		expect(calls.blocked).toEqual(['9']);
-		expect(result.tasks.filter((t) => t.id === '9')).toHaveLength(6);
+		expect(calls.ran.filter((id) => id === '9')).toHaveLength(6);
 	});
 
 	it('blocks a task with no progress in two waves, but never a claimed one', async () => {
@@ -177,12 +177,9 @@ describe('runMergingWaves', () => {
 		);
 	});
 
-	it('leaves unfinished and empty tasks unmerged', async () => {
+	it('leaves an unfinished task unmerged and stops when a wave moves nothing', async () => {
 		const { calls, deps } = fakeRun([
-			wave([
-				task('1', { finished: false, state: 'failed' }),
-				task('2', { kept: false })
-			])
+			wave([task('1', { finished: false, state: 'failed' })])
 		]);
 
 		const result = await runMergingWaves({ parallel: 3 }, deps);
@@ -190,6 +187,69 @@ describe('runMergingWaves', () => {
 		expect(calls.merged).toEqual([]);
 		// Nothing merged, so another wave would do the same
 		expect(result.waves).toBe(1);
+	});
+
+	it('marks a finished task with no changes done, so its dependents run next wave (#1013)', async () => {
+		const { calls, deps } = fakeRun([
+			wave([task('2', { kept: false })]),
+			wave([task('4')])
+		]);
+
+		const result = await runMergingWaves({ parallel: 3 }, deps);
+
+		expect(calls.merged).toEqual(['taskgraph/task-4']);
+		expect(calls.done).toEqual(['2', '4']);
+		expect(result.waves).toBe(3);
+		expect(result.unmergedIds).toBeUndefined();
+	});
+
+	it("doesn't merge or mark done a finished task with uncommitted work (#1012)", async () => {
+		const { calls, deps } = fakeRun([
+			wave([
+				task('1', { uncommitted: true, commits: 0 }),
+				task('2', { uncommitted: true, commits: 2 }),
+				task('3')
+			])
+		]);
+
+		const result = await runMergingWaves({ parallel: 3 }, deps);
+
+		expect(calls.merged).toEqual(['taskgraph/task-3']);
+		expect(calls.done).toEqual(['3']);
+		expect(calls.removed).toEqual(['/repo/.taskgraph/worktrees/task-3']);
+		expect(result.unmergedIds).toEqual(['1', '2']);
+	});
+
+	it('reports a task whose Claude Code failed after setting review, without merging it (#1013)', async () => {
+		const { calls, deps } = fakeRun([
+			wave([
+				task('5', {
+					state: 'failed',
+					finished: false,
+					commits: 1,
+					status: 'review'
+				})
+			])
+		]);
+
+		const result = await runMergingWaves({ parallel: 3 }, deps);
+
+		expect(calls.merged).toEqual([]);
+		expect(result.unmergedIds).toEqual(['5']);
+	});
+
+	it("keeps only each task's latest attempt, so a task that failed and then merged isn't failed", async () => {
+		const { deps } = fakeRun([
+			wave([task('1'), task('9', { state: 'failed', finished: false })]),
+			wave([task('9')])
+		]);
+
+		const result = await runMergingWaves({ parallel: 2 }, deps);
+
+		expect(result.tasks.map((t) => [t.id, t.state, t.merged])).toEqual([
+			['1', 'done', true],
+			['9', 'done', true]
+		]);
 	});
 
 	it('has Claude resolve a conflicting branch, then merges it', async () => {
@@ -264,6 +324,43 @@ describe('runMergingWaves', () => {
 		expect(calls.budgets).toEqual([5, 2]);
 		expect(result.totalCostUsd).toBeCloseTo(4.8);
 		expect(result.waves).toBe(2);
+	});
+
+	it('charges a worker killed before it reported a cost the share it was capped at (#1014)', async () => {
+		const killed = (commits: number) =>
+			task('9', {
+				state: 'failed',
+				finished: false,
+				costUnknown: true,
+				commits
+			});
+		const { calls, deps } = fakeRun([
+			wave([task('1'), killed(1)], { costPartial: true }),
+			wave([task('2'), killed(2)], { costPartial: true })
+		]);
+
+		const result = await runMergingWaves(
+			{ parallel: 2, maxBudgetUsd: 10 },
+			deps
+		);
+
+		// Each wave's killed worker had half of what was left
+		expect(calls.budgets).toEqual([10, 5, 2.5]);
+		expect(result.totalCostUsd).toBeCloseTo(7.5);
+		expect(result.costPartial).toBe(true);
+	});
+
+	it('stops when a killed worker leaves under $0.25 of the budget (#1014)', async () => {
+		const killed = () =>
+			task('9', { state: 'failed', finished: false, costUnknown: true });
+		const { calls, deps } = fakeRun([
+			wave([task('1'), killed()], { costPartial: true }),
+			wave([task('2'), killed()], { costPartial: true })
+		]);
+
+		await runMergingWaves({ parallel: 1, maxBudgetUsd: 1 }, deps);
+
+		expect(calls.budgets).toEqual([1]);
 	});
 
 	it('stops after an aborted wave without merging it', async () => {
