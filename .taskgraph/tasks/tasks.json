@@ -18,10 +18,11 @@
         "description": "Every command takes 1.5–1.8 s, including `taskgraph --version` (bare `node -e 1` takes 24 ms). An agent runs TaskGraph 20–50 times a session, so that's 30–80 s of waiting per session.",
         "details": "GitHub issue #248: https://github.com/stephennmiller/taskgraph-ai/issues/248\nThe issue holds the scope and the done criteria, and it wins where this task disagrees.",
         "testStrategy": "",
-        "status": "pending",
+        "status": "done",
         "dependencies": [],
         "priority": "medium",
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-11-06T02:50:59.541Z"
       },
       {
         "id": "3",
@@ -29,10 +30,11 @@
         "description": "`npm pack` then a clean `npm install` of `taskgraph-ai@0.54.12` adds 345 packages and 802 MB.",
         "details": "GitHub issue #249: https://github.com/stephennmiller/taskgraph-ai/issues/249\nThe issue holds the scope and the done criteria, and it wins where this task disagrees.",
         "testStrategy": "",
-        "status": "pending",
+        "status": "done",
         "dependencies": [],
         "priority": "medium",
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-11-06T02:50:59.541Z"
       },
       {
         "id": "4",
@@ -86,17 +88,16 @@
         "priority": "medium",
         "subtasks": [
           {
-            "id": 1,
+            "id": "1",
             "title": "AI service in @tm/core",
             "description": "Prompt loading, a Claude Code provider with the role restrictions, schema validation and patch-based saves.",
             "details": "",
             "status": "done",
             "dependencies": [],
-            "parentTaskId": 7,
             "parentId": "7"
           },
           {
-            "id": 2,
+            "id": "2",
             "title": "Move the AI commands",
             "description": "One PR each, verified with the build comparison: add-task, expand, parse-prd, analyze-complexity, update-task/update, research.",
             "details": "",
@@ -104,11 +105,10 @@
             "dependencies": [
               "7.1"
             ],
-            "parentTaskId": 7,
             "parentId": "7"
           },
           {
-            "id": 3,
+            "id": "3",
             "title": "Retire the legacy CLI and MCP server",
             "description": "Delete commands.js, utils.js and mcp-server/src, and move the MCP tools into apps/mcp, leaving one MCP server.",
             "details": "",
@@ -116,7 +116,6 @@
             "dependencies": [
               "7.2"
             ],
-            "parentTaskId": 7,
             "parentId": "7"
           }
         ]
@@ -127,10 +126,11 @@
         "description": "Setup is four steps (`npm i -g`, `init`, two `/plugin` commands, optional MCP), and nothing checks that they worked.",
         "details": "GitHub issue #256: https://github.com/stephennmiller/taskgraph-ai/issues/256\nThe issue holds the scope and the done criteria, and it wins where this task disagrees.",
         "testStrategy": "",
-        "status": "pending",
+        "status": "done",
         "dependencies": [],
         "priority": "medium",
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-11-06T02:50:59.541Z"
       },
       {
         "id": "9",
@@ -138,10 +138,11 @@
         "description": "Every CI job runs on `ubuntu-latest` with Node 24. But `engines` allows `>=22.13.0`, and the code has Windows-specific paths (`claude.cmd`/`claude.exe` in `src/ai-providers/claude-code.js`, lock files, path guards).",
         "details": "GitHub issue #258: https://github.com/stephennmiller/taskgraph-ai/issues/258\nThe issue holds the scope and the done criteria, and it wins where this task disagrees.",
         "testStrategy": "",
-        "status": "pending",
+        "status": "done",
         "dependencies": [],
         "priority": "medium",
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-11-06T02:50:59.541Z"
       },
       {
         "id": "10",
@@ -210,17 +211,16 @@
         "priority": "medium",
         "subtasks": [
           {
-            "id": 1,
+            "id": "1",
             "title": "Dependencies: add, remove, validate, fix",
             "description": "Move dependency-manager.js into @tm/core, including #214; decide the typing in #290 first.",
             "details": "",
             "status": "done",
             "dependencies": [],
-            "parentTaskId": 14,
             "parentId": "14"
           },
           {
-            "id": 2,
+            "id": "2",
             "title": "remove-task, remove-subtask, clear-subtasks",
             "description": "Move the removal commands into @tm/core.",
             "details": "",
@@ -228,11 +228,10 @@
             "dependencies": [
               "14.1"
             ],
-            "parentTaskId": 14,
             "parentId": "14"
           },
           {
-            "id": 3,
+            "id": "3",
             "title": "add-subtask and move",
             "description": "Move add-subtask and move-task.js into @tm/core.",
             "details": "",
@@ -240,11 +239,10 @@
             "dependencies": [
               "14.2"
             ],
-            "parentTaskId": 14,
             "parentId": "14"
           },
           {
-            "id": 4,
+            "id": "4",
             "title": "Tags",
             "description": "Move tag-management.js into @tm/core, with #221 (create from branch) and #220 (root tsc in CI) as follow-ups.",
             "details": "",
@@ -252,7 +250,6 @@
             "dependencies": [
               "14.3"
             ],
-            "parentTaskId": 14,
             "parentId": "14"
           }
         ]
@@ -323,10 +320,11 @@
         "description": "The knip check from #361 skips unused and duplicate exports in the legacy JS (`scripts/`, `mcp-server/`, `src/`, `tests/`) through `ignoreIssues` in `knip.jsonc`. Unused files and dependencies are still checked there.",
         "details": "GitHub issue #373: https://github.com/stephennmiller/taskgraph-ai/issues/373\nThe issue holds the scope and the done criteria, and it wins where this task disagrees.",
         "testStrategy": "",
-        "status": "pending",
+        "status": "done",
         "dependencies": [],
         "priority": "medium",
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-11-06T02:50:59.541Z"
       },
       {
         "id": "21",
@@ -525,10 +523,11 @@
         "description": "The path guard still lets Claude read kubeconfig.yaml, kubeconfig-prod and similar names, and wrongly refuses a pkg/kubeconfig/ source directory.",
         "details": "GitHub issue #438: https://github.com/stephennmiller/taskgraph-ai/issues/438\nThe issue holds the scope and the done criteria, and it wins where this task disagrees.",
         "testStrategy": "",
-        "status": "pending",
+        "status": "done",
         "dependencies": [],
         "priority": "medium",
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-11-06T02:50:59.541Z"
       },
       {
         "id": "38",
@@ -912,12 +911,12 @@
     "metadata": {
       "created": "2026-10-23T23:05:46.810Z",
       "description": "Tasks for master context",
-      "schemaVersion": 1,
+      "schemaVersion": 2,
       "updated": "2026-10-24T00:05:11.748Z",
       "version": "1.0.0",
-      "lastModified": "2026-10-26T03:01:10.709Z",
-      "taskCount": 68,
-      "completedCount": 60,
+      "lastModified": "2026-11-06T02:50:59.541Z",
+      "taskCount": 69,
+      "completedCount": 67,
       "tags": [
         "master"
       ]
