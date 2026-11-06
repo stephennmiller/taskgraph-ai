@@ -60,7 +60,6 @@ const KEPT_GLOBAL_SETTINGS = [
 	'defaultSubtasks',
 	'defaultPriority',
 	'projectName',
-	'defaultTag',
 	'responseLanguage',
 	'enableCodebaseAnalysis'
 ];

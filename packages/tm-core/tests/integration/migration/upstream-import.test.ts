@@ -146,7 +146,8 @@ describe('importUpstreamProject', () => {
 				'global.anthropicApiKey',
 				'global.ollamaBaseURL',
 				'global.vertexProjectId',
-				'global.userId'
+				'global.userId',
+				'global.defaultTag'
 			])
 		);
 		expect(config.global).toMatchObject({
