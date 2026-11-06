@@ -150,6 +150,28 @@ describe('explainBlockers', () => {
 		]);
 	});
 
+	it('lists a deferred or blocked task with open blockers of its own as stalled too (#1016)', () => {
+		const result = explainBlockers(
+			[
+				task('2'),
+				task('4', ['2'], 'deferred'),
+				task('6', ['2'], 'blocked'),
+				task('5', ['4', '6'])
+			],
+			'5'
+		);
+
+		expect(shape(result.blockers)).toEqual([
+			['4', [['2:ready']]],
+			['6', [['2:ready']]]
+		]);
+		expect(result.rootCauses.map((c) => `${c.id}:${c.kind}`)).toEqual([
+			'2:ready',
+			'4:stalled',
+			'6:stalled'
+		]);
+	});
+
 	it('names in-progress and review dependencies by their own kind, not ready', () => {
 		const result = explainBlockers(
 			[

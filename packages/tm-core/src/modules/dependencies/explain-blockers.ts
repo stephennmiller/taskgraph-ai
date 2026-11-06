@@ -96,7 +96,10 @@ export interface BlockerExplanation {
 	/** True when something unfinished or missing stands in the way */
 	blocked: boolean;
 	blockers: BlockerNode[];
-	/** Where each chain ends, in the order first reached, each once */
+	/**
+	 * Where each chain ends, in the order first reached, each once. A deferred
+	 * or blocked task is listed as `stalled` even when it has blockers of its own
+	 */
 	rootCauses: BlockerRootCause[];
 }
 
@@ -349,12 +352,19 @@ export function explainBlockers(tasks: Task[], id: string): BlockerExplanation {
 
 		const node = frame.node;
 		onPath.delete(node.id);
-		const kind: BlockerKind | undefined = below.length
-			? undefined
-			: (END_KINDS.get(node.status) ?? 'ready');
+		const end = END_KINDS.get(node.status) ?? 'ready';
+		const kind = below.length ? undefined : end;
 		kinds.set(node.id, kind);
-		if (kind) {
-			addCause({ id: node.id, title: node.title, status: node.status, kind });
+		// A deferred or blocked task still needs reopening once its own
+		// blockers are done (#1016)
+		const cause = end === 'stalled' ? end : kind;
+		if (cause) {
+			addCause({
+				id: node.id,
+				title: node.title,
+				status: node.status,
+				kind: cause
+			});
 		}
 		(frame.inherited ? parent.inheritedOut : parent.out).push({
 			id: node.id,
