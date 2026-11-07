@@ -391,7 +391,7 @@ export class ContainerWorkers {
 	 * After the container is gone: fetch the branch, then remove the clone
 	 * unless the fetch failed or the run was stopped. A clone whose `.git`
 	 * can't be made safe loses its `.git`; its files stay. Sets the task's
-	 * commits, kept and (on failure) error.
+	 * commits and (on failure) error.
 	 */
 	async bringBack(
 		task: ParallelTask,
