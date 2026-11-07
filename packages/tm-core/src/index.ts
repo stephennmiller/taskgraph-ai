@@ -143,6 +143,7 @@ export {
 } from './modules/loop/index.js';
 export {
 	DEFAULT_CONTAINER_IMAGE,
+	KEPT_OUTCOMES,
 	MAX_PARALLEL,
 	ParallelLoopError,
 	assertContainerFlags,
@@ -154,6 +155,7 @@ export type {
 	ParallelLoopOptions,
 	ParallelLoopResult,
 	ParallelTask,
+	ParallelTaskOutcome,
 	ParallelTaskState
 } from './modules/loop/index.js';
 

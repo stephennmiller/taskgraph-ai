@@ -193,7 +193,7 @@ describe('loop --parallel', () => {
 		expect(byId['1']).toMatchObject({
 			state: 'done',
 			commits: 1,
-			kept: true,
+			outcome: 'kept',
 			claimed: true,
 			finished: false
 		});
@@ -210,12 +210,12 @@ describe('loop --parallel', () => {
 		expect(byId['2']).toMatchObject({
 			state: 'failed',
 			error: 'exit 1',
-			kept: false,
+			outcome: 'failed',
 			claimed: false
 		});
 		expect(byId['3']).toMatchObject({
 			state: 'done',
-			kept: false,
+			outcome: 'no-changes',
 			finished: false
 		});
 		for (const id of ['2', '3']) {
@@ -241,7 +241,7 @@ describe('loop --parallel', () => {
 
 		expect(first).toMatchObject({
 			state: 'failed',
-			kept: true,
+			outcome: 'released',
 			claimed: false
 		});
 		expect(fs.existsSync(first.worktree)).toBe(true);
@@ -273,7 +273,7 @@ describe('loop --parallel', () => {
 		expect(only).toMatchObject({
 			state: 'failed',
 			uncommitted: true,
-			kept: true,
+			outcome: 'released',
 			claimed: false
 		});
 		expect(only.error).toContain('TASKGRAPH_LOOP_TIMEOUT_MS');
@@ -299,7 +299,7 @@ describe('loop --parallel', () => {
 			state: 'done',
 			commits: 1,
 			uncommitted: false,
-			kept: true,
+			outcome: 'kept',
 			claimed: false,
 			finished: true
 		});
@@ -336,7 +336,7 @@ describe('loop --parallel', () => {
 		});
 
 		const [only] = result.tasks;
-		expect(only).toMatchObject({ id: '5', state: 'done', kept: true });
+		expect(only).toMatchObject({ id: '5', state: 'done', outcome: 'kept' });
 		expect(taskById('5')?.status).toBe('review');
 		expect(readTasks(only.worktree).map((t) => t.id)).not.toContain('5');
 	}, 120_000);
@@ -395,12 +395,12 @@ describe('loop --parallel', () => {
 		const [first, second] = result.tasks;
 		expect(first).toMatchObject({
 			uncommitted: true,
-			kept: true,
+			outcome: 'stopped',
 			claimed: false
 		});
 		expect(fs.existsSync(path.join(first.worktree, 'partial.txt'))).toBe(true);
 		expect(branchExists('taskgraph/task-1')).toBe(true);
-		expect(second).toMatchObject({ kept: false, claimed: false });
+		expect(second).toMatchObject({ outcome: 'no-changes', claimed: false });
 		expect(fs.existsSync(second.worktree)).toBe(false);
 		expect(branchExists('taskgraph/task-2')).toBe(false);
 	}, 60_000);
@@ -526,7 +526,7 @@ describe('loop --parallel', () => {
 			command: fakeClaude()
 		});
 
-		expect(result.tasks[0]).toMatchObject({ state: 'done', kept: true });
+		expect(result.tasks[0]).toMatchObject({ state: 'done', outcome: 'kept' });
 		expect(
 			fs.readFileSync(path.join(root, '.git', 'info', 'exclude'), 'utf8')
 		).toContain('/.taskgraph/worktrees/');

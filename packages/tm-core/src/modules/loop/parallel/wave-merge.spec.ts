@@ -18,7 +18,7 @@ const task = (
 	state: 'done',
 	startedAt: 0,
 	finished: true,
-	kept: true,
+	outcome: 'kept',
 	...fields
 });
 const wave = (
@@ -118,10 +118,10 @@ describe('runMergingWaves', () => {
 		expect(calls.removed).toHaveLength(3);
 		// The third wave found nothing ready
 		expect(result.waves).toBe(3);
-		expect(result.tasks.map((t) => [t.id, t.merged])).toEqual([
-			['1', true],
-			['2', true],
-			['3', true]
+		expect(result.tasks.map((t) => [t.id, t.outcome])).toEqual([
+			['1', 'merged'],
+			['2', 'merged'],
+			['3', 'merged']
 		]);
 	});
 
@@ -149,7 +149,12 @@ describe('runMergingWaves', () => {
 
 	it('never counts a failed wave that committed, only ones that added nothing', async () => {
 		const failing = (commits: number) =>
-			task('9', { state: 'failed', finished: false, commits, kept: true });
+			task('9', {
+				state: 'failed',
+				finished: false,
+				commits,
+				outcome: 'released'
+			});
 		const { calls, deps } = fakeRun([
 			wave([task('1'), failing(1)]),
 			wave([task('2'), failing(2)]),
@@ -167,7 +172,7 @@ describe('runMergingWaves', () => {
 	});
 
 	it('blocks a task with no progress in two waves, but never a claimed one', async () => {
-		const idle = () => task('8', { finished: false, kept: false });
+		const idle = () => task('8', { finished: false, outcome: 'no-changes' });
 		const kept = () => task('7', { finished: false, claimed: true });
 		const { calls, deps } = fakeRun([
 			wave([task('1'), idle(), kept()]),
@@ -196,7 +201,7 @@ describe('runMergingWaves', () => {
 
 	it('marks a finished task with no changes done, so its dependents run next wave (#1013)', async () => {
 		const { calls, deps } = fakeRun([
-			wave([task('2', { kept: false })]),
+			wave([task('2', { outcome: 'no-changes' })]),
 			wave([task('4')])
 		]);
 
@@ -251,9 +256,9 @@ describe('runMergingWaves', () => {
 
 		const result = await runMergingWaves({ parallel: 2 }, deps);
 
-		expect(result.tasks.map((t) => [t.id, t.state, t.merged])).toEqual([
-			['1', 'done', true],
-			['9', 'done', true]
+		expect(result.tasks.map((t) => [t.id, t.state, t.outcome])).toEqual([
+			['1', 'done', 'merged'],
+			['9', 'done', 'merged']
 		]);
 	});
 
@@ -287,7 +292,10 @@ describe('runMergingWaves', () => {
 
 		expect(calls.merged).toEqual(['taskgraph/task-1', 'taskgraph/task-3']);
 		expect(calls.setAside).toEqual(['2']);
-		expect(result.tasks[1].setAsideAs).toBe('taskgraph/task-2-conflict-1');
+		expect(result.tasks[1]).toMatchObject({
+			outcome: 'set-aside',
+			setAsideAs: 'taskgraph/task-2-conflict-1'
+		});
 		// The redo conflicted again, so the run stops on it
 		expect(result.conflictBranch).toBe('taskgraph/task-2');
 		expect(result.waves).toBe(2);
@@ -314,7 +322,7 @@ describe('runMergingWaves', () => {
 					task('1'),
 					task('2'),
 					task('3'),
-					task('4', { kept: false }),
+					task('4', { outcome: 'no-changes' }),
 					task('5', { uncommitted: true }),
 					task('6')
 				])
@@ -330,6 +338,14 @@ describe('runMergingWaves', () => {
 		expect(result.conflictBranch).toBe('taskgraph/task-2');
 		// A second branch that conflicts is reported, not dropped
 		expect(result.unmergedIds).toEqual(['5', '6']);
+		expect(result.tasks.map((t) => t.outcome)).toEqual([
+			'merged',
+			'conflict',
+			'merged',
+			'no-changes',
+			'unmerged',
+			'conflict'
+		]);
 		expect(result.waves).toBe(1);
 	});
 

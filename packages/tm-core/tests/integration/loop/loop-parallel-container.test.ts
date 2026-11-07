@@ -217,7 +217,7 @@ describe('loop --parallel --container', () => {
 		const result = await runParallel();
 
 		expect(result.tasks).toMatchObject([
-			{ id: '1', state: 'done', commits: 1, kept: true, finished: true }
+			{ id: '1', state: 'done', commits: 1, outcome: 'kept', finished: true }
 		]);
 		expect(git(root, 'log', '--format=%s', 'main..taskgraph/task-1')).toBe(
 			'work on 1'
@@ -252,7 +252,10 @@ describe('loop --parallel --container', () => {
 
 		const result = await runParallel();
 
-		expect(result.tasks[0]).toMatchObject({ state: 'failed', kept: true });
+		expect(result.tasks[0]).toMatchObject({
+			state: 'failed',
+			outcome: 'failed-kept'
+		});
 		expect(result.tasks[0].error).toBe(
 			"couldn't bring the branch back (couldn't find remote ref refs/heads/taskgraph/task-1); its clone is kept in .taskgraph/worktrees/task-1"
 		);
@@ -301,7 +304,7 @@ describe('loop --parallel --container', () => {
 
 	it("doesn't count a container's commits as where the last run left the branch", async () => {
 		const first = await runParallel();
-		expect(first.tasks[0]).toMatchObject({ state: 'done', kept: true });
+		expect(first.tasks[0]).toMatchObject({ state: 'done', outcome: 'kept' });
 		const data = JSON.parse(
 			fs.readFileSync(
 				path.join(root, '.taskgraph', 'tasks', 'tasks.json'),
@@ -336,7 +339,10 @@ describe('loop --parallel --container', () => {
 		const result = await running;
 
 		expect(result.aborted).toBe(true);
-		expect(result.tasks[0]).toMatchObject({ state: 'stopped', kept: true });
+		expect(result.tasks[0]).toMatchObject({
+			state: 'stopped',
+			outcome: 'stopped'
+		});
 		expect(dockerCalls()).toContainEqual(['rm', '--force', name]);
 		expect(readTask().status).toBe('pending');
 		expect(fs.readFileSync(path.join(clone, 'wip.txt'), 'utf8')).toBe('wip\n');
@@ -366,7 +372,10 @@ describe('loop --parallel --container', () => {
 			killGraceMs: 60_000
 		});
 
-		expect(result.tasks[0]).toMatchObject({ state: 'failed', kept: true });
+		expect(result.tasks[0]).toMatchObject({
+			state: 'failed',
+			outcome: 'released'
+		});
 		expect(result.tasks[0].error).toContain('TASKGRAPH_LOOP_TIMEOUT_MS');
 		expect(dockerCalls().some(([command]) => command === 'rm')).toBe(true);
 		expect(readTask().status).toBe('pending');
@@ -386,7 +395,10 @@ describe('loop --parallel --container', () => {
 		controller.abort();
 		const result = await running;
 
-		expect(result.tasks[0]).toMatchObject({ state: 'failed', kept: true });
+		expect(result.tasks[0]).toMatchObject({
+			state: 'failed',
+			outcome: 'container-running'
+		});
 		expect(result.tasks[0].error).toBe(
 			`its container may still be running; remove it with docker rm -f ${name}`
 		);
@@ -411,7 +423,10 @@ describe('loop --parallel --container', () => {
 		controller.abort();
 		const result = await running;
 
-		expect(result.tasks[0]).toMatchObject({ state: 'failed', kept: true });
+		expect(result.tasks[0]).toMatchObject({
+			state: 'failed',
+			outcome: 'container-running'
+		});
 		expect(result.tasks[0].error).toBe(
 			`its container may still be running; remove it with docker rm -f ${name}`
 		);
@@ -492,7 +507,7 @@ describe('loop --parallel --container', () => {
 		const result = await runParallel();
 
 		expect(result.tasks).toMatchObject([
-			{ id: '1', state: 'failed', error: 'exit 125', kept: false }
+			{ id: '1', state: 'failed', error: 'exit 125', outcome: 'failed' }
 		]);
 		expect(readTask().status).toBe('pending');
 		expect(fs.existsSync(clone)).toBe(false);

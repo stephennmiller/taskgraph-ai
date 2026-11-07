@@ -12,6 +12,7 @@ export {
 	assertParallelFlags,
 	parseParallelCount
 } from './parallel-plan.js';
+export { KEPT_OUTCOMES, type ParallelTaskOutcome } from './outcome.js';
 export type {
 	ParallelLoopCallbacks,
 	ParallelLoopOptions,

@@ -21,8 +21,10 @@
 
 import path from 'node:path';
 import {
+	KEPT_OUTCOMES,
 	type ParallelLoopResult,
 	type ParallelTask,
+	type ParallelTaskOutcome,
 	stripTerminalControls
 } from '@tm/core';
 import chalk from 'chalk';
@@ -124,31 +126,39 @@ export function formatParallelTaskLines(
 	});
 }
 
-/** What became of one task's worktree, for the summary row */
-function outcome(task: ParallelTask, projectRoot: string): string {
-	if (task.state === 'failed' && !task.kept) {
-		const why = plain(task.error ?? 'failed');
-		return `failed: ${why} ${theme.muted(`· ${rel(projectRoot, task.logFile)}`)}`;
-	}
-	if (task.setAsideAs) {
-		return `conflicted; work kept on ${theme.brand(task.setAsideAs)}, task back to pending`;
-	}
-	if (task.merged) {
-		return `merged ${theme.brand(task.branch)}${task.commits ? ` ${theme.muted(`· ${plural(task.commits, 'commit')}`)}` : ''}`;
-	}
-	if (!task.kept) return theme.muted('no changes; worktree removed');
+/** A kept branch and its work; `failed` adds why it failed, `released` that its claim was freed */
+function branchRow(task: ParallelTask, failed = false, released = false) {
 	const work = [
 		task.commits ? plural(task.commits, 'commit') : null,
 		task.uncommitted ? 'uncommitted changes' : null
 	].filter(Boolean);
-	// Released by the runner: a later run retries it in this worktree
-	const released = task.claimed ? '' : '; worktree kept, claim released';
-	const failed =
-		task.state === 'failed'
-			? ` ${chalk.red(`(failed: ${plain(task.error ?? 'failed')}${released})`)}`
-			: '';
-	return `${theme.brand(task.branch)}${work.length ? ` ${theme.muted(`· ${work.join(', ')}`)}` : ''}${failed}`;
+	const why = failed
+		? ` ${chalk.red(`(failed: ${plain(task.error ?? 'failed')}${released ? '; worktree kept, claim released' : ''})`)}`
+		: '';
+	return `${theme.brand(task.branch)}${work.length ? ` ${theme.muted(`· ${work.join(', ')}`)}` : ''}${why}`;
 }
+
+/** What became of one task's worktree, for the summary row */
+const OUTCOME_TEXT: Record<
+	ParallelTaskOutcome,
+	(task: ParallelTask, projectRoot: string) => string
+> = {
+	failed: (task, projectRoot) =>
+		`failed: ${plain(task.error ?? 'failed')} ${theme.muted(`· ${rel(projectRoot, task.logFile)}`)}`,
+	'set-aside': (task) =>
+		`conflicted; work kept on ${theme.brand(task.setAsideAs ?? task.branch)}, task back to pending`,
+	merged: (task) =>
+		`merged ${theme.brand(task.branch)}${task.commits ? ` ${theme.muted(`· ${plural(task.commits, 'commit')}`)}` : ''}`,
+	'no-changes': () => theme.muted('no changes; worktree removed'),
+	kept: (task) => branchRow(task),
+	stopped: (task) => branchRow(task),
+	conflict: (task) => branchRow(task),
+	unmerged: (task) => branchRow(task),
+	// Released by the runner: a later run retries it in this worktree
+	released: (task) => branchRow(task, true, true),
+	'failed-kept': (task) => branchRow(task, true),
+	'container-running': (task) => branchRow(task, true)
+};
 
 /** The flags a rerun needs to stay in containers and reuse the clones */
 const rerunFlags = (container?: { image?: string }) =>
@@ -188,14 +198,14 @@ export function formatParallelSummary(
 	const idWidth = Math.max(...tasks.map((t) => t.id.length));
 	const rows = tasks.map(
 		(t) =>
-			`  ${theme.brand(t.id.padEnd(idWidth))}  ${outcome(t, projectRoot)}${formatLoopSpend({ model: t.model, effort: t.effort, costUsd: t.costUsd, costUnknown: t.costUnknown, turns: t.turns })}`
+			`  ${theme.brand(t.id.padEnd(idWidth))}  ${OUTCOME_TEXT[t.outcome ?? 'no-changes'](t, projectRoot)}${formatLoopSpend({ model: t.model, effort: t.effort, costUsd: t.costUsd, costUnknown: t.costUnknown, turns: t.turns })}`
 	);
 	const spent = formatLoopSpend({
 		costUsd: result.totalCostUsd,
 		costPartial: result.costPartial
 	});
-	const kept = tasks.filter((t) => t.kept && !t.merged && !t.setAsideAs);
-	const merged = tasks.filter((t) => t.merged).length;
+	const kept = tasks.filter((t) => t.outcome && KEPT_OUTCOMES.has(t.outcome));
+	const merged = tasks.filter((t) => t.outcome === 'merged').length;
 	// Exiting 0 isn't enough: Claude must have marked the task review or done
 	const done = tasks.filter((t) => t.finished).length;
 	const failed = tasks.filter((t) => t.state === 'failed').length;

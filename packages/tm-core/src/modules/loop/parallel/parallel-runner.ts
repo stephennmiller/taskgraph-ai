@@ -50,6 +50,7 @@ import {
 	findResultEvent,
 	hasStreamEvent
 } from '../services/stream-events.js';
+import { settledOutcome } from './outcome.js';
 import { TaskWorktrees } from './task-worktrees.js';
 import {
 	type LoopBand,
@@ -467,12 +468,11 @@ export class ParallelLoopRunner {
 	}
 
 	/**
-	 * After every process is gone: keep worktrees with work, remove the
-	 * empty ones, and release claims on failed tasks and tasks with nothing
-	 * to review (all of them on abort). Claude updates the task in the main
-	 * project (see start), so `claimed` is read back from there: a task Claude marked
-	 * `review` is no longer claimed. With --container, every container is
-	 * removed first, and the work comes back through ContainerWorkers.
+	 * After every process is gone: keep worktrees with work, remove empty
+	 * ones, release claims on failed tasks and tasks with nothing to review
+	 * (all on abort), and set each outcome. `claimed` is read back from the
+	 * main project, which Claude updates (see start). Containers are
+	 * removed first; ContainerWorkers brings their work back.
 	 */
 	private async settle(
 		running: Running[],
@@ -493,16 +493,15 @@ export class ParallelLoopRunner {
 			container,
 			timedOut
 		} of running) {
-			let hasWork = false;
 			const isStuck = !!container && stuck.has(container);
+			let hasWork = isStuck;
+			let kept = isStuck;
 			// Claude failed: free the task so a later run retries it in the kept worktree
 			let releaseClaim = !isStuck && (aborted || task.state === 'failed');
 			if (isStuck) {
 				// It may still be writing to the clone: leave the clone and claim
 				task.state = 'failed';
 				task.error = `its container may still be running; remove it with docker rm -f ${container}`;
-				task.kept = true;
-				hasWork = true;
 			} else if (workers && hasWorktree) {
 				// Read before bringBack removes the copy; applied only if the
 				// branch came back, so a failed task doesn't leave `review`
@@ -514,7 +513,7 @@ export class ParallelLoopRunner {
 					// Killed, so its uncommitted work was never committed: keep the clone
 					aborted || !!timedOut
 				);
-				hasWork = back.hasWork;
+				kept = hasWork = back.hasWork;
 				// The work is only in the clone: keep the claim so no other run starts over
 				if (!back.fetched) releaseClaim = aborted;
 				if (back.fetched && status) {
@@ -525,11 +524,9 @@ export class ParallelLoopRunner {
 				task.commits = work.commits;
 				task.uncommitted = work.uncommitted;
 				hasWork = work.commits > 0 || work.uncommitted;
-				task.kept = hasWork
-					? true
-					: !(await git.remove(task.worktree, task.branch, createdBranch));
-			} else {
-				task.kept = false;
+				kept =
+					hasWork ||
+					!(await git.remove(task.worktree, task.branch, createdBranch));
 			}
 			// A container's commits weren't made here: note only that its branch is gone
 			if (hasWorktree && !(workers && (await git.branchExists(task.branch)))) {
@@ -541,6 +538,7 @@ export class ParallelLoopRunner {
 			task.claimed = await this.isClaimed(task.id, tag, claimant);
 			task.status = await this.statusOf(task.id, tag);
 			task.finished = task.state === 'done' && isFinishedStatus(task.status);
+			task.outcome = settledOutcome(task.state, kept, !!task.claimed, isStuck);
 		}
 	}
 
