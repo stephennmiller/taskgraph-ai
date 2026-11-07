@@ -39,7 +39,6 @@ import type { TaskService } from './task-service.js';
 import {
 	aiDependencies,
 	keepDoneSubtasks,
-	keepStatus,
 	mergeRewrite,
 	promptView,
 	removedError,
@@ -240,7 +239,6 @@ export class UpdateTaskService {
 		const { updated, relabel } = this.rewrite(
 			stored,
 			response.mainResult?.task,
-			prompt,
 			metadata,
 			warn,
 			debug
@@ -296,7 +294,7 @@ export class UpdateTaskService {
 
 	/**
 	 * The AI's rewrite of `stored`, ready to save: its ID and status kept
-	 * (status unless the prompt mentions it), each subtask under the ID of
+	 * (status changes only through set-status, #1031), each subtask under the ID of
 	 * the stored one it matches (see rewriteSubtasks), done subtasks restored,
 	 * and every field the AI left out or nulled kept. `relabel` gives a copy of
 	 * the task as saved since with a subtask added during the call moved off
@@ -305,7 +303,6 @@ export class UpdateTaskService {
 	private rewrite(
 		stored: Task,
 		aiTask: any,
-		prompt: string,
 		metadata: Record<string, unknown> | undefined,
 		warn: (message: string) => void,
 		debug: (message: string) => void
@@ -328,18 +325,13 @@ export class UpdateTaskService {
 			debug(`AI changed task ID. Restoring original ID ${stored.id}.`);
 		}
 		updated.id = stored.id;
-		keepStatus(stored, updated, prompt, warn);
+		updated.status = stored.status;
 		const original = stored.subtasks ?? [];
 		let relabel = (task: Task) => task;
 		if (Array.isArray(updated.subtasks)) {
 			// Matched subtasks keep their stored IDs, so dependencies on them from
 			// other tasks still name them (#804); new ones get the next free ID
-			const { subtasks, newIds } = rewriteSubtasks(
-				stored,
-				updated.subtasks,
-				prompt,
-				warn
-			);
+			const { subtasks, newIds } = rewriteSubtasks(stored, updated.subtasks);
 			updated.subtasks = subtasks;
 			const ids = subtasks.map((st) => st.id);
 			// A subtask added during the call under an ID a new one took moves on
@@ -472,7 +464,7 @@ export class UpdateTaskService {
 			}
 			rewritten.set(String(task.id), {
 				stored: task,
-				updated: this.rewriteOne(task, ai, prompt, (message) =>
+				updated: this.rewriteOne(task, ai, (message) =>
 					warn(`Task ${task.id}: ${message}`)
 				)
 			});
@@ -512,12 +504,11 @@ export class UpdateTaskService {
 
 	/**
 	 * One task of an `update --from` reply merged onto the stored task, with
-	 * its status (unless the prompt mentions it) and done subtasks kept
+	 * its status and done subtasks kept
 	 */
 	private rewriteOne(
 		task: Task,
 		ai: any,
-		prompt: string,
 		warn: (message: string) => void
 	): Task {
 		const merged = keepStoredFields(
@@ -535,7 +526,7 @@ export class UpdateTaskService {
 				// No subtasks back is the AI leaving them out (#863)
 				subtasks:
 					Array.isArray(ai.subtasks) && ai.subtasks.length > 0
-						? rewriteSubtasks(task, ai.subtasks, prompt, warn).subtasks
+						? rewriteSubtasks(task, ai.subtasks).subtasks
 						: null
 			},
 			task
@@ -545,7 +536,7 @@ export class UpdateTaskService {
 		if (Array.isArray(merged.subtasks) && task.subtasks?.length) {
 			merged.subtasks = keepDoneSubtasks(task.subtasks, merged.subtasks, warn);
 		}
-		keepStatus(task, merged, prompt, warn);
+		merged.status = task.status;
 		return merged;
 	}
 

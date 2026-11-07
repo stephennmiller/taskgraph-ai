@@ -483,7 +483,7 @@ describe('AI-written subtask dependencies that loop through the parent', () => {
 	);
 
 	it.each(['update-task', 'update --from'])(
-		"%s keeps each matched subtask's stored status unless the prompt asks for a status change (#872)",
+		"%s keeps each matched subtask's stored status, even when the prompt mentions status (#872, #1031)",
 		async (via) => {
 			const statuses = ['in-progress', 'review', 'blocked', 'pending'];
 			write(
@@ -496,7 +496,7 @@ describe('AI-written subtask dependencies that loop through the parent', () => {
 					})) as never
 				)
 			);
-			// The AI can write only pending or done
+			// Off-schema: the AI schema has no status
 			const aiTask = {
 				...task('1'),
 				subtasks: ['pending', 'done', 'pending', 'done'].map((status, i) => ({
@@ -511,13 +511,11 @@ describe('AI-written subtask dependencies that loop through the parent', () => {
 			const warnings = await rewrite(via, aiTask);
 
 			expect(savedStatuses()).toEqual(statuses);
-			expect(warnings.join('\n')).toContain(
-				"AI changed subtask 1.1 status. Restoring original status 'in-progress'."
-			);
+			expect(warnings.join('\n')).not.toContain('status');
 
-			await rewrite(via, aiTask, () => {}, 'Set the status of 1.4 to done');
+			await rewrite(via, aiTask, () => {}, 'Return 404 status codes');
 
-			expect(savedStatuses()).toEqual(['pending', 'done', 'pending', 'done']);
+			expect(savedStatuses()).toEqual(statuses);
 		}
 	);
 

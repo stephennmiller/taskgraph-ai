@@ -229,9 +229,9 @@ describe('tasks.updateFrom', () => {
 		]);
 	});
 
-	it('keeps the status unless the prompt mentions it, and done subtasks', async () => {
+	it('keeps the stored status even when the prompt mentions status, and done subtasks (#1031)', async () => {
 		const done = { id: 1, title: 'Shipped', status: 'done', dependencies: [] };
-		write([stored('2', { subtasks: [done] })]);
+		write([stored('2', { status: 'review', subtasks: [done] })]);
 		answer(
 			fromAi(2, {
 				status: 'done',
@@ -241,15 +241,14 @@ describe('tasks.updateFrom', () => {
 		const warnings: string[] = [];
 
 		await tmCore.tasks.updateFrom(
-			{ from: 2, prompt: 'New direction' },
+			{ from: 2, prompt: 'Return 404 status codes' },
 			{ onWarning: (m) => warnings.push(m) }
 		);
 
-		expect(savedTasks()[0].status).toBe('pending');
+		expect(savedTasks()[0].status).toBe('review');
 		expect(savedTasks()[0].subtasks).toMatchObject([{ ...done, id: '1' }]);
 		expect(warnings).toEqual([
-			'Task 2: Completed subtask 1 was modified or removed. Restoring.',
-			"Task 2: AI changed task status. Restoring original status 'pending'."
+			'Task 2: Completed subtask 1 was modified or removed. Restoring.'
 		]);
 	});
 
