@@ -8,6 +8,7 @@ import {
 	type TaskChecklist,
 	type TaskStatus,
 	type TmCore,
+	TASK_STATUSES,
 	createTmCore,
 	getUncheckedCriteria,
 	neutralizeTaskData,
@@ -26,19 +27,6 @@ import {
 import { displayError, printError } from '../utils/error-handler.js';
 import { jsonOption, printJson } from '../utils/json-output.js';
 import { getProjectRoot } from '../utils/project-root.js';
-
-/**
- * Valid task status values for validation
- */
-const VALID_TASK_STATUSES: TaskStatus[] = [
-	'pending',
-	'in-progress',
-	'done',
-	'deferred',
-	'cancelled',
-	'blocked',
-	'review'
-];
 
 /**
  * Options interface for the set-status command
@@ -108,7 +96,7 @@ export class SetStatusCommand extends Command {
 				'[id]',
 				'Task ID(s) - comma-separated for multiple (e.g., 1 or 1,1.1,2)'
 			)
-			.argument('[status]', `Status - ${VALID_TASK_STATUSES.join(', ')}`)
+			.argument('[status]', `Status - ${TASK_STATUSES.join(', ')}`)
 			.option('-i, --id <id>', 'Task ID(s) (fallback if not using positional)')
 			.option(
 				'-s, --status <status>',
@@ -196,10 +184,10 @@ export class SetStatusCommand extends Command {
 			}
 
 			// Validate status
-			if (options.status && !VALID_TASK_STATUSES.includes(options.status)) {
+			if (options.status && !TASK_STATUSES.includes(options.status)) {
 				printError(
 					`"${options.status}" isn't a status`,
-					`Use one of: ${VALID_TASK_STATUSES.join(', ')}`
+					`Use one of: ${TASK_STATUSES.join(', ')}`
 				);
 				process.exit(1);
 			}

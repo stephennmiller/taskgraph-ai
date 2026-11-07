@@ -11,6 +11,7 @@
  * container-workers.ts).
  */
 
+import { statusesWhere } from '../../../common/constants/index.js';
 import type { TaskStatus } from '../../../common/types/index.js';
 import { PROJECT_ROOT_ENV } from '../../../common/utils/project-root-finder.js';
 import { ParallelLoopError } from './parallel-plan.js';
@@ -27,7 +28,7 @@ const TOKEN_VARS = ['CLAUDE_CODE_OAUTH_TOKEN', 'ANTHROPIC_API_KEY'];
  * The statuses a worker may give its task. Not `done`: the work is on an
  * unmerged branch, and `done` would let dependent tasks start without it.
  */
-const IMPORTABLE_STATUSES: readonly TaskStatus[] = ['review', 'blocked'];
+const IMPORTABLE_STATUSES = statusesWhere('importable');
 
 /** The worker's tasks.json is read back only up to this size */
 export const MAX_IMPORTED_TASKS_BYTES = 32 * 1024 * 1024;

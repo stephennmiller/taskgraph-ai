@@ -27,6 +27,7 @@ import {
 	TaskGraphError
 } from '../../../common/errors/taskgraph-error.js';
 import { getLogger } from '../../../common/logger/factory.js';
+import { TASK_STATUSES } from '../../../common/constants/index.js';
 
 /**
  * Result returned by getTaskList
@@ -313,17 +314,7 @@ export class TaskReader {
 		};
 
 		// Initialize all statuses
-		const allStatuses: TaskStatus[] = [
-			'pending',
-			'in-progress',
-			'done',
-			'deferred',
-			'cancelled',
-			'blocked',
-			'review'
-		];
-
-		allStatuses.forEach((status) => {
+		TASK_STATUSES.forEach((status) => {
 			stats.byStatus[status] = 0;
 		});
 

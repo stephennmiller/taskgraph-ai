@@ -2,6 +2,7 @@
  * @fileoverview Task entity with business rules and domain logic
  */
 
+import { TASK_STATUSES } from '../../../common/constants/index.js';
 import {
 	ERROR_CODES,
 	TaskGraphError
@@ -125,15 +126,7 @@ export class TaskEntity implements Task {
 	 * Check if status is valid
 	 */
 	private isValidStatus(status: any): status is TaskStatus {
-		return [
-			'pending',
-			'in-progress',
-			'done',
-			'deferred',
-			'cancelled',
-			'blocked',
-			'review'
-		].includes(status);
+		return TASK_STATUSES.includes(status);
 	}
 
 	/**
@@ -141,50 +134,6 @@ export class TaskEntity implements Task {
 	 */
 	private isValidPriority(priority: any): priority is TaskPriority {
 		return ['low', 'medium', 'high', 'critical'].includes(priority);
-	}
-
-	/**
-	 * Check if task can be marked as complete
-	 */
-	canComplete(): boolean {
-		// Cannot complete if status is already done or cancelled
-		if (this.status === 'done' || this.status === 'cancelled') {
-			return false;
-		}
-
-		// Cannot complete if blocked
-		if (this.status === 'blocked') {
-			return false;
-		}
-
-		// Check if all subtasks are complete
-		const allSubtasksComplete = this.subtasks.every(
-			(subtask) => subtask.status === 'done' || subtask.status === 'cancelled'
-		);
-
-		return allSubtasksComplete;
-	}
-
-	/**
-	 * Mark task as complete
-	 */
-	markAsComplete(): void {
-		if (!this.canComplete()) {
-			throw new TaskGraphError(
-				'Task cannot be marked as complete',
-				ERROR_CODES.TASK_STATUS_ERROR,
-				{
-					taskId: this.id,
-					currentStatus: this.status,
-					hasIncompleteSubtasks: this.subtasks.some(
-						(s) => s.status !== 'done' && s.status !== 'cancelled'
-					)
-				}
-			);
-		}
-
-		this.status = 'done';
-		this.updatedAt = new Date().toISOString();
 	}
 
 	/**
@@ -211,29 +160,6 @@ export class TaskEntity implements Task {
 			id: String(nextId),
 			parentId: this.id
 		});
-		this.updatedAt = new Date().toISOString();
-	}
-
-	/**
-	 * Update task status
-	 */
-	updateStatus(newStatus: TaskStatus): void {
-		if (!this.isValidStatus(newStatus)) {
-			throw new TaskGraphError(
-				`Invalid status: ${newStatus}`,
-				ERROR_CODES.VALIDATION_ERROR
-			);
-		}
-
-		// Business rule: Cannot move from done to pending
-		if (this.status === 'done' && newStatus === 'pending') {
-			throw new TaskGraphError(
-				'Cannot move completed task back to pending',
-				ERROR_CODES.TASK_STATUS_ERROR
-			);
-		}
-
-		this.status = newStatus;
 		this.updatedAt = new Date().toISOString();
 	}
 

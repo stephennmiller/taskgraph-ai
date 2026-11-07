@@ -3,6 +3,7 @@
  * issue-renderer.ts writes)
  */
 
+import { statusesWhere } from '../../../common/constants/index.js';
 import type { TaskStatus } from '../../../common/types/index.js';
 import { normalizeTaskStatus } from '../../tasks/utils/legacy-status.js';
 import type { RemoteIssue } from '../types.js';
@@ -10,13 +11,7 @@ import type { RemoteIssue } from '../types.js';
 const STATUS_LABEL_PREFIX = 'taskgraph:status/';
 
 /** Statuses the renderer puts on an open issue as a label */
-const OPEN_STATUSES: readonly TaskStatus[] = [
-	'pending',
-	'in-progress',
-	'deferred',
-	'blocked',
-	'review'
-];
+const OPEN_STATUSES = statusesWhere('open');
 
 /**
  * Whether two statuses match. A link's lastPushedStatus is stored as pushed,

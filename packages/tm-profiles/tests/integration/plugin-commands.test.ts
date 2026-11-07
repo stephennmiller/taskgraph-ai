@@ -140,16 +140,17 @@ describe('status commands', () => {
 	});
 
 	it('set-status lists every status the CLI accepts', () => {
+		// The CLI accepts TASK_STATUSES, the keys of this table
 		const source = readFileSync(
-			join(repoRoot, 'apps/cli/src/commands/set-status.command.ts'),
+			join(repoRoot, 'packages/tm-core/src/common/constants/index.ts'),
 			'utf-8'
 		);
-		const list = source.match(
-			/VALID_TASK_STATUSES: TaskStatus\[\] = \[([^\]]*)\]/
+		const table = source.match(
+			/TASK_STATUS_MEANINGS = \{\n([\s\S]*?)\n\} as const/
 		);
-		const statuses = [...(list?.[1] ?? '').matchAll(/'([a-z-]+)'/g)].map(
-			(match) => match[1]
-		);
+		const statuses = [
+			...(table?.[1] ?? '').matchAll(/^\t'?([a-z-]+)'?: \{/gm)
+		].map((match) => match[1]);
 
 		expect(statuses.length).toBeGreaterThan(5);
 		for (const status of statuses) {

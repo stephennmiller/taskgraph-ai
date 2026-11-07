@@ -98,9 +98,9 @@ describe('TaskEntity', () => {
 			const entity = new TaskEntity({
 				...createMinimalTask(),
 				id: 7,
+				status: 'in-progress',
 				dependencies: [3 as unknown as string]
 			});
-			entity.updateStatus('in-progress');
 
 			const json = entity.toJSON();
 
