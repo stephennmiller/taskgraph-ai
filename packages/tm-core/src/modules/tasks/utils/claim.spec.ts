@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Task } from '../../../common/types/index.js';
+import { setTaskStatusIn } from '../../storage/adapters/file-storage/task-updates.js';
 import { claimNextInTasks, resolveClaimant, withoutClaim } from './claim.js';
 
 const task = (id: string, fields: Partial<Task> = {}): Task => ({
@@ -94,6 +95,64 @@ describe('claimNextInTasks', () => {
 
 		expect(claimNextInTasks(tasks, 'bob')?.claim.task.id).toBe('2');
 		expect(claimNextInTasks(tasks, 'alice')?.claim.task.id).toBe('1.1');
+	});
+
+	it('lets others take the subtasks once the claimant moves the task on (#1034)', () => {
+		const tasks = [
+			task('7', {
+				status: 'in-progress',
+				metadata: { claimedBy: 'alice', claimedAt: 'then' },
+				subtasks: [
+					{
+						id: '1',
+						parentId: '7',
+						title: 'Sub',
+						description: '',
+						status: 'pending',
+						dependencies: [],
+						details: '',
+						testStrategy: '',
+						priority: 'medium'
+					}
+				]
+			})
+		];
+
+		// A stuck loop blocks it, then someone starts it again by hand
+		const blocked = setTaskStatusIn(tasks, '7', 'blocked', {}).tasks ?? [];
+		const restarted =
+			setTaskStatusIn(blocked, '7', 'in-progress', {}).tasks ?? [];
+
+		expect(blocked[0].metadata).toBeUndefined();
+		expect(claimNextInTasks(restarted, 'bob')?.claim.task.id).toBe('7.1');
+	});
+
+	it('starts a pending parent before claiming its subtasks (#1034)', () => {
+		const tasks = [
+			task('5', {
+				subtasks: [
+					{
+						id: '1',
+						parentId: '5',
+						title: 'Sub',
+						description: '',
+						status: 'pending',
+						dependencies: [],
+						details: '',
+						testStrategy: '',
+						priority: 'medium'
+					}
+				]
+			})
+		];
+
+		const first = claimNextInTasks(tasks, 'alice');
+		const second = claimNextInTasks(first?.tasks ?? [], 'alice');
+
+		expect(first?.claim.task.id).toBe('5');
+		expect(second?.claim.task.id).toBe('5.1');
+		expect(second?.tasks[0].status).toBe('in-progress');
+		expect(second?.tasks[0].subtasks[0].status).toBe('in-progress');
 	});
 
 	it('picks only from the given task IDs, never a subtask', () => {

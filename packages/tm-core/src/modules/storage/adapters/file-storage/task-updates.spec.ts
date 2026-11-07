@@ -63,6 +63,16 @@ describe('setTaskStatusIn parent auto-status', () => {
 		expect(tasks?.[0].status).toBe('done');
 	});
 
+	it('drops the claim on a parent its subtasks finish (#1034)', () => {
+		const [claimed] = parent('in-progress', 'done');
+		const tasks = [{ ...claimed, metadata: { claimedBy: 'alice' } }];
+
+		const { tasks: updated } = setTaskStatusIn(tasks, '1.2', 'done', {});
+
+		expect(updated?.[0].status).toBe('done');
+		expect(updated?.[0].metadata).toBeUndefined();
+	});
+
 	it('leaves the parent as it was when every subtask is cancelled', () => {
 		const { tasks } = setTaskStatusIn(
 			parent('pending', 'cancelled'),

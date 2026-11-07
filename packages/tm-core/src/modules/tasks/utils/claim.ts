@@ -3,8 +3,9 @@
  * sessions working the same tasks never get the same one.
  *
  * A claim sets the task (or subtask) `in-progress` and records who took it
- * and when in its metadata, under `claimedBy` and `claimedAt`. Setting the
- * task back to `pending` clears both.
+ * and when in its metadata, under `claimedBy` and `claimedAt`. Moving the
+ * task out of `in-progress` (back to pending, or on to review, blocked, done)
+ * clears both.
  */
 
 import os from 'node:os';
@@ -66,11 +67,11 @@ function withMetadata<T extends { metadata?: Record<string, unknown> }>(
 	return (metadata ? { ...rest, metadata } : rest) as T;
 }
 
-/** Back to pending means nobody is working on it: drop the claim */
-export function releaseClaimIfPending<
+/** Out of in-progress means the claimant stopped working on it: drop the claim */
+export function releaseClaimUnlessInProgress<
 	T extends { metadata?: Record<string, unknown> }
 >(item: T, status: TaskStatus): T {
-	if (status !== 'pending') return item;
+	if (status === 'in-progress') return item;
 	const metadata = withoutClaim(item.metadata);
 	return metadata === item.metadata ? item : withMetadata(item, metadata);
 }
