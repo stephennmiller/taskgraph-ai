@@ -122,7 +122,7 @@ describe('loop --parallel --merge', () => {
 		expect(fs.existsSync(path.join(root, 'work-1.txt'))).toBe(false);
 		// The work is still in its worktree
 		const one = result.tasks.find((t) => t.id === '1');
-		expect(one?.merged).toBeUndefined();
+		expect(one?.outcome).not.toBe('merged');
 		expect(fs.existsSync(path.join(one?.worktree ?? '', 'work-1.txt'))).toBe(
 			true
 		);

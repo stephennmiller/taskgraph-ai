@@ -425,7 +425,6 @@ export class ContainerWorkers {
 				await this.git.deleteBranch(task.branch);
 			}
 		}
-		task.kept = task.commits > 0 || keepClone;
-		return { fetched, hasWork: task.kept };
+		return { fetched, hasWork: task.commits > 0 || keepClone };
 	}
 }

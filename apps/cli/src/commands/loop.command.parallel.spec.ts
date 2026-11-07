@@ -25,6 +25,7 @@ vi.mock('@tm/core', async (importOriginal) => {
 		assertParallelFlags: actual.assertParallelFlags,
 		assertContainerFlags: actual.assertContainerFlags,
 		DEFAULT_CONTAINER_IMAGE: actual.DEFAULT_CONTAINER_IMAGE,
+		KEPT_OUTCOMES: actual.KEPT_OUTCOMES,
 		parseParallelCount: actual.parseParallelCount,
 		parseLoopCaps: actual.parseLoopCaps,
 		parseLoopModel: actual.parseLoopModel,
@@ -63,7 +64,7 @@ describe('LoopCommand --parallel', () => {
 				durationMs: 1000,
 				commits: 2,
 				uncommitted: false,
-				kept: true,
+				outcome: 'kept',
 				claimed: false,
 				finished: true
 			}
@@ -234,7 +235,7 @@ describe('LoopCommand --parallel', () => {
 						...parallelResult().tasks[0],
 						state: 'failed',
 						error: 'exit 1',
-						kept: false
+						outcome: 'failed'
 					}
 				]
 			})

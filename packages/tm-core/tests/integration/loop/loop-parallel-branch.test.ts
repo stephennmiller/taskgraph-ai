@@ -130,20 +130,32 @@ describe('loop --parallel with an existing task branch', () => {
 		const [first] = (
 			await tmCore.loop.runParallel({ ...options, claimant: 'a' })
 		).tasks;
-		expect(first).toMatchObject({ state: 'failed', commits: 1, kept: true });
+		expect(first).toMatchObject({
+			state: 'failed',
+			commits: 1,
+			outcome: 'released'
+		});
 
 		// The kept worktree is picked up again, Claude's commit and all
 		const [second] = (
 			await tmCore.loop.runParallel({ ...options, claimant: 'b' })
 		).tasks;
-		expect(second).toMatchObject({ error: 'exit 1', commits: 1, kept: true });
+		expect(second).toMatchObject({
+			error: 'exit 1',
+			commits: 1,
+			outcome: 'released'
+		});
 
 		// Still where the last run left it after main moves on
 		commitFile(root, 'src/main.ts');
 		const [third] = (
 			await tmCore.loop.runParallel({ ...options, claimant: 'c' })
 		).tasks;
-		expect(third).toMatchObject({ error: 'exit 1', commits: 1, kept: true });
+		expect(third).toMatchObject({
+			error: 'exit 1',
+			commits: 1,
+			outcome: 'released'
+		});
 
 		commitFile(third.worktree, 'src/app.ts');
 		const [fourth] = (
@@ -192,9 +204,9 @@ describe('loop --parallel with an existing task branch', () => {
 
 		const { tasks } = await tmCore.loop.runParallel(options('a'));
 
-		expect(tasks.map((t) => [t.id, t.state, t.kept])).toEqual([
-			['1', 'done', false],
-			['2', 'done', false]
+		expect(tasks.map((t) => [t.id, t.state, t.outcome])).toEqual([
+			['1', 'done', 'no-changes'],
+			['2', 'done', 'no-changes']
 		]);
 		for (const t of tasks) expect(fs.existsSync(t.worktree)).toBe(false);
 		expect(taskById('1')?.status).toBe('pending');
@@ -214,7 +226,7 @@ describe('loop --parallel with an existing task branch', () => {
 
 		const [result] = (await tmCore.loop.runParallel(options('a'))).tasks;
 
-		expect(result).toMatchObject({ state: 'done', kept: false });
+		expect(result).toMatchObject({ state: 'done', outcome: 'no-changes' });
 		expect(fs.existsSync(marker)).toBe(false);
 	}, 60_000);
 });

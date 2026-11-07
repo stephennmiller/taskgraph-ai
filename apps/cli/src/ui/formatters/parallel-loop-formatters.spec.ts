@@ -66,7 +66,13 @@ describe('task text', () => {
 		expect(line).not.toMatch(/[\x00-\x1f]/);
 
 		const out = summary(
-			result([task('2', { state: 'failed', error: 'bad\x1b[1A\x1b[2Kref' })])
+			result([
+				task('2', {
+					state: 'failed',
+					error: 'bad\x1b[1A\x1b[2Kref',
+					outcome: 'failed'
+				})
+			])
 		);
 		expect(out).toContain('failed: badref');
 		expect(out).not.toContain('\x1b');
@@ -104,9 +110,9 @@ describe('formatParallelSummary', () => {
 	it('leads with the result, one row per task, and one next step', () => {
 		const out = summary(
 			result([
-				task('1', { commits: 2, kept: true, finished: true }),
-				task('2', { kept: false, finished: true }),
-				task('3', { state: 'failed', error: 'exit 1', kept: false })
+				task('1', { commits: 2, outcome: 'kept', finished: true }),
+				task('2', { outcome: 'no-changes', finished: true }),
+				task('3', { state: 'failed', error: 'exit 1', outcome: 'failed' })
 			])
 		);
 
@@ -121,7 +127,7 @@ describe('formatParallelSummary', () => {
 
 	it('names the tasks held back because they edit the same files (#952)', () => {
 		const out = summary(
-			result([task('1', { commits: 1, kept: true, finished: true })], {
+			result([task('1', { commits: 1, outcome: 'kept', finished: true })], {
 				heldBackIds: ['2', '4']
 			})
 		);
@@ -138,12 +144,12 @@ describe('formatParallelSummary', () => {
 				[
 					task('1', {
 						commits: 1,
-						kept: true,
+						outcome: 'kept',
 						finished: true,
 						costUsd: 0.72,
 						turns: 31
 					}),
-					task('2', { kept: false })
+					task('2', { outcome: 'no-changes' })
 				],
 				{ totalCostUsd: 0.72 }
 			)
@@ -160,8 +166,13 @@ describe('formatParallelSummary', () => {
 		const out = summary(
 			result(
 				[
-					task('1', { commits: 1, kept: true, finished: true, costUsd: 0.72 }),
-					task('2', { kept: false, costUnknown: true })
+					task('1', {
+						commits: 1,
+						outcome: 'kept',
+						finished: true,
+						costUsd: 0.72
+					}),
+					task('2', { outcome: 'no-changes', costUnknown: true })
 				],
 				{ totalCostUsd: 0.72, costPartial: true }
 			)
@@ -177,8 +188,8 @@ describe('formatParallelSummary', () => {
 	it('says "branches" for more than one kept branch', () => {
 		const out = summary(
 			result([
-				task('1', { commits: 1, kept: true, finished: true }),
-				task('2', { commits: 1, kept: true, finished: true })
+				task('1', { commits: 1, outcome: 'kept', finished: true }),
+				task('2', { commits: 1, outcome: 'kept', finished: true })
 			])
 		);
 
@@ -186,9 +197,7 @@ describe('formatParallelSummary', () => {
 	});
 
 	it("doesn't count a task Claude left unmarked as done", () => {
-		const out = summary(
-			result([task('1', { commits: 1, kept: true, claimed: true })])
-		);
+		const out = summary(result([task('1', { commits: 1, outcome: 'kept' })]));
 
 		expect(out).toContain('✗ 0 of 1 task done · 1 branch to review');
 	});
@@ -200,7 +209,7 @@ describe('formatParallelSummary', () => {
 					state: 'failed',
 					error: 'exit 2',
 					uncommitted: true,
-					kept: true
+					outcome: 'released'
 				})
 			])
 		);
@@ -218,8 +227,7 @@ describe('formatParallelSummary', () => {
 					state: 'failed',
 					error: 'stuck',
 					commits: 1,
-					kept: true,
-					claimed: true
+					outcome: 'failed-kept'
 				})
 			])
 		);
@@ -231,8 +239,12 @@ describe('formatParallelSummary', () => {
 		const out = summary(
 			result(
 				[
-					task('1', { state: 'stopped', uncommitted: true, kept: true }),
-					task('2', { state: 'stopped', kept: false })
+					task('1', {
+						state: 'stopped',
+						uncommitted: true,
+						outcome: 'stopped'
+					}),
+					task('2', { state: 'stopped', outcome: 'no-changes' })
 				],
 				{ aborted: true }
 			)
@@ -247,9 +259,12 @@ describe('formatParallelSummary', () => {
 	});
 
 	it('on abort keeps --container in the resume command, so the rerun reuses the clones', () => {
-		const aborted = result([task('1', { state: 'stopped', kept: true })], {
-			aborted: true
-		});
+		const aborted = result(
+			[task('1', { state: 'stopped', outcome: 'stopped' })],
+			{
+				aborted: true
+			}
+		);
 		const resume = (container: { image?: string }) =>
 			strip(
 				formatParallelSummary(aborted, {
@@ -271,8 +286,8 @@ describe('formatParallelSummary', () => {
 		const out = summary(
 			result(
 				[
-					task('1', { finished: true, kept: true, merged: true, commits: 2 }),
-					task('2', { finished: true, kept: true, merged: true, commits: 1 })
+					task('1', { finished: true, outcome: 'merged', commits: 2 }),
+					task('2', { finished: true, outcome: 'merged', commits: 1 })
 				],
 				{ waves: 2 }
 			)
@@ -289,11 +304,11 @@ describe('formatParallelSummary', () => {
 		const out = summary(
 			result(
 				[
-					task('1', { finished: true, kept: true, merged: true, commits: 1 }),
-					task('2', { finished: true, kept: true, commits: 1 }),
+					task('1', { finished: true, outcome: 'merged', commits: 1 }),
+					task('2', { finished: true, outcome: 'conflict', commits: 1 }),
 					task('3', {
 						finished: true,
-						kept: true,
+						outcome: 'set-aside',
 						setAsideAs: 'taskgraph/task-3-conflict-1'
 					})
 				],
@@ -314,15 +329,15 @@ describe('formatParallelSummary', () => {
 		const out = summary(
 			result(
 				[
-					task('1', { finished: true, kept: true, uncommitted: true }),
+					task('1', { finished: true, outcome: 'unmerged', uncommitted: true }),
 					task('2', {
 						state: 'failed',
 						error: 'exit 1',
-						kept: true,
+						outcome: 'released',
 						commits: 1,
 						status: 'review'
 					}),
-					task('3', { finished: true, kept: true, commits: 1 })
+					task('3', { finished: true, outcome: 'conflict', commits: 1 })
 				],
 				{ waves: 1, unmergedIds: ['1', '2', '3'] }
 			)
@@ -338,8 +353,8 @@ describe('formatParallelSummary', () => {
 		const out = summary(
 			result(
 				[
-					task('1', { finished: true, kept: true, merged: true, commits: 1 }),
-					task('9', { state: 'failed', error: 'exit 1' })
+					task('1', { finished: true, outcome: 'merged', commits: 1 }),
+					task('9', { state: 'failed', error: 'exit 1', outcome: 'failed' })
 				],
 				{ waves: 3, setAside: [{ id: '9', reason }] }
 			)
@@ -357,8 +372,8 @@ describe('formatParallelSummary', () => {
 		const out = summary(
 			result(
 				[
-					task('1', { finished: true, kept: true, commits: 1 }),
-					task('9', { state: 'failed', error: 'exit 1' })
+					task('1', { finished: true, outcome: 'kept', commits: 1 }),
+					task('9', { state: 'failed', error: 'exit 1', outcome: 'failed' })
 				],
 				{ waves: 3, setAside: [{ id: '9', reason }] }
 			)
@@ -380,7 +395,7 @@ describe('formatParallelSummary', () => {
 
 	it('fits 80 columns for typical output', () => {
 		const out = summary(
-			result([task('100', { commits: 12, uncommitted: true, kept: true })])
+			result([task('100', { commits: 12, uncommitted: true, outcome: 'kept' })])
 		);
 		for (const line of out.split('\n')) {
 			expect(line.length).toBeLessThanOrEqual(80);

@@ -111,7 +111,7 @@ export async function runMergingWaves(
 		// a set-aside one stays, as it names the branch its work was kept on
 		const ran = new Set(wave.tasks.map((t) => t.id));
 		total.tasks = [
-			...total.tasks.filter((t) => t.setAsideAs || !ran.has(t.id)),
+			...total.tasks.filter((t) => t.outcome === 'set-aside' || !ran.has(t.id)),
 			...wave.tasks
 		];
 		total.skippedIds = wave.skippedIds;
@@ -138,11 +138,13 @@ export async function runMergingWaves(
 				(task.finished && task.uncommitted) ||
 				(task.state === 'failed' && isFinishedStatus(task.status))
 			) {
+				// A failed one keeps the outcome that says what became of its worktree
+				if (task.state !== 'failed') task.outcome = 'unmerged';
 				unmerged.push(task.id);
 				continue;
 			}
 			if (!task.finished) continue;
-			if (!task.kept) {
+			if (task.outcome === 'no-changes') {
 				// No changes, so nothing to merge: done, so its dependents run
 				merged++;
 				await deps.markDone(task.id).catch(() => notDone.push(task.id));
@@ -152,6 +154,7 @@ export async function runMergingWaves(
 				(await deps.merge(task.branch)) || (await resolveAndMerge(task));
 			if (resolved === 'uncommitted') {
 				task.uncommitted = true;
+				task.outcome = 'unmerged';
 				unmerged.push(task.id);
 				continue;
 			}
@@ -161,15 +164,17 @@ export async function runMergingWaves(
 					(await deps.setAside(task.id, task.worktree, task.branch));
 				// The run stops after this wave, but the rest of it still merges (#1025)
 				if (!kept) {
+					task.outcome = 'conflict';
 					if (total.conflictBranch) unmerged.push(task.id);
 					else total.conflictBranch = task.branch;
 					continue;
 				}
 				conflicted.add(task.id);
+				task.outcome = 'set-aside';
 				task.setAsideAs = kept;
 				continue;
 			}
-			task.merged = true;
+			task.outcome = 'merged';
 			merged++;
 			await deps.remove(task.worktree, task.branch);
 			await deps.markDone(task.id).catch(() => notDone.push(task.id));

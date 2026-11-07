@@ -6,6 +6,7 @@ import type { ChildProcess, SpawnOptions } from 'node:child_process';
 import type { TaskStatus } from '../../../common/types/index.js';
 import type { ModelChoice } from '../model-bands.js';
 import type { SetAsideTask } from '../types.js';
+import type { ParallelTaskOutcome } from './outcome.js';
 
 /** Starts one Claude Code process; `child_process.spawn` by default */
 type AgentSpawner = (
@@ -53,11 +54,9 @@ export interface ParallelTask extends ModelChoice {
 	commits?: number;
 	/** Uncommitted changes left in the worktree (set at the end) */
 	uncommitted?: boolean;
-	/** The worktree and branch were kept for review (set at the end) */
-	kept?: boolean;
-	/** --merge: its branch was merged into the current branch, and the worktree removed */
-	merged?: boolean;
-	/** --merge: its branch conflicted, so its work was kept under this name and the task redone */
+	/** How the run ended for it (set at the end) */
+	outcome?: ParallelTaskOutcome;
+	/** --merge: the branch its work was kept under, with outcome `set-aside` */
 	setAsideAs?: string;
 	/** The task is still claimed (in-progress) after the run (set at the end) */
 	claimed?: boolean;
