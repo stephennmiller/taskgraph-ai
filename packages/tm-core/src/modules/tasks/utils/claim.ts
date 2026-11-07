@@ -3,8 +3,9 @@
  * sessions working the same tasks never get the same one.
  *
  * A claim sets the task (or subtask) `in-progress` and records who took it
- * and when in its metadata, under `claimedBy` and `claimedAt`. Setting the
- * task back to `pending` clears both.
+ * and when in its metadata, under `claimedBy` and `claimedAt`. A move that
+ * gives the work up (pending, blocked, deferred) clears both; done, review
+ * and cancelled keep them as a record of who did it.
  */
 
 import os from 'node:os';
@@ -66,11 +67,17 @@ function withMetadata<T extends { metadata?: Record<string, unknown> }>(
 	return (metadata ? { ...rest, metadata } : rest) as T;
 }
 
-/** Back to pending means nobody is working on it: drop the claim */
-export function releaseClaimIfPending<
+const GIVEN_UP: ReadonlySet<TaskStatus> = new Set([
+	'pending',
+	'blocked',
+	'deferred'
+]);
+
+/** Pending, blocked or deferred means nobody is working on it: drop the claim */
+export function releaseClaimIfGivenUp<
 	T extends { metadata?: Record<string, unknown> }
 >(item: T, status: TaskStatus): T {
-	if (status !== 'pending') return item;
+	if (!GIVEN_UP.has(status)) return item;
 	const metadata = withoutClaim(item.metadata);
 	return metadata === item.metadata ? item : withMetadata(item, metadata);
 }
