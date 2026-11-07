@@ -6,7 +6,8 @@
 import type { Task, TaskStatus } from '../../../common/types/index.js';
 import {
 	TASK_STATUSES,
-	assertTaskStatus
+	assertTaskStatus,
+	statusesWhere
 } from '../../../common/constants/index.js';
 import { getLogger } from '../../../common/logger/index.js';
 import {
@@ -28,11 +29,7 @@ export type TaskWithBlocks = Task & { blocks: string[] };
  * Statuses that are actionable (not deferred, blocked, or terminal)
  * Tasks with these statuses can be worked on when dependencies are satisfied
  */
-export const ACTIONABLE_STATUSES: readonly TaskStatus[] = [
-	'pending',
-	'in-progress',
-	'review'
-] as const;
+export const ACTIONABLE_STATUSES = statusesWhere('actionable');
 
 /**
  * Invalid dependency reference (task depends on non-existent task)

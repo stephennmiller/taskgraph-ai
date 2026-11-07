@@ -2,6 +2,9 @@
  * Core type definitions for TaskGraph
  */
 
+// constants imports this file for types only, so this is no runtime cycle
+import { TASK_STATUSES } from '../constants/index.js';
+
 // ============================================================================
 // Type Literals
 // ============================================================================
@@ -275,18 +278,7 @@ export interface TaskSortOptions {
  * Type guard to check if a value is a valid TaskStatus
  */
 export function isTaskStatus(value: unknown): value is TaskStatus {
-	return (
-		typeof value === 'string' &&
-		[
-			'pending',
-			'in-progress',
-			'done',
-			'deferred',
-			'cancelled',
-			'blocked',
-			'review'
-		].includes(value)
-	);
+	return TASK_STATUSES.includes(value as TaskStatus);
 }
 
 /**

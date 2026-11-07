@@ -14,7 +14,8 @@ import {
 	ERROR_CODES,
 	TaskGraphError
 } from '../../../common/errors/taskgraph-error.js';
-import type { Task } from '../../../common/types/index.js';
+import { statusesWhere } from '../../../common/constants/index.js';
+import type { Task, TaskStatus } from '../../../common/types/index.js';
 import {
 	TASK_DATA_TAG,
 	neutralizeTag
@@ -48,7 +49,7 @@ import { TAG_NAME_PATTERN } from '../utils/tag-names.js';
 /** How many related tasks go into the prompt's project context */
 const MAX_RELATED_TASKS = 10;
 
-const ACTIVE_STATUSES = ['pending', 'blocked', 'in-progress'];
+const ACTIVE_STATUSES = statusesWhere('active');
 
 /** Longest expansionPrompt saved to the report; expand reads it as a suggestion */
 const MAX_EXPANSION_PROMPT_LENGTH = 1000;
@@ -329,7 +330,9 @@ export class AnalyzeComplexityService {
 		}
 
 		const isActive = (task: Task) =>
-			ACTIVE_STATUSES.includes(task.status?.toLowerCase() || 'pending');
+			ACTIVE_STATUSES.includes(
+				(task.status?.toLowerCase() || 'pending') as TaskStatus
+			);
 		// IDs are numbers here (readStoredTasks), compared as the legacy command did
 		const idOf = (task: Task) => task.id as unknown as number;
 		const first = fromId ?? 1;

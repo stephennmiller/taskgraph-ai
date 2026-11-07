@@ -4,7 +4,8 @@
  * and the legacy scripts so the CLI, MCP and list view never disagree.
  */
 
-import type { Task } from '../../../common/types/index.js';
+import { statusesWhere } from '../../../common/constants/index.js';
+import type { Task, TaskStatus } from '../../../common/types/index.js';
 import {
 	blockedCount,
 	blockedWithinTask,
@@ -38,6 +39,7 @@ export function selectNextTask(
 	return rankNextTasks(tasks, options)[0] ?? null;
 }
 
+const PICKABLE_STATUSES = statusesWhere('pickable');
 /**
  * Every eligible item in `next` order: subtasks of in-progress tasks first,
  * then top-level tasks, each group ranked as selectNextTask describes. The
@@ -49,8 +51,8 @@ export function rankNextTasks(
 	options: SelectNextTaskOptions = {}
 ): Task[] {
 	const pickable = (status: string) =>
-		status === 'pending' ||
-		(status === 'in-progress' && !options.unstartedOnly);
+		PICKABLE_STATUSES.includes(status as TaskStatus) &&
+		!(options.unstartedOnly && status === 'in-progress');
 	const graph = buildDependencyGraph(tasks);
 	const blockedCounts = blockedCount(tasks, graph);
 	const blocks = (task: Task) => blockedCounts.get(String(task.id)) ?? 0;

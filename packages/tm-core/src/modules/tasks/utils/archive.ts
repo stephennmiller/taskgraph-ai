@@ -17,6 +17,7 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
+import { isTaskComplete } from '../../../common/constants/index.js';
 import type { Task } from '../../../common/types/index.js';
 import { resolveSubtaskDependency } from '../../dependencies/subtask-dependency.js';
 import { FileOperations } from '../../storage/adapters/file-storage/file-operations.js';
@@ -49,11 +50,6 @@ export type ArchiveData = Record<string, ArchiveTagData>;
 /** The archive file that goes with a tasks file */
 export function archivePathFor(tasksPath: string): string {
 	return path.join(path.dirname(tasksPath), ARCHIVE_FILE_NAME);
-}
-
-/** Whether a status means the work is over */
-function isFinishedStatus(status: string | undefined): boolean {
-	return status === 'done' || status === 'cancelled';
 }
 
 /**
@@ -92,7 +88,7 @@ export function selectArchivable(
 	for (const task of tasks) {
 		const changed = lastChangedAt(task);
 		if (
-			isFinishedStatus(task.status) &&
+			isTaskComplete(task.status) &&
 			(changed === null || changed <= cutoff)
 		) {
 			archive.push(task);

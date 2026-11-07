@@ -32,18 +32,104 @@ export const TASKGRAPH_PACKAGE = `${PACKAGE_NAME}@${TASKGRAPH_VERSION}`;
  */
 export const NODE_VERSION_RANGE: string = packageJson.engines?.node ?? '';
 
+/** What a status means to each part of TaskGraph; one row per TaskStatus */
+interface TaskStatusMeaning {
+	/** Finished: satisfies dependencies, counts toward completion, never picked by `next` */
+	complete: boolean;
+	/** `next` may pick it (in-progress only without `unstartedOnly`) */
+	pickable: boolean;
+	/** Kept by the actionable list filter: can be worked on once dependencies are met */
+	actionable: boolean;
+	/** A loop run counts a move to this status as the task completed (#812) */
+	finished: boolean;
+	/** analyze-complexity scores tasks in this status */
+	active: boolean;
+	/** The GitHub issue stays open, with this status as a label */
+	open: boolean;
+	/** A parallel container worker may hand its task back in this status; not done, the work is unmerged */
+	importable: boolean;
+}
+
+/** Every status and what it means. Key order is TASK_STATUSES order. */
+export const TASK_STATUS_MEANINGS = {
+	pending: {
+		complete: false,
+		pickable: true,
+		actionable: true,
+		finished: false,
+		active: true,
+		open: true,
+		importable: false
+	},
+	'in-progress': {
+		complete: false,
+		pickable: true,
+		actionable: true,
+		finished: false,
+		active: true,
+		open: true,
+		importable: false
+	},
+	done: {
+		complete: true,
+		pickable: false,
+		actionable: false,
+		finished: true,
+		active: false,
+		open: false,
+		importable: false
+	},
+	deferred: {
+		complete: false,
+		pickable: false,
+		actionable: false,
+		finished: false,
+		active: false,
+		open: true,
+		importable: false
+	},
+	cancelled: {
+		complete: true,
+		pickable: false,
+		actionable: false,
+		finished: false,
+		active: false,
+		open: false,
+		importable: false
+	},
+	blocked: {
+		complete: false,
+		pickable: false,
+		actionable: false,
+		finished: false,
+		active: true,
+		open: true,
+		importable: true
+	},
+	review: {
+		complete: false,
+		pickable: false,
+		actionable: true,
+		finished: true,
+		active: false,
+		open: true,
+		importable: true
+	}
+} as const satisfies Record<TaskStatus, TaskStatusMeaning>;
+
 /**
  * Valid task status values
  */
-export const TASK_STATUSES: readonly TaskStatus[] = [
-	'pending',
-	'in-progress',
-	'done',
-	'deferred',
-	'cancelled',
-	'blocked',
-	'review'
-] as const;
+export const TASK_STATUSES = Object.keys(
+	TASK_STATUS_MEANINGS
+) as readonly TaskStatus[];
+
+/** The statuses whose row has `meaning` set, in TASK_STATUSES order */
+export function statusesWhere(
+	meaning: keyof TaskStatusMeaning
+): readonly TaskStatus[] {
+	return TASK_STATUSES.filter((s) => TASK_STATUS_MEANINGS[s][meaning]);
+}
 
 /**
  * Throws a VALIDATION_ERROR unless `status` is one of TASK_STATUSES.
@@ -70,10 +156,7 @@ export function assertTaskStatus(
  * - Should be considered satisfied for dependency resolution
  * - Should not be selected as "next task"
  */
-export const TERMINAL_COMPLETE_STATUSES: readonly TaskStatus[] = [
-	'done',
-	'cancelled'
-] as const;
+export const TERMINAL_COMPLETE_STATUSES = statusesWhere('complete');
 
 /**
  * Check if a task status represents a terminal complete state
