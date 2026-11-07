@@ -21,7 +21,7 @@ import type {
 	TaskStatus
 } from '../../../../common/types/index.js';
 import { archiveTag, nextTaskId } from '../../../tasks/utils/archive.js';
-import { releaseClaimUnlessInProgress } from '../../../tasks/utils/claim.js';
+import { releaseClaimIfGivenUp } from '../../../tasks/utils/claim.js';
 
 type Outcome<R> = { tasks: Task[] | null; result: R };
 
@@ -117,7 +117,7 @@ export function setTaskStatusIn(
 	}
 
 	const updated = [...tasks];
-	updated[taskIndex] = releaseClaimUnlessInProgress(
+	updated[taskIndex] = releaseClaimIfGivenUp(
 		{
 			...tasks[taskIndex],
 			status: newStatus,
@@ -203,7 +203,7 @@ function setSubtaskStatusIn(
 	const now = new Date().toISOString();
 
 	// Update the subtask status
-	parentTask.subtasks[subtaskIndex] = releaseClaimUnlessInProgress(
+	parentTask.subtasks[subtaskIndex] = releaseClaimIfGivenUp(
 		{
 			...parentTask.subtasks[subtaskIndex],
 			status: newStatus,
@@ -239,7 +239,7 @@ function setSubtaskStatusIn(
 	const updated = [...tasks];
 	updated[parentTaskIndex] =
 		parentNewStatus !== parentTask.status
-			? releaseClaimUnlessInProgress(
+			? releaseClaimIfGivenUp(
 					{ ...parentTask, status: parentNewStatus, updatedAt: now },
 					parentNewStatus
 				)
