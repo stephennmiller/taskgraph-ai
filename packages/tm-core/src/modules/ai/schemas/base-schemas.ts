@@ -15,15 +15,13 @@ import { z } from 'zod';
  * from all AI schemas. This ensures AI operations cannot overwrite user metadata.
  * When tasks are updated via AI, the spread operator preserves existing metadata
  * since AI responses won't include a metadata field.
+ *
+ * `status` is accepted but ignored: it changes only through set-status, which
+ * runs the checklist gate and the parent recompute (#1031). The update prompts
+ * show the stored status, so a model may echo it, and `.strict()` would fail
+ * the whole update on that key.
  */
-const TaskStatusSchema = z.enum([
-	'pending',
-	'in-progress',
-	'blocked',
-	'done',
-	'cancelled',
-	'deferred'
-]);
+const IgnoredStatusSchema = z.string().nullish();
 
 /**
  * Acceptance criteria the AI writes for a generated task or subtask: short,
@@ -45,7 +43,7 @@ export const BaseTaskSchema = z
 		id: z.number().int().positive(),
 		title: z.string().min(1).max(200),
 		description: z.string().min(1),
-		status: TaskStatusSchema,
+		status: IgnoredStatusSchema,
 		dependencies: z.array(z.union([z.number().int().positive(), z.string()])),
 		priority: z.enum(['low', 'medium', 'high', 'critical']).nullable(),
 		details: z.string().nullable(),
@@ -71,7 +69,7 @@ export const SubtaskSchema = z
 		description: z.string().min(10),
 		dependencies: z.array(SubtaskDependencySchema),
 		details: z.string().min(20),
-		status: z.enum(['pending', 'done']),
+		status: IgnoredStatusSchema,
 		testStrategy: z.string().nullable()
 	})
 	.strict();

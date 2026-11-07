@@ -283,21 +283,14 @@ describe('tasks.updateWithPrompt', () => {
 		);
 	});
 
-	it('keeps the status unless the prompt mentions it', async () => {
+	it('keeps the stored status even when the prompt mentions status (#1031)', async () => {
+		write(stored({ status: 'review' }));
+		// The schema accepts an echoed status; the rewrite ignores it
 		answer(fromAi({ status: 'done' }));
-		const warnings: string[] = [];
 
-		await tmCore.tasks.updateWithPrompt(
-			{ id: '1', prompt: 'Rewrite it' },
-			{ onWarning: (m) => warnings.push(m) }
-		);
-		expect(saved().status).toBe('pending');
-		expect(warnings).toEqual([
-			"AI changed task status. Restoring original status 'pending'."
-		]);
+		await update({ prompt: 'Return 404 status codes' });
 
-		await update({ prompt: 'Set the status to in-progress' });
-		expect(saved().status).toBe('done');
+		expect(saved().status).toBe('review');
 	});
 
 	it('keeps related and discovered-from links, which --metadata cannot replace', async () => {

@@ -148,10 +148,12 @@ describe('expand-task prompt template', () => {
 			expect(item.properties.status.enum).toEqual(['pending', 'done']);
 		});
 
-		test('update schemas still require status', () => {
-			expect(
-				SubtaskSchema.safeParse({ ...subtask, status: undefined }).success
-			).toBe(false);
+		test('update schemas accept an echoed status, which the rewrite ignores (#1031)', () => {
+			for (const status of ['review', null, undefined]) {
+				expect(SubtaskSchema.safeParse({ ...subtask, status }).success).toBe(
+					true
+				);
+			}
 		});
 
 		test('update keeps the shared subtask schema without criteria', () => {
