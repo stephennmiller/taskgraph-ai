@@ -496,7 +496,7 @@ describe('AI-written subtask dependencies that loop through the parent', () => {
 					})) as never
 				)
 			);
-			// Off-schema: the AI schema has no status
+			// The schema accepts an echoed status; the rewrite ignores it
 			const aiTask = {
 				...task('1'),
 				subtasks: ['pending', 'done', 'pending', 'done'].map((status, i) => ({

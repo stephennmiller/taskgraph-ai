@@ -285,7 +285,7 @@ describe('tasks.updateWithPrompt', () => {
 
 	it('keeps the stored status even when the prompt mentions status (#1031)', async () => {
 		write(stored({ status: 'review' }));
-		// Off-schema: the AI schema has no status
+		// The schema accepts an echoed status; the rewrite ignores it
 		answer(fromAi({ status: 'done' }));
 
 		await update({ prompt: 'Return 404 status codes' });
