@@ -44,6 +44,8 @@ regression test.
 ## Checks
 
 CI runs these on every PR. Run the ones your change touches before you push.
+Claude Code agents can run them without a permission prompt:
+`.claude/settings.json` allows these and other read-only dev commands.
 
 - `npm run format-check`: Biome formatting (`npm run format` fixes it).
 - `npm run turbo:typecheck`: types in every workspace.

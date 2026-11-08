@@ -1,0 +1,31 @@
+{
+	"permissions": {
+		"allow": [
+			"Bash(npm run build)",
+			"Bash(npm run turbo:typecheck)",
+			"Bash(npm run typecheck:root)",
+			"Bash(npm run format-check)",
+			"Bash(npm run format)",
+			"Bash(npm run knip)",
+			"Bash(npm test)",
+			"Bash(npm test:*)",
+			"Bash(npm run test:*)",
+			"Bash(npm run test:coverage *)",
+			"Bash(npx vitest:*)",
+			"Bash(bin/agent-cli --help)",
+			"Bash(bin/agent-cli ready:*)",
+			"Bash(bin/agent-cli conflicts:*)",
+			"Bash(bin/agent-cli attribution:*)",
+			"Bash(taskgraph --help)",
+			"Bash(taskgraph prime:*)",
+			"Bash(taskgraph next)",
+			"Bash(taskgraph next --json)",
+			"Bash(taskgraph list:*)",
+			"Bash(taskgraph show:*)",
+			"Bash(taskgraph graph:*)",
+			"Bash(taskgraph why:*)",
+			"Bash(git status:*)",
+			"Bash(git worktree list:*)"
+		]
+	}
+}
