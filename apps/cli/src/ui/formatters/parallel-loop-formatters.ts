@@ -266,6 +266,7 @@ export function formatParallelSummary(
 	return [
 		lead,
 		...rows,
+		...(result.errorMessage ? [chalk.red(result.errorMessage)] : []),
 		...(held ? [held] : []),
 		...(notDone ? [notDone] : []),
 		...(unmerged ? [unmerged] : []),

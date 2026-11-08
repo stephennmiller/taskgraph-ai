@@ -53,4 +53,29 @@ describe('resolveConflict', () => {
 			});
 		}
 	);
+
+	it.skipIf(process.platform === 'win32')(
+		'stops Claude Code when the run is aborted (#1039)',
+		async () => {
+			const file = path.join(dir, 'claude');
+			fs.writeFileSync(file, '#!/bin/sh\nexec sleep 30\n');
+			fs.chmodSync(file, 0o755);
+			const controller = new AbortController();
+			const started = Date.now();
+
+			const resolving = resolveConflict({
+				projectRoot: dir,
+				worktree: dir,
+				branch: 'taskgraph/task-2',
+				commit: 'abc123',
+				command: file,
+				maxBudgetUsd: 1.5,
+				signal: controller.signal
+			});
+			controller.abort();
+
+			expect(await resolving).toEqual({ ok: false, costUsd: 1.5 });
+			expect(Date.now() - started).toBeLessThan(10_000);
+		}
+	);
 });

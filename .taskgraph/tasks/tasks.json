@@ -906,6 +906,78 @@
         "priority": "medium",
         "subtasks": [],
         "updatedAt": "2026-10-31T15:00:00.000Z"
+      },
+      {
+        "id": "70",
+        "title": "loop --parallel --merge keeps going after its approval is withdrawn or the run is aborted (#1039)",
+        "description": "Re-check trust before each wave and stop on abort before each merge or resolver session.",
+        "details": "",
+        "testStrategy": "",
+        "status": "done",
+        "dependencies": [],
+        "priority": "high",
+        "subtasks": [],
+        "createdAt": "2026-11-08T02:28:44.982Z"
+      },
+      {
+        "id": "71",
+        "title": "A removed task's ID is reused, so stale edits, merges and GitHub links land on the new task (#1040)",
+        "description": "Keep a per-tag highestId high-water mark so removed IDs are never handed out again.",
+        "details": "",
+        "testStrategy": "",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "high",
+        "subtasks": [],
+        "createdAt": "2026-11-08T02:28:45.151Z"
+      },
+      {
+        "id": "72",
+        "title": "A push interrupted after creating issues makes the next pull reopen done tasks (#1041)",
+        "description": "Record the status GitHub holds after pass 1, not the task status.",
+        "details": "",
+        "testStrategy": "",
+        "status": "done",
+        "dependencies": [],
+        "priority": "high",
+        "subtasks": [],
+        "createdAt": "2026-11-08T02:28:45.287Z"
+      },
+      {
+        "id": "73",
+        "title": "Adding, moving or removing subtasks leaves the parent's status wrong, hiding work from next and the loop (#1042)",
+        "description": "Run the parent status rule after every subtask writer; leave review parents alone.",
+        "details": "",
+        "testStrategy": "",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "medium",
+        "subtasks": [],
+        "createdAt": "2026-11-08T02:28:45.439Z"
+      },
+      {
+        "id": "74",
+        "title": "Converting between task and subtask drops acceptance criteria, and add-subtask can nest subtasks two deep (#1043)",
+        "description": "Keep all fields on conversion; refuse add-subtask --task-id of a task with subtasks.",
+        "details": "",
+        "testStrategy": "",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "medium",
+        "subtasks": [],
+        "createdAt": "2026-11-08T02:28:45.603Z"
+      },
+      {
+        "id": "75",
+        "title": "Claims outlive a killed loop --parallel, and next hands out tasks another run has claimed (#1044)",
+        "description": "Record pid and host with a claim, reclaim dead claims, and make next skip live foreign claims.",
+        "details": "",
+        "testStrategy": "",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "medium",
+        "subtasks": [],
+        "createdAt": "2026-11-08T02:28:45.763Z"
       }
     ],
     "metadata": {
@@ -914,8 +986,8 @@
       "schemaVersion": 2,
       "updated": "2026-10-24T00:05:11.748Z",
       "version": "1.0.0",
-      "lastModified": "2026-11-06T02:50:59.541Z",
-      "taskCount": 69,
+      "lastModified": "2026-11-08T02:28:45.763Z",
+      "taskCount": 75,
       "completedCount": 67,
       "tags": [
         "master"
