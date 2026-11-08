@@ -4,6 +4,7 @@
  *   Task 2  Email and password sign-in with sessions
  *   ▶ in-progress · high priority · complexity 7 (high) · depends on 1
  *   related to 4 · discovered from 3
+ *   3 loop iterations · $1.24 · 12m 5s
  *   From docs/prd.md#authentication
  *
  *   Let people create an account with an email and password, sign in, and
@@ -61,6 +62,7 @@ import {
 } from './markdown-formatters.js';
 import { getPriorityWithColor } from './priority-formatters.js';
 import { getStatusWithColor } from './status-formatters.js';
+import { formatLoopSpend } from './usage-formatters.js';
 
 /** Text wraps at the terminal width, but no wider than this */
 const MAX_WIDTH = 100;
@@ -196,6 +198,15 @@ function facts(task: Task | Subtask, width: number): string[] {
 		parts.push(theme.accent(task.skills.join(', ')));
 	}
 	return joinFacts(parts, width);
+}
+
+/** `3 loop iterations · $1.24 · 12m 5s`: what loop runs spent on it, if any */
+function spendLine(task: Task | Subtask): string[] {
+	const { usd, durationMs, iterations } = task.spend ?? {};
+	// A hand edit can leave anything here
+	if (![usd, durationMs, iterations].every(Number.isFinite)) return [];
+	const runs = `${iterations} loop ${iterations === 1 ? 'iteration' : 'iterations'}`;
+	return [theme.muted(runs) + formatLoopSpend({ costUsd: usd, durationMs })];
 }
 
 /** `From docs/prd.md#authentication`: the PRD section parse-prd made it from */
@@ -383,6 +394,7 @@ export function formatTaskDetail(
 	sections.push([
 		...header(label, task.title, width),
 		...facts(task, width),
+		...spendLine(task),
 		...(options.prdSection ? [] : sourceLine(task, width))
 	]);
 

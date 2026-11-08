@@ -102,6 +102,46 @@ describe('LoopService cost and caps', () => {
 		}
 	);
 
+	it("adds each iteration's cost and time to the task it started on, and only once Claude Code ran", async () => {
+		spawn.mockImplementation(spends(0.4, 3));
+		const recordSpend = vi.fn().mockRejectedValueOnce(new Error('locked'));
+		const onError = vi.fn();
+		const ready = ['7.2', '8'];
+		service = new LoopService({
+			projectRoot: '/test/project',
+			findReadyTask: async () => ready.shift(),
+			recordSpend
+		});
+
+		await service.run(
+			config({ iterations: 2, tag: 'feat', callbacks: { onError } })
+		);
+
+		const run = { usd: 0.4, durationMs: expect.any(Number) };
+		expect(recordSpend.mock.calls).toEqual([
+			['7.2', run, 'feat'],
+			['8', run, 'feat']
+		]);
+		// A failed write warns and the run goes on
+		expect(onError).toHaveBeenCalledWith(
+			"Couldn't add the iteration's spend to task 7.2: locked",
+			'warning'
+		);
+
+		// Claude Code never started: nothing to add
+		recordSpend.mockClear();
+		spawn.mockImplementation(
+			() =>
+				fakeClaude({
+					error: Object.assign(new Error('spawn claude ENOENT'), {
+						code: 'ENOENT'
+					})
+				}) as never
+		);
+		await service.run(config({ taskId: '3' }));
+		expect(recordSpend).not.toHaveBeenCalled();
+	});
+
 	it("quiet mode doesn't print the JSON events of a run that died before its result event", async () => {
 		const events = streamJson({ result: 'x' }).split('\n')[0];
 		spawn.mockImplementation(

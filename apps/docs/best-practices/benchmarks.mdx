@@ -180,3 +180,25 @@ files. One run per row, on a different day from the uninterrupted runs.
   about 30% cheaper than plain [after an interruption](#interrupted-at-8-minutes).
 - On independent parts, `loop --parallel --merge` came within a case of plain
   subagents, at twice the cost and four times the time.
+
+## When to use it
+
+What you get over plain Claude Code:
+
+- **A plan on disk.** Tasks, dependencies and progress notes live in
+  `.taskgraph/tasks/tasks.json`, so you can read, edit and review them like
+  code.
+- **Clean resume.** After an interruption `taskgraph loop` picks up from the
+  task statuses and comes close to its uninterrupted score.
+- **A dependency graph you can inspect.** `taskgraph next` shows the first
+  unblocked task, `graph` draws the tree and `why 7` says what blocks task 7.
+- **Unattended parallel builds.** `loop --parallel --merge` runs independent
+  tasks side by side and merges each wave itself.
+
+What it costs: no better scores, more money and time with one task per
+session (Shell and jq together scored 79/87 for $7.52 in 48 minutes, against
+80/87 for $4.61 in 37 minutes for plain), and slower parallel builds.
+
+Use TaskGraph when a build is long enough that you will stop and resume it,
+or when you want the plan and its progress kept in the repo. For a build that
+fits in one sitting, plain Claude Code is cheaper and just as good.

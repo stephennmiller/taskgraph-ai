@@ -1,21 +1,23 @@
-import { execFileSync } from 'child_process';
-import fs from 'fs';
-import os from 'os';
-import path from 'path';
-import { fileURLToPath } from 'url';
-import { vi } from 'vitest';
+import { execFileSync } from 'node:child_process';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
+import { getCliBinPath, RM_OPTS } from '../helpers/test-utils.js';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const binPath = path.join(__dirname, '..', '..', '..', 'dist', 'taskgraph.js');
+const binPath = getCliBinPath();
 
 // Each case runs the built CLI in a throwaway project
 vi.setConfig({ testTimeout: 60000, hookTimeout: 60000 });
 
 describe("a project's .env", () => {
-	let dir;
-	const env = { ...process.env, TASKGRAPH_SKIP_AUTO_UPDATE: '1' };
+	let dir: string;
+	const env: NodeJS.ProcessEnv = {
+		...process.env,
+		TASKGRAPH_SKIP_AUTO_UPDATE: '1'
+	};
 	delete env.TASKGRAPH_PROJECT_ROOT;
-	const run = (...args) =>
+	const run = (...args: string[]) =>
 		execFileSync('node', [binPath, ...args], {
 			cwd: dir,
 			encoding: 'utf8',
@@ -45,7 +47,7 @@ describe("a project's .env", () => {
 		);
 	});
 
-	afterEach(() => fs.rmSync(dir, { recursive: true, force: true }));
+	afterEach(() => fs.rmSync(dir, RM_OPTS));
 
 	// A cloned repo's .env must not reach process.env, which TaskGraph and the
 	// Claude Code subprocess read

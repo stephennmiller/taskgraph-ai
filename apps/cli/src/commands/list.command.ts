@@ -4,13 +4,9 @@
  */
 
 import {
-	buildBlocksMap,
 	createTmCore,
-	filterBlockingTasks,
-	filterByAssignee,
-	filterBySearch,
-	filterByStatus,
 	filterReadyTasks,
+	filterTaskList,
 	formatTaskData,
 	neutralizeTaskData,
 	sanitizeForTerminal,
@@ -20,6 +16,7 @@ import {
 	STATUS_ICONS,
 	type TmCore,
 	type WatchSubscription,
+	withBlocks,
 	withFullSubtaskIds
 } from '@tm/core';
 import chalk from 'chalk';
@@ -261,36 +258,18 @@ export class ListTasksCommand extends Command {
 			includeSubtasks: true
 		});
 
-		// Build blocks map and enrich tasks with blocks field. Dependencies on
-		// archived tasks count as done, not as missing
+		// Dependencies on archived tasks count as done, not as missing
 		const archivedIds = await this.tmCore.tasks.getArchivedIds(options.tag);
-		const { blocksMap, invalidDependencies } = buildBlocksMap(
+		const { tasks, invalidDependencies } = withBlocks(
 			result.tasks,
 			archivedIds
 		);
 		this.displayInvalidDependencyWarnings(invalidDependencies, options.tag);
-		const enrichedTasks = result.tasks.map((task) => ({
-			...task,
-			blocks: blocksMap.get(String(task.id)) || []
-		}));
-
-		// Apply ready/blocking filters (with full task context), then status
-		let filteredTasks = enrichedTasks;
-
-		if (options.ready) {
-			filteredTasks = filterReadyTasks(filteredTasks, archivedIds);
-		}
-
-		if (options.blocking) {
-			filteredTasks = filterBlockingTasks(filteredTasks);
-		}
-
-		filteredTasks = filterByStatus(filteredTasks, options.status);
-		filteredTasks = filterByAssignee(filteredTasks, await this.mine(options));
-		filteredTasks = filterBySearch(filteredTasks, options.search);
-		if (!options.withSubtasks) {
-			filteredTasks = filteredTasks.map((task) => ({ ...task, subtasks: [] }));
-		}
+		const filteredTasks = filterTaskList(tasks, {
+			...options,
+			archivedIds,
+			assignee: await this.mine(options)
+		});
 
 		// The recommendation comes from tm-core so it matches `taskgraph next`.
 		// It may be a subtask (`2.2`), which isn't a row of the task list, so
@@ -343,25 +322,18 @@ export class ListTasksCommand extends Command {
 				// Track total count before any filtering (consistent with getTasks)
 				totalTaskCount += result.tasks.length;
 
-				// Build blocks map for this tag's tasks
 				const archivedIds = await this.tmCore.tasks.getArchivedIds(tagName);
-				const { blocksMap, invalidDependencies } = buildBlocksMap(
+				const { tasks, invalidDependencies } = withBlocks(
 					result.tasks,
 					archivedIds
 				);
 				this.displayInvalidDependencyWarnings(invalidDependencies, tagName);
-
-				// Enrich tasks with blocks field and tag name
-				const enrichedTasks: TaskWithTag[] = result.tasks.map((task) => ({
-					...task,
-					blocks: blocksMap.get(String(task.id)) || [],
-					tagName
-				}));
+				const enrichedTasks = tasks.map((task) => ({ ...task, tagName }));
 
 				// Apply ready filter per-tag to respect tag-scoped dependencies
 				// (task IDs may overlap between tags, so we must filter within each tag)
-				const ready: TaskWithTag[] = options.ready
-					? (filterReadyTasks(enrichedTasks, archivedIds) as TaskWithTag[])
+				const ready = options.ready
+					? filterReadyTasks(enrichedTasks, archivedIds)
 					: enrichedTasks;
 
 				allTaggedTasks.push(...ready);
@@ -396,21 +368,12 @@ export class ListTasksCommand extends Command {
 			);
 		}
 
-		// Apply additional filters
-		let filteredTasks: TaskWithTag[] = allTaggedTasks;
-
-		// Apply blocking filter if specified
-		if (options.blocking) {
-			filteredTasks = filteredTasks.filter((task) => task.blocks.length > 0);
-		}
-
-		filteredTasks = filterByStatus(filteredTasks, options.status);
-		filteredTasks = filterByAssignee(filteredTasks, await this.mine(options));
-		filteredTasks = filterBySearch(filteredTasks, options.search);
-		// Subtasks go last: --mine and --search match on them too
-		if (!options.withSubtasks) {
-			filteredTasks = filteredTasks.map((task) => ({ ...task, subtasks: [] }));
-		}
+		// --ready was applied per tag above
+		const filteredTasks = filterTaskList(allTaggedTasks, {
+			...options,
+			ready: false,
+			assignee: await this.mine(options)
+		});
 
 		return {
 			tasks: filteredTasks,

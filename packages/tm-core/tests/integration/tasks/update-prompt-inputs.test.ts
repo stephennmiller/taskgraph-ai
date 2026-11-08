@@ -141,10 +141,15 @@ describe('update prompt inputs', () => {
 	});
 
 	/** What the call sent, in the shape the legacy capture recorded */
-	async function capture(s: Scenario, promptName: string, run: () => unknown) {
+	async function capture(
+		s: Scenario,
+		promptName: string,
+		run: () => unknown,
+		file: unknown = fixture(s.stringIds)
+	) {
 		fs.writeFileSync(
 			path.join(projectDir, '.taskgraph', 'tasks', 'tasks.json'),
-			JSON.stringify(fixture(s.stringIds))
+			JSON.stringify(file)
 		);
 		const loadPrompt = vi.spyOn(getPromptManager(), 'loadPrompt');
 		await run();
@@ -237,6 +242,34 @@ describe('update prompt inputs', () => {
 			tmCore.tasks.updateFrom(updateFrom.default as any)
 		);
 		expect(many).toEqual(legacy.update.default);
+	});
+
+	it("leaves loop's spend out of the prompt and keeps it on the task", async () => {
+		const spend = { usd: 2.5, durationMs: 60000, iterations: 4 };
+		const withSpend = () => {
+			const file = fixture();
+			Object.assign(file.master.tasks[2], { spend });
+			return file;
+		};
+
+		const one = await capture(
+			updateTask.default,
+			'update-task',
+			() => tmCore.tasks.updateWithPrompt(updateTask.default as any),
+			withSpend()
+		);
+		expect(one).toEqual(legacy['update-task'].default);
+		expect((await tmCore.tasks.get('3')).task?.spend).toEqual(spend);
+
+		ai.object.mockClear();
+		const many = await capture(
+			updateFrom.default,
+			'update-tasks',
+			() => tmCore.tasks.updateFrom(updateFrom.default as any),
+			withSpend()
+		);
+		expect(many).toEqual(legacy.update.default);
+		expect((await tmCore.tasks.get('3')).task?.spend).toEqual(spend);
 	});
 
 	// The legacy command asked for a 'research' variant the prompt doesn't

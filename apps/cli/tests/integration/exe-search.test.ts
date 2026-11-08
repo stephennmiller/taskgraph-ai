@@ -1,12 +1,11 @@
-import { spawnSync } from 'child_process';
-import fs from 'fs';
-import os from 'os';
-import path from 'path';
-import { fileURLToPath } from 'url';
-import { vi } from 'vitest';
+import { spawnSync } from 'node:child_process';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { afterEach, describe, expect, test, vi } from 'vitest';
+import { getCliBinPath, RM_OPTS } from '../helpers/test-utils.js';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const binPath = path.join(__dirname, '..', '..', '..', 'dist', 'taskgraph.js');
+const binPath = getCliBinPath();
 
 // Prints the variable as the CLI process exits
 const reportOnExit = `data:text/javascript,process.on('exit',()=>process.stderr.write('NDC='+process.env.NoDefaultCurrentDirectoryInExePath+'\\n'))`;
@@ -14,14 +13,17 @@ const reportOnExit = `data:text/javascript,process.on('exit',()=>process.stderr.
 vi.setConfig({ testTimeout: 60000 });
 
 describe('taskgraph exe search', () => {
-	let dir;
-	afterEach(() => fs.rmSync(dir, { recursive: true, force: true }));
+	let dir: string;
+	afterEach(() => fs.rmSync(dir, RM_OPTS));
 
 	// On Windows, cmd.exe and libuv otherwise run a git.exe or claude.cmd in
 	// the project directory before the one on PATH
 	test('sets NoDefaultCurrentDirectoryInExePath for the processes it starts', () => {
 		dir = fs.mkdtempSync(path.join(os.tmpdir(), 'tm-exe-search-'));
-		const env = { ...process.env, TASKGRAPH_SKIP_AUTO_UPDATE: '1' };
+		const env: NodeJS.ProcessEnv = {
+			...process.env,
+			TASKGRAPH_SKIP_AUTO_UPDATE: '1'
+		};
 		delete env.NoDefaultCurrentDirectoryInExePath;
 
 		const result = spawnSync(

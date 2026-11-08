@@ -45,6 +45,7 @@ import {
 	timeoutMessage
 } from '../services/iteration-limits.js';
 import { STREAM_JSON_ARGS } from '../services/stream-events.js';
+import { claudeRan } from '../services/iteration-result.js';
 import { openLog, readSpend } from './task-log.js';
 import { settledOutcome } from './outcome.js';
 import { TaskWorktrees } from './task-worktrees.js';
@@ -517,6 +518,21 @@ export class ParallelLoopRunner {
 			task.status = await this.statusOf(task.id, tag);
 			task.finished = task.state === 'done' && isFinishedStatus(task.status);
 			task.outcome = settledOutcome(task.state, kept, !!task.claimed, isStuck);
+			// Claude Code ran: what it spent goes on the task
+			if (claudeRan(task)) {
+				await this.tasks
+					.addSpend(
+						task.id,
+						{ usd: task.costUsd, durationMs: task.durationMs },
+						tag
+					)
+					.catch((error) =>
+						this.logger.warn(
+							`Couldn't add task ${task.id}'s spend to it:`,
+							error
+						)
+					);
+			}
 		}
 	}
 

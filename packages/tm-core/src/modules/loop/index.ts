@@ -12,7 +12,9 @@ export type {
 	LoopConfig,
 	LoopIteration,
 	LoopResult,
-	LoopOutputCallbacks
+	LoopOutputCallbacks,
+	LoopPlan,
+	LoopPlanTask
 } from './types.js';
 
 // One named task (loop --id)

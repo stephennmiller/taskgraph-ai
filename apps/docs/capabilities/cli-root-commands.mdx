@@ -14,3 +14,74 @@ Every `taskgraph` command, with its flags and examples, on four pages:
 | [Project Setup](/capabilities/cli-project-commands) | [`init`](/capabilities/cli-project-commands#initialize-a-project), [`doctor`](/capabilities/cli-project-commands#check-the-setup), [`upgrade`](/capabilities/cli-project-commands#install-the-latest-version), [`tags`](/capabilities/cli-project-commands#tag-management), [`models`](/capabilities/cli-project-commands#configure-ai-models), [`completion`](/capabilities/cli-project-commands#tab-completion), [`loop`](/capabilities/cli-project-commands#loop-autonomous-batch-execution) |
 
 `taskgraph --help` lists every command, and `taskgraph <command> --help` its flags.
+
+## Quick reference
+
+Plain requests to Claude, slash commands and the `taskgraph` CLI all reach the same actions.
+
+### Ask Claude, or type the command
+
+With the plugin installed, ask Claude in plain language. The same actions as slash commands and CLI commands:
+
+| You say                     | Slash command                         | CLI                                                |
+| --------------------------- | ------------------------------------- | -------------------------------------------------- |
+| What should I work on next? | `/taskgraph:next`                     | `taskgraph next`                                   |
+| Show me the task graph      | `/taskgraph:graph`                    | `taskgraph graph`                                  |
+| Why is task 7 blocked?      | `/taskgraph:why 7`                    | `taskgraph why 7`                                  |
+| Show task 1                 | `/taskgraph:show 1`                   | `taskgraph show 1`                                 |
+| Start task 3                | `/taskgraph:set-status 3 in-progress` | `taskgraph set-status --id=3 --status=in-progress` |
+| Mark task 3 done            | `/taskgraph:to-done 3`                | `taskgraph set-status --id=3 --status=done`        |
+| Break task 4 into subtasks  | `/taskgraph:expand 4`                 | `taskgraph expand 4`                               |
+| Add a task for ...          | `/taskgraph:add-task <what you want>` | `taskgraph add-task --prompt='...'`                |
+| Update task 5: ...          | `/taskgraph:update-task 5 <change>`   | `taskgraph update 5 --prompt='...'`                |
+| Research ...                | (research skill)                      | `taskgraph research "JWT best practices"`          |
+
+If you use the MCP server instead, research, tags and the dependency editing tools (`add_dependency`, `remove_dependency`, `validate_dependencies`, `fix_dependencies`) load only with `TASKGRAPH_TOOLS=all`. `dependency_analysis` is in `standard` (see [MCP tool tiers](/capabilities/mcp#tool-tiers-at-a-glance)), and everything else here works with `standard`.
+
+### Slash commands
+
+Install the plugin and they appear as `/taskgraph:<name>`. `taskgraph init` does not write slash commands. To see them all, type `/taskgraph` in Claude Code.
+
+| Purpose        | Commands                                                                    |
+| -------------- | --------------------------------------------------------------------------- |
+| Daily workflow | `next`, `show`, `list`, `set-status`, `to-done`, `add-task`, `note`, `loop` |
+| Set up         | `init`                                                                      |
+| Plan & update  | `parse-prd`, `update-task`, `analyze-complexity`, `expand`                  |
+| Dependencies   | `graph`, `why`                                                              |
+| Other          | `help`                                                                      |
+
+### CLI cheat sheet
+
+```bash
+taskgraph parse-prd .taskgraph/docs/prd.md   # generate tasks from a PRD
+taskgraph list                               # all tasks and their status
+taskgraph next                               # next task to work on
+taskgraph graph                              # tasks as a dependency tree
+taskgraph why 7                              # why task 7 is blocked
+taskgraph show 1,3,5                         # one or more tasks
+taskgraph set-status --id=3 --status=done    # change status
+taskgraph add-task --prompt='...' --research # add a task
+taskgraph expand 4 --research                # split into subtasks
+taskgraph expand --all                       # expand every eligible task
+taskgraph update 5 --prompt='...'            # change one task
+taskgraph update --from=5 --prompt='...'     # change task 5 onward
+taskgraph note 3.2 'chose argon2'            # log progress, as written
+taskgraph analyze-complexity --research
+taskgraph analyze-complexity --report
+taskgraph depend 5 3
+taskgraph fix-dependencies --check
+taskgraph move --from=5 --from-tag=backlog --to-tag=in-progress
+taskgraph research "latest JWT best practices"
+taskgraph models --setup                     # choose models
+taskgraph completion --install               # Tab completion for your shell
+taskgraph doctor                             # check the setup, with fixes
+```
+
+For Tab completion of commands, flags, task IDs, tags and statuses in bash, zsh or fish, run `taskgraph completion --install` once, and again after upgrading.
+
+### Keep it organized
+
+- **Tags** keep separate task lists per branch, feature or experiment. Ask Claude `Make a tag for the auth rewrite`. The CLI commands are `taskgraph tags`, `taskgraph tags add` and `taskgraph tags use` (MCP: `list_tags`, `add_tag`, `use_tag`).
+- **Dependencies** decide what counts as "next". If the graph looks wrong, ask Claude `Check the task dependencies and fix any problems`.
+- **Statuses:** `pending`, `in-progress`, `review`, `done`, `blocked`, `deferred`, `cancelled`.
+- **Task IDs** look like `3` for a task and `3.2` for a subtask.

@@ -32,12 +32,11 @@ Planning
 In the CLI
   taskgraph models                         Show or choose the AI models
   taskgraph update                         Rewrite every task from an ID onward
-  taskgraph add-dependency                 Make a task wait on another
-  taskgraph remove-dependency              Remove a dependency
-  taskgraph validate-dependencies          Check for broken or circular links
-  taskgraph add-subtask / remove-subtask   Add, move or delete subtasks
-  taskgraph remove-task                    Delete a task
-  taskgraph complexity-report              Show the complexity report
+  taskgraph depend <id> <ids> [--remove]   Make a task wait on others, or not
+  taskgraph fix-dependencies [--check]     Check or fix broken or circular links
+  taskgraph add-subtask                    Add or move a subtask
+  taskgraph remove-task                    Delete a task or subtask
+  taskgraph analyze-complexity --report    Show the complexity report
   taskgraph --help                         Everything else
 ```
 

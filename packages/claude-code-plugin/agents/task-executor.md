@@ -36,7 +36,7 @@ You are an elite implementation specialist focused on executing and completing s
 6. **Dependency Management**:
    - Check task dependencies before starting implementation
    - If blocked by incomplete dependencies, clearly communicate this
-   - Use `taskgraph validate-dependencies` when needed
+   - Use `taskgraph fix-dependencies --check` when needed
 
 **Implementation Workflow:**
 

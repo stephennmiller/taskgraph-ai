@@ -4,10 +4,11 @@
  */
 
 import { stripVTControlCharacters } from 'node:util';
-import type { LoopResult } from '@tm/core';
+import type { LoopPlan, LoopResult } from '@tm/core';
 import { describe, expect, it } from 'vitest';
 import {
 	type LoopIntro,
+	formatLoopDryRun,
 	formatLoopIntro,
 	formatLoopIterationEnd,
 	formatLoopIterationStart,
@@ -286,5 +287,80 @@ describe('formatLoopSummary', () => {
 		for (const line of two.split('\n')) {
 			expect(line.length).toBeLessThanOrEqual(80);
 		}
+	});
+});
+
+describe('formatLoopDryRun', () => {
+	const plan = (overrides: Partial<LoopPlan> = {}): LoopPlan => ({
+		prompt: 'default',
+		iterations: 3,
+		tag: 'master',
+		tasks: [
+			{
+				id: '1',
+				title: 'Set up the database schema',
+				model: 'sonnet',
+				effort: 'low'
+			},
+			{ id: '3.1', title: 'Add the session table' },
+			{ id: '4', title: 'Build the login API', effort: 'high' }
+		],
+		picksOwnWork: false,
+		...overrides
+	});
+	const options = { isPreset: true, sandbox: false };
+
+	it('lists the tasks in order with the model and effort each runs at', () => {
+		expect(plain(formatLoopDryRun(plan(), options))).toEqual([
+			'Loop dry run · default preset · up to 3 iterations · Claude CLI',
+			'  1    sonnet, low effort  Set up the database schema',
+			'  3.1  default model       Add the session table',
+			'  4    high effort         Build the login API',
+			'Nothing started; run it without --dry-run'
+		]);
+	});
+
+	it('says when no task is ready, and shows the smoke command', () => {
+		const lines = plain(
+			formatLoopDryRun(
+				plan({ tasks: [], smokeCommand: 'npm run smoke' }),
+				options
+			)
+		);
+		expect(lines).toContain('No task is ready to work on');
+		expect(lines).toContain('Smoke check  npm run smoke');
+	});
+
+	it('gives the model for a preset that picks its own work', () => {
+		const lines = plain(
+			formatLoopDryRun(
+				plan({
+					prompt: 'linting',
+					tasks: [],
+					picksOwnWork: true,
+					model: 'opus'
+				}),
+				options
+			)
+		);
+		expect(lines[1]).toBe('  Each iteration picks its own work · opus');
+	});
+
+	it('fits 80 columns and drops escape sequences from task text', () => {
+		const raw = formatLoopDryRun(
+			plan({
+				tasks: [
+					{ id: '2', title: `Build \x1b[31mit${' and more'.repeat(20)}` }
+				],
+				smokeCommand: `node cli.js ${'x'.repeat(100)}`
+			}),
+			options
+		);
+		const lines = plain(raw);
+		for (const line of lines) expect(line.length).toBeLessThanOrEqual(80);
+		expect(lines[1]).toMatch(
+			/^ {2}2 {2}default model {2}Build it and more.*…$/
+		);
+		expect(raw[1]).not.toContain('\x1b[31mit');
 	});
 });

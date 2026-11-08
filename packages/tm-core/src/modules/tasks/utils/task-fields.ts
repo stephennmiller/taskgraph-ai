@@ -51,6 +51,7 @@ export const TASK_FIELDS = [
 	'recommendedSubtasks',
 	'expansionPrompt',
 	'complexityReasoning',
+	'spend',
 	'metadata'
 ] as const satisfies readonly (keyof Task)[];
 

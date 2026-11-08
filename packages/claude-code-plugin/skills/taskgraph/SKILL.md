@@ -19,9 +19,9 @@ For what the user asked:
 - Log progress: `taskgraph note <id> '<what you did or decided>'`.
 - Finish: check its criteria, then `taskgraph set-status --id=<id> --status=done`.
 - Why blocked, or the whole graph: `taskgraph why <id>`, `taskgraph graph`.
-- Change a task: `taskgraph update-task --id=<id> --prompt='<change>'`.
+- Change a task: `taskgraph update <id> --prompt='<change>'`.
 - Size the work: `taskgraph analyze-complexity`, then `taskgraph expand --all`.
-- Dependencies look wrong: `taskgraph validate-dependencies`, then `taskgraph fix-dependencies`.
+- Dependencies look wrong: `taskgraph fix-dependencies --check`, then `taskgraph fix-dependencies`.
 - Separate task lists: `taskgraph tags`, `taskgraph tags add <name>`, `taskgraph tags use <name>`.
 - Models: `taskgraph models --set-main <opus|sonnet|haiku>` (also `--set-research`, `--set-fallback`).
 - Anything else: `taskgraph --help` lists every command.

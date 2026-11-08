@@ -12,6 +12,7 @@ import {
 	DEFAULT_CONTAINER_IMAGE,
 	MAX_PARALLEL,
 	PRESET_NAMES,
+	ParallelLoopError,
 	type ParallelTask,
 	type TmCore,
 	assertContainerFlags,
@@ -24,6 +25,7 @@ import {
 import chalk from 'chalk';
 import { Command } from 'commander';
 import {
+	formatLoopDryRun,
 	formatLoopIntro,
 	formatLoopIterationEnd,
 	formatLoopIterationStart,
@@ -61,6 +63,7 @@ export interface LoopCommandOptions {
 	maxBudgetUsd?: string;
 	model?: string;
 	reuseSession?: boolean;
+	dryRun?: boolean;
 }
 
 export class LoopCommand extends Command {
@@ -117,6 +120,10 @@ export class LoopCommand extends Command {
 			.option(
 				'--reuse-session',
 				"Resume the last iteration's Claude Code session for the next task instead of starting a new one"
+			)
+			.option(
+				'--dry-run',
+				'Show the tasks a run would work, in order, and the model each would use, without starting Claude Code'
 			)
 			.option(
 				'--parallel <n>',
@@ -182,6 +189,26 @@ export class LoopCommand extends Command {
 				tag: options.tag || this.tmCore.config.getActiveTag(),
 				projectRoot: this.tmCore.projectPath
 			});
+
+			if (options.dryRun) {
+				const plan = await this.tmCore.loop.plan({
+					prompt,
+					iterations,
+					taskId: pinned?.id,
+					tag: options.tag,
+					model
+				});
+				const lines = formatLoopDryRun(
+					plan,
+					{
+						isPreset: this.tmCore.loop.isPreset(prompt),
+						sandbox: options.sandbox ?? false
+					},
+					terminalWidth()
+				);
+				console.log(lines.join('\n'));
+				return;
+			}
 
 			// Only check sandbox auth when --sandbox flag is used
 			if (options.sandbox) {
@@ -263,6 +290,13 @@ export class LoopCommand extends Command {
 		let timer: NodeJS.Timeout | undefined;
 
 		try {
+			if (options.dryRun) {
+				// Which tasks a parallel run starts depends on which finish first
+				throw new ParallelLoopError(
+					"--dry-run can't be combined with --parallel",
+					'Drop --parallel, or run `taskgraph graph` to see what can run at once'
+				);
+			}
 			const parallel = parseParallelCount(options.parallel ?? '');
 			assertParallelFlags({
 				prompt: options.prompt,

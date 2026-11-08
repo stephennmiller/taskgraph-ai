@@ -162,6 +162,7 @@ export {
 
 // What `loop` prints before it starts
 export {
+	formatLoopDryRun,
 	formatLoopIntro,
 	formatLoopIterationEnd,
 	formatLoopIterationStart,

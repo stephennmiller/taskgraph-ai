@@ -84,6 +84,12 @@ export function formatUsageLine(
 	return parts.join(' · ');
 }
 
+/** `sonnet, low effort`, `high effort` or `sonnet`; empty when neither was picked */
+export const modelSetting = (choice: { model?: string; effort?: string }) =>
+	[choice.model, choice.effort && `${choice.effort} effort`]
+		.filter(Boolean)
+		.join(', ');
+
 /**
  * ` · resumed · sonnet, low effort · $0.42 · 12 turns · 3m 10s`, muted, for
  * the end of a `loop` line; leaves out what wasn't picked or reported, and is
@@ -102,9 +108,7 @@ export function formatLoopSpend(spend: {
 	turns?: number;
 	durationMs?: number;
 }): string {
-	const setting = [spend.model, spend.effort && `${spend.effort} effort`]
-		.filter(Boolean)
-		.join(', ');
+	const setting = modelSetting(spend);
 	const facts = [
 		spend.session ?? null,
 		setting || null,

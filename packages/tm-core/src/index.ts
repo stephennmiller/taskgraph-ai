@@ -131,6 +131,8 @@ export type {
 	LoopIteration,
 	LoopResult,
 	LoopOutputCallbacks,
+	LoopPlan,
+	LoopPlanTask,
 	LoopTask
 } from './modules/loop/index.js';
 export {
@@ -223,12 +225,9 @@ export {
 
 // Task filtering utilities
 export {
-	buildBlocksMap,
+	withBlocks,
+	filterTaskList,
 	filterReadyTasks,
-	filterBlockingTasks,
-	filterByStatus,
-	filterByAssignee,
-	filterBySearch,
 	parseStatusFilter,
 	ACTIONABLE_STATUSES,
 	selectNextTask,

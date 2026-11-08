@@ -16,6 +16,25 @@ Each tool is defined with a name, a description, and a set of parameters that ar
 
 To optimize LLM context usage, you can control which TaskGraph MCP tools are loaded using the `TASKGRAPH_TOOLS` environment variable. This is particularly useful when working with LLMs that have context limits or when you only need a subset of tools.
 
+### Tool tiers at a glance
+
+Each tool you load costs context. If `TASKGRAPH_TOOLS` is unset, you get `core`.
+
+| Value                          | Tools  | Includes                                                                                                                                                                            |
+| ------------------------------ | ------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `core` (default, alias `lean`) | 7      | `get_tasks`, `next_task`, `get_task`, `set_task_status`, `add_note`, `parse_prd`, `expand_task`                                                                                     |
+| `standard`                     | 16     | core, plus `update_subtask`, `initialize_project`, `analyze_project_complexity`, `expand_all`, `add_subtask`, `remove_task`, `add_task`, `complexity_report`, `dependency_analysis` |
+| `all`                          | 40     | everything: updates, dependencies, archive, tags, `research`, `move_task`, `scope_up_task`, `scope_down_task` and `generate`                                                        |
+| a list                         | custom | e.g. `get_tasks,next_task,set_task_status`                                                                                                                                          |
+
+Set it when you add the server, or edit the `env` block in `.mcp.json`, then restart Claude Code:
+
+```bash
+claude mcp add taskgraph-ai --scope user \
+  --env TASKGRAPH_TOOLS=core \
+  -- npx -y taskgraph-ai
+```
+
 ### Configuration Modes
 
 The examples pin the package to one version: replace `<version>` with the one `taskgraph --version` prints, or let `taskgraph init --mcp` write the entry.

@@ -17,7 +17,7 @@ npm run format-check              # Biome; `npm run format` to fix
 npm run knip                      # unused files, exports and dependencies; CI runs it
 npm run test -w @tm/core          # one package (also @tm/cli, @tm/mcp); coverage off
 npm run test:coverage -w @tm/core # coverage and the 80% thresholds; CI runs this; Vitest
-npm test                          # root tests/ suite (Vitest, vitest.root.config.ts)
+npm test                          # root tests/ suite: repo-level checks (Vitest, vitest.root.config.ts)
 npm run evals                     # real-model plan evals (parse-prd, expand, analyze-complexity); not in CI
 npm run evals:review              # real-model review-bot evals on past reverts and fix-forwards; not in CI
 ```
@@ -35,7 +35,7 @@ Agents: use `bin/agent-cli` first for worktrees (`wt`, `wt-prune`), merge readin
 - **Package & tests**: Place in `packages/<package-name>/src/<module>/<file>.spec.ts` or `apps/<app-name>/src/<module>/<file.spec.ts>` alongside source
 - **Package integration tests**: Place in `packages/<package-name>/tests/integration/<module>/<file>.test.ts` or `apps/<app-name>/tests/integration/<module>/<file>.test.ts` alongside source
 - **Isolated unit tests**: Use `tests/unit/packages/<package-name>/` only when parallel placement isn't possible
-- **Test extension**: Always use `.ts` for TypeScript tests, never `.js`. Exception: the legacy root `tests/` suite is Vitest with `.js` tests; new tests go in packages/apps, not there.
+- **Test extension**: Always use `.ts` for TypeScript tests, never `.js`. Exception: the root `tests/` suite (repo-level checks: CI, scripts, git hooks, plugin hooks, licensing) still has `.js` files; tests of one package's code go in that package, not there.
 
 ### Synchronous Tests
 
@@ -119,7 +119,7 @@ Structure tests as Arrange, Act, Assert.
 - `packages/tm-core` (`@tm/core`): all business logic
 - `apps/cli` (`@tm/cli`), `apps/mcp` (`@tm/mcp`): thin presentation layers over tm-core
 - `packages/tm-profiles` (`@tm/profiles`): shell utils and `pruneLegacySlashCommands`, which removes the files older `init` runs wrote to `.claude/commands/tm`. Slash commands live only in the plugin
-- `packages/claude-code-plugin` (`@tm/claude-code-plugin`): the Claude Code plugin, markdown, JSON and POSIX shell only (`commands/`, `agents/`, `hooks/`, `.claude-plugin/plugin.json`), no TypeScript. Each hook is a script in `hooks/` that `hooks.json` runs by name (`sh "${CLAUDE_PLUGIN_ROOT}/hooks/<name>.sh"`; the plugin validator rejects inline commands), tested in `tests/unit/packages/claude-code-plugin/`
+- `packages/claude-code-plugin` (`@tm/claude-code-plugin`): the Claude Code plugin, markdown, JSON and POSIX shell only (`commands/`, `agents/`, `hooks/`, `skills/`, `.claude-plugin/plugin.json`), no TypeScript. Each hook is a script in `hooks/` that `hooks.json` runs by name (`sh "${CLAUDE_PLUGIN_ROOT}/hooks/<name>.sh"`; the plugin validator rejects inline commands), tested in `tests/unit/packages/claude-code-plugin/`
 - `packages/build-config` (`@tm/build-config`): shared tsdown base config, compiled with `tsc` and imported by the root `tsdown.config.ts`; `npm run build` builds it first
 - `apps/docs`: Mintlify docs source (not a code package)
 - `apps/extension`, `packages/tm-bridge`, `packages/ai-sdk-provider-grok-cli` hold only untracked build artifacts and have no `package.json`. Don't add code there.
@@ -164,7 +164,7 @@ Structure tests as Arrange, Act, Assert.
 
 Extract a pattern into a shared utility once it appears twice, not before. Export new modules from the package's index file.
 
-CLI startup has a CI budget (`.github/scripts/check-startup-time.mjs`, about 40 ms for `--version` and 160 ms for `list` locally), and that check also fails if `list` or `next` imports a package on its `HEAVY_PACKAGES` list. Import heavy packages (AI SDKs, markdown, prompts, inquirer) inside the function that uses them: `await import()`, or `createRequire(import.meta.url)` when the caller must stay synchronous. A top-level import runs on every command.
+CLI startup has a CI budget (`.github/scripts/check-startup-time.mjs`, about 40 ms for `--version` and 160 ms for `list` locally), and that check also fails if `list`, `next` or `show 1` imports a package on its `HEAVY_PACKAGES` list. Import heavy packages (AI SDKs, markdown, prompts, inquirer) inside the function that uses them: `await import()`, or `createRequire(import.meta.url)` when the caller must stay synchronous. A top-level import runs on every command.
 
 Remove what a change leaves unused: files, exports, types and dependencies. `npm run knip` finds them and CI fails on them. Fix the code rather than adding to the allowlist in `knip.jsonc`; an entry there needs a one-line reason.
 

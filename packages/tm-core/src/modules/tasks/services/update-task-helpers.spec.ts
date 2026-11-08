@@ -105,3 +105,23 @@ describe('keptSubtaskIds', () => {
 		expect(ids).toEqual(['3.1', '2']);
 	});
 });
+
+describe('mergeRewrite: loop spend written during the AI call', () => {
+	it("keeps the loop's write", () => {
+		const before = { usd: 1, durationMs: 1000, iterations: 1 };
+		const after = { usd: 1.5, durationMs: 3000, iterations: 2 };
+		const stored = task({ spend: before });
+		const warn = vi.fn();
+
+		// keepStoredFields gave the rewrite the stored spend
+		const merged = mergeRewrite(
+			stored,
+			task({ title: 'New', spend: before }),
+			task({ spend: after }),
+			warn
+		);
+
+		expect(merged).toMatchObject({ title: 'New', spend: after });
+		expect(warn).not.toHaveBeenCalled();
+	});
+});

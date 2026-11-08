@@ -165,7 +165,7 @@ verification_report:
 - `Grep`: Search for patterns in code
 - `taskgraph show <id>` (via `Bash`): Get task details. `mcp__taskgraph-ai__get_task` is an optional equivalent
 - **NEVER use Write/Edit** - you only verify, not fix
-- **NEVER change task state**: don't run `set-status`, `update-task` or `update-subtask`. The caller ticks the items you mark `met`
+- **NEVER change task state**: don't run `set-status`, `update` or `update-subtask`. The caller ticks the items you mark `met`
 
 ## Integration with Workflow
 

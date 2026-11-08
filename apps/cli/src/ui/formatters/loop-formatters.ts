@@ -21,15 +21,30 @@
  *   Set aside 1 stuck task as blocked
  *     4  stuck: no progress in 2 sessions
  *   Next: taskgraph show 4, then taskgraph set-status --id=4 --status=pending
+ *
+ * With --dry-run, in place of all of that:
+ *
+ *   Loop dry run · default preset · up to 3 iterations · Claude CLI
+ *     1    sonnet, low effort  Set up the database schema
+ *     3.1  default model       Add the session table
+ *     4    high effort         Build the login API
+ *   Smoke check  npm run smoke
+ *   Nothing started; run it without --dry-run
  */
 
-import type { LoopIteration, LoopResult, LoopTask } from '@tm/core';
+import type {
+	LoopIteration,
+	LoopPlan,
+	LoopPlanTask,
+	LoopResult,
+	LoopTask
+} from '@tm/core';
 import chalk from 'chalk';
 import { wrapLine } from '../layout/helpers.js';
 import { theme } from '../theme.js';
 import { terminalSafe } from './markdown-formatters.js';
 import { fit, formatSetAside, plural } from './parallel-loop-formatters.js';
-import { formatLoopSpend } from './usage-formatters.js';
+import { formatLoopSpend, modelSetting } from './usage-formatters.js';
 
 /** A line that can carry an error's text, wrapped at spaces with a hanging indent */
 const wrap = (line: string, width: number) =>
@@ -51,8 +66,12 @@ export interface LoopIntro {
 	next?: LoopTask | null;
 }
 
-/** The lines `loop` prints before it starts Claude */
-export function formatLoopIntro(intro: LoopIntro, width = 80): string[] {
+/** `Loop · default preset · up to 5 iterations · Claude CLI`, fitted to `width` */
+function introLine(
+	label: string,
+	intro: Pick<LoopIntro, 'prompt' | 'isPreset' | 'iterations' | 'sandbox'>,
+	width: number
+): string {
 	const prompt = intro.isPreset
 		? `${intro.prompt} preset`
 		: `prompt ${intro.prompt}`;
@@ -61,8 +80,16 @@ export function formatLoopIntro(intro: LoopIntro, width = 80): string[] {
 			? '1 iteration'
 			: `up to ${intro.iterations} iterations`;
 	const mode = intro.sandbox ? 'Docker sandbox' : 'Claude CLI';
-	const facts = fit([prompt, iterations, mode].join(' · '), width - 7);
-	const lines = [theme.text('Loop') + theme.muted(` · ${facts}`)];
+	const facts = fit(
+		[prompt, iterations, mode].join(' · '),
+		width - label.length - 3
+	);
+	return theme.text(label) + theme.muted(` · ${facts}`);
+}
+
+/** The lines `loop` prints before it starts Claude */
+export function formatLoopIntro(intro: LoopIntro, width = 80): string[] {
+	const lines = [introLine('Loop', intro, width)];
 
 	const task = intro.pinned ?? intro.next;
 	if (task) {
@@ -182,4 +209,47 @@ export function formatLoopSummary(
 		width
 	);
 	return [line, ...formatSetAside(result.setAside, width)].join('\n');
+}
+
+/** `sonnet, low effort`, or `default model` when the band picks nothing */
+const setting = (choice: Pick<LoopPlanTask, 'model' | 'effort'>) =>
+	modelSetting(choice) || 'default model';
+
+/** What `loop --dry-run` prints: the tasks a run would work, in order, and at what */
+export function formatLoopDryRun(
+	plan: LoopPlan,
+	options: { isPreset: boolean; sandbox: boolean },
+	width = 80
+): string[] {
+	const lines = [introLine('Loop dry run', { ...plan, ...options }, width)];
+	const ids = plan.tasks.map((t) => fit(t.id, 20));
+	const settings = plan.tasks.map(setting);
+	const idWidth = Math.max(0, ...ids.map((id) => id.length));
+	const settingWidth = Math.max(0, ...settings.map((s) => s.length));
+	plan.tasks.forEach((task, i) => {
+		const head = `  ${ids[i].padEnd(idWidth)}  `;
+		const middle = `${settings[i].padEnd(settingWidth)}  `;
+		lines.push(
+			theme.text(head) +
+				theme.muted(middle) +
+				theme.text(fit(task.title, width - head.length - middle.length))
+		);
+	});
+	if (!plan.tasks.length) {
+		lines.push(
+			plan.picksOwnWork
+				? theme.muted(
+						`  ${fit(`Each iteration picks its own work · ${setting(plan)}`, width - 2)}`
+					)
+				: chalk.yellow('No task is ready to work on')
+		);
+	}
+	if (plan.smokeCommand) {
+		lines.push(
+			theme.text('Smoke check  ') +
+				theme.muted(fit(plan.smokeCommand, width - 13))
+		);
+	}
+	lines.push(theme.muted('Nothing started; run it without --dry-run'));
+	return lines;
 }

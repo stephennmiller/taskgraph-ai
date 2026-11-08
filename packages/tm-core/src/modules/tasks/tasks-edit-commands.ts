@@ -6,7 +6,7 @@
 
 import type { ConfigManager } from '../config/managers/config-manager.js';
 import type { TaskService } from './services/task-service.js';
-import type { Subtask, Task } from '../../common/types/index.js';
+import type { Subtask, Task, TaskSpend } from '../../common/types/index.js';
 import {
 	ERROR_CODES,
 	TaskGraphError
@@ -35,6 +35,10 @@ export interface ArchiveResult {
 	olderThanDays: number;
 	dryRun: boolean;
 }
+
+/** A count from tasks.json, which a hand edit can make anything */
+const count = (n: unknown) =>
+	typeof n === 'number' && Number.isFinite(n) && n > 0 ? n : 0;
 
 /** Archive, notes and restructuring behind TasksDomain */
 export class TaskEditCommands {
@@ -209,6 +213,35 @@ export class TaskEditCommands {
 			addedAt,
 			text: note
 		};
+	}
+
+	// ========== Loop spend ==========
+
+	/**
+	 * Add one loop iteration's cost and time to a task's `spend`, in one
+	 * locked write. A subtask's go to its parent, so `expand --force`
+	 * replacing the subtasks can't drop them. A cost Claude Code didn't
+	 * report adds nothing to `usd`. Throws TASK_NOT_FOUND for an unknown ID.
+	 * @returns The task's spend as saved
+	 */
+	async addSpend(
+		taskId: string,
+		run: { usd?: number; durationMs?: number },
+		tag?: string
+	): Promise<TaskSpend> {
+		const id = normalizeTaskId(taskId).split('.')[0];
+		const saved = await this.taskService.modifyTask(
+			id,
+			({ spend }) => ({
+				spend: {
+					usd: count(spend?.usd) + count(run.usd),
+					durationMs: count(spend?.durationMs) + count(run.durationMs),
+					iterations: count(spend?.iterations) + 1
+				}
+			}),
+			tag
+		);
+		return saved.spend as TaskSpend;
 	}
 
 	// ========== Restructuring ==========
