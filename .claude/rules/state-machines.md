@@ -93,6 +93,9 @@ criteria and Definition of Done).
 | all pending                    | pending (claim cleared), set-status only |
 | other mixes, parent done       | in-progress                              |
 | other mixes                    | unchanged                                |
+
+Exceptions:
+
 - A parent in `review` stays in review when its last subtask finishes.
 - Only a subtask's own status change moves a parent in `review`,
   `blocked`, `deferred` or `cancelled`; the other writers leave it.
