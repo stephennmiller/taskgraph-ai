@@ -425,6 +425,8 @@ describe('tasks.expand', () => {
 			await tmCore.tasks.expand({ id: '6', num: 2 });
 
 			expect(readFile().master.tasks[5].subtasks).toHaveLength(2);
+			// Its new subtasks are open, so it is in progress again (#1042)
+			expect(readFile().master.tasks[5].status).toBe('in-progress');
 		});
 	});
 
