@@ -9,7 +9,7 @@ import {
 	createTmCore,
 	formatTaskData,
 	neutralizeTaskData,
-	TaskIdSchema,
+	parseTaskIds,
 	withFullSubtaskIds
 } from '@tm/core';
 import type { Subtask } from '@tm/core';
@@ -124,24 +124,8 @@ export class ShowCommand extends Command {
 				process.exit(1);
 			}
 
-			// Parse and validate task IDs (handle comma-separated values)
-			const rawIds = idArg
-				.split(',')
-				.map((id) => id.trim())
-				.filter((id) => id.length > 0);
-			const taskIds: string[] = [];
-
-			for (const rawId of rawIds) {
-				const parseResult = TaskIdSchema.safeParse(rawId);
-				if (!parseResult.success) {
-					printError(
-						`"${rawId}" isn't a task ID`,
-						'Use a number like `3`, or `3.1` for a subtask'
-					);
-					process.exit(1);
-				}
-				taskIds.push(parseResult.data);
-			}
+			// Every ID is checked before any is read (throws with a hint)
+			const taskIds = parseTaskIds(idArg);
 
 			// Get tasks from core
 			const result =

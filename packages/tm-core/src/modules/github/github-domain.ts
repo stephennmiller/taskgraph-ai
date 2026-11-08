@@ -485,14 +485,7 @@ export class GitHubDomain {
 	): string[] | undefined {
 		if (taskIds === undefined) return undefined;
 		if (Array.isArray(taskIds)) return taskIds.map(String);
-		try {
-			return parseTaskIds(taskIds);
-		} catch (error) {
-			throw new TaskGraphError(
-				error instanceof Error ? error.message : String(error),
-				ERROR_CODES.VALIDATION_ERROR
-			);
-		}
+		return parseTaskIds(taskIds);
 	}
 
 	private async detectRepo(): Promise<string | null> {

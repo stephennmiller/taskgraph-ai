@@ -9,6 +9,11 @@
  */
 
 import { z } from 'zod';
+import { TaskIdSchema } from '../../../common/schemas/task-id.schema.js';
+import {
+	ERROR_CODES,
+	errorWithHint
+} from '../../../common/errors/taskgraph-error.js';
 
 /**
  * Pattern for validating a single task ID
@@ -88,6 +93,7 @@ export const taskIdSchema = z
  * taskIdsSchema.parse("1,2,3");    // valid
  * taskIdsSchema.parse("1.2, 3.4"); // valid (spaces trimmed)
  * taskIdsSchema.parse("abc");      // throws
+ * taskIdsSchema.parse("1.2.3");    // throws (subtasks are one level deep)
  * taskIdsSchema.parse("ABC-123");  // throws (prefixed IDs are not supported)
  * ```
  */
@@ -100,7 +106,10 @@ export const taskIdsSchema = z
 				.split(',')
 				.map((id) => id.trim())
 				.filter((id) => id.length > 0);
-			return ids.length > 0 && ids.every(isValidTaskIdFormat);
+			// One level, as parseTaskIds checks: `1.2.3` fails here, with the hint
+			return (
+				ids.length > 0 && ids.every((id) => TaskIdSchema.safeParse(id).success)
+			);
 		},
 		{
 			message:
@@ -108,19 +117,24 @@ export const taskIdsSchema = z
 		}
 	);
 
+/** The fix for an ID that isn't one, as the CLI and MCP print it */
+const TASK_ID_HINT = 'Use a number like `3`, or `3.1` for a subtask';
+
 /**
- * Parse and validate comma-separated task IDs
+ * Parse and validate comma-separated task IDs, all of them before any is
+ * used, so a typo in one changes nothing
  *
  * @param input - Comma-separated task ID string
  * @returns Array of validated task IDs
- * @throws Error if any ID is invalid
+ * @throws TaskGraphError (VALIDATION_ERROR, with a `hint`) naming every
+ *   invalid ID, or when no ID is given
  *
  * @example
  * ```typescript
  * parseTaskIds("1, 2, 3");     // ["1", "2", "3"]
  * parseTaskIds("1.2,3.4");     // ["1.2", "3.4"]
- * parseTaskIds("invalid");     // throws Error
- * parseTaskIds("ABC-123");     // throws Error (prefixed IDs are not supported)
+ * parseTaskIds("abc");         // throws: "abc" isn't a task ID
+ * parseTaskIds("1.2.3");       // throws: subtasks are one level deep
  * ```
  */
 export function parseTaskIds(input: string): string[] {
@@ -130,13 +144,22 @@ export function parseTaskIds(input: string): string[] {
 		.filter((id) => id.length > 0);
 
 	if (ids.length === 0) {
-		throw new Error('No valid task IDs provided');
+		throw errorWithHint(
+			ERROR_CODES.VALIDATION_ERROR,
+			'No task ID given',
+			TASK_ID_HINT
+		);
 	}
 
-	const invalidIds = ids.filter((id) => !isValidTaskIdFormat(id));
+	const invalidIds = ids.filter((id) => !TaskIdSchema.safeParse(id).success);
 	if (invalidIds.length > 0) {
-		throw new Error(
-			`Invalid task ID format: ${invalidIds.join(', ')}. Expected numeric (e.g., '15') or subtask (e.g., '15.2')`
+		const quoted = invalidIds.map((id) => `"${id}"`).join(', ');
+		throw errorWithHint(
+			ERROR_CODES.VALIDATION_ERROR,
+			invalidIds.length === 1
+				? `${quoted} isn't a task ID`
+				: `${quoted} aren't task IDs`,
+			TASK_ID_HINT
 		);
 	}
 

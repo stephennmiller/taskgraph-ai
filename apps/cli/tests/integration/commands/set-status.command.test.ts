@@ -293,6 +293,31 @@ describe('set-status command', () => {
 		);
 	});
 
+	it('changes nothing and names every malformed id', () => {
+		writeTasks(
+			createTasksFile({
+				tasks: [createTask({ id: 1, title: 'Keep pending', status: 'pending' })]
+			})
+		);
+
+		let stderr = '';
+		let exitCode = 0;
+		try {
+			execSync(`node "${binPath}" set-status 1,abc,1.2.3 done`, {
+				stdio: 'pipe',
+				env: { ...process.env, TASKGRAPH_SKIP_AUTO_UPDATE: '1' }
+			});
+		} catch (error: any) {
+			stderr = error.stderr?.toString() ?? '';
+			exitCode = error.status;
+		}
+
+		expect(exitCode).toBe(1);
+		expect(stderr).toContain('"abc", "1.2.3" aren\'t task IDs');
+		expect(stderr).toContain('Use a number like 3, or 3.1 for a subtask');
+		expect(readTasks().master.tasks[0].status).toBe('pending');
+	});
+
 	// Regression: #699. A later bad id used to leave the earlier ids saved.
 	it('changes nothing when a later id in the list does not exist', () => {
 		writeTasks(
