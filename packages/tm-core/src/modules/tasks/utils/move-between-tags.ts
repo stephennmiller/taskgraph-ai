@@ -78,6 +78,8 @@ function forwardDependencies(sources: Item[], tasks: Item[]): number[] {
  * or `ignoreDependencies` drops it. The target tag is created when missing.
  * @param tags - Every tag's tasks, in file order; changed in place
  * @param archivedIds - Archived task IDs of a tag
+ * @param targetUsedBefore - The target tag's high-water mark (highestTaskId):
+ *   an ID at or below it is taken, removed task or not (#1040)
  */
 export function moveTasksBetweenTags(
 	tags: Map<string, Task[]>,
@@ -85,7 +87,8 @@ export function moveTasksBetweenTags(
 	sourceTag: string,
 	targetTag: string,
 	options: CrossTagMoveOptions,
-	archivedIds: (tag: string) => ReadonlySet<string>
+	archivedIds: (tag: string) => ReadonlySet<string>,
+	targetUsedBefore = 0
 ): CrossTagMoveResult {
 	// "02" is task 2, as everywhere else
 	const taskIds = taskIdsInput.map(normalizeTaskId);
@@ -265,12 +268,12 @@ First promote it to a full task using:
 	});
 	const newIds = new Map<string, string>();
 	for (const id of ids) {
-		if (!inUse.has(id)) newIds.set(id, id);
+		if (!inUse.has(id) && Number(id) > targetUsedBefore) newIds.set(id, id);
 		inUse.add(id);
 	}
 	for (const id of ids) {
 		if (newIds.has(id)) continue;
-		const next = String(nextTaskId(inUse));
+		const next = String(nextTaskId(inUse, targetUsedBefore));
 		newIds.set(id, next);
 		inUse.add(next);
 	}

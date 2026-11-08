@@ -14,8 +14,9 @@
  *   form each was stored: a number, a string, or a sibling number),
  *   `metadata.dependencySources` and `metadata.taskLinks` keys and a
  *   subtask's `parentId`.
- * - An incoming new task under an archived ID (options.archive) gets the
- *   next ID above every archived one.
+ * - An incoming new task under an archived ID (options.archive), or under
+ *   one the current branch used and removed since the base (its tag's
+ *   `metadata.highestId`), gets the next ID above every ID either used.
  * - archive.json merges the same way (`renumber: false`), except that IDs
  *   never move: the same ID on both sides is one task, merged field by field.
  * - The same field changed to different values on both sides is a conflict.
@@ -25,10 +26,11 @@
  *   is in the report and in git's index (`git show :3:<path>`).
  *   Exceptions that merge cleanly: timestamps (`updatedAt`, `updated`,
  *   `lastModified`) take the later one, `created`/`createdAt`/`archivedAt`
- *   the earlier, `schemaVersion` and the archive's `highestId` the higher one,
- *   lists of plain values (dependencies, tags) take both sides' additions
- *   and removals, `details` that both sides appended to keeps both
- *   appendices, and a tag's `taskCount`/`completedCount` are recounted.
+ *   the earlier, `schemaVersion` and `highestId` (a tag's or the archive's)
+ *   the higher one, lists of plain values (dependencies, tags) take both
+ *   sides' additions and removals, `details` that both sides appended to
+ *   keeps both appendices, and a tag's `taskCount`/`completedCount` are
+ *   recounted.
  * - A task removed on one side and changed on the other is kept, as a
  *   conflict. Removed on one side and untouched on the other, it goes.
  *
@@ -40,7 +42,7 @@ import {
 	DEPENDENCY_SOURCES_KEY,
 	TASK_LINKS_KEY
 } from '../../dependencies/dependency-provenance.js';
-import { archivedTasksById } from '../../tasks/utils/archive.js';
+import { archivedTasksById, highestTaskId } from '../../tasks/utils/archive.js';
 import { normalizeTaskStatuses } from '../../tasks/utils/legacy-status.js';
 import {
 	type Item,
@@ -258,18 +260,26 @@ function renumberIncoming(
 	const moves = new Map<string, string>();
 
 	// New tasks on both sides under one ID, or incoming under an archived ID
+	// or one this branch used and removed since the base (#1040)
+	const baseHighest = highestTaskId(base);
+	const ourHighest = highestTaskId(ours);
 	let nextTask =
-		Math.max(maxId([baseList, ourTasks, theirTasks]), ctx.archived.highestId) +
-		1;
+		Math.max(
+			maxId([baseList, ourTasks, theirTasks]),
+			ctx.archived.highestId,
+			ourHighest,
+			highestTaskId(theirs)
+		) + 1;
 	for (const task of theirTasks) {
 		const key = keyOf(task);
 		if (baseById.has(key)) continue;
 		if (oursById.has(key)) {
 			if (same(task, oursById.get(key))) continue;
 		} else if (
-			!ctx.archived.tasks.has(key) ||
-			// The archived task itself, restored on that branch
-			same(task, ctx.archived.tasks.get(key))
+			!(Number(key) > baseHighest && Number(key) <= ourHighest) &&
+			(!ctx.archived.tasks.has(key) ||
+				// The archived task itself, restored on that branch
+				same(task, ctx.archived.tasks.get(key)))
 		) {
 			continue;
 		}
