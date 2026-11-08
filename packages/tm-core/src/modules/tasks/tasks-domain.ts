@@ -93,7 +93,7 @@ export class TasksDomain {
 		);
 		this.removalService = new TaskRemovalService(
 			this.taskService,
-			this.projectRoot
+			configManager
 		);
 		this.ai = new TaskAiCommands(this.taskService, configManager);
 		this.edits = new TaskEditCommands(this.taskService, configManager);

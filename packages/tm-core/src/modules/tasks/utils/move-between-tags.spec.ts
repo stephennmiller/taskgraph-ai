@@ -235,6 +235,26 @@ describe('moveTasksBetweenTags', () => {
 		expect(ids(tags.get('master') ?? [])).toEqual(['1', '2', '3', '4', '5']);
 	});
 
+	it('gives a moved task a new ID when the target tag used its ID for a task since removed (#1040)', () => {
+		const tags = new Map<string, Task[]>([
+			['master', [{ id: '3', title: 'C', dependencies: [], subtasks: [] }]],
+			['feature', [{ id: '1', title: 'A', dependencies: [], subtasks: [] }]]
+		] as any);
+
+		const result = moveTasksBetweenTags(
+			tags,
+			['3'],
+			'master',
+			'feature',
+			{},
+			archived,
+			4
+		);
+
+		expect(result.movedTasks[0].newId).toBe('5');
+		expect(ids(tags.get('feature') ?? [])).toEqual(['1', '5']);
+	});
+
 	it('moves tasks that depend on each other once each', () => {
 		const tags = new Map<string, Task[]>([
 			[

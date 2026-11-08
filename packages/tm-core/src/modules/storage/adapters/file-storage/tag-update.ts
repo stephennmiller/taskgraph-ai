@@ -12,6 +12,7 @@ import type { Task, TaskMetadata } from '../../../../common/types/index.js';
 import type { FormatHandler } from './format-handler.js';
 import { getOwnKey, setOwnKey } from '../../../../common/utils/own-key.js';
 import { withSchemaVersion } from './schema-version.js';
+import { highestTaskId } from '../../../tasks/utils/archive.js';
 
 export function buildTagMetadata(tasks: Task[], tag: string): TaskMetadata {
 	return {
@@ -44,15 +45,26 @@ export function applyTagUpdate(
 	metadata: TaskMetadata
 ): any {
 	const normalizedTasks = normalizeTaskIds(tasks);
+	const legacy = formatHandler.detectFormat(existingData) === 'legacy';
+	const previous = legacy
+		? getOwnKey(existingData, resolvedTag)
+		: resolvedTag === 'master'
+			? existingData
+			: undefined;
+	// The high-water mark: a removed task's ID stays used (#1040)
+	const withHighestId = {
+		...metadata,
+		highestId: Math.max(
+			highestTaskId(previous),
+			highestTaskId({ tasks: normalizedTasks })
+		)
+	};
 
-	if (formatHandler.detectFormat(existingData) === 'legacy') {
+	if (legacy) {
 		// Legacy format - update/add the tag
 		setOwnKey(existingData, resolvedTag, {
 			tasks: normalizedTasks,
-			metadata: mergeTagMetadata(
-				metadata,
-				getOwnKey(existingData, resolvedTag)?.metadata
-			)
+			metadata: mergeTagMetadata(withHighestId, previous?.metadata)
 		});
 		return existingData;
 	}
@@ -60,7 +72,7 @@ export function applyTagUpdate(
 		// Standard format for master tag
 		return {
 			tasks: normalizedTasks,
-			metadata: mergeTagMetadata(metadata, existingData.metadata)
+			metadata: mergeTagMetadata(withHighestId, previous?.metadata)
 		};
 	}
 	// Convert to legacy format when adding non-master tags
@@ -76,7 +88,7 @@ export function applyTagUpdate(
 		},
 		[resolvedTag]: {
 			tasks: normalizedTasks,
-			metadata: withSchemaVersion(metadata)
+			metadata: withSchemaVersion(withHighestId)
 		}
 	};
 }

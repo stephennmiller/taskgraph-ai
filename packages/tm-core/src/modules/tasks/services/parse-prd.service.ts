@@ -313,9 +313,8 @@ export class ParsePrdService {
 		// A new tag gets a valid name; one already in the file keeps its own
 		if (!loaded.exists) assertTagName(tag);
 		const { highestId } = readArchivedIdsSync(tasksPath, tag);
-		// Overwriting (force) replaces the list, so numbering starts over (above
-		// any archived IDs, which stay reserved); only append continues after
-		// the existing tasks
+		// Overwriting (force) replaces the list; numbering still goes above
+		// every ID the tag has held (highestId), so no old ID is reused
 		const existingTasks = append ? loaded.tasks : [];
 		const nextId = append
 			? nextTaskId(

@@ -24,6 +24,7 @@ import {
 	retargetDependents
 } from '../../dependencies/task-to-subtask.js';
 import { normalizeTaskId } from '../validation/task-id.js';
+import { type ParentDoneGuard, settleParentsIn } from './parent-status.js';
 
 // Tasks as stored: IDs and dependencies may be numbers or strings
 export type Item = Record<string, any>;
@@ -141,6 +142,15 @@ export function taken(
 export const findTask = (tasks: Item[], id: DependencyId) =>
 	tasks.find((t) => String(t.id) === String(id));
 
+/** Subtasks can't have subtasks: refuse a task with some becoming one */
+export function refuseNesting(task: Item, id: DependencyId) {
+	if (task.subtasks?.length > 0) {
+		fail(
+			`Task ${id} has subtasks and cannot become a subtask. Move or remove its subtasks first`
+		);
+	}
+}
+
 // A dotted ID left as is ("4.1" under task 3) is not one of this task's numbers
 const nextSubtaskId = (parent: Item) =>
 	String(
@@ -155,12 +165,14 @@ const nextSubtaskId = (parent: Item) =>
 /**
  * Add a subtask to `parentId`: a new one, or the task `fromTaskId` turned
  * into one (what depended on that task then depends on the subtask).
+ * The parent's status then follows its subtasks (see withParentStatus).
  * @returns The subtask as stored
  */
 export function addSubtaskIn(
 	tasks: Task[],
 	parentId: string,
-	source: { fromTaskId: string } | { subtask: NewSubtaskInput }
+	source: { fromTaskId: string } | { subtask: NewSubtaskInput },
+	guardDone?: ParentDoneGuard
 ): Subtask {
 	const items = tasks as Item[];
 	// "01" is task 1; parseInt also read "1x" and subtask "8.1" as a task
@@ -192,6 +204,7 @@ export function addSubtaskIn(
 			dependencies: data.dependencies || []
 		};
 		parentTask.subtasks.push(subtask);
+		settleParentsIn(tasks, [parentKey], guardDone);
 		return subtask as unknown as Subtask;
 	}
 
@@ -202,6 +215,7 @@ export function addSubtaskIn(
 	if (taskKey === parentKey) {
 		fail('Cannot make a task a subtask of itself');
 	}
+	refuseNesting(task, taskKey);
 	if (
 		wouldSubtaskCloseLoop(tasks, parentKey, {
 			fromTaskId: taskKey
@@ -218,14 +232,12 @@ export function addSubtaskIn(
 		task,
 		parentKey
 	);
-	const subtask: Item = {
-		...task,
-		id: newSubtaskId,
-		dependencies
-	};
+	const { subtasks: _none, ...fields } = task;
+	const subtask: Item = { ...fields, id: newSubtaskId, dependencies };
 	assignMetadata(subtask, metadata);
 	parentTask.subtasks.push(subtask);
 	items.splice(taskIndex, 1);
 	retargetDependents(items, taskKey, `${parentKey}.${newSubtaskId}`);
+	settleParentsIn(tasks, [parentKey], guardDone);
 	return subtask as unknown as Subtask;
 }
