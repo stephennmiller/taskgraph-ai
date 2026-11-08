@@ -21,7 +21,13 @@ import {
 	isTaskPreset
 } from './loop-task.js';
 import { isLoopTrusted, keepLoopTrust, trustLoop } from './loop-trust.js';
-import { type LoopBand, resolveLoopBands } from './model-bands.js';
+import {
+	type LoopBand,
+	pickModelEffort,
+	resolveLoopBands
+} from './model-bands.js';
+import { LOOP_CHILD_ENV } from '../../common/constants/auto-update.js';
+import { smokeCommandFor } from '../tasks/utils/smoke-gate.js';
 import { preflightContainer } from './parallel/container-workers.js';
 import { ParallelLoopRunner } from './parallel/parallel-runner.js';
 import { TaskWorktrees } from './parallel/task-worktrees.js';
@@ -34,7 +40,13 @@ import type {
 import { LoopService } from './services/loop.service.js';
 import { resolveResumeLimit } from './session-resume.js';
 import { taskStatuses } from './task-progress.js';
-import type { LoopConfig, LoopPreset, LoopResult } from './types.js';
+import type {
+	LoopConfig,
+	LoopPlan,
+	LoopPlanTask,
+	LoopPreset,
+	LoopResult
+} from './types.js';
 
 /** A task ID (`3`) or a subtask ID (`3.2`): no spaces, at most one dot */
 const TASK_ID_PATTERN = /^[^.\s]+(\.[^.\s]+)?$/;
@@ -185,6 +197,60 @@ export class LoopDomain {
 			);
 		}
 		return { id, title: found.task.title };
+	}
+
+	/**
+	 * What a run would do, without starting Claude Code or writing anything
+	 * (`loop --dry-run`): the tasks it would work, in `taskgraph next` order
+	 * with each one done as it's picked, each at the model and effort its
+	 * complexity picks. Pass the iteration count resolveIterations gave.
+	 * @throws LoopError (with a hint) for a bad `--id`, `loop.bands` or
+	 *   `loop.smokeCommand`
+	 */
+	async plan(options: {
+		prompt: string;
+		iterations: number;
+		taskId?: string;
+		tag?: string;
+		model?: string;
+	}): Promise<LoopPlan> {
+		const { prompt, iterations, taskId, model } = options;
+		const tag = options.tag || this.configManager.getActiveTag();
+		const bands = this.loopBands();
+		// Read as the run's own `set-status done` would read it
+		const smokeCommand = smokeCommandFor(this.loopSettings(), {
+			[LOOP_CHILD_ENV]: '1'
+		});
+		const tasks = this.tasks;
+		const picksOwnWork = taskId === undefined && !isTaskPreset(prompt);
+		const picks: LoopTask[] =
+			!tasks || picksOwnWork
+				? []
+				: taskId !== undefined
+					? [await this.resolveTask(taskId, { prompt, tag })]
+					: (await tasks.getNextSequence(iterations, { tag })).map((t) => ({
+							id: String(t.id),
+							title: t.title
+						}));
+		const planned = await Promise.all(
+			picks.map(async (task): Promise<LoopPlanTask> => {
+				// The score the run's own chooseModel reads
+				const score = bands.length
+					? (await tasks?.get(task.id, tag).catch(() => undefined))?.task
+							?.complexity
+					: undefined;
+				return { ...task, ...pickModelEffort(score, bands, model) };
+			})
+		);
+		return {
+			prompt,
+			iterations,
+			tag,
+			tasks: planned,
+			picksOwnWork,
+			...(model ? { model } : {}),
+			...(smokeCommand ? { smokeCommand } : {})
+		};
 	}
 
 	/**

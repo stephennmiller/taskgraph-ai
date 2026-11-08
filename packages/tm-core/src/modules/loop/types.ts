@@ -2,7 +2,8 @@
  * @fileoverview Type definitions for the loop module
  */
 
-import type { LoopBand, LoopEffort } from './model-bands.js';
+import type { LoopTask } from './loop-task.js';
+import type { LoopBand, LoopEffort, ModelChoice } from './model-bands.js';
 
 /**
  * Available preset loop prompts
@@ -182,4 +183,27 @@ export interface SetAsideTask {
 	id: string;
 	/** The note added to the task */
 	reason: string;
+}
+
+/** A task a dry run says the loop would work, and what it would run at */
+export type LoopPlanTask = LoopTask & ModelChoice;
+
+/** What `loop --dry-run` shows: a run's work, without running it */
+export interface LoopPlan {
+	/** Preset name or custom prompt path */
+	prompt: string;
+	iterations: number;
+	/** The tag the run works in */
+	tag: string;
+	/**
+	 * The tasks in the order the run would work them, if each session
+	 * finishes its task; empty for a prompt that picks its own work
+	 */
+	tasks: LoopPlanTask[];
+	/** The prompt picks its own work (`linting`, a custom file without `--id`), not TaskGraph tasks */
+	picksOwnWork: boolean;
+	/** `--model`, which an iteration without a task runs at */
+	model?: string;
+	/** `loop.smokeCommand`, which `set-status done` runs inside the loop */
+	smokeCommand?: string;
 }

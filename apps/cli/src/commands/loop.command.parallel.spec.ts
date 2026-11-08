@@ -122,6 +122,20 @@ describe('LoopCommand --parallel', () => {
 		expect(process.exitCode).toBeUndefined();
 	});
 
+	it('refuses --dry-run before starting tm-core', async () => {
+		await execute({ parallel: '2', dryRun: true });
+
+		expect(createTmCore).not.toHaveBeenCalled();
+		expect(displayError).toHaveBeenCalledWith(
+			expect.objectContaining({
+				message: "--dry-run can't be combined with --parallel",
+				hint: expect.stringContaining('Drop --parallel')
+			}),
+			{ skipExit: true }
+		);
+		expect(process.exitCode).toBe(1);
+	});
+
 	it('refuses a bad count before starting tm-core', async () => {
 		await execute({ parallel: 'lots' });
 

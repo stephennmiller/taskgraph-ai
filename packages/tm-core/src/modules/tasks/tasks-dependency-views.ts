@@ -15,6 +15,9 @@ import {
 	type DependencyTree
 } from '../dependencies/index.js';
 import { buildPrimeContext, type PrimeContext } from './utils/prime-context.js';
+import { nextTaskSequence } from './utils/next-task.js';
+import { resolveClaimant } from './utils/claim.js';
+import type { Task } from '../../common/types/index.js';
 import { normalizeTaskId } from './validation/task-id.js';
 
 /** Read-only dependency views behind TasksDomain */
@@ -64,6 +67,19 @@ export class TaskDependencyViews {
 	): Promise<BlockerExplanation> {
 		const tasks = await this.taskService.getDependencyView(options.tag);
 		return explainBlockers(tasks, normalizeTaskId(taskId));
+	}
+
+	/**
+	 * Up to `limit` items in the order `next` would pick them if each were
+	 * done as soon as it was picked (see nextTaskSequence), skipping what
+	 * someone else's claim holds, as getNext does
+	 */
+	async getNextSequence(
+		limit: number,
+		options: { tag?: string } = {}
+	): Promise<Task[]> {
+		const tasks = await this.taskService.getDependencyView(options.tag);
+		return nextTaskSequence(tasks, limit, { claimant: resolveClaimant() });
 	}
 
 	/**

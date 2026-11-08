@@ -66,6 +66,27 @@ Watch Claude work as it goes, instead of seeing each iteration's output when it 
 taskgraph loop -n 5 --verbose
 ```
 
+### See what a run would do
+
+`--dry-run` prints the tasks a run would work, in the order it would work them, and the model and effort each would run at, then exits 0 without starting Claude Code or changing any file:
+
+```bash
+taskgraph loop --dry-run -n 5
+```
+
+```
+Loop dry run · default preset · up to 5 iterations · Claude CLI
+  3.1  default model       Profile form
+  3.2  default model       Avatar upload
+  1    sonnet, low effort  Set up the database schema
+  2    high effort         Build the login API
+  4    default model       Write docs
+Smoke check  node dist/cli.js < smoke.txt
+Nothing started; run it without --dry-run
+```
+
+The order is `taskgraph next`'s, as if each task were done when its session ends, so a task shows up after the tasks it depends on; `--tag`, `--id` and `-n` narrow it as they narrow the run. The model and effort come from each task's complexity score and `loop.bands`, or `--model` (see [Model and effort by complexity](/capabilities/loop-cost#model-and-effort-by-complexity)). A preset that picks its own work, such as `linting`, lists no tasks. `Smoke check` appears when `loop.smokeCommand` is set. A run can differ when a session fails, adds tasks or changes dependencies. `--dry-run` refuses `--parallel`, whose tasks depend on which finish first; `taskgraph graph` shows what can run at once.
+
 ### Cost, caps and models
 
 Each iteration's status line shows what it cost, how many turns it took and the model and effort it ran at. `--max-turns` and `--max-budget-usd` cap a run, a task's complexity score picks its model and effort and `--reuse-session` resumes the last iteration's Claude Code session for the next task. See [Loop cost and models](/capabilities/loop-cost).
@@ -137,6 +158,7 @@ It then prints one line: why it stopped (`✓ All tasks complete`, `Iteration li
 | `--max-budget-usd`       | number | -                               | Stop the run once it has spent this many US dollars; each iteration gets what's left. See [Cost and caps](/capabilities/loop-cost#cost-and-caps). |
 | `--model`                | string | -                               | Run every iteration on this model instead of the one the task's complexity picks. See [Model and effort by complexity](/capabilities/loop-cost#model-and-effort-by-complexity). |
 | `--reuse-session`        | flag   | -                               | Resume the last iteration's Claude Code session for the next task instead of starting a new one. See [Session reuse](/capabilities/loop-cost#session-reuse). |
+| `--dry-run`              | flag   | -                               | Print the tasks a run would work, in order, with each one's model and effort, and start nothing. Not with `--parallel`. See [See what a run would do](#see-what-a-run-would-do). |
 | `--parallel`             | number | -                               | Run up to N ready tasks at once, each in its own git worktree and branch. See [Run tasks in parallel](/capabilities/loop-parallel). |
 | `--container`            | flag   | -                               | With `--parallel`: run each task in its own Docker container. See [Run each task in a container](/capabilities/loop-parallel#run-each-task-in-a-container). |
 | `--container-image`      | string | `docker/sandbox-templates:claude-code` | The image `--container` uses.                                                                          |
