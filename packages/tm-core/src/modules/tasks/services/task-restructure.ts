@@ -14,6 +14,7 @@ import type { Subtask, Task } from '../../../common/types/index.js';
 import { parseSubtaskDependencyInput } from '../../dependencies/subtask-dependency.js';
 import { moveTasksBetweenTags } from '../utils/move-between-tags.js';
 import { moveTasksIn } from '../utils/move-within-tag.js';
+import type { ParentDoneGuard } from '../utils/parent-status.js';
 import {
 	type CrossTagMoveOptions,
 	type CrossTagMoveResult,
@@ -57,7 +58,8 @@ export function addSubtaskToTag(
 	storage: IStorage,
 	tag: string,
 	parentId: string,
-	input: AddSubtaskInput
+	input: AddSubtaskInput,
+	guardDone: ParentDoneGuard
 ): Promise<Subtask> {
 	const { fromTaskId, title, dependencies, ...fields } = input;
 	if (!fromTaskId && !title) {
@@ -78,7 +80,7 @@ export function addSubtaskToTag(
 				}
 			};
 	return mutateTag(storage, tag, (tasks) =>
-		addSubtaskIn(tasks, String(parentId), source)
+		addSubtaskIn(tasks, String(parentId), source, guardDone)
 	);
 }
 
@@ -86,11 +88,12 @@ export async function moveTasksWithinTag(
 	storage: IStorage,
 	tag: string,
 	from: string,
-	to: string
+	to: string,
+	guardDone: ParentDoneGuard
 ): Promise<WithinTagMoveResult> {
 	const archived = await storage.loadArchivedTaskIds(tag);
 	return mutateTag(storage, tag, (tasks) =>
-		moveTasksIn(tasks, from, to, tag, archived)
+		moveTasksIn(tasks, from, to, tag, archived, guardDone)
 	);
 }
 

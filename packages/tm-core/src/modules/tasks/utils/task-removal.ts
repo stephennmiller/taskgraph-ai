@@ -27,6 +27,7 @@ import {
 	normalizeTaskId
 } from '../validation/task-id.js';
 import { liveOrArchived, nextTaskId } from './archive.js';
+import { type ParentDoneGuard, settleParentsIn } from './parent-status.js';
 import { promotedSubtaskDescription } from './promoted-subtask.js';
 
 type StoredSubtask = Subtask & Record<string, unknown>;
@@ -126,13 +127,15 @@ export interface RemoveTasksOutcome {
 
 /**
  * Remove tasks and subtasks, their subtasks with them, and every reference
- * to them. Throws, changing nothing, when an ID names nothing.
+ * to them; a subtask's parent then takes its status from the rest. Throws,
+ * changing nothing, when an ID names nothing.
  */
 export function removeTasksIn(
 	tasks: Task[],
 	ids: string[],
 	tag: string,
-	archivedIds: ReadonlySet<string>
+	archivedIds: ReadonlySet<string>,
+	guardDone?: ParentDoneGuard
 ): RemoveTasksOutcome {
 	if (ids.length === 0) {
 		throw errorWithHint(ERROR_CODES.INVALID_INPUT, 'Task ID is required');
@@ -152,6 +155,7 @@ export function removeTasksIn(
 		danglingDependents: 0
 	};
 	const removedIds = new Set<string>();
+	const parents: string[] = [];
 	for (const id of ids) {
 		// Gone already: listed twice, or a subtask of a task removed before it
 		const item = findItem(tasks, id);
@@ -159,6 +163,7 @@ export function removeTasksIn(
 		if (item.subtask) {
 			const subtasks = item.task.subtasks as StoredSubtask[];
 			subtasks.splice(subtasks.indexOf(item.subtask), 1);
+			parents.push(String(item.task.id));
 			outcome.removedTasks.push({
 				...item.subtask,
 				parentTaskId: parseInt(id, 10)
@@ -180,6 +185,7 @@ export function removeTasksIn(
 		outcome.messages.push(`Successfully removed task ${id} from tag '${tag}'`);
 	}
 	dropReferences(tasks, removedIds);
+	settleParentsIn(tasks, parents, guardDone);
 
 	// Dependencies that were already dangling stay; callers point to
 	// fix-dependencies. A failed check must not fail the removal.
@@ -203,12 +209,14 @@ interface RemoveSubtaskOptions {
 	/** The archive's highest ID for the tag; a new task's ID goes above it */
 	highestArchivedId: number;
 	archivedIds: ReadonlySet<string>;
+	guardDone?: ParentDoneGuard;
 }
 
 /**
  * Remove subtasks ("5.2"), or with `convert` turn each into a top-level task
- * with the subtask's own dependencies (not its old parent). Throws, changing nothing, when an ID isn't
- * a subtask that exists.
+ * with the subtask's own dependencies (not its old parent). The parent then
+ * takes its status from the subtasks left. Throws, changing nothing, when an
+ * ID isn't a subtask that exists.
  * @returns For each ID, the task it became, or null when it was deleted
  */
 export function removeSubtasksIn(
@@ -222,7 +230,7 @@ export function removeSubtasksIn(
 function removeSubtaskIn(
 	tasks: Task[],
 	id: string,
-	{ convert, highestArchivedId, archivedIds }: RemoveSubtaskOptions
+	{ convert, highestArchivedId, archivedIds, guardDone }: RemoveSubtaskOptions
 ): Task | null {
 	// Exactly "<task>.<subtask>": parseInt read "1.1x" as 1.1 (#539)
 	if (!/^\d+\.\d+$/.test(id)) {
@@ -256,6 +264,7 @@ function removeSubtaskIn(
 	const [removed] = subtasks.splice(index, 1);
 	// Saved without the key, as the legacy command did
 	if (subtasks.length === 0) delete (parent as Partial<Task>).subtasks;
+	settleParentsIn(tasks, [parentId], guardDone);
 	const fullId = `${parentId}.${subtaskNumber}`;
 
 	if (!convert) {
@@ -267,18 +276,19 @@ function removeSubtaskIn(
 
 	// Its siblings become full IDs, which read the same on a task
 	const moved = dependenciesForMovedItem(removed, parentId, undefined);
+	const { parentId: _parent, subtasks: _none, ...fields } = removed;
 	const converted = {
+		...fields,
 		// Stored as a number, as the legacy command wrote it
 		id: nextTaskId(
 			tasks.map((t) => t.id),
 			highestArchivedId
 		) as unknown as string,
-		title: removed.title,
 		description: promotedSubtaskDescription(removed),
 		details: removed.details || '',
 		status: removed.status || 'pending',
 		dependencies: moved.dependencies,
-		priority: parent.priority || 'medium'
+		priority: removed.priority || parent.priority || 'medium'
 	} as Task;
 	// Keep metadata (and its dependency marks, re-keyed for top level). No
 	// dependency on the old parent: a sibling waiting on it would loop (#803)
