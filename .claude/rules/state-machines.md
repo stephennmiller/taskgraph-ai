@@ -149,23 +149,27 @@ Known breaks, tracked in #1044:
 
 ## 4. Task ID
 
-| From     | Event                        | To                 |
-| -------- | ---------------------------- | ------------------ |
-| free     | add-task, parse-prd, move    | live               |
-| live     | archive                      | archived (ID kept) |
-| archived | restore                      | live               |
-| live     | remove-task, move off the ID | free again         |
+| From     | Event                     | To                 |
+| -------- | ------------------------- | ------------------ |
+| free     | add-task, parse-prd, move | live               |
+| live     | archive                   | archived (ID kept) |
+| archived | restore                   | live               |
+| live     | remove-task, move off     | retired            |
 
-`nextTaskId` (`tasks/utils/archive.ts`) is the highest live ID or archive
-`highestId`, plus one.
+Each tag records `metadata.highestId`, the highest task ID it has ever
+held, on every write (`applyTagUpdate` in `tag-update.ts`). `nextTaskId`
+and `withFreeIds` hand out IDs above the highest of that mark, the live IDs
+and the archive's `highestId`. That covers add-task, parse-prd (including
+`--force`), `remove-task --convert`, GitHub import and moves between tags.
+The merge driver merges the mark as a max and renumbers an incoming new
+task whose ID this branch used and removed (#1040).
 
 Invariant everything relies on: an ID names one task for its whole life.
 The merge driver, GitHub link recovery and every in-flight AI write find a
 task by ID only.
 
-Known break, tracked in #1040: remove-task frees the ID, so the next
-add-task reuses it, and a stale edit, a merge from another branch or a
-GitHub push then lands on the unrelated new task.
+Known limits: `move --to=<id>` within a tag may name a removed ID on
+purpose, and subtask IDs within a parent can still be reused.
 
 ## 5. tasks.json write
 
@@ -314,8 +318,8 @@ Pass 1 records the status of the issue it created or recovered, and pass 2
 records the task's status once it has written it, so a push cut off between
 the passes never makes a pull revert the task (#1041).
 
-Known break, tracked in #1040: ID reuse lets a new task recover a removed
-task's link.
+A removed task's ID is never handed to a new task (machine 4), so link
+recovery by `(tag, id)` can't adopt another task's issue (#1040).
 
 ## 13. Auto-update
 

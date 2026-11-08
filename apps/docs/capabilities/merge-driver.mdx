@@ -14,7 +14,7 @@ TaskGraph ships a Git merge driver for `tasks.json`. Git runs it during `git mer
 
 - **New tasks on both branches are all kept.** When both branches used the same ID, the incoming branch's task gets the next free ID. The same goes for new subtasks of an existing task.
 - **References follow the renumbered task.** On the incoming side, task and subtask `dependencies`, `metadata.dependencySources` keys, `related` / `discovered-from` links (`metadata.taskLinks`) and a subtask's `parentId` are rewritten to the new ID.
-- **Only IDs that collide move.** An incoming task whose ID is still free keeps it.
+- **Only IDs that collide move.** An incoming task whose ID is still free keeps it. An ID this branch used for a task it has since removed isn't free: the incoming task moves, so the other branch's edits to the removed task show up as a conflict on it instead of landing on a new task under its old ID.
 - **Changes to different fields merge cleanly.** One branch sets task 3 to `done` while the other edits its description: both changes land.
 
 It prints one line inside the merge output when it renumbered something:
@@ -75,7 +75,7 @@ Some fields never clash:
 |-------|-----------|
 | `updatedAt`, `updated`, `lastModified` | the later timestamp |
 | `created`, `createdAt`, `archivedAt` | the earlier timestamp |
-| `schemaVersion`, the archive's `highestId` | the higher one |
+| `schemaVersion`, `highestId` | the higher one |
 | `dependencies`, `tags` and other lists of plain values | both sides' additions and removals |
 | `details` that both sides appended to | both appendices, this branch's first |
 | a tag's `taskCount`, `completedCount` | recounted |

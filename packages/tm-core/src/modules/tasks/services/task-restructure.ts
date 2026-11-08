@@ -12,6 +12,7 @@ import {
 import type { IStorage } from '../../../common/interfaces/storage.interface.js';
 import type { Subtask, Task } from '../../../common/types/index.js';
 import { parseSubtaskDependencyInput } from '../../dependencies/subtask-dependency.js';
+import { highestTaskId } from '../utils/archive.js';
 import { moveTasksBetweenTags } from '../utils/move-between-tags.js';
 import { moveTasksIn } from '../utils/move-within-tag.js';
 import type { ParentDoneGuard } from '../utils/parent-status.js';
@@ -112,14 +113,15 @@ export async function moveTasksToTag(
 		[fromTag, fromArchived],
 		[toTag, toArchived]
 	]);
-	return storage.mutateTags((tags) => ({
+	return storage.mutateTags((tags, metadata) => ({
 		result: moveTasksBetweenTags(
 			tags,
 			taskIds,
 			fromTag,
 			toTag,
 			options,
-			(tag) => archived.get(tag) ?? new Set()
+			(tag) => archived.get(tag) ?? new Set(),
+			highestTaskId({ metadata: metadata.get(toTag) })
 		),
 		changed: [fromTag, toTag]
 	}));

@@ -1,0 +1,100 @@
+/**
+ * @fileoverview A removed task's ID is never handed out again (#1040): every
+ * write keeps the tag's `metadata.highestId`, and new tasks go above it
+ */
+
+import * as fs from 'node:fs';
+import * as os from 'node:os';
+import * as path from 'node:path';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import type { Task } from '../../../src/common/types/index.js';
+import { FileStorage } from '../../../src/modules/storage/adapters/file-storage/file-storage.js';
+import { renderIssue } from '../../../src/modules/github/services/issue-renderer.js';
+import { planSync } from '../../../src/modules/github/services/sync-planner.js';
+import { createTask } from '../../../src/testing/task-fixtures.js';
+
+describe('FileStorage high-water mark', () => {
+	let tempDir: string;
+	let tasksPath: string;
+	let storage: FileStorage;
+
+	const write = (data: unknown) =>
+		fs.writeFileSync(tasksPath, JSON.stringify(data));
+	const read = () => JSON.parse(fs.readFileSync(tasksPath, 'utf8'));
+	const titled = (id: string, title: string): Task =>
+		createTask({ id, title, description: title });
+
+	beforeEach(() => {
+		tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'tg-highest-id-'));
+		tasksPath = path.join(tempDir, '.taskgraph', 'tasks', 'tasks.json');
+		fs.mkdirSync(path.dirname(tasksPath), { recursive: true });
+		storage = new FileStorage(tempDir);
+	});
+
+	afterEach(() => {
+		fs.rmSync(tempDir, { recursive: true, force: true });
+	});
+
+	it('gives a task added after a remove a new ID, in a file written before the mark existed', async () => {
+		write({
+			master: {
+				tasks: [titled('1', 'A'), titled('2', 'Old feature')],
+				metadata: {}
+			}
+		});
+
+		await storage.deleteTask('2', 'master');
+		const [added] = await storage.appendTasks(
+			[titled('2', 'Brand new work')],
+			'master'
+		);
+
+		expect(added.id).toBe('3');
+		expect(read().master.metadata.highestId).toBe(3);
+	});
+
+	it('keeps the mark in a legacy-shaped file', async () => {
+		write({ tasks: [titled('1', 'A'), titled('2', 'B')] });
+
+		await storage.deleteTask('2', 'master');
+
+		expect(read().metadata.highestId).toBe(2);
+	});
+
+	it("doesn't push the new task onto the removed task's GitHub issue", async () => {
+		write({
+			master: { tasks: [titled('1', 'A'), titled('12', 'Old feature')] }
+		});
+		const old = renderIssue(
+			{ ...titled('12', 'Old feature'), status: 'done' },
+			{ tag: 'master' }
+		);
+
+		await storage.deleteTask('12', 'master');
+		const [added] = await storage.appendTasks(
+			[titled('12', 'Brand new thing')],
+			'master'
+		);
+		const plan = planSync({
+			repo: 'o/r',
+			tasks: [{ tag: 'master', task: added }],
+			remote: [
+				{
+					number: 40,
+					url: 'u',
+					title: old.title,
+					body: old.body,
+					labels: old.labels,
+					assignees: [],
+					state: 'closed',
+					stateReason: 'completed',
+					author: 'me'
+				}
+			],
+			viewer: 'me'
+		} as any);
+
+		expect(added.id).toBe('13');
+		expect(plan.steps[0].action).toBe('create');
+	});
+});

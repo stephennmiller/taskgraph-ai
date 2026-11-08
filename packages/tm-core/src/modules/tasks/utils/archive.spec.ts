@@ -278,6 +278,24 @@ describe('readArchivedIdsSync', () => {
 		});
 	});
 
+	it("reserves IDs up to the tag's high-water mark in tasks.json (#1040)", () => {
+		dir = fs.mkdtempSync(path.join(os.tmpdir(), 'tg-archive-'));
+		const tasksPath = path.join(dir, 'tasks.json');
+		fs.writeFileSync(
+			tasksPath,
+			JSON.stringify({
+				master: {
+					tasks: [createTask({ id: 1, title: 'A' })],
+					metadata: { highestId: 5 }
+				},
+				feature: { tasks: [createTask({ id: 7, title: 'B' })], metadata: {} }
+			})
+		);
+
+		expect(readArchivedIdsSync(tasksPath, 'master').highestId).toBe(5);
+		expect(readArchivedIdsSync(tasksPath, 'feature').highestId).toBe(7);
+	});
+
 	it('has nothing reserved when there is no archive', () => {
 		dir = fs.mkdtempSync(path.join(os.tmpdir(), 'tg-archive-'));
 

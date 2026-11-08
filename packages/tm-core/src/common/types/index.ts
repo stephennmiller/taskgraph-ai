@@ -205,6 +205,11 @@ export interface TaskMetadata {
 	lastModified: string;
 	taskCount: number;
 	completedCount: number;
+	/**
+	 * Highest task ID the tag has held, removed tasks included, so an ID is
+	 * never handed out twice (#1040). Absent in files written before it existed
+	 */
+	highestId?: number;
 	projectName?: string;
 	description?: string;
 	tags?: string[];
