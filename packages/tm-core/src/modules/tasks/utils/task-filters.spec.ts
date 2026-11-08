@@ -7,7 +7,9 @@ import {
 	filterBySearch,
 	filterByStatus,
 	filterReadyTasks,
-	parseStatusFilter
+	filterTaskList,
+	parseStatusFilter,
+	withBlocks
 } from './task-filters.js';
 
 describe('filterByStatus', () => {
@@ -142,5 +144,80 @@ describe('filterByAssignee', () => {
 		] as unknown as Task[];
 
 		expect(filterByAssignee(tasks, 'octocat').map((t) => t.id)).toEqual(['2']);
+	});
+});
+
+describe('withBlocks', () => {
+	it('adds the IDs of the dependents and reports dependencies on no task', () => {
+		const { tasks, invalidDependencies } = withBlocks([
+			createTask({ id: 1, title: 'Base' }),
+			createTask({ id: 2, title: 'Uses base', dependencies: ['1', '9'] })
+		]);
+
+		expect(tasks.map((task) => task.blocks)).toEqual([['2'], []]);
+		expect(invalidDependencies).toEqual([{ taskId: '2', depId: '9' }]);
+	});
+
+	it('does not report a dependency on an archived task', () => {
+		const { invalidDependencies } = withBlocks(
+			[createTask({ id: 2, title: 'Uses archived', dependencies: ['1'] })],
+			new Set(['1'])
+		);
+
+		expect(invalidDependencies).toEqual([]);
+	});
+});
+
+describe('filterTaskList', () => {
+	const { tasks } = withBlocks([
+		createTask({ id: 1, title: 'Done base', status: 'done' }),
+		createTask({
+			id: 2,
+			title: 'Ready',
+			status: 'pending',
+			dependencies: ['1'],
+			subtasks: [createSubtask({ id: 1, title: 'Login form', parentId: '2' })]
+		}),
+		createTask({
+			id: 3,
+			title: 'Waiting',
+			status: 'pending',
+			dependencies: ['2']
+		})
+	]);
+	const ids = (filtered: typeof tasks) => filtered.map((task) => task.id);
+
+	it('keeps every task and drops subtasks with no filters', () => {
+		const filtered = filterTaskList(tasks, {});
+
+		expect(ids(filtered)).toEqual(['1', '2', '3']);
+		expect(filtered[1].subtasks).toEqual([]);
+	});
+
+	it('judges ready and blocking against every task, before the status filter', () => {
+		expect(ids(filterTaskList(tasks, { ready: true }))).toEqual(['2']);
+		expect(
+			ids(filterTaskList(tasks, { blocking: true, status: 'pending' }))
+		).toEqual(['2']);
+	});
+
+	it('counts an archived dependency as done for ready', () => {
+		const { tasks: archived } = withBlocks([
+			createTask({ id: 5, title: 'After', dependencies: ['4'] })
+		]);
+
+		expect(ids(filterTaskList(archived, { ready: true }))).toEqual([]);
+		expect(
+			ids(
+				filterTaskList(archived, { ready: true, archivedIds: new Set(['4']) })
+			)
+		).toEqual(['5']);
+	});
+
+	it('matches search on a subtask, then keeps subtasks only when asked', () => {
+		expect(ids(filterTaskList(tasks, { search: 'LOGIN' }))).toEqual(['2']);
+		expect(
+			filterTaskList(tasks, { search: 'login', withSubtasks: true })[0].subtasks
+		).toHaveLength(1);
 	});
 });

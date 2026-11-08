@@ -111,6 +111,68 @@ export function buildBlocksMap(
 }
 
 /**
+ * Each task with `blocks`, the IDs of the tasks that depend on it, and the
+ * dependencies that name no task. Pass every task in one tag, with subtasks
+ * (see `buildBlocksMap`).
+ */
+export function withBlocks<T extends Task>(
+	tasks: T[],
+	archivedIds?: ReadonlySet<string>
+): {
+	tasks: Array<T & { blocks: string[] }>;
+	invalidDependencies: InvalidDependency[];
+} {
+	const { blocksMap, invalidDependencies } = buildBlocksMap(tasks, archivedIds);
+	return {
+		tasks: tasks.map((task) => ({
+			...task,
+			blocks: blocksMap.get(String(task.id)) || []
+		})),
+		invalidDependencies
+	};
+}
+
+/** The filters `list` applies, see `filterTaskList` */
+export interface TaskListFilters {
+	/** Only tasks you can start now; judged within the tasks given, so one tag's */
+	ready?: boolean;
+	/** IDs of the tag's archived tasks, which count as done for `ready` */
+	archivedIds?: ReadonlySet<string>;
+	/** Only tasks that block another */
+	blocking?: boolean;
+	/** A `--status` value: `pending`, `pending,review` or `all` */
+	status?: string;
+	/** Only tasks (or with a subtask) assigned to this login */
+	assignee?: string;
+	/** Only tasks (or with a subtask) whose text holds this, any case */
+	search?: string;
+	/** Keep each task's subtasks; without it they're dropped after the filters, which match on them */
+	withSubtasks?: boolean;
+}
+
+/**
+ * The tasks `list` shows. Give it the output of `withBlocks` over every task
+ * in the tag: a dependency on a task the status filter drops isn't a
+ * missing one (#365), and a dependency can name a subtask (#657).
+ */
+export function filterTaskList<T extends TaskWithBlocks>(
+	tasks: T[],
+	filters: TaskListFilters
+): T[] {
+	let filtered = filters.ready
+		? filterReadyTasks(tasks, filters.archivedIds)
+		: tasks;
+	if (filters.blocking)
+		filtered = filtered.filter((task) => task.blocks.length > 0);
+	filtered = filterByStatus(filtered, filters.status);
+	filtered = filterByAssignee(filtered, filters.assignee);
+	filtered = filterBySearch(filtered, filters.search);
+	return filters.withSubtasks
+		? filtered
+		: filtered.map((task) => ({ ...task, subtasks: [] }));
+}
+
+/**
  * Filter to only tasks that are ready to work on
  * A task is ready when:
  * 1. It has an actionable status (pending, in-progress, or review)
@@ -133,10 +195,10 @@ export function buildBlocksMap(
  * // Task 3 is not ready because dependency '2' is still pending
  * ```
  */
-export function filterReadyTasks(
-	tasks: TaskWithBlocks[],
+export function filterReadyTasks<T extends TaskWithBlocks>(
+	tasks: T[],
 	archivedIds: ReadonlySet<string> = new Set()
-): TaskWithBlocks[] {
+): T[] {
 	const dependencyState = createDependencyState(tasks);
 	const liveIds = new Set(tasks.map((t) => String(t.id)));
 
@@ -167,28 +229,6 @@ export function filterReadyTasks(
 			);
 		});
 	});
-}
-
-/**
- * Filter to only tasks that block other tasks
- * These are tasks that have at least one other task depending on them
- *
- * @param tasks - Array of tasks with blocks information
- * @returns Filtered array of tasks that have dependents (block other tasks)
- *
- * @example
- * ```typescript
- * const tasks = [
- *   { id: '1', blocks: ['2', '3'] },  // Blocks tasks 2 and 3
- *   { id: '2', blocks: [] },          // Blocks nothing
- *   { id: '3', blocks: [] }           // Blocks nothing
- * ];
- * const blockingTasks = filterBlockingTasks(tasks);
- * // Returns only task 1 (the only task with non-empty blocks)
- * ```
- */
-export function filterBlockingTasks(tasks: TaskWithBlocks[]): TaskWithBlocks[] {
-	return tasks.filter((task) => task.blocks.length > 0);
 }
 
 /**
