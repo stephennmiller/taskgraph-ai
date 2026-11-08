@@ -244,6 +244,8 @@ export class TasksDomain {
 		this.views.explainBlockers(...a);
 	getPrimeContext: TaskDependencyViews['getPrimeContext'] = (...a) =>
 		this.views.getPrimeContext(...a);
+	getNextSequence: TaskDependencyViews['getNextSequence'] = (...a) =>
+		this.views.getNextSequence(...a);
 
 	// ===== Dependencies and removal (DependencyService, TaskRemovalService) =====
 

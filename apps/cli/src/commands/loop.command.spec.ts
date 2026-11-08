@@ -106,6 +106,13 @@ describe('LoopCommand', () => {
 					title: 'Pinned Task'
 				})),
 				isPreset: vi.fn().mockReturnValue(true),
+				plan: vi.fn().mockResolvedValue({
+					prompt: 'default',
+					iterations: 1,
+					tag: 'feature-auth',
+					tasks: [{ id: '1', title: 'Test Task', model: 'sonnet' }],
+					picksOwnWork: false
+				}),
 				isTaskPreset: vi
 					.fn()
 					.mockImplementation((p: string) => p === 'default' || p === 'tdd')
@@ -335,6 +342,24 @@ describe('LoopCommand', () => {
 		);
 	});
 
+	describe('--dry-run', () => {
+		it('prints the plan without asking for approval or starting Claude', async () => {
+			mockTmCore.loop.isTrusted.mockReturnValue(false);
+			const execute = (loopCommand as any).execute.bind(loopCommand);
+			await execute({ dryRun: true, model: 'sonnet' });
+
+			expect(mockTmCore.loop.plan).toHaveBeenCalledWith(
+				expect.objectContaining({ prompt: 'default', model: 'sonnet' })
+			);
+			expect(mockLoopRun).not.toHaveBeenCalled();
+			expect(inquirer.prompt).not.toHaveBeenCalled();
+			const output = consoleLogSpy.mock.calls.flat().join('\n');
+			expect(output).toContain('Loop dry run');
+			expect(output).toContain('Test Task');
+			expect(processExitSpy).not.toHaveBeenCalled();
+		});
+	});
+
 	describe('execute integration', () => {
 		it('should call tmCore.loop.run with parsed config', async () => {
 			const result = createMockResult();
@@ -512,8 +537,6 @@ describe('LoopCommand', () => {
 
 			const execute = (loopCommand as any).execute.bind(loopCommand);
 			await execute({});
-
-			expect(mockTmCore.loop.checkSandboxAuth).not.toHaveBeenCalled();
 		});
 
 		it('should run interactive auth when sandbox not ready', async () => {

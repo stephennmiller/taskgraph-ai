@@ -1,7 +1,7 @@
 import { spawnSync } from 'node:child_process';
 import os from 'node:os';
 import { describe, expect, it } from 'vitest';
-import type { Task } from '../../../common/types/index.js';
+import type { Task, TaskStatus } from '../../../common/types/index.js';
 import { createSubtask, createTask } from '../../../testing/task-fixtures.js';
 import {
 	bottlenecks,
@@ -9,7 +9,8 @@ import {
 	explainBlockers,
 	parallelWaves
 } from '../../dependencies/index.js';
-import { isStaleClaim, selectNextTask } from './next-task.js';
+import { isStaleClaim, nextTaskSequence, selectNextTask } from './next-task.js';
+import { parentDoneGate } from './parent-status.js';
 
 /** A pid that was in use and has exited */
 const deadPid = () => spawnSync(process.execPath, ['-e', '']).pid;
@@ -382,5 +383,99 @@ describe('isStaleClaim', () => {
 			false
 		);
 		expect(isStaleClaim({ claimPid: '1', claimHost: host })).toBe(false);
+	});
+});
+
+describe('nextTaskSequence', () => {
+	const tasks = (): Task[] => [
+		createTask({ id: 1, title: 'Schema', priority: 'high' }),
+		createTask({ id: 2, title: 'API', dependencies: ['1'] }),
+		createTask({
+			id: 3,
+			title: 'Profile',
+			status: 'in-progress',
+			subtasks: [
+				createSubtask({ id: 1, title: 'Form', parentId: '3' }),
+				createSubtask({
+					id: 2,
+					title: 'Avatar',
+					parentId: '3',
+					dependencies: [1]
+				})
+			]
+		}),
+		createTask({
+			id: 4,
+			title: 'Docs',
+			priority: 'low',
+			dependencies: ['2', '3']
+		})
+	];
+	const ids = (picked: Task[]) => picked.map((t) => String(t.id));
+
+	it('picks in next order, each pick done before the next, so dependents follow', () => {
+		expect(ids(nextTaskSequence(tasks(), 10))).toEqual([
+			'3.1',
+			'3.2',
+			'1',
+			'2',
+			'4'
+		]);
+	});
+
+	it('stops at the limit, and leaves the tasks it was given unchanged', () => {
+		const given = tasks();
+		expect(ids(nextTaskSequence(given, 2))).toEqual(['3.1', '3.2']);
+		expect(given[2].status).toBe('in-progress');
+		expect(given[2].subtasks[0].status).toBe('pending');
+	});
+
+	it('counts a task picked whole as done with its subtasks', () => {
+		const picked = nextTaskSequence(
+			[
+				createTask({
+					id: 1,
+					title: 'Whole',
+					subtasks: [createSubtask({ id: 1, title: 'Step', parentId: '1' })]
+				}),
+				createTask({ id: 2, title: 'After', dependencies: ['1'] })
+			],
+			10
+		);
+		expect(ids(picked)).toEqual(['1', '2']);
+	});
+
+	// A parent settles as set-status settles it (#1042)
+	const parentWith = (
+		extra: Partial<Task>,
+		first: TaskStatus = 'pending'
+	): Task[] => [
+		createTask({
+			id: 3,
+			title: 'Profile',
+			status: 'in-progress',
+			...extra,
+			subtasks: [
+				createSubtask({ id: 1, title: 'Form', parentId: '3', status: first }),
+				createSubtask({ id: 2, title: 'Avatar', parentId: '3' })
+			]
+		}),
+		createTask({ id: 4, title: 'Docs', dependencies: ['3'] })
+	];
+
+	it('counts a parent done when its other subtasks were cancelled', () => {
+		expect(ids(nextTaskSequence(parentWith({}, 'cancelled'), 10))).toEqual([
+			'3.2',
+			'4'
+		]);
+	});
+
+	it('picks a parent again when its own criteria stay unchecked', () => {
+		const picked = nextTaskSequence(
+			parentWith({ acceptanceCriteria: ['Profile page loads'] }),
+			10,
+			{ guardDone: parentDoneGate([]) }
+		);
+		expect(ids(picked)).toEqual(['3.1', '3.2', '3', '4']);
 	});
 });

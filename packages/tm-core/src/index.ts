@@ -131,6 +131,8 @@ export type {
 	LoopIteration,
 	LoopResult,
 	LoopOutputCallbacks,
+	LoopPlan,
+	LoopPlanTask,
 	LoopTask
 } from './modules/loop/index.js';
 export {

@@ -6,6 +6,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { LoopDomain } from './loop-domain.js';
 import type { ConfigManager } from '../config/managers/config-manager.js';
 import type { LoopConfig } from './types.js';
+import type { TasksDomain } from '../tasks/tasks-domain.js';
 
 // Mock ConfigManager
 function createMockConfigManager(projectRoot = '/test/project'): ConfigManager {
@@ -299,5 +300,103 @@ describe('LoopDomain', () => {
 			});
 			expect(result).toBe(30);
 		});
+	});
+});
+
+describe('LoopDomain.plan', () => {
+	const domain = (loop: unknown) => {
+		const tasks = {
+			getNextSequence: vi.fn().mockResolvedValue([
+				{ id: '1', title: 'Easy' },
+				{ id: '2', title: 'Hard' },
+				{ id: '3', title: 'Unscored' }
+			]),
+			get: vi.fn(async (id: string) => ({
+				task: { id, title: `Task ${id}`, complexity: { '1': 2, '2': 9 }[id] },
+				isSubtask: false
+			}))
+		};
+		const config = {
+			getProjectRoot: () => '/p',
+			getConfig: () => ({ loop }),
+			getActiveTag: () => 'master'
+		} as unknown as ConfigManager;
+		return {
+			tasks,
+			loop: new LoopDomain(config, tasks as unknown as TasksDomain)
+		};
+	};
+
+	it("lists next's order with each task's band, and the smoke command", async () => {
+		const { tasks, loop } = domain({ smokeCommand: 'npm run smoke' });
+
+		const plan = await loop.plan({ prompt: 'default', iterations: 3 });
+
+		expect(tasks.getNextSequence).toHaveBeenCalledWith(3, { tag: 'master' });
+		expect(plan).toEqual({
+			prompt: 'default',
+			iterations: 3,
+			tag: 'master',
+			picksOwnWork: false,
+			smokeCommand: 'npm run smoke',
+			tasks: [
+				{
+					id: '1',
+					title: 'Easy',
+					model: 'sonnet',
+					effort: 'low'
+				},
+				{ id: '2', title: 'Hard', effort: 'high' },
+				{ id: '3', title: 'Unscored' }
+			]
+		});
+	});
+
+	it('runs every task on --model, keeping the band effort', async () => {
+		const { loop } = domain(undefined);
+
+		const plan = await loop.plan({
+			prompt: 'tdd',
+			iterations: 3,
+			model: 'opus'
+		});
+
+		expect(plan.tasks.map((t) => [t.model, t.effort])).toEqual([
+			['opus', 'low'],
+			['opus', 'high'],
+			['opus', undefined]
+		]);
+		expect(plan.model).toBe('opus');
+	});
+
+	it('plans only the --id task', async () => {
+		const { tasks, loop } = domain(undefined);
+
+		const plan = await loop.plan({
+			prompt: 'default',
+			iterations: 2,
+			taskId: '2'
+		});
+
+		expect(tasks.getNextSequence).not.toHaveBeenCalled();
+		expect(plan.tasks).toEqual([{ id: '2', title: 'Task 2', effort: 'high' }]);
+	});
+
+	it('lists no tasks for a preset that picks its own work', async () => {
+		const { tasks, loop } = domain(undefined);
+
+		const plan = await loop.plan({ prompt: 'linting', iterations: 10 });
+
+		expect(tasks.getNextSequence).not.toHaveBeenCalled();
+		expect(plan).toMatchObject({ tasks: [], picksOwnWork: true });
+	});
+
+	it('refuses a bad loop.bands before reading tasks', async () => {
+		const { tasks, loop } = domain({ bands: 'fast' });
+
+		await expect(
+			loop.plan({ prompt: 'default', iterations: 1 })
+		).rejects.toThrow('loop.bands');
+		expect(tasks.getNextSequence).not.toHaveBeenCalled();
 	});
 });
