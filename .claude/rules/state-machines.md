@@ -119,13 +119,13 @@ A claim marks who is working on an in-progress task:
 A parallel run also records its own `claimPid` and `claimHost`; once that
 process is gone the claim is stale.
 
-| From      | Event                                    | To                        |
-| --------- | ---------------------------------------- | ------------------------- |
-| unclaimed | `next --claim`, parallel runner          | claimed, in-progress      |
-| stale     | `next --claim`, parallel runner          | claimed by the new holder |
-| claimed   | status to pending, blocked, deferred     | unclaimed                 |
-| claimed   | status to done, review, cancelled        | who/when kept as a record |
-| claimed   | parallel settle: abort, failure, no work | unclaimed                 |
+| From      | Event                                | To                   |
+| --------- | ------------------------------------ | -------------------- |
+| unclaimed | `next --claim`, parallel runner      | claimed, in-progress |
+| stale     | `next --claim`, parallel runner      | taken over           |
+| claimed   | status to pending, blocked, deferred | unclaimed            |
+| claimed   | status to done, review, cancelled    | who and when kept    |
+| claimed   | settle: abort, failure, no work      | unclaimed            |
 
 Invariants:
 
