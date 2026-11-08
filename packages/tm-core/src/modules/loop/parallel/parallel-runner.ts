@@ -44,11 +44,8 @@ import {
 	loopIterationTimeoutMs,
 	timeoutMessage
 } from '../services/iteration-limits.js';
-import {
-	STREAM_JSON_ARGS,
-	findResultEvent,
-	hasStreamEvent
-} from '../services/stream-events.js';
+import { STREAM_JSON_ARGS } from '../services/stream-events.js';
+import { openLog, readSpend } from './task-log.js';
 import { settledOutcome } from './outcome.js';
 import { TaskWorktrees } from './task-worktrees.js';
 import {
@@ -77,44 +74,6 @@ interface Running {
 	/** Stopped for running past TASKGRAPH_LOOP_TIMEOUT_MS */
 	timedOut?: boolean;
 	exited: Promise<void>;
-}
-
-/**
- * Open a task's log for appending. Never through a symlink: one planted
- * there would send Claude's output into whatever file it points at.
- */
-function openLog(file: string): number {
-	const flags =
-		fs.constants.O_WRONLY |
-		fs.constants.O_APPEND |
-		fs.constants.O_CREAT |
-		(fs.constants.O_NOFOLLOW ?? 0);
-	let stat: fs.Stats | undefined;
-	try {
-		stat = fs.lstatSync(file);
-	} catch {
-		// A new log
-	}
-	if (stat && !stat.isFile()) {
-		throw new Error(`${path.basename(file)} isn't a plain file`);
-	}
-	return fs.openSync(file, flags, 0o600);
-}
-
-/** The cost and turns at the end of a task's log, if Claude Code got that far */
-function readSpend(task: ParallelTask, from: number): void {
-	try {
-		// From where this run started: a rerun appends to the failed run's log
-		const log = fs.readFileSync(task.logFile).subarray(from);
-		const text = log.toString('utf8');
-		const run = findResultEvent(text);
-		if (run?.costUsd !== undefined) task.costUsd = run.costUsd;
-		// Started, then killed or crashed before its result event (#861)
-		else if (hasStreamEvent(text)) task.costUnknown = true;
-		if (run?.turns !== undefined) task.turns = run.turns;
-	} catch {
-		// No log (the spawn failed): nothing was spent
-	}
 }
 
 const describeSpawnError = (error: NodeJS.ErrnoException, command: string) =>
@@ -307,6 +266,25 @@ export class ParallelLoopRunner {
 						killGraceMs: options.killGraceMs ?? 5000,
 						workers
 					});
+					// A worker (its own process group) outlives a SIGKILLed run:
+					// while it's alive, a rerun must not take the claim over (#1051).
+					// With --container this is the docker client.
+					const workerPid = entry.child?.pid;
+					if (workerPid) {
+						await this.tasks
+							.recordClaimWorker(
+								id,
+								{ claimedBy: claimant, claimPid: process.pid },
+								workerPid,
+								tag
+							)
+							.catch((error) =>
+								this.logger.warn(
+									`Couldn't record task ${id}'s worker in its claim:`,
+									error
+								)
+							);
+					}
 					callbacks?.onTaskStart?.({ ...entry.task });
 					entry.exited = entry.exited.then(() =>
 						callbacks?.onTaskEnd?.({ ...entry.task })

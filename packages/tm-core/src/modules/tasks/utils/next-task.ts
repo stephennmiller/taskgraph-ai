@@ -24,10 +24,23 @@ export interface SelectNextTaskOptions {
 	claimant?: string;
 }
 
+/** A pid that exists on this host (EPERM: alive, just not ours to signal) */
+function isAlive(pid: unknown): boolean {
+	if (!Number.isInteger(pid) || (pid as number) <= 0) return false;
+	try {
+		process.kill(pid as number, 0);
+		return true;
+	} catch (error) {
+		return (error as NodeJS.ErrnoException).code !== 'ESRCH';
+	}
+}
+
 /**
- * Whether the process holding a claim is gone: it ran on this host and its
- * pid no longer exists. A claim without a pid (`next --claim`, which exits at
- * once, or an older version) or from another host is never stale.
+ * Whether the process holding a claim is gone: it ran on this host, its pid
+ * no longer exists, and neither does the worker it spawned
+ * (`claimWorkerPid`), which can outlive a killed run (#1051). A claim
+ * without a pid (`next --claim`, which exits at once, or an older version)
+ * or from another host is never stale.
  */
 export function isStaleClaim(
 	metadata: Record<string, unknown> | undefined
@@ -35,13 +48,7 @@ export function isStaleClaim(
 	const pid = metadata?.claimPid;
 	if (!Number.isInteger(pid) || (pid as number) <= 0) return false;
 	if (metadata?.claimHost !== os.hostname()) return false;
-	try {
-		process.kill(pid as number, 0);
-		return false;
-	} catch (error) {
-		// EPERM: alive, just not ours to signal
-		return (error as NodeJS.ErrnoException).code === 'ESRCH';
-	}
+	return !isAlive(pid) && !isAlive(metadata?.claimWorkerPid);
 }
 
 /**

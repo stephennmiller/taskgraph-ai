@@ -124,12 +124,14 @@ an explicit user action. The next writer to touch its subtasks reopens it.
 
 A claim marks who is working on an in-progress task:
 `metadata.claimedBy` and `metadata.claimedAt` (`tasks/utils/claim.ts`).
-A parallel run also records its own `claimPid` and `claimHost`; once that
-process is gone the claim is stale.
+A parallel run also records its own `claimPid` and `claimHost`, and the
+worker it spawned as `claimWorkerPid` (with `--container`, the docker
+client). The claim is stale once the run and the worker are both gone.
 
 | From      | Event                                | To                   |
 | --------- | ------------------------------------ | -------------------- |
 | unclaimed | `next --claim`, parallel runner      | claimed, in-progress |
+| claimed   | parallel runner spawns the worker    | worker recorded      |
 | stale     | `next --claim`, parallel runner      | taken over           |
 | claimed   | status to pending, blocked, deferred | unclaimed            |
 | claimed   | status to done, review, cancelled    | who and when kept    |
@@ -141,12 +143,16 @@ Invariants:
   when its claim is stale (resumed first). It never takes a live one.
 - `next` (`getNext`) and the serial loop skip a task, and its subtasks,
   that a live claim holds for another claimant or another live process.
-- Any status change drops `claimPid`/`claimHost`, so a reopened task never
-  looks like a dead run's.
+- Any status change drops `claimPid`/`claimHost`/`claimWorkerPid`, so a
+  reopened task never looks like a dead run's.
+- The worker is recorded in one locked write, only while the task is still
+  in-progress under the same `claimedBy` and `claimPid`.
 - A claim without a pid (`next --claim`) is never stale.
 
-Known limit: a SIGKILLed parallel run's workers (own process groups) can
-outlive it; a rerun then resumes the task in the same worktree beside them.
+Known limits: a container can outlive its docker client; a rerun that
+takes the claim over then stops at the leftover container (`docker rm -f`
+it). A run killed between spawning a worker and recording it leaves an
+unrecorded worker.
 
 ## 4. Task ID
 

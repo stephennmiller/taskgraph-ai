@@ -264,21 +264,23 @@ describe('loop --parallel', () => {
 		await tmCore.tasks.claimNext({ claimant: 'tester', pid: deadPid });
 		expect(taskById('1')?.metadata?.claimPid).toBe(deadPid);
 
+		let started: unknown;
 		const rerun = await tmCore.loop.runParallel({
 			parallel: 1,
 			trusted: true,
 			claimant: 'tester',
 			command: fakeClaude(),
 			callbacks: {
-				onTaskStart: (t) =>
-					expect(taskById(t.id)?.metadata).toMatchObject({
-						claimedBy: 'tester',
-						claimPid: process.pid,
-						claimHost: os.hostname()
-					})
+				onTaskStart: (t) => void (started = taskById(t.id)?.metadata)
 			}
 		});
 
+		expect(started).toMatchObject({
+			claimedBy: 'tester',
+			claimPid: process.pid,
+			claimHost: os.hostname(),
+			claimWorkerPid: expect.any(Number)
+		});
 		expect(rerun.tasks.map((t) => t.id)).toEqual(['1']);
 		// Settled with no work: released, the pid with it
 		expect(taskById('1')?.status).toBe('pending');

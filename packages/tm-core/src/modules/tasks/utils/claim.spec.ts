@@ -3,7 +3,12 @@ import os from 'node:os';
 import { describe, expect, it } from 'vitest';
 import type { Task } from '../../../common/types/index.js';
 import { setTaskStatusIn } from '../../storage/adapters/file-storage/task-updates.js';
-import { claimNextInTasks, resolveClaimant, withoutClaim } from './claim.js';
+import {
+	claimNextInTasks,
+	recordClaimWorkerIn,
+	resolveClaimant,
+	withoutClaim
+} from './claim.js';
 
 const task = (id: string, fields: Partial<Task> = {}): Task => ({
 	id,
@@ -272,6 +277,97 @@ describe('claimNextInTasks and the claiming process (#1044)', () => {
 	});
 });
 
+describe("a killed run's worker keeps its claim (#1051)", () => {
+	const host = os.hostname();
+	const deadPid = spawnSync(process.execPath, ['-e', '']).pid;
+	const held = (claimWorkerPid: number) =>
+		task('1', {
+			status: 'in-progress',
+			metadata: {
+				claimedBy: 'alice',
+				claimedAt: 'then',
+				claimPid: deadPid,
+				claimHost: host,
+				claimWorkerPid
+			}
+		});
+
+	it('is not taken over while the worker is alive', () => {
+		expect(
+			claimNextInTasks(
+				[held(process.pid), task('2')],
+				'alice',
+				'now',
+				undefined,
+				{
+					pid: process.pid
+				}
+			)?.claim.task.id
+		).toBe('2');
+	});
+
+	it('is taken over once the run and the worker are both gone', () => {
+		const result = claimNextInTasks(
+			[held(deadPid)],
+			'alice',
+			'now',
+			undefined,
+			{
+				pid: process.pid
+			}
+		);
+
+		expect(result?.claim.task.id).toBe('1');
+		// The dead worker's pid goes with the old claim
+		expect(result?.tasks[0].metadata).toEqual({
+			claimedBy: 'alice',
+			claimedAt: 'now',
+			claimPid: process.pid,
+			claimHost: host
+		});
+	});
+
+	it('drops the worker with the run on any status change', () => {
+		const [review] =
+			setTaskStatusIn([held(process.pid)], '1', 'review', {}).tasks ?? [];
+
+		expect(review.metadata).toEqual({ claimedBy: 'alice', claimedAt: 'then' });
+	});
+});
+
+describe('recordClaimWorkerIn', () => {
+	const holder = { claimedBy: 'alice', claimPid: 10 };
+	const claimed = (metadata: Record<string, unknown>, status = 'in-progress') =>
+		task('1', { status: status as Task['status'], metadata });
+
+	it("records the worker while the task is still the run's claim", () => {
+		const tasks = recordClaimWorkerIn(
+			[claimed({ claimedBy: 'alice', claimPid: 10, claimHost: 'h' })],
+			'1',
+			holder,
+			42
+		);
+
+		expect(tasks?.[0].metadata).toEqual({
+			claimedBy: 'alice',
+			claimPid: 10,
+			claimHost: 'h',
+			claimWorkerPid: 42
+		});
+	});
+
+	it("changes nothing once the claim is someone else's or settled", () => {
+		for (const tasks of [
+			[claimed({ claimedBy: 'bob', claimPid: 10 })],
+			[claimed({ claimedBy: 'alice', claimPid: 11 })],
+			[claimed({ claimedBy: 'alice' }, 'review')],
+			[task('2')]
+		]) {
+			expect(recordClaimWorkerIn(tasks, '1', holder, 42)).toBeNull();
+		}
+	});
+});
+
 describe('withoutClaim', () => {
 	it('removes only the claim keys', () => {
 		expect(
@@ -280,6 +376,7 @@ describe('withoutClaim', () => {
 				claimedAt: 'b',
 				claimPid: 1,
 				claimHost: 'h',
+				claimWorkerPid: 2,
 				externalId: 'x'
 			})
 		).toEqual({ externalId: 'x' });

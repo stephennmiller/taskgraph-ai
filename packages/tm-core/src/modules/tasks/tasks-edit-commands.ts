@@ -12,7 +12,7 @@ import {
 	TaskGraphError
 } from '../../common/errors/taskgraph-error.js';
 import { normalizeAssignee } from './utils/assignee.js';
-import type { TaskClaim } from './utils/claim.js';
+import { recordClaimWorkerIn, type TaskClaim } from './utils/claim.js';
 import { normalizeNoteText, type TaskNote } from './utils/notes.js';
 import { parentDoneGate } from './utils/parent-status.js';
 import {
@@ -138,6 +138,26 @@ export class TaskEditCommands {
 			{ keepExisting: true }
 		);
 		return { ...claim, task: { ...claim.task, assignee } };
+	}
+
+	/**
+	 * Record the worker a claim's holding process (`claimPid`) spawned for
+	 * top-level task `taskId`, so the claim stays live while the worker runs
+	 * even if the holder dies. One locked write, made only while the task is
+	 * still in-progress under that claim.
+	 * @returns Whether it was recorded
+	 */
+	async recordClaimWorker(
+		taskId: string,
+		holder: { claimedBy: string; claimPid: number },
+		workerPid: number,
+		tag?: string
+	): Promise<boolean> {
+		const { result } = await this.taskService.modifyTasks((tasks) => {
+			const updated = recordClaimWorkerIn(tasks, taskId, holder, workerPid);
+			return { tasks: updated, result: updated !== null };
+		}, tag);
+		return result;
 	}
 
 	/**

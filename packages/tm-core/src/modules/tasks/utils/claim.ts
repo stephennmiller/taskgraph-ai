@@ -5,9 +5,9 @@
  * A claim sets the task (or subtask) `in-progress` and records who took it
  * and when in its metadata, under `claimedBy` and `claimedAt`, plus the
  * holding process as `claimPid` and `claimHost` when a long-lived process
- * (`loop --parallel`) holds it. A move that gives the work up (pending,
- * blocked, deferred) clears them; done, review and cancelled keep who and
- * when as a record of who did it.
+ * (`loop --parallel`) holds it, and that run's worker as `claimWorkerPid`.
+ * A move that gives the work up (pending, blocked, deferred) clears them;
+ * done, review and cancelled keep who and when as a record of who did it.
  */
 
 import os from 'node:os';
@@ -23,7 +23,7 @@ export interface TaskClaim {
 	claimedAt: string;
 }
 
-const HOLDER_KEYS = ['claimPid', 'claimHost'] as const;
+const HOLDER_KEYS = ['claimPid', 'claimHost', 'claimWorkerPid'] as const;
 const CLAIM_KEYS = ['claimedBy', 'claimedAt', ...HOLDER_KEYS] as const;
 
 /**
@@ -186,4 +186,35 @@ export function claimNextInTasks(
 		tasks: updated,
 		claim: { task: asLoaded(start(next)), ...claim }
 	};
+}
+
+/**
+ * Record the worker a parallel run spawned for top-level task `id` as
+ * `claimWorkerPid`, while the task is still in-progress under the run's claim
+ * (`claimedBy` and `claimPid`): the claim then stays live while the worker
+ * runs, even if the run itself was killed (#1051)
+ * @returns The changed tasks, or null when the claim isn't the run's any more
+ */
+export function recordClaimWorkerIn(
+	tasks: Task[],
+	id: string,
+	holder: { claimedBy: string; claimPid: number },
+	workerPid: number
+): Task[] | null {
+	const index = tasks.findIndex((task) => String(task.id) === id);
+	const task = tasks[index];
+	if (
+		!task ||
+		task.status !== 'in-progress' ||
+		task.metadata?.claimedBy !== holder.claimedBy ||
+		task.metadata?.claimPid !== holder.claimPid
+	) {
+		return null;
+	}
+	const updated = [...tasks];
+	updated[index] = withMetadata(task, {
+		...task.metadata,
+		claimWorkerPid: workerPid
+	});
+	return updated;
 }

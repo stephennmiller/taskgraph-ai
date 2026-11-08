@@ -231,6 +231,8 @@ export class TasksDomain {
 
 	claimNext: TaskEditCommands['claimNext'] = (...a) =>
 		this.edits.claimNext(...a);
+	recordClaimWorker: TaskEditCommands['recordClaimWorker'] = (...a) =>
+		this.edits.recordClaimWorker(...a);
 
 	// ===== Dependency views (TaskDependencyViews) =====
 
