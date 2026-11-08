@@ -913,7 +913,7 @@
         "description": "Re-check trust before each wave and stop on abort before each merge or resolver session.",
         "details": "",
         "testStrategy": "",
-        "status": "pending",
+        "status": "done",
         "dependencies": [],
         "priority": "high",
         "subtasks": [],

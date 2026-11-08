@@ -257,13 +257,15 @@ Invariant: settle releases the claim on abort, failure, or no work.
 | settled    | conflict, cannot set aside    | run ends                |
 | wave end   | nothing merged, abort, budget | run ends                |
 
-Invariants an approved run must hold, broken today (#1039):
+Invariants (#1039):
 
-- It stops when its approval is withdrawn, like the serial loop. Today
-  trust is checked only once, before the first wave.
-- It does no new work after an abort. Today the abort is checked only at
-  the top of each wave, so the rest of a wave still merges and a conflict
-  still starts a resolver session.
+- An approved run checks trust before each wave, before it claims
+  anything, and stops with `TRUST_LOST` (exit 1) once the approval is
+  withdrawn, like the serial loop.
+- After an abort it does no new work: the abort is checked before each
+  merge and before each resolver session, an aborted resolver is killed,
+  and the run reports aborted (exit 130). A merge that already succeeded
+  still marks its task done.
 
 ## 10. Loop trust
 
