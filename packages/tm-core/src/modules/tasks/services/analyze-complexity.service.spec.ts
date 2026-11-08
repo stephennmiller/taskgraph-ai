@@ -111,15 +111,17 @@ describe('AnalyzeComplexityService.analyze, tasks with subtasks (#991)', () => {
 		expect(saved.complexityAnalysis).toEqual([entry(2, 9), entry(1, 6)]);
 	});
 
-	it("leaves the task's stored complexity out of the prompt (#996)", async () => {
+	it("leaves the task's stored complexity (#996) and loop's spend out of the prompt", async () => {
 		const file = path.join(projectDir, '.taskgraph', 'tasks', 'tasks.json');
 		const data = JSON.parse(fs.readFileSync(file, 'utf8'));
 		data.master.tasks[0].complexity = 2;
+		data.master.tasks[0].spend = { usd: 1, durationMs: 1, iterations: 1 };
 		fs.writeFileSync(file, JSON.stringify(data));
 
 		const { sent } = await analyze([1]);
 
 		expect(sent[0]).not.toHaveProperty('complexity');
+		expect(sent[0]).not.toHaveProperty('spend');
 		expect(sent[0]).toMatchObject({ id: 1, title: 'Task 1' });
 	});
 

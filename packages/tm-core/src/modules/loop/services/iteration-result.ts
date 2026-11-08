@@ -60,6 +60,10 @@ export function completeIteration(
 
 export type RunSpend = Pick<LoopIteration, 'costUsd' | 'turns' | 'costUnknown'>;
 
+/** Whether Claude Code ran far enough to spend anything: it reported a cost, or died after it started */
+export const claudeRan = (spend: Pick<RunSpend, 'costUsd' | 'costUnknown'>) =>
+	spend.costUsd !== undefined || !!spend.costUnknown;
+
 /** For a run loop stopped or that died: the cost and turns Claude Code reported, or `costUnknown` (#855) */
 export function runSpend(run: ClaudeRunResult | undefined): RunSpend {
 	return {

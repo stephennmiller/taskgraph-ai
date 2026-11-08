@@ -108,6 +108,25 @@ describe('formatTaskDetail', () => {
 		]);
 	});
 
+	it('says what loop runs spent on the task, on one line, only when they did', () => {
+		const spent = (spend: unknown) =>
+			lines(formatTaskDetail({ ...signIn(), spend } as never, { width: 80 }))
+				.slice(1, 3)
+				.join('\n');
+
+		expect(
+			spent({ usd: 1.2391, durationMs: 725_000, iterations: 3 })
+		).toContain('3 loop iterations · $1.24 · 12m 5s');
+		expect(spent({ usd: 0.42, durationMs: 48_000, iterations: 1 })).toContain(
+			'1 loop iteration · $0.42 · 48s'
+		);
+		expect(lines(formatTaskDetail(signIn(), { width: 80 }))[2]).toBe('');
+		// Hand-edited into something else: left out
+		expect(spent({ usd: '1', durationMs: 5, iterations: 1 })).not.toContain(
+			'loop'
+		);
+	});
+
 	it('prints the cited PRD section as written, in place of the source line', () => {
 		const task = {
 			...signIn(),

@@ -118,6 +118,18 @@ export interface TaskImplementationMetadata {
 	category?: TaskCategory;
 }
 
+/**
+ * What `loop` iterations spent working on a task, summed over every run.
+ * Only loop writes it (TasksDomain.addSpend); AI rewrites keep it and
+ * prompts leave it out.
+ */
+export interface TaskSpend {
+	/** Claude Code's own cost estimate, in US dollars */
+	usd: number;
+	durationMs: number;
+	iterations: number;
+}
+
 // ============================================================================
 // Core Interfaces
 // ============================================================================
@@ -158,6 +170,9 @@ export interface Task extends TaskImplementationMetadata {
 	recommendedSubtasks?: number;
 	expansionPrompt?: string;
 	complexityReasoning?: string;
+
+	/** What loop runs spent on the task (see TaskSpend) */
+	spend?: TaskSpend;
 
 	/**
 	 * User-defined metadata that survives all task operations.

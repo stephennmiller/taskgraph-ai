@@ -133,12 +133,13 @@ describe('ParallelLoopRunner', () => {
 		expect(result.tasks[0]).toMatchObject({ model: 'opus', effort: 'low' });
 	});
 
-	it('marks the total partial when a task died before reporting its cost (#861)', async () => {
+	it('marks the total partial when a task died before reporting its cost (#861), and adds each cost to its task', async () => {
 		root = fs.mkdtempSync(path.join(os.tmpdir(), 'tg-parallel-'));
 		fs.mkdirSync(path.join(root, '.taskgraph', 'worktrees'), {
 			recursive: true
 		});
 		const ids = ['1', '2'];
+		const addSpend = vi.fn(async () => ({}));
 		const tasks = {
 			list: async () => ({ tasks: [] }),
 			getDependencyTree: async () => ({ waves: { waves: [ids] } }),
@@ -147,7 +148,8 @@ describe('ParallelLoopRunner', () => {
 				return { task: id ? { id, title: `Task ${id}` } : null };
 			},
 			get: async () => ({ task: { status: 'pending', metadata: {} } }),
-			updateStatus: async () => {}
+			updateStatus: async () => {},
+			addSpend
 		};
 		// Task 1 reports its cost; task 2 starts, then is killed before its result event
 		const output = [
@@ -180,6 +182,10 @@ describe('ParallelLoopRunner', () => {
 			['2', undefined, true]
 		]);
 		expect(result).toMatchObject({ totalCostUsd: 0.4, costPartial: true });
+		expect(addSpend.mock.calls).toEqual([
+			['1', { usd: 0.4, durationMs: expect.any(Number) }, undefined],
+			['2', { usd: undefined, durationMs: expect.any(Number) }, undefined]
+		]);
 	});
 	it('never runs two tasks that edit the same file at once (#952)', async () => {
 		root = fs.mkdtempSync(path.join(os.tmpdir(), 'tg-parallel-'));

@@ -30,6 +30,20 @@ taskgraph loop --max-turns 60 --max-budget-usd 10 --trust
 
 Both work with `--sandbox` and `--parallel` (see [Run tasks in parallel](/capabilities/loop-parallel)).
 
+### What each task cost
+
+Each iteration also adds its cost and duration to the task it started on, so `taskgraph show` tells you what a task has cost across every run:
+
+```
+Task 3  Rate-limit the sign-in endpoint
+✓ done · high priority · complexity 7 (high) · depends on 2
+3 loop iterations · $1.24 · 12m 5s
+```
+
+The task is the one `--id` names, or the one `taskgraph next` picked when the iteration started; an iteration on a subtask counts on its parent task. A `--parallel` task counts its one Claude Code run the same way. An iteration whose Claude Code never started (not installed, say) adds nothing. One that reported no cost adds its time and the budget it was given, if any; a `--parallel` task that reported no cost adds only its time. Presets that pick their own work, such as `linting`, record nothing.
+
+`show --json` (and `get_tasks` with `fields: 'spend'`) returns it as an optional field, `"spend": { "usd": 1.24, "durationMs": 725000, "iterations": 3 }`. Only loop writes it: AI commands never see it in their prompts, and `update-task`, `update` and `expand` keep it. The [merge driver](/capabilities/merge-driver) merges it like any other field: when two branches both ran loop on a task, its `spend` is a clash for you to settle, since with squash merges and rebases the driver can't tell new spend from spend already counted.
+
 ## Model and effort by complexity
 
 When the task an iteration works on has a complexity score (1 to 10), `loop` picks the model and effort for that iteration from it, so a one-line fix doesn't cost as much as a refactor. The task is the one `--id` names, or the one `taskgraph next` picks with the `default` and `tdd` presets. It passes `--model` and `--effort` to `claude -p`, which take precedence over the `model` and `effortLevel` in your Claude Code settings:

@@ -274,6 +274,7 @@ export class TasksDomain {
 	getArchivedIds: TaskEditCommands['getArchivedIds'] = (...a) =>
 		this.edits.getArchivedIds(...a);
 	addNote: TaskEditCommands['addNote'] = (...a) => this.edits.addNote(...a);
+	addSpend: TaskEditCommands['addSpend'] = (...a) => this.edits.addSpend(...a);
 	assign: TaskEditCommands['assign'] = (...a) => this.edits.assign(...a);
 	addSubtask: TaskEditCommands['addSubtask'] = (...a) =>
 		this.edits.addSubtask(...a);

@@ -34,6 +34,21 @@ describe('keepStoredFields', () => {
 		expect(rewrite).toEqual({ id: 1, title: 'New' });
 	});
 
+	it("keeps loop's stored spend whatever the rewrite says", () => {
+		const spend = { usd: 1.5, durationMs: 9000, iterations: 2 };
+		const forged = { id: 1, title: 'New', spend: { usd: 0 } };
+		const cleared = { id: 1, title: 'New', spend: null };
+		const added = { id: 1, title: 'New', spend: { usd: 0 } };
+
+		keepStoredFields(forged, { id: 1, title: 'Old', spend });
+		keepStoredFields(cleared, { id: 1, title: 'Old', spend });
+		keepStoredFields(added, { id: 1, title: 'Old' });
+
+		expect(forged.spend).toBe(spend);
+		expect(cleared.spend).toBe(spend);
+		expect(added).not.toHaveProperty('spend');
+	});
+
 	it('leaves the rewrite alone when nothing was stored', () => {
 		const rewrite = { id: 1, title: 'New' };
 

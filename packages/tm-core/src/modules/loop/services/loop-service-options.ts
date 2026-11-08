@@ -17,6 +17,12 @@ export interface LoopServiceOptions {
 	taskComplexity?: (id: string, tag?: string) => Promise<unknown>;
 	/** Set a stuck task to blocked with a note saying why, so the run can move on */
 	blockTask?: (id: string, note: string, tag?: string) => Promise<void>;
+	/** Add an iteration's cost and time to the task it worked on (TasksDomain.addSpend) */
+	recordSpend?: (
+		id: string,
+		run: { usd?: number; durationMs?: number },
+		tag?: string
+	) => Promise<unknown>;
 	/** Files with uncommitted changes, which an interrupted task may have left */
 	uncommittedFiles?: () => Promise<string[]>;
 }
