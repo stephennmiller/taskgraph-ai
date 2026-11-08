@@ -4,7 +4,61 @@ sidebarTitle: "FAQ"
 description: "Answers to common TaskGraph questions and where to get help with Claude Code task management."
 ---
 
-Coming soon. 
+## Troubleshooting
+
+**Something in the setup doesn't work.** Run this; it prints a line per setup
+step and the fix under each one that failed:
+
+```bash
+taskgraph doctor
+```
+
+**AI commands fail.** Run Claude Code once and make sure you're signed in:
+
+```bash
+claude
+```
+
+**Task files look out of sync.** Ask Claude to fix the task dependencies, or
+run:
+
+```bash
+taskgraph fix-dependencies
+```
+
+Don't hand-edit `.taskgraph/tasks/tasks.json` or `.taskgraph/config.json`; ask
+Claude or use the commands.
+
+**`0 tools enabled`, or the MCP server won't connect.** Restart Claude Code and
+run `/mcp`. Then check that the server starts on its own in a terminal. It
+waits for input; press Ctrl+C to stop it. If it exits instead, its error names
+the problem, such as an unknown `TASKGRAPH_TOOLS` tier or tool name.
+
+```bash
+npx -y taskgraph-ai
+```
+
+**Fewer MCP tools than expected.** `TASKGRAPH_TOOLS` defaults to `core`. Set
+`standard` or `all` (see [MCP tool tiers](/capabilities/mcp#tool-tiers-at-a-glance)).
+
+**Working on TaskGraph itself.** Build from source:
+
+```bash
+git clone https://github.com/stephennmiller/taskgraph-ai.git
+cd taskgraph-ai
+npm install
+npm run build
+```
+
+Then run the CLI from the build:
+
+```bash
+node dist/taskgraph.js
+```
+
+This repository's own `.mcp.json` starts `dist/mcp-server.js` with
+`TASKGRAPH_TOOLS=core`, so build first or the server won't connect. After a
+`git pull`, run `npm run build` again; the CLI and server run from `dist/`.
 
 ## 💬 Getting Help
 
