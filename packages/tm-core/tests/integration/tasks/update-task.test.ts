@@ -143,6 +143,22 @@ describe('tasks.updateWithPrompt', () => {
 			expect(generateObject).not.toHaveBeenCalled();
 		});
 
+		it('refuses a subtask ID with a prompt before assigning it', async () => {
+			write(
+				stored({ subtasks: [{ id: '1', title: 'S1', status: 'pending' }] })
+			);
+
+			await expect(
+				tmCore.tasks.updateTask({
+					id: '1.1',
+					prompt: 'Rewrite it',
+					assignee: 'octocat'
+				})
+			).rejects.toMatchObject({ code: 'VALIDATION_ERROR' });
+
+			expect(saved().subtasks[0].assignee).toBeUndefined();
+		});
+
 		it('refuses when there is nothing to update', async () => {
 			await expect(
 				tmCore.tasks.updateTask({ id: '1', prompt: '  ' })

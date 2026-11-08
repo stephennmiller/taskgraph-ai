@@ -1,5 +1,5 @@
 /**
- * @fileoverview Tests for dashboard component calculations
+ * @fileoverview Tests for the list summary counts (task-stats.ts)
  * Bug fix: Cancelled tasks should be treated as complete
  */
 
@@ -48,7 +48,7 @@ const createTestSubtask = (
 	testStrategy: ''
 });
 
-describe('dashboard.component - Bug Fix: Cancelled Tasks as Complete', () => {
+describe('task-stats', () => {
 	describe('calculateTaskStatistics', () => {
 		it('should treat cancelled tasks as complete in percentage calculation', () => {
 			// Arrange: 14 done, 1 cancelled = 100% complete

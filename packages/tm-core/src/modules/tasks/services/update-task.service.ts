@@ -62,7 +62,7 @@ interface UpdateBase {
 }
 
 export interface UpdateTaskInput extends UpdateBase {
-	/** A top-level task ID */
+	/** A top-level task ID (`tasks.updateTask` also takes a subtask's, to assign it) */
 	id: string | number;
 	/** What changed; may be empty only when `metadata` is given */
 	prompt?: string;

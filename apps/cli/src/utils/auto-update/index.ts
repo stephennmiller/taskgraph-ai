@@ -8,8 +8,6 @@
  * - Restarting CLI after updates
  */
 
-// Re-export version utilities
-
 // Re-export update checking
 export { checkForUpdate } from './check-update.js';
 

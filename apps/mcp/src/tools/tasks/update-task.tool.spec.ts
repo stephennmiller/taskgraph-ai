@@ -245,6 +245,17 @@ describe('update_task', () => {
 		});
 	});
 
+	it('replies with an error when tm-core finds nothing to update', async () => {
+		tasks.updateTask.mockRejectedValueOnce(
+			new Error('Nothing to update: give a prompt, metadata or an assignee')
+		);
+
+		const result = await tool().execute({ id: '3', projectRoot: project }, ctx);
+
+		expect(result.isError).toBe(true);
+		expect(text(result)).toContain('Nothing to update');
+	});
+
 	it("refuses a file other than the project's tasks.json", async () => {
 		const result = await tool().execute(
 			{ id: '3', prompt: 'x', file: '/tmp/other.json', projectRoot: project },
