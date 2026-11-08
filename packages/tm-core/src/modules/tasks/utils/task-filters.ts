@@ -162,7 +162,8 @@ export function filterTaskList<T extends TaskWithBlocks>(
 	let filtered = filters.ready
 		? filterReadyTasks(tasks, filters.archivedIds)
 		: tasks;
-	if (filters.blocking) filtered = filterBlockingTasks(filtered);
+	if (filters.blocking)
+		filtered = filtered.filter((task) => task.blocks.length > 0);
 	filtered = filterByStatus(filtered, filters.status);
 	filtered = filterByAssignee(filtered, filters.assignee);
 	filtered = filterBySearch(filtered, filters.search);
@@ -228,28 +229,6 @@ export function filterReadyTasks<T extends TaskWithBlocks>(
 			);
 		});
 	});
-}
-
-/**
- * Filter to only tasks that block other tasks
- * These are tasks that have at least one other task depending on them
- *
- * @param tasks - Array of tasks with blocks information
- * @returns Filtered array of tasks that have dependents (block other tasks)
- *
- * @example
- * ```typescript
- * const tasks = [
- *   { id: '1', blocks: ['2', '3'] },  // Blocks tasks 2 and 3
- *   { id: '2', blocks: [] },          // Blocks nothing
- *   { id: '3', blocks: [] }           // Blocks nothing
- * ];
- * const blockingTasks = filterBlockingTasks(tasks);
- * // Returns only task 1 (the only task with non-empty blocks)
- * ```
- */
-export function filterBlockingTasks<T extends TaskWithBlocks>(tasks: T[]): T[] {
-	return tasks.filter((task) => task.blocks.length > 0);
 }
 
 /**
