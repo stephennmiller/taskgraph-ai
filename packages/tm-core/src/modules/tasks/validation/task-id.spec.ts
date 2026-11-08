@@ -116,12 +116,31 @@ describe('Task ID Validation', () => {
 		});
 
 		it('throws on invalid IDs', () => {
-			expect(() => parseTaskIds('abc')).toThrow(/Invalid task ID format/);
-			expect(() => parseTaskIds('HAM-123')).toThrow(/Invalid task ID format/);
+			expect(() => parseTaskIds('abc')).toThrow('"abc" isn\'t a task ID');
+			expect(() => parseTaskIds('HAM-123')).toThrow(
+				'"HAM-123" isn\'t a task ID'
+			);
+		});
+
+		it('names every invalid ID, with the fix as a hint', () => {
+			let error: any;
+			try {
+				parseTaskIds('1,abc,1.2.3');
+			} catch (e) {
+				error = e;
+			}
+			expect(error.message).toBe('"abc", "1.2.3" aren\'t task IDs');
+			expect(error.code).toBe('VALIDATION_ERROR');
+			expect(error.hint).toBe('Use a number like `3`, or `3.1` for a subtask');
+		});
+
+		it('rejects sub-subtask IDs: subtasks are one level deep', () => {
+			expect(() => parseTaskIds('1.2.3')).toThrow('"1.2.3" isn\'t a task ID');
 		});
 
 		it('throws on empty input', () => {
-			expect(() => parseTaskIds('')).toThrow(/No valid task IDs/);
+			expect(() => parseTaskIds('')).toThrow('No task ID given');
+			expect(() => parseTaskIds(' , ')).toThrow('No task ID given');
 		});
 	});
 

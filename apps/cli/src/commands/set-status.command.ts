@@ -13,7 +13,7 @@ import {
 	getUncheckedCriteria,
 	neutralizeTaskData,
 	parseChecklistNumbers,
-	TaskIdSchema
+	parseTaskIds
 } from '@tm/core';
 import { Command } from 'commander';
 import {
@@ -197,21 +197,8 @@ export class SetStatusCommand extends Command {
 				projectPath: getProjectRoot(options.project)
 			});
 
-			// Parse and validate task IDs (handle comma-separated values)
-			const rawIds = options.id.split(',').map((id) => id.trim());
-			const taskIds: string[] = [];
-
-			for (const rawId of rawIds) {
-				const parseResult = TaskIdSchema.safeParse(rawId);
-				if (!parseResult.success) {
-					printError(
-						`"${rawId}" isn't a task ID`,
-						'Use a number like `3`, or `3.1` for a subtask'
-					);
-					process.exit(1);
-				}
-				taskIds.push(parseResult.data);
-			}
+			// Every ID is checked before anything changes (throws with a hint)
+			const taskIds = parseTaskIds(options.id);
 
 			let checklist: (TaskChecklist & { taskId: string }) | undefined;
 			if (changesChecklist) {
