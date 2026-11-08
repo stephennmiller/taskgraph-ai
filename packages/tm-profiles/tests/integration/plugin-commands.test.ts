@@ -127,7 +127,7 @@ describe('merged plugin commands', () => {
 
 	it('update-task runs the single-task CLI command', () => {
 		expect(body('update-task')).toContain(
-			'taskgraph update-task --id=<id> --prompt='
+			'taskgraph update --id=<id> --prompt='
 		);
 	});
 });
@@ -376,7 +376,7 @@ describe('command bodies run the CLI instead of asking for untracked data', () =
 		'set-status': 'set-status',
 		show: 'show',
 		'to-done': 'set-status',
-		'update-task': 'update-task',
+		'update-task': 'update',
 		why: 'why'
 	};
 	// The list of the slash commands, not tied to one CLI command
