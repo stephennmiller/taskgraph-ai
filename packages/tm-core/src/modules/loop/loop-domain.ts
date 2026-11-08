@@ -150,6 +150,7 @@ export class LoopDomain {
 			blockTask: tasks
 				? (id, note, tag) => blockTask(tasks, id, note, tag)
 				: undefined,
+			recordSpend: tasks?.addSpend,
 			uncommittedFiles: () =>
 				new TaskWorktrees(this.projectRoot).changedFiles(
 					fullConfig.progressFile

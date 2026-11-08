@@ -46,7 +46,8 @@ export function taskIdOf(id: unknown, hint: string, allowZero = false): string {
 /**
  * The task as the legacy reader handed it to the prompt, with number IDs
  * ("3" -> 3) for the task and its subtasks, and without the fields the
- * loader adds from the complexity report (the legacy reader added none)
+ * loader adds from the complexity report (the legacy reader added none),
+ * and without what loop runs spent on it
  */
 export function promptView(task: Task): Task {
 	const num = (id: unknown) => (/^\d+$/.test(String(id)) ? Number(id) : id);
@@ -56,6 +57,7 @@ export function promptView(task: Task): Task {
 		recommendedSubtasks: _r,
 		expansionPrompt: _e,
 		complexityReasoning: _cr,
+		spend: _s,
 		...rest
 	} = task;
 	return {

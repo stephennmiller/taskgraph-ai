@@ -33,6 +33,7 @@ import {
 	formatCommandError,
 	loopResult,
 	type RunSpend,
+	claudeRan,
 	runSpend
 } from './iteration-result.js';
 import {
@@ -71,6 +72,7 @@ export class LoopService {
 	private readonly headCommit?: LoopServiceOptions['headCommit'];
 	private readonly taskComplexity?: LoopServiceOptions['taskComplexity'];
 	private readonly blockTask?: LoopServiceOptions['blockTask'];
+	private readonly recordSpend?: LoopServiceOptions['recordSpend'];
 	private stuck?: StuckTasks;
 	private readonly uncommittedFiles?: LoopServiceOptions['uncommittedFiles'];
 	private readonly logger = getLogger('LoopService');
@@ -85,6 +87,7 @@ export class LoopService {
 		this.headCommit = options.headCommit;
 		this.taskComplexity = options.taskComplexity;
 		this.blockTask = options.blockTask;
+		this.recordSpend = options.recordSpend;
 		this.uncommittedFiles = options.uncommittedFiles;
 	}
 
@@ -165,7 +168,13 @@ export class LoopService {
 			}
 			config.callbacks?.onIterationStart?.(i, config.iterations);
 
-			const choice = await this.chooseModel(config);
+			// The task the iteration starts on, looked up once and only if needed
+			let lookup: Promise<string | undefined> | undefined;
+			const startTask = () =>
+				(lookup ??= this.readyTask(config).then((id) => config.taskId ?? id));
+			// Its spend goes on it; read before Claude moves on to another
+			const spendOn = this.recordSpend ? await startTask() : undefined;
+			const choice = await this.chooseModel(config, startTask);
 			// Opt-in (#841); a sandbox keeps its sessions in the container, not here
 			let resume =
 				config.reuseSession && !config.sandbox
@@ -177,7 +186,7 @@ export class LoopService {
 					: undefined;
 			const interrupted = await interruptedTask(
 				config.taskId,
-				() => this.readyTask(config),
+				startTask,
 				statuses,
 				this.uncommittedFiles
 			);
@@ -206,6 +215,10 @@ export class LoopService {
 			if (iteration.costUnknown && left !== undefined) iteration.costUsd = left;
 			iterations.push(iteration);
 			spent += iteration.costUsd ?? 0;
+			// Claude Code ran: what it spent goes on the task
+			if (spendOn && claudeRan(iteration)) {
+				await this.addSpend(config, spendOn, iteration);
+			}
 
 			// Completed means its status moved to done or review, not that Claude exited 0
 			const after = await this.readStatuses(config);
@@ -351,13 +364,14 @@ export class LoopService {
 
 	/** The model and effort for the task this iteration starts on, from its complexity score */
 	private async chooseModel(
-		config: LoopConfig
+		config: LoopConfig,
+		startTask: () => Promise<string | undefined>
 	): Promise<ModelChoice & { complexity?: number }> {
 		// No lookup or no bands: skip the extra `taskgraph next`
 		if (!this.taskComplexity || !config.bands?.length) {
 			return pickModelEffort(undefined, [], config.model);
 		}
-		const id = config.taskId ?? (await this.readyTask(config));
+		const id = await startTask();
 		const score = id
 			? await this.taskComplexity(id, config.tag).catch(() => undefined)
 			: undefined;
@@ -365,6 +379,27 @@ export class LoopService {
 		return typeof score === 'number'
 			? { ...choice, complexity: score }
 			: choice;
+	}
+
+	/** Add the iteration's cost and time to the task; a failed write only warns */
+	private async addSpend(
+		config: LoopConfig,
+		taskId: string,
+		iteration: LoopIteration
+	): Promise<void> {
+		try {
+			await this.recordSpend?.(
+				taskId,
+				{ usd: iteration.costUsd, durationMs: iteration.duration },
+				config.tag
+			);
+		} catch (error) {
+			this.reportError(
+				config.callbacks,
+				`Couldn't add the iteration's spend to task ${taskId}: ${error instanceof Error ? error.message : String(error)}`,
+				'warning'
+			);
+		}
 	}
 
 	/** HEAD's commit, or null when there's no lookup or it fails */

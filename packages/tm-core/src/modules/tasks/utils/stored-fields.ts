@@ -8,7 +8,7 @@
  * fields their schema has, and null for the ones they have nothing to say
  * about; without this a rewrite drops everything else the task holds, such
  * as its GitHub link, tags, assignee, details, acceptance criteria and
- * checked Definition of Done items.
+ * checked Definition of Done items. `spend` is always the stored one.
  *
  * @param target - The rewritten task or subtask, changed in place
  * @param source - The task or subtask as stored, if there was one
@@ -23,6 +23,10 @@ export function keepStoredFields<T extends object>(
 	for (const [key, value] of Object.entries(source)) {
 		if (fields[key] == null) fields[key] = value;
 	}
+	// Only loop writes a task's spend: a reply can neither set nor clear it
+	if (Object.hasOwn(source, 'spend'))
+		fields.spend = (source as Record<string, unknown>).spend;
+	else delete fields.spend;
 	// A null for a field the stored one lacks would wipe a value another
 	// writer saves meanwhile (the save merges against the stored task)
 	for (const key of Object.keys(fields)) {

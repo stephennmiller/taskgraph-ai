@@ -78,6 +78,7 @@ Some fields never clash:
 | `schemaVersion`, `highestId` | the higher one |
 | `dependencies`, `tags` and other lists of plain values | both sides' additions and removals |
 | `details` that both sides appended to | both appendices, this branch's first |
+| a task's `spend` (what [loop](/capabilities/loop-cost#what-each-task-cost) spent on it) | both sides' additions |
 | a tag's `taskCount`, `completedCount` | recounted |
 
 A task removed on one branch and changed on the other is kept and reported as a clash. Removed on one branch and untouched on the other, it goes.
