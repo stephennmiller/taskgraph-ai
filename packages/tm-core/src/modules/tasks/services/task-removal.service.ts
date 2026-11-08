@@ -8,7 +8,9 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { TASKGRAPH_TASKS_FILE } from '../../../common/constants/paths.js';
 import type { Task } from '../../../common/types/index.js';
+import type { ConfigManager } from '../../config/managers/config-manager.js';
 import { readArchivedIdsSync } from '../utils/archive.js';
+import { parentDoneGate } from '../utils/parent-status.js';
 import {
 	type ClearSubtasksResult,
 	clearSubtasksIn,
@@ -34,7 +36,7 @@ export interface RemoveTasksResult
 export class TaskRemovalService {
 	constructor(
 		private readonly taskService: TaskService,
-		private readonly projectRoot: string
+		private readonly configManager: ConfigManager
 	) {}
 
 	/** What removeTasks would remove, without changing anything */
@@ -58,7 +60,13 @@ export class TaskRemovalService {
 		const { result } = await this.taskService.modifyTasks(
 			(tasks, archivedIds) => ({
 				tasks,
-				result: removeTasksIn(tasks, splitIds(ids), tag, archivedIds)
+				result: removeTasksIn(
+					tasks,
+					splitIds(ids),
+					tag,
+					archivedIds,
+					parentDoneGate(this.configManager.getDefinitionOfDone())
+				)
 			}),
 			tag
 		);
@@ -100,6 +108,7 @@ export class TaskRemovalService {
 				result: removeSubtasksIn(tasks, ids, {
 					convert: options.convert,
 					archivedIds,
+					guardDone: parentDoneGate(this.configManager.getDefinitionOfDone()),
 					highestArchivedId: options.convert
 						? readArchivedIdsSync(this.tasksPath(), tag).highestId
 						: 0
@@ -134,6 +143,6 @@ export class TaskRemovalService {
 	}
 
 	private tasksPath(): string {
-		return path.join(this.projectRoot, TASKGRAPH_TASKS_FILE);
+		return path.join(this.configManager.getProjectRoot(), TASKGRAPH_TASKS_FILE);
 	}
 }

@@ -9,7 +9,6 @@ import {
 	ERROR_CODES,
 	TaskGraphError
 } from '../../../../common/errors/taskgraph-error.js';
-import { isTaskComplete } from '../../../../common/constants/index.js';
 import type {
 	TaskFieldUpdates,
 	UpdateStatusOptions,
@@ -22,6 +21,7 @@ import type {
 } from '../../../../common/types/index.js';
 import { archiveTag, nextTaskId } from '../../../tasks/utils/archive.js';
 import { releaseClaimIfGivenUp } from '../../../tasks/utils/claim.js';
+import { withParentStatus } from '../../../tasks/utils/parent-status.js';
 
 type Outcome<R> = { tasks: Task[] | null; result: R };
 
@@ -212,38 +212,16 @@ function setSubtaskStatusIn(
 		newStatus
 	);
 
-	// Auto-adjust parent status based on subtask statuses
-	const subs = parentTask.subtasks;
-	let parentNewStatus = parentTask.status;
-	if (subs.length > 0) {
-		const norm = (s: any) => s.status || 'pending';
-		const allComplete = subs.every((s) => isTaskComplete(norm(s)));
-		const anyInProgress = subs.some((s) => norm(s) === 'in-progress');
-		const anyDone = subs.some((s) => norm(s) === 'done');
-		const allPending = subs.every((s) => norm(s) === 'pending');
-
-		if (allComplete && anyDone) {
-			// A parent with unchecked criteria waits in progress for them
-			const refusal =
-				parentTask.status !== 'done'
-					? options.guardDone?.(parentTask, String(parentTask.id), true)
-					: undefined;
-			parentNewStatus = refusal ? 'in-progress' : 'done';
-		} else if (allComplete) {
-			// All cancelled: nothing was done, so the parent's own status stands
-		} else if (anyInProgress || anyDone) parentNewStatus = 'in-progress';
-		else if (allPending) parentNewStatus = 'pending';
-	}
-
-	// Always bump updatedAt; update status only if changed
+	// The parent follows its subtasks; one set back can make it pending again
 	const updated = [...tasks];
-	updated[parentTaskIndex] =
-		parentNewStatus !== parentTask.status
-			? releaseClaimIfGivenUp(
-					{ ...parentTask, status: parentNewStatus, updatedAt: now },
-					parentNewStatus
-				)
-			: { ...parentTask, updatedAt: now };
+	updated[parentTaskIndex] = {
+		...withParentStatus(
+			parentTask,
+			(parent) => options.guardDone?.(parent, String(parent.id), true),
+			true
+		),
+		updatedAt: now
+	};
 
 	return { tasks: updated, result };
 }

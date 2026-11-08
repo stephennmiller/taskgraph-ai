@@ -91,6 +91,17 @@ describe('setTaskStatusIn parent auto-status', () => {
 		expect(given?.[0].metadata).toBeUndefined();
 	});
 
+	it('leaves a parent in review for the user when its last subtask finishes (#1042)', () => {
+		const { tasks } = setTaskStatusIn(
+			parent('review', 'done'),
+			'1.2',
+			'done',
+			{}
+		);
+
+		expect(tasks?.[0].status).toBe('review');
+	});
+
 	it('leaves the parent as it was when every subtask is cancelled', () => {
 		const { tasks } = setTaskStatusIn(
 			parent('pending', 'cancelled'),

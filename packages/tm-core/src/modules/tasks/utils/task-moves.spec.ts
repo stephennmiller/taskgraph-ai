@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { Task } from '../../../common/types/index.js';
 import { moveTasksBetweenTags } from './move-between-tags.js';
 import { moveTasksIn } from './move-within-tag.js';
+import { rankNextTasks } from './next-task.js';
 import { addSubtaskIn } from './task-moves.js';
 import { ids, noArchive, sample } from './task-moves.fixture.js';
 
@@ -354,5 +355,115 @@ describe('related and discovered-from links on a move', () => {
 
 		expect(find(tags.get('other') ?? [], 3).metadata.taskLinks).toBeUndefined();
 		expect(find(master, 4).metadata).toBeUndefined();
+	});
+});
+
+describe('parent status after add-subtask and move (#1042)', () => {
+	const find = (tasks: Task[], id: string) =>
+		tasks.find((t) => String(t.id) === id) as Task;
+	const refuse = () => new Error('unchecked');
+
+	it('reopens a done parent that gains an open subtask, so next offers it', () => {
+		const tasks = sample();
+
+		addSubtaskIn(tasks, '1', { subtask: { title: 'Follow-up' } });
+
+		expect(tasks[0].status).toBe('in-progress');
+		const ranked = rankNextTasks(tasks).map((t) => String(t.id));
+		expect(ranked).toContain('1.1');
+		// Task 2 waits on task 1 again
+		expect(ranked).not.toContain('2');
+	});
+
+	it('finishes an in-progress parent when a done subtask completes it, unless its checklist refuses', () => {
+		const add = (guard?: () => Error) => {
+			const tasks = sample();
+			tasks[1].status = 'in-progress';
+			for (const st of tasks[1].subtasks) st.status = 'done';
+			addSubtaskIn(
+				tasks,
+				'2',
+				{ subtask: { title: 'Done too', status: 'done' } },
+				guard
+			);
+			return tasks[1].status;
+		};
+
+		expect(add()).toBe('done');
+		expect(add(refuse)).toBe('in-progress');
+	});
+
+	it('marks the parent done when its last open subtask moves out, and reopens the one it joins', () => {
+		const tasks = sample();
+		tasks[1].status = 'in-progress';
+		tasks[1].subtasks[0].status = 'done';
+		tasks[2].status = 'done';
+
+		moveTasksIn(tasks, '2.2', '3.1', 'master', noArchive);
+
+		expect(find(tasks, '2').status).toBe('done');
+		expect(find(tasks, '3').status).toBe('in-progress');
+	});
+
+	it('leaves a parent in review for the user', () => {
+		const tasks = sample();
+		tasks[1].status = 'review';
+		tasks[1].subtasks[0].status = 'done';
+
+		moveTasksIn(tasks, '2.2', '9', 'master', noArchive);
+
+		expect(find(tasks, '2').status).toBe('review');
+	});
+});
+
+describe('conversions keep the fields they carry (#1043)', () => {
+	const kept = {
+		acceptanceCriteria: [{ text: 'works', checked: false }],
+		assignee: 'alice',
+		tags: ['api'],
+		createdAt: '2026-01-01T00:00:00.000Z'
+	};
+	const find = (tasks: Task[], id: string) =>
+		tasks.find((t) => String(t.id) === id) as Task;
+
+	it('refuses add-subtask --task-id of a task with subtasks, as move does', () => {
+		const tasks = sample();
+		const before = structuredClone(tasks);
+
+		expect(() => addSubtaskIn(tasks, '4', { fromTaskId: '2' })).toThrow(
+			'Task 2 has subtasks and cannot become a subtask. Move or remove its subtasks first'
+		);
+		expect(tasks).toEqual(before);
+	});
+
+	it('keeps them when add-subtask turns a task into a subtask, without a subtasks key', () => {
+		const tasks = sample();
+		Object.assign(tasks[2], kept);
+
+		const subtask = addSubtaskIn(tasks, '2', { fromTaskId: '3' });
+
+		expect(subtask).toMatchObject(kept);
+		expect(subtask).not.toHaveProperty('subtasks');
+	});
+
+	it('keeps them when a subtask moves to a task', () => {
+		const tasks = sample();
+		Object.assign(tasks[1].subtasks[0], kept, { parentId: '2' });
+
+		moveTasksIn(tasks, '2.1', '9', 'master', noArchive);
+
+		expect(find(tasks, '9')).toMatchObject(kept);
+		expect(find(tasks, '9')).not.toHaveProperty('parentId');
+	});
+
+	it('keeps them when a task moves to a subtask', () => {
+		const tasks = sample();
+		Object.assign(tasks[2], kept);
+
+		moveTasksIn(tasks, '3', '2.3', 'master', noArchive);
+
+		const subtask = find(tasks, '2').subtasks[2];
+		expect(subtask).toMatchObject({ ...kept, id: '3', parentId: '2' });
+		expect(subtask).not.toHaveProperty('subtasks');
 	});
 });

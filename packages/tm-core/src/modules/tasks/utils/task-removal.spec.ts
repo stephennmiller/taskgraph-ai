@@ -345,3 +345,62 @@ describe('clearSubtasksIn', () => {
 		expect(tasks).toEqual(tasksOf());
 	});
 });
+
+describe('parent status after a subtask is removed (#1042)', () => {
+	const options = { highestArchivedId: 0, archivedIds: none };
+	// Task 2 in progress: 2.2 done, 2.1 the last open subtask
+	const started = (status = 'in-progress') => {
+		const tasks = tasksOf();
+		tasks[1].status = status;
+		tasks[1].metadata = { claimedBy: 'alice' };
+		return tasks;
+	};
+
+	it('marks the parent done, keeping its claim, when the last open subtask goes', () => {
+		const viaSubtask = started();
+		const viaTask = started();
+
+		removeSubtasksIn(asTasks(viaSubtask), ['2.1'], options);
+		removeTasksIn(asTasks(viaTask), ['2.1'], 'master', none);
+
+		for (const tasks of [viaSubtask, viaTask]) {
+			expect(tasks[1].status).toBe('done');
+			expect(tasks[1].metadata).toEqual({ claimedBy: 'alice' });
+		}
+	});
+
+	it('keeps it in progress while its own checklist is unchecked, and leaves review alone', () => {
+		const gated = started();
+		const review = started('review');
+
+		removeSubtasksIn(asTasks(gated), ['2.1'], {
+			...options,
+			guardDone: () => new Error('unchecked')
+		});
+		removeSubtasksIn(asTasks(review), ['2.1'], options);
+
+		expect(gated[1].status).toBe('in-progress');
+		expect(review[1].status).toBe('review');
+	});
+});
+
+it('remove-subtask --convert keeps the fields the subtask carried (#1043)', () => {
+	const tasks = tasksOf();
+	const kept = {
+		testStrategy: 'unit tests',
+		acceptanceCriteria: [{ text: 'works', checked: false }],
+		assignee: 'alice',
+		tags: ['api'],
+		createdAt: '2026-01-01T00:00:00.000Z'
+	};
+	Object.assign(tasks[1].subtasks[0], kept, { parentId: '2' });
+
+	const [converted] = removeSubtasksIn(asTasks(tasks), ['2.1'], {
+		highestArchivedId: 0,
+		archivedIds: none,
+		convert: true
+	}) as Raw[];
+
+	expect(converted).toMatchObject({ ...kept, id: 4, priority: 'high' });
+	expect(converted).not.toHaveProperty('parentId');
+});

@@ -17,6 +17,7 @@ import {
 	retargetDependents
 } from '../../dependencies/task-to-subtask.js';
 import { isValidTaskIdFormat, normalizeTaskId } from '../validation/task-id.js';
+import { type ParentDoneGuard, settleParentsIn } from './parent-status.js';
 import { promotedSubtaskDescription } from './promoted-subtask.js';
 import {
 	type DependencyId,
@@ -26,13 +27,15 @@ import {
 	fail,
 	findTask,
 	notFound,
+	refuseNesting,
 	taken
 } from './task-moves.js';
 
 /**
  * Move tasks or subtasks to new IDs within one tag: `from` and `to` are one
  * ID each ("5", "5.2") or as many comma-separated. A task can't land on a
- * taken or archived ID; what depended on a moved item follows it.
+ * taken or archived ID; what depended on a moved item follows it. Parents
+ * that gain or lose a subtask then take their status from their subtasks.
  * @param archivedIds - The tag's archived task IDs, which stay reserved
  */
 export function moveTasksIn(
@@ -40,7 +43,8 @@ export function moveTasksIn(
 	from: string,
 	to: string,
 	tag: string,
-	archivedIds: ReadonlySet<string>
+	archivedIds: ReadonlySet<string>,
+	guardDone?: ParentDoneGuard
 ): WithinTagMoveResult {
 	// "1.03" is subtask 1.3, as everywhere else
 	const ids = (list: string) => list.split(',').map(normalizeTaskId);
@@ -74,6 +78,10 @@ export function moveTasksIn(
 			moveOne(tasks as Item[], sourceId, destinationId, tag, archivedIds)
 		);
 	});
+	const parents = [...sourceIds, ...destinationIds]
+		.filter((id) => id.includes('.'))
+		.map((id) => id.split('.')[0]);
+	settleParentsIn(tasks, parents, guardDone);
 	return result;
 }
 
@@ -236,9 +244,10 @@ function moveSubtaskToTask(
 
 	// The subtask's siblings become full IDs, which read the same on a task
 	const moved = dependenciesForMovedItem(subtask, sourceParent.id, undefined);
+	const { parentId: _parent, ...fields } = subtask;
 	const newTask: Item = {
+		...fields,
 		id: destTaskId,
-		title: subtask.title,
 		description: promotedSubtaskDescription(subtask),
 		status: subtask.status || 'pending',
 		dependencies: moved.dependencies,
@@ -286,12 +295,7 @@ function moveTaskToSubtask(
 	if (destParentId === sourceTaskId) {
 		fail(`Cannot move task ${sourceTaskId} inside itself`);
 	}
-	// Subtasks can't have subtasks, so they would be dropped
-	if (sourceTask.subtasks?.length > 0) {
-		fail(
-			`Task ${sourceTaskId} has subtasks and cannot become a subtask. Move or remove its subtasks first`
-		);
-	}
+	refuseNesting(sourceTask, sourceTaskId);
 	if (
 		destParent.subtasks?.some((st: Item) => Number(st.id) === destSubtaskId)
 	) {
@@ -310,11 +314,11 @@ function moveTaskToSubtask(
 	// Under a subtask a bare number would name a sibling, so its task
 	// dependencies are written as strings (and the new parent dropped)
 	const converted = dependenciesForConvertedTask(sourceTask, destParent.id);
+	const { subtasks: _none, ...fields } = sourceTask;
 	const newSubtask: Item = {
+		...fields,
 		id: String(destSubtaskId),
 		parentId: String(destParent.id),
-		title: sourceTask.title,
-		description: sourceTask.description,
 		status: sourceTask.status || 'pending',
 		dependencies: converted.dependencies,
 		details: sourceTask.details || '',
