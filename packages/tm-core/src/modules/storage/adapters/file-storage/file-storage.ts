@@ -38,6 +38,7 @@ import {
 	takeFromArchive
 } from '../../../tasks/utils/archive.js';
 import {
+	type ClaimNextOptions,
 	type TaskClaim,
 	claimNextInTasks
 } from '../../../tasks/utils/claim.js';
@@ -398,7 +399,7 @@ export class FileStorage implements IStorage {
 	async claimNextTask(
 		claimant: string,
 		tag?: string,
-		among?: ReadonlySet<string>
+		options: ClaimNextOptions = {}
 	): Promise<TaskClaim | null> {
 		return this.mutateTasks(tag, async (tasks) => {
 			// Read after tasks.json: archive writes archive.json first, so a task
@@ -409,7 +410,7 @@ export class FileStorage implements IStorage {
 				claimant,
 				new Date().toISOString(),
 				archived,
-				{ among }
+				options
 			);
 			return outcome
 				? { tasks: outcome.tasks, result: outcome.claim }

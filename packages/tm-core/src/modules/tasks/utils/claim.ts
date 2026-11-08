@@ -3,15 +3,17 @@
  * sessions working the same tasks never get the same one.
  *
  * A claim sets the task (or subtask) `in-progress` and records who took it
- * and when in its metadata, under `claimedBy` and `claimedAt`. A move that
- * gives the work up (pending, blocked, deferred) clears both; done, review
- * and cancelled keep them as a record of who did it.
+ * and when in its metadata, under `claimedBy` and `claimedAt`, plus the
+ * holding process as `claimPid` and `claimHost` when a long-lived process
+ * (`loop --parallel`) holds it. A move that gives the work up (pending,
+ * blocked, deferred) clears them; done, review and cancelled keep who and
+ * when as a record of who did it.
  */
 
 import os from 'node:os';
 import type { Subtask, Task, TaskStatus } from '../../../common/types/index.js';
 import { satisfyArchivedDependencies } from './archive.js';
-import { rankNextTasks } from './next-task.js';
+import { isStaleClaim, rankNextTasks } from './next-task.js';
 
 /** Who claimed a task and when */
 export interface TaskClaim {
@@ -21,7 +23,8 @@ export interface TaskClaim {
 	claimedAt: string;
 }
 
-const CLAIM_KEYS = ['claimedBy', 'claimedAt'] as const;
+const HOLDER_KEYS = ['claimPid', 'claimHost'] as const;
+const CLAIM_KEYS = ['claimedBy', 'claimedAt', ...HOLDER_KEYS] as const;
 
 /**
  * The name a claim is recorded under: the session ID when one is set
@@ -48,13 +51,14 @@ export function resolveClaimant(env: NodeJS.ProcessEnv = process.env): string {
  * and undefined when the claim was all it held.
  */
 export function withoutClaim(
-	metadata: Record<string, unknown> | undefined
+	metadata: Record<string, unknown> | undefined,
+	keys: readonly string[] = CLAIM_KEYS
 ): Record<string, unknown> | undefined {
-	if (!metadata || !CLAIM_KEYS.some((key) => key in metadata)) {
+	if (!metadata || !keys.some((key) => key in metadata)) {
 		return metadata;
 	}
 	const rest = { ...metadata };
-	for (const key of CLAIM_KEYS) delete rest[key];
+	for (const key of keys) delete rest[key];
 	return Object.keys(rest).length > 0 ? rest : undefined;
 }
 
@@ -73,12 +77,19 @@ const GIVEN_UP: ReadonlySet<TaskStatus> = new Set([
 	'deferred'
 ]);
 
-/** Pending, blocked or deferred means nobody is working on it: drop the claim */
+/**
+ * Pending, blocked or deferred means nobody is working on it: drop the
+ * claim. Any other change drops the holding process, which held only the
+ * claimed in-progress run: else a task reopened from review would look
+ * like a dead run's to take over (#1044)
+ */
 export function releaseClaimIfGivenUp<
 	T extends { metadata?: Record<string, unknown> }
 >(item: T, status: TaskStatus): T {
-	if (!GIVEN_UP.has(status)) return item;
-	const metadata = withoutClaim(item.metadata);
+	const metadata = withoutClaim(
+		item.metadata,
+		GIVEN_UP.has(status) ? CLAIM_KEYS : HOLDER_KEYS
+	);
 	return metadata === item.metadata ? item : withMetadata(item, metadata);
 }
 
@@ -96,10 +107,17 @@ export interface ClaimNextOptions {
 	 * parallel wave). Subtasks are never picked when this is set.
 	 */
 	among?: ReadonlySet<string>;
+	/**
+	 * The process that holds the claim for as long as the work runs. Once it
+	 * is gone, a later claim may take the task over. Leave unset for a
+	 * process that exits right after claiming: the claim then never goes stale.
+	 */
+	pid?: number;
 }
 
 /**
- * Claim the next task nobody has started, by the same order as `next`.
+ * Claim the next task nobody has started, by the same order as `next`. A
+ * task whose claim is stale (its process died) comes first: it is resumed.
  *
  * @param archivedIds - Tasks in the archive; dependencies on them count as done
  * @returns The changed tasks and the claim, or null when nothing is ready
@@ -111,32 +129,37 @@ export function claimNextInTasks(
 	archivedIds: ReadonlySet<string> = new Set(),
 	options: ClaimNextOptions = {}
 ): { tasks: Task[]; claim: TaskClaim } | null {
-	// A task someone else claimed is theirs, subtasks included
-	const claimedByOther = new Set(
-		tasks
-			.filter((task) => {
-				const owner = task.metadata?.claimedBy;
-				return typeof owner === 'string' && owner !== claimedBy;
-			})
-			.map((task) => String(task.id))
-	);
-	const next = rankNextTasks(satisfyArchivedDependencies(tasks, archivedIds), {
-		unstartedOnly: true
-	}).find((item) => {
-		const parentId = (item as Task & { parentId?: string }).parentId;
-		if (options.among) {
-			return parentId === undefined && options.among.has(String(item.id));
+	// Skips what someone else's live claim holds, subtasks included
+	const ranked = rankNextTasks(
+		satisfyArchivedDependencies(tasks, archivedIds),
+		{
+			claimant: claimedBy
 		}
-		return parentId === undefined || !claimedByOther.has(parentId);
+	).filter((item) => {
+		const parentId = (item as Task & { parentId?: string }).parentId;
+		return (
+			!options.among ||
+			(parentId === undefined && options.among.has(String(item.id)))
+		);
 	});
+	const started = (item: Task) =>
+		(item.status || '').toLowerCase() === 'in-progress';
+	const next =
+		ranked.find((item) => started(item) && isStaleClaim(item.metadata)) ??
+		ranked.find((item) => !started(item));
 	if (!next) return null;
 
 	const claim = { claimedBy, claimedAt };
+	const holder =
+		options.pid === undefined
+			? {}
+			: { claimPid: options.pid, claimHost: os.hostname() };
+	// A stale claim's pid goes too, so a claim without one never inherits it
 	const start = <T extends Task | Subtask>(item: T): T => ({
 		...item,
 		status: 'in-progress',
 		updatedAt: claimedAt,
-		metadata: { ...(item.metadata ?? {}), ...claim }
+		metadata: { ...(withoutClaim(item.metadata) ?? {}), ...claim, ...holder }
 	});
 
 	const id = String(next.id);

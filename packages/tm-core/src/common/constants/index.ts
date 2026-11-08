@@ -36,7 +36,7 @@ export const NODE_VERSION_RANGE: string = packageJson.engines?.node ?? '';
 interface TaskStatusMeaning {
 	/** Finished: satisfies dependencies, counts toward completion, never picked by `next` */
 	complete: boolean;
-	/** `next` may pick it (in-progress only without `unstartedOnly`) */
+	/** `next` may pick it (a claim picks in-progress only when its claim is stale) */
 	pickable: boolean;
 	/** Kept by the actionable list filter: can be worked on once dependencies are met */
 	actionable: boolean;

@@ -4,6 +4,7 @@
  * and the legacy scripts so the CLI, MCP and list view never disagree.
  */
 
+import os from 'node:os';
 import { statusesWhere } from '../../../common/constants/index.js';
 import type { Task, TaskStatus } from '../../../common/types/index.js';
 import {
@@ -17,10 +18,44 @@ import { subtaskInContext } from './subtask-context.js';
 
 export interface SelectNextTaskOptions {
 	/**
-	 * Only pick work nobody has started: skip items already in progress. Used
-	 * by claims, so two sessions never get the same task.
+	 * Who is asking: skip items (and the subtasks of tasks) that a live claim
+	 * by anyone else holds. Unset, claims are ignored.
 	 */
-	unstartedOnly?: boolean;
+	claimant?: string;
+}
+
+/**
+ * Whether the process holding a claim is gone: it ran on this host and its
+ * pid no longer exists. A claim without a pid (`next --claim`, which exits at
+ * once, or an older version) or from another host is never stale.
+ */
+export function isStaleClaim(
+	metadata: Record<string, unknown> | undefined
+): boolean {
+	const pid = metadata?.claimPid;
+	if (!Number.isInteger(pid) || (pid as number) <= 0) return false;
+	if (metadata?.claimHost !== os.hostname()) return false;
+	try {
+		process.kill(pid as number, 0);
+		return false;
+	} catch (error) {
+		// EPERM: alive, just not ours to signal
+		return (error as NodeJS.ErrnoException).code === 'ESRCH';
+	}
+}
+
+/**
+ * Held by a claim that isn't stale, of someone other than `claimant` or of
+ * another live process (a parallel run in another terminal, same user name)
+ */
+function heldByOther(
+	metadata: Record<string, unknown> | undefined,
+	claimant: string
+): boolean {
+	const owner = metadata?.claimedBy;
+	if (typeof owner !== 'string' || isStaleClaim(metadata)) return false;
+	const pid = metadata?.claimPid;
+	return owner !== claimant || (Number.isInteger(pid) && pid !== process.pid);
 }
 
 /**
@@ -51,8 +86,10 @@ export function rankNextTasks(
 	options: SelectNextTaskOptions = {}
 ): Task[] {
 	const pickable = (status: string) =>
-		PICKABLE_STATUSES.includes(status as TaskStatus) &&
-		!(options.unstartedOnly && status === 'in-progress');
+		PICKABLE_STATUSES.includes(status as TaskStatus);
+	const { claimant } = options;
+	const taken = (item: { metadata?: Record<string, unknown> }) =>
+		claimant !== undefined && heldByOther(item.metadata, claimant);
 	const graph = buildDependencyGraph(tasks);
 	const blockedCounts = blockedCount(tasks, graph);
 	const blocks = (task: Task) => blockedCounts.get(String(task.id)) ?? 0;
@@ -80,10 +117,10 @@ export function rankNextTasks(
 				.map(String)
 				.filter((depId) => depId !== parentId)
 				.every((depId) => satisfied(parentId, depId));
-			if (!parentDepsSatisfied) return;
+			if (!parentDepsSatisfied || taken(parent)) return;
 			parent.subtasks!.forEach((st) => {
 				const stStatus = (st.status || 'pending').toLowerCase();
-				if (!pickable(stStatus)) return;
+				if (!pickable(stStatus) || taken(st)) return;
 
 				const fullDeps =
 					st.dependencies?.map((d) => resolveSubtaskDependency(parent.id, d)) ??
@@ -128,7 +165,7 @@ export function rankNextTasks(
 	// 2) Then top-level tasks
 	const eligibleTasks = tasks.filter((task) => {
 		const status = (task.status || 'pending').toLowerCase();
-		if (!pickable(status)) return false;
+		if (!pickable(status) || taken(task)) return false;
 
 		const deps = task.dependencies ?? [];
 		return deps.every((depId) => satisfied(String(task.id), depId));

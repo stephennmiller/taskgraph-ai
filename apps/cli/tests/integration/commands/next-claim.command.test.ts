@@ -163,6 +163,22 @@ describe('next --claim', () => {
 		expect(result.stdout).toContain('taskgraph list');
 	}, 90000);
 
+	it("next skips another session's claim, and its own claim stays put (#1044)", () => {
+		run(['next', '--claim'], { TASKGRAPH_SESSION_ID: 'session-a' });
+		// The CLI that claimed it has exited: the claim must not go stale
+		expect(readTasks()[0].metadata?.claimPid).toBeUndefined();
+
+		const other = run(['next', '--format', 'json'], {
+			TASKGRAPH_SESSION_ID: 'session-b'
+		});
+		const own = run(['next', '--format', 'json'], {
+			TASKGRAPH_SESSION_ID: 'session-a'
+		});
+
+		expect(JSON.parse(other.stdout).task.id).toBe('2');
+		expect(JSON.parse(own.stdout).task.id).toBe('1');
+	}, 90000);
+
 	it('set-status pending releases the claim', () => {
 		run(['next', '--claim'], { TASKGRAPH_SESSION_ID: 'session-a' });
 

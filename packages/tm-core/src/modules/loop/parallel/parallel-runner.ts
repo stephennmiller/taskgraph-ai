@@ -3,12 +3,11 @@
  * its own git worktree and branch, with one Claude Code process per task.
  *
  * 1. Refuse if tracked files have uncommitted changes.
- * 2. Claim up to N tasks from wave 1 (the tasks that can run now), using the
- *    same locked claim as `next --claim`.
+ * 2. Claim up to N wave 1 tasks like `next --claim`, plus this pid: if it
+ *    dies unsettled, a rerun resumes them.
  * 3. For each, make `.taskgraph/worktrees/task-<id>` on `taskgraph/task-<id>`
  *    and start `claude -p <prompt>` there, with TASKGRAPH_PROJECT_ROOT set
- *    so its `taskgraph` commands update the main tasks.json. Output goes to
- *    a log file.
+ *    so its `taskgraph` commands update the main tasks.json; log to a file.
  * 4. When all have exited: keep every worktree with commits or changes, and
  *    its claim if Claude finished without marking the task `review`; remove
  *    the empty ones and release their claims. A failed task's claim is
@@ -218,7 +217,8 @@ export class ParallelLoopRunner {
 				const claim = await this.tasks.claimNext({
 					tag,
 					claimant,
-					among: free
+					among: free,
+					pid: process.pid
 				});
 				if (!claim) break;
 				const id = String(claim.task.id);
