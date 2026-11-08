@@ -258,13 +258,15 @@ Invariant: settle releases the claim on abort, failure, or no work.
 | settled    | conflict, cannot set aside    | run ends                |
 | wave end   | nothing merged, abort, budget | run ends                |
 
-Invariants an approved run must hold, broken today (#1039):
+Invariants (#1039):
 
-- It stops when its approval is withdrawn, like the serial loop. Today
-  trust is checked only once, before the first wave.
-- It does no new work after an abort. Today the abort is checked only at
-  the top of each wave, so the rest of a wave still merges and a conflict
-  still starts a resolver session.
+- An approved run checks trust before each wave, before it claims
+  anything, and stops with `TRUST_LOST` (exit 1) once the approval is
+  withdrawn, like the serial loop.
+- After an abort it does no new work: the abort is checked before each
+  merge and before each resolver session, an aborted resolver is killed,
+  and the run reports aborted (exit 130). A merge that already succeeded
+  still marks its task done.
 
 ## 10. Loop trust
 
@@ -301,11 +303,12 @@ Push runs in two passes: create every missing issue, then update bodies
 and state. Links are recovered by a `(tag, id)` marker in the issue body.
 
 Invariant: `lastPushedStatus` is the status GitHub holds for the issue.
+Pass 1 records the status of the issue it created or recovered, and pass 2
+records the task's status once it has written it, so a push cut off between
+the passes never makes a pull revert the task (#1041).
 
-Known break, tracked in #1041: pass 1 records the task's status for an
-issue GitHub still holds as open, so a push cut off before pass 2 makes
-the next pull reopen done tasks. ID reuse (#1040) also lets a new task
-recover a removed task's link.
+Known break, tracked in #1040: ID reuse lets a new task recover a removed
+task's link.
 
 ## 13. Auto-update
 

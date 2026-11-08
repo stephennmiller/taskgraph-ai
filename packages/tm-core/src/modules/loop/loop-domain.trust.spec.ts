@@ -10,7 +10,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ConfigManager } from '../config/managers/config-manager.js';
 import type { TasksDomain } from '../tasks/tasks-domain.js';
 import { LoopDomain } from './loop-domain.js';
-import { isLoopTrusted, trustLoop, untrustLoop } from './loop-trust.js';
+import {
+	TRUST_LOST,
+	isLoopTrusted,
+	trustLoop,
+	untrustLoop
+} from './loop-trust.js';
 import { ParallelLoopRunner } from './parallel/parallel-runner.js';
 
 vi.mock('./parallel/parallel-runner.js', () => ({
@@ -77,5 +82,49 @@ describe('LoopDomain.runParallel trust', () => {
 		await domain.runParallel({ parallel: 2, trusted: true });
 
 		expect(isLoopTrusted(project, home)).toBe(false);
+	});
+
+	it('with --merge, starts no wave after the approval is withdrawn (#1039)', async () => {
+		let waves = 0;
+		vi.mocked(ParallelLoopRunner).mockImplementation(function () {
+			return {
+				run: async () => {
+					waves++;
+					// During wave 1, `taskgraph github import` withdraws the approval
+					untrustLoop(project, home);
+					// A finished task with no changes, so another wave would follow
+					return {
+						tasks: [
+							{
+								id: String(waves),
+								finished: true,
+								outcome: 'no-changes'
+							}
+						],
+						readyCount: 1,
+						skippedIds: [],
+						heldBackIds: [],
+						// Ends a run that ignores the withdrawal, so it fails rather than hangs
+						aborted: waves >= 3
+					};
+				}
+			};
+		} as never);
+		domain = new LoopDomain(
+			{
+				getProjectRoot: () => project,
+				getConfig: () => ({})
+			} as unknown as ConfigManager,
+			{ updateStatus: async () => {} } as unknown as TasksDomain
+		);
+
+		const result = await domain.runParallel({
+			parallel: 2,
+			merge: true,
+			trusted: true
+		});
+
+		expect(waves).toBe(1);
+		expect(result.errorMessage).toBe(TRUST_LOST);
 	});
 });
