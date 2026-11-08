@@ -123,6 +123,20 @@ describe('selectNextTask', () => {
 		expect(selectNextTask(tasks)?.id).toBe('1');
 	});
 
+	it("skips a task a live parallel run holds under the asker's own name (#1044)", () => {
+		const tasks = [
+			claimed(createTask({ id: 1, title: 'Running', status: 'in-progress' }), {
+				claimedBy: 'me',
+				// Another live process here: the run in another terminal
+				claimPid: process.ppid,
+				claimHost: os.hostname()
+			}),
+			createTask({ id: 2, title: 'Free' })
+		];
+
+		expect(selectNextTask(tasks, { claimant: 'me' })?.id).toBe('2');
+	});
+
 	it('skips the subtasks of a task someone else claimed (#1044)', () => {
 		const next = selectNextTask(
 			[

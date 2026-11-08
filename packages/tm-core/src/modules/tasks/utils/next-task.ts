@@ -44,15 +44,18 @@ export function isStaleClaim(
 	}
 }
 
-/** Held by a claim of someone other than `claimant` that isn't stale */
+/**
+ * Held by a claim that isn't stale, of someone other than `claimant` or of
+ * another live process (a parallel run in another terminal, same user name)
+ */
 function heldByOther(
 	metadata: Record<string, unknown> | undefined,
 	claimant: string
 ): boolean {
 	const owner = metadata?.claimedBy;
-	return (
-		typeof owner === 'string' && owner !== claimant && !isStaleClaim(metadata)
-	);
+	if (typeof owner !== 'string' || isStaleClaim(metadata)) return false;
+	const pid = metadata?.claimPid;
+	return owner !== claimant || (Number.isInteger(pid) && pid !== process.pid);
 }
 
 /**

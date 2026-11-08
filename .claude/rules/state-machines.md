@@ -116,28 +116,29 @@ an explicit user action.
 
 A claim marks who is working on an in-progress task:
 `metadata.claimedBy` and `metadata.claimedAt` (`tasks/utils/claim.ts`).
+A parallel run also records its own `claimPid` and `claimHost`; once that
+process is gone the claim is stale.
 
-| From      | Event                                    | To                   |
-| --------- | ---------------------------------------- | -------------------- |
-| unclaimed | `next --claim`, parallel runner          | claimed, in-progress |
-| claimed   | status to pending, blocked, deferred     | unclaimed            |
-| claimed   | status to done, review, cancelled        | kept as a record     |
-| claimed   | parallel settle: abort, failure, no work | unclaimed            |
+| From      | Event                                    | To                        |
+| --------- | ---------------------------------------- | ------------------------- |
+| unclaimed | `next --claim`, parallel runner          | claimed, in-progress      |
+| stale     | `next --claim`, parallel runner          | claimed by the new holder |
+| claimed   | status to pending, blocked, deferred     | unclaimed                 |
+| claimed   | status to done, review, cancelled        | who/when kept as a record |
+| claimed   | parallel settle: abort, failure, no work | unclaimed                 |
 
 Invariants:
 
-- `claimNextInTasks` takes only unstarted tasks (`unstartedOnly`), and
-  hides the subtasks of a task claimed by someone else.
-- A claim is released only by the process that holds it or by a status
-  change.
+- `claimNextInTasks` takes an unstarted task, or an in-progress one only
+  when its claim is stale (resumed first). It never takes a live one.
+- `next` (`getNext`) and the serial loop skip a task, and its subtasks,
+  that a live claim holds for another claimant or another live process.
+- Any status change drops `claimPid`/`claimHost`, so a reopened task never
+  looks like a dead run's.
+- A claim without a pid (`next --claim`) is never stale.
 
-Known breaks, tracked in #1044:
-
-- A claim does not record which process holds it. A `loop --parallel` that
-  is killed hard (second Ctrl-C, SIGKILL, crash) leaves its tasks claimed
-  and in-progress, and no later run can take them.
-- `next` and the serial loop ignore claims, so they can hand out a task a
-  parallel run is building.
+Known limit: a SIGKILLed parallel run's workers (own process groups) can
+outlive it; a rerun then resumes the task in the same worktree beside them.
 
 ## 4. Task ID
 

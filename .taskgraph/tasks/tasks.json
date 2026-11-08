@@ -973,11 +973,12 @@
         "description": "Record pid and host with a claim, reclaim dead claims, and make next skip live foreign claims.",
         "details": "",
         "testStrategy": "",
-        "status": "pending",
+        "status": "done",
         "dependencies": [],
         "priority": "medium",
         "subtasks": [],
-        "createdAt": "2026-11-08T02:28:45.763Z"
+        "createdAt": "2026-11-08T02:28:45.763Z",
+        "updatedAt": "2026-11-08T02:51:12.332Z"
       }
     ],
     "metadata": {
@@ -986,9 +987,9 @@
       "schemaVersion": 2,
       "updated": "2026-10-24T00:05:11.748Z",
       "version": "1.0.0",
-      "lastModified": "2026-11-08T02:28:45.763Z",
+      "lastModified": "2026-11-08T02:51:12.332Z",
       "taskCount": 75,
-      "completedCount": 67,
+      "completedCount": 68,
       "tags": [
         "master"
       ]

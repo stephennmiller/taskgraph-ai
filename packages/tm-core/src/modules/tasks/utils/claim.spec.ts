@@ -233,6 +233,27 @@ describe('claimNextInTasks and the claiming process (#1044)', () => {
 		});
 	});
 
+	it('does not hand out a task reopened from review as a dead run (#1044)', () => {
+		const reviewed = task('1', {
+			status: 'review',
+			metadata: {
+				claimedBy: 'alice',
+				claimedAt: 'then',
+				claimPid: deadPid,
+				claimHost: host
+			}
+		});
+		const reopened =
+			setTaskStatusIn([reviewed, task('2')], '1', 'in-progress', {}).tasks ??
+			[];
+
+		expect(reopened[0].metadata).toEqual({
+			claimedBy: 'alice',
+			claimedAt: 'then'
+		});
+		expect(claimNextInTasks(reopened, 'bob')?.claim.task.id).toBe('2');
+	});
+
 	it('leaves a live, pid-less or other-host claim alone', () => {
 		const claimed = (id: string, metadata: Record<string, unknown>) =>
 			task(id, {

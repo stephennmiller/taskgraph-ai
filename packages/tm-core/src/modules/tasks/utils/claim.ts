@@ -6,8 +6,8 @@
  * and when in its metadata, under `claimedBy` and `claimedAt`, plus the
  * holding process as `claimPid` and `claimHost` when a long-lived process
  * (`loop --parallel`) holds it. A move that gives the work up (pending,
- * blocked, deferred) clears them; done, review and cancelled keep them as a
- * record of who did it.
+ * blocked, deferred) clears them; done, review and cancelled keep who and
+ * when as a record of who did it.
  */
 
 import os from 'node:os';
@@ -23,7 +23,8 @@ export interface TaskClaim {
 	claimedAt: string;
 }
 
-const CLAIM_KEYS = ['claimedBy', 'claimedAt', 'claimPid', 'claimHost'] as const;
+const HOLDER_KEYS = ['claimPid', 'claimHost'] as const;
+const CLAIM_KEYS = ['claimedBy', 'claimedAt', ...HOLDER_KEYS] as const;
 
 /**
  * The name a claim is recorded under: the session ID when one is set
@@ -50,13 +51,14 @@ export function resolveClaimant(env: NodeJS.ProcessEnv = process.env): string {
  * and undefined when the claim was all it held.
  */
 export function withoutClaim(
-	metadata: Record<string, unknown> | undefined
+	metadata: Record<string, unknown> | undefined,
+	keys: readonly string[] = CLAIM_KEYS
 ): Record<string, unknown> | undefined {
-	if (!metadata || !CLAIM_KEYS.some((key) => key in metadata)) {
+	if (!metadata || !keys.some((key) => key in metadata)) {
 		return metadata;
 	}
 	const rest = { ...metadata };
-	for (const key of CLAIM_KEYS) delete rest[key];
+	for (const key of keys) delete rest[key];
 	return Object.keys(rest).length > 0 ? rest : undefined;
 }
 
@@ -75,12 +77,19 @@ const GIVEN_UP: ReadonlySet<TaskStatus> = new Set([
 	'deferred'
 ]);
 
-/** Pending, blocked or deferred means nobody is working on it: drop the claim */
+/**
+ * Pending, blocked or deferred means nobody is working on it: drop the
+ * claim. Any other change drops the holding process, which held only the
+ * claimed in-progress run: else a task reopened from review would look
+ * like a dead run's to take over (#1044)
+ */
 export function releaseClaimIfGivenUp<
 	T extends { metadata?: Record<string, unknown> }
 >(item: T, status: TaskStatus): T {
-	if (!GIVEN_UP.has(status)) return item;
-	const metadata = withoutClaim(item.metadata);
+	const metadata = withoutClaim(
+		item.metadata,
+		GIVEN_UP.has(status) ? CLAIM_KEYS : HOLDER_KEYS
+	);
 	return metadata === item.metadata ? item : withMetadata(item, metadata);
 }
 
