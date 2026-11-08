@@ -1,6 +1,5 @@
-import MODEL_MAP from '../../packages/tm-core/src/modules/ai/supported-models.json' with {
-	type: 'json'
-};
+import { describe, expect, it } from 'vitest';
+import MODEL_MAP from './supported-models.json' with { type: 'json' };
 
 const CLAUDE_CODE_MODELS = ['opus', 'sonnet', 'haiku'];
 
@@ -13,8 +12,8 @@ describe('supported-models.json', () => {
 		const model = MODEL_MAP['claude-code'].find((m) => m.id === id);
 
 		expect(model).toBeDefined();
-		expect(model.supported).toBe(true);
-		expect(model.allowed_roles).toEqual(
+		expect(model?.supported).toBe(true);
+		expect(model?.allowed_roles).toEqual(
 			expect.arrayContaining(['main', 'research', 'fallback'])
 		);
 	});

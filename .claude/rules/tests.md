@@ -120,7 +120,7 @@ Keep test bodies synchronous unless the code under test is async (CLAUDE.md "Syn
 - **Circular imports:** mocking a module in an import cycle can raise "Cannot access 'X' before initialization"; mock at the module boundary instead.
 - **Console spies:** give them an implementation (`mockImplementation(() => {})`); `mockImplementation(console.log)` recurses.
 - **Mock state:** call `vi.clearAllMocks()` in `beforeEach`, and `vi.restoreAllMocks()` when the test spied on a real object. Change `process.env` with `vi.stubEnv` so it is undone.
-- **Slow tests that run the built CLI:** raise the file's timeout with `vi.setConfig({ testTimeout: 60000, hookTimeout: 60000 })` (see `tests/integration/cli/complex-cross-tag-scenarios.test.js`).
+- **Slow tests that run the built CLI:** raise the file's timeout with `vi.setConfig({ testTimeout: 60000, hookTimeout: 60000 })` (see `apps/cli/tests/integration/commands/move-cross-tag.command.test.ts`).
 - **Fake timers:** `vi.useFakeTimers()`, and `vi.useRealTimers()` in `afterEach`.
 
 ## Test quality

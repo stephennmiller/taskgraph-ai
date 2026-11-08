@@ -1,42 +1,44 @@
-import { execSync } from 'child_process';
-import fs from 'fs';
-import os from 'os';
-import path from 'path';
-import { fileURLToPath } from 'url';
-import { vi } from 'vitest';
+/**
+ * @fileoverview `taskgraph move` between tags on the built CLI: dependency
+ * chains, subtasks, large task sets and bad input.
+ *
+ * @integration
+ */
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+import { execSync } from 'node:child_process';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { getCliBinPath, RM_OPTS } from '../../helpers/test-utils.js';
 
-// These tests block on execSync CLI runs (init alone can take ~9s). Jest never
-// enforced its 5s timeout on synchronous tests; Vitest does, so raise it.
+interface SavedTask {
+	id: number | string;
+	subtasks: Array<{ id: number | string }>;
+}
+type SavedTasks = Record<string, { tasks: SavedTask[] }>;
+
+// These tests block on execSync CLI runs (init alone can take ~9s)
 vi.setConfig({ testTimeout: 60000, hookTimeout: 60000 });
 
 describe('Complex Cross-Tag Scenarios', () => {
-	let testDir;
-	let tasksPath;
+	let testDir: string;
+	let tasksPath: string;
 
-	// Define binPath once for the entire test suite
-	const binPath = path.join(
-		__dirname,
-		'..',
-		'..',
-		'..',
-		'dist',
-		'taskgraph.js'
-	);
+	const binPath = getCliBinPath();
+	// Keep integration timings deterministic
+	const env = { ...process.env, TASKGRAPH_SKIP_AUTO_UPDATE: '1' };
+	const run = (args: string) =>
+		execSync(`node "${binPath}" ${args}`, { cwd: testDir, env, stdio: 'pipe' });
+	const readTasks = (): SavedTasks =>
+		JSON.parse(fs.readFileSync(tasksPath, 'utf8'));
 
 	beforeEach(() => {
 		// Create test directory in OS temp directory to isolate from project
 		testDir = fs.mkdtempSync(path.join(os.tmpdir(), 'tm-test-'));
-		process.chdir(testDir);
-		// Keep integration timings deterministic
-		process.env.TASKGRAPH_SKIP_AUTO_UPDATE = '1';
 
 		// Initialize taskgraph
-		execSync(`node ${binPath} init --yes`, {
-			stdio: 'pipe'
-		});
+		run('init --yes');
 
 		// Create test tasks with complex dependencies in the correct tagged format
 		const complexTasks = {
@@ -132,19 +134,7 @@ describe('Complex Cross-Tag Scenarios', () => {
 	});
 
 	afterEach(() => {
-		// Change back to project root before cleanup
-		try {
-			process.chdir(global.projectRoot || path.resolve(__dirname, '../../..'));
-		} catch (error) {
-			// If we can't change directory, try a known safe directory
-			process.chdir(require('os').homedir());
-		}
-
-		// Cleanup test directory
-		if (testDir && fs.existsSync(testDir)) {
-			fs.rmSync(testDir, { recursive: true, force: true });
-		}
-		delete process.env.TASKGRAPH_SKIP_AUTO_UPDATE;
+		fs.rmSync(testDir, RM_OPTS);
 	});
 
 	describe('Circular Dependency Detection', () => {
@@ -193,14 +183,11 @@ describe('Complex Cross-Tag Scenarios', () => {
 
 			// Try to move task 1 - should fail due to circular dependency
 			expect(() => {
-				execSync(
-					`node ${binPath} move --from=1 --from-tag=backlog --to-tag=in-progress`,
-					{ stdio: 'pipe' }
-				);
+				run('move --from=1 --from-tag=backlog --to-tag=in-progress');
 			}).toThrow();
 
 			// Check that the move was not performed
-			const tasksAfter = JSON.parse(fs.readFileSync(tasksPath, 'utf8'));
+			const tasksAfter = readTasks();
 			expect(
 				tasksAfter.backlog.tasks.find((t) => String(t.id) === '1')
 			).toBeDefined();
@@ -269,13 +256,12 @@ describe('Complex Cross-Tag Scenarios', () => {
 			fs.writeFileSync(tasksPath, JSON.stringify(deepChainTasks, null, 2));
 
 			// Move task 1 with dependencies - should move entire chain
-			execSync(
-				`node ${binPath} move --from=1 --from-tag=master --to-tag=in-progress --with-dependencies`,
-				{ stdio: 'pipe' }
+			run(
+				'move --from=1 --from-tag=master --to-tag=in-progress --with-dependencies'
 			);
 
 			// Verify all tasks in the chain were moved
-			const tasksAfter = JSON.parse(fs.readFileSync(tasksPath, 'utf8'));
+			const tasksAfter = readTasks();
 			expect(
 				tasksAfter.master.tasks.find((t) => String(t.id) === '1')
 			).toBeUndefined();
@@ -314,28 +300,24 @@ describe('Complex Cross-Tag Scenarios', () => {
 		it('should prevent direct subtask movement between tags', () => {
 			// Try to move a subtask directly
 			expect(() => {
-				execSync(
-					`node ${binPath} move --from=2.1 --from-tag=master --to-tag=in-progress`,
-					{ stdio: 'pipe' }
-				);
+				run('move --from=2.1 --from-tag=master --to-tag=in-progress');
 			}).toThrow();
 
 			// Verify subtask was not moved
-			const tasksAfter = JSON.parse(fs.readFileSync(tasksPath, 'utf8'));
+			const tasksAfter = readTasks();
 			const task2 = tasksAfter.master.tasks.find((t) => String(t.id) === '2');
 			expect(task2).toBeDefined();
-			expect(task2.subtasks.find((s) => s.id === '2.1')).toBeDefined();
+			expect(task2?.subtasks.find((s) => s.id === '2.1')).toBeDefined();
 		});
 
 		it('should allow moving parent task with all subtasks', () => {
 			// Move parent task with dependencies (includes subtasks), and tasks 3-5, which depend on it in a chain
-			execSync(
-				`node ${binPath} move --from=2,3,4,5 --from-tag=master --to-tag=in-progress --with-dependencies`,
-				{ stdio: 'pipe' }
+			run(
+				'move --from=2,3,4,5 --from-tag=master --to-tag=in-progress --with-dependencies'
 			);
 
 			// Verify parent and subtasks were moved
-			const tasksAfter = JSON.parse(fs.readFileSync(tasksPath, 'utf8'));
+			const tasksAfter = readTasks();
 			expect(
 				tasksAfter.master.tasks.find((t) => String(t.id) === '2')
 			).toBeUndefined();
@@ -343,7 +325,7 @@ describe('Complex Cross-Tag Scenarios', () => {
 				(t) => String(t.id) === '2'
 			);
 			expect(movedTask2).toBeDefined();
-			expect(movedTask2.subtasks).toHaveLength(2);
+			expect(movedTask2?.subtasks).toHaveLength(2);
 		});
 	});
 
@@ -352,14 +334,14 @@ describe('Complex Cross-Tag Scenarios', () => {
 			// Create a large task set (50 tasks)
 			const largeTaskSet = {
 				master: {
-					tasks: [],
+					tasks: [] as object[],
 					metadata: {
 						created: new Date().toISOString(),
 						description: 'Large task set for performance testing'
 					}
 				},
 				'in-progress': {
-					tasks: [],
+					tasks: [] as object[],
 					metadata: {
 						created: new Date().toISOString(),
 						description: 'In-progress tasks'
@@ -391,13 +373,12 @@ describe('Complex Cross-Tag Scenarios', () => {
 
 			fs.writeFileSync(tasksPath, JSON.stringify(largeTaskSet, null, 2));
 			// Execute move; correctness is validated below (no timing assertion)
-			execSync(
-				`node ${binPath} move --from=25 --from-tag=master --to-tag=in-progress --with-dependencies`,
-				{ stdio: 'pipe' }
+			run(
+				'move --from=25 --from-tag=master --to-tag=in-progress --with-dependencies'
 			);
 
 			// Verify the move was successful
-			const tasksAfter = JSON.parse(fs.readFileSync(tasksPath, 'utf8'));
+			const tasksAfter = readTasks();
 
 			// Verify all tasks in the dependency chain were moved
 			for (let i = 1; i <= 25; i++) {
@@ -428,38 +409,28 @@ describe('Complex Cross-Tag Scenarios', () => {
 	describe('Error Recovery and Edge Cases', () => {
 		it('should handle invalid task IDs gracefully', () => {
 			expect(() => {
-				execSync(
-					`node ${binPath} move --from=999 --from-tag=master --to-tag=in-progress`,
-					{ stdio: 'pipe' }
-				);
+				run('move --from=999 --from-tag=master --to-tag=in-progress');
 			}).toThrow();
 		});
 
 		it('should handle invalid tag names gracefully', () => {
 			expect(() => {
-				execSync(
-					`node ${binPath} move --from=1 --from-tag=invalid-tag --to-tag=in-progress`,
-					{ stdio: 'pipe' }
-				);
+				run('move --from=1 --from-tag=invalid-tag --to-tag=in-progress');
 			}).toThrow();
 		});
 
 		it('should handle same source and target tags', () => {
 			expect(() => {
-				execSync(
-					`node ${binPath} move --from=1 --from-tag=master --to-tag=master`,
-					{ stdio: 'pipe' }
-				);
+				run('move --from=1 --from-tag=master --to-tag=master');
 			}).toThrow();
 		});
 
 		it('should create target tag if it does not exist', () => {
-			execSync(
-				`node ${binPath} move --from=1 --from-tag=master --to-tag=new-tag --ignore-dependencies`,
-				{ stdio: 'pipe' }
+			run(
+				'move --from=1 --from-tag=master --to-tag=new-tag --ignore-dependencies'
 			);
 
-			const tasksAfter = JSON.parse(fs.readFileSync(tasksPath, 'utf8'));
+			const tasksAfter = readTasks();
 			expect(tasksAfter['new-tag']).toBeDefined();
 			expect(
 				tasksAfter['new-tag'].tasks.find((t) => String(t.id) === '1')
@@ -512,13 +483,10 @@ describe('Complex Cross-Tag Scenarios', () => {
 			fs.writeFileSync(tasksPath, JSON.stringify(multiTaskSet, null, 2));
 
 			// Move multiple tasks
-			execSync(
-				`node ${binPath} move --from=1,2,3 --from-tag=master --to-tag=in-progress`,
-				{ stdio: 'pipe' }
-			);
+			run('move --from=1,2,3 --from-tag=master --to-tag=in-progress');
 
 			// Verify all tasks were moved
-			const tasksAfter = JSON.parse(fs.readFileSync(tasksPath, 'utf8'));
+			const tasksAfter = readTasks();
 			expect(
 				tasksAfter.master.tasks.find((t) => String(t.id) === '1')
 			).toBeUndefined();

@@ -17,7 +17,7 @@ npm run format-check              # Biome; `npm run format` to fix
 npm run knip                      # unused files, exports and dependencies; CI runs it
 npm run test -w @tm/core          # one package (also @tm/cli, @tm/mcp); coverage off
 npm run test:coverage -w @tm/core # coverage and the 80% thresholds; CI runs this; Vitest
-npm test                          # root tests/ suite (Vitest, vitest.root.config.ts)
+npm test                          # root tests/ suite: repo-level checks (Vitest, vitest.root.config.ts)
 npm run evals                     # real-model plan evals (parse-prd, expand, analyze-complexity); not in CI
 npm run evals:review              # real-model review-bot evals on past reverts and fix-forwards; not in CI
 ```
@@ -35,7 +35,7 @@ Agents: use `bin/agent-cli` first for worktrees (`wt`, `wt-prune`), merge readin
 - **Package & tests**: Place in `packages/<package-name>/src/<module>/<file>.spec.ts` or `apps/<app-name>/src/<module>/<file.spec.ts>` alongside source
 - **Package integration tests**: Place in `packages/<package-name>/tests/integration/<module>/<file>.test.ts` or `apps/<app-name>/tests/integration/<module>/<file>.test.ts` alongside source
 - **Isolated unit tests**: Use `tests/unit/packages/<package-name>/` only when parallel placement isn't possible
-- **Test extension**: Always use `.ts` for TypeScript tests, never `.js`. Exception: the legacy root `tests/` suite is Vitest with `.js` tests; new tests go in packages/apps, not there.
+- **Test extension**: Always use `.ts` for TypeScript tests, never `.js`. Exception: the root `tests/` suite (repo-level checks: CI, scripts, git hooks, plugin hooks, licensing) still has `.js` files; tests of one package's code go in that package, not there.
 
 ### Synchronous Tests
 

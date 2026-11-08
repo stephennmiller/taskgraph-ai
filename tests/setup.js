@@ -7,9 +7,6 @@
 import path from 'path';
 import { fileURLToPath } from 'url';
 
-// Capture the actual original working directory before any changes
-const originalWorkingDirectory = process.cwd();
-
 // Store original working directory and project root
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -33,13 +30,6 @@ process.env.PROJECT_VERSION = '1.0.0';
 // Ensure tests don't make real API calls by setting mock API keys
 process.env.ANTHROPIC_API_KEY = 'test-mock-api-key-for-tests';
 process.env.PERPLEXITY_API_KEY = 'test-mock-perplexity-key-for-tests';
-
-// Add global test helpers if needed
-global.wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-
-// Store original working directory for tests that need it
-global.originalWorkingDirectory = originalWorkingDirectory;
-global.projectRoot = projectRoot;
 
 // If needed, silence console during tests
 if (process.env.SILENCE_CONSOLE === 'true') {
