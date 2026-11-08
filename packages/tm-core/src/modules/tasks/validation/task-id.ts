@@ -93,6 +93,7 @@ export const taskIdSchema = z
  * taskIdsSchema.parse("1,2,3");    // valid
  * taskIdsSchema.parse("1.2, 3.4"); // valid (spaces trimmed)
  * taskIdsSchema.parse("abc");      // throws
+ * taskIdsSchema.parse("1.2.3");    // throws (subtasks are one level deep)
  * taskIdsSchema.parse("ABC-123");  // throws (prefixed IDs are not supported)
  * ```
  */
@@ -105,7 +106,10 @@ export const taskIdsSchema = z
 				.split(',')
 				.map((id) => id.trim())
 				.filter((id) => id.length > 0);
-			return ids.length > 0 && ids.every(isValidTaskIdFormat);
+			// One level, as parseTaskIds checks: `1.2.3` fails here, with the hint
+			return (
+				ids.length > 0 && ids.every((id) => TaskIdSchema.safeParse(id).success)
+			);
 		},
 		{
 			message:

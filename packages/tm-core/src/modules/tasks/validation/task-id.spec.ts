@@ -94,6 +94,9 @@ describe('Task ID Validation', () => {
 			expect(() => taskIdsSchema.parse('abc')).toThrow();
 			expect(() => taskIdsSchema.parse('1,abc,3')).toThrow();
 			expect(() => taskIdsSchema.parse('1,HAM-123')).toThrow();
+			// get_task/set_task_status: rejected by the schema, with its hint
+			expect(() => taskIdsSchema.parse('1.2.3')).toThrow();
+			expect(() => taskIdsSchema.parse('1,1.2.3')).toThrow();
 		});
 	});
 
