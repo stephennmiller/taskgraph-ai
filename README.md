@@ -1,3 +1,4 @@
+<!-- markdownlint-disable MD013 MD033 MD041 -->
 <a name="readme-top"></a>
 
 <p align="center">
@@ -74,6 +75,8 @@ plan and progress stored in your repo.
 
 </details>
 
+<!-- markdownlint-enable MD013 -->
+
 > **Attribution:** TaskGraph is based on [Task
 > Master](https://github.com/eyaltoledano/claude-task-master) by Eyal Toledano
 > ([@eyaltoledano](https://x.com/eyaltoledano)) and Ralph Khreish
@@ -85,37 +88,13 @@ plan and progress stored in your repo.
 
 ## Pros and cons
 
-Compared with giving the same PRD to plain Claude Code, measured on our
-[benchmarks](https://taskgraph-ai.com/best-practices/benchmarks): long builds
-scored by hidden tests against a real tool, one run per row.
-
-What you get:
-
-- **A plan on disk.** Tasks, dependencies and progress notes live in
-  `.taskgraph/tasks/tasks.json`, so you can read, edit and review them like
-  code.
-- **Clean resume.** After an interruption `taskgraph loop` picks up from the
-  task statuses and comes close to its uninterrupted score. Stopped 8 minutes
-  in and resumed, the Shell and jq builds cost 14% more than uninterrupted with
-  TaskGraph, and almost three times as much with plain `claude --continue`, at
-  the same score.
-- **A dependency graph you can inspect.** `taskgraph next` shows the first
-  unblocked task, `graph` draws the tree and `why 7` says what blocks task 7.
-- **Unattended parallel builds.** `loop --parallel --merge` runs independent
-  tasks side by side and merges each wave itself.
-
-What it costs:
-
-- **No better results.** Plain Claude Code already passes nearly every case.
-  TaskGraph ties or trails it on score on every benchmark.
-- **More money and time.** With one task per session, the default, the Shell
-  and jq builds together scored 79/87 for $7.52 in 48 minutes. Plain scored
-  80/87 for $4.61 in 37 minutes, so TaskGraph cost about 60% more. Plain
-  works in a few large calls, while each fresh TaskGraph session reads its
-  prompt and files again.
-- **Slower in parallel.** On 13 independent tools, `loop --parallel
-  3 --merge` scored 17/21 for $2.30 in 11 minutes. Plain Claude Code with
-  subagents scored 18/21 for $1.16 in under 3 minutes.
+On our [benchmarks][benchmarks], long builds scored by hidden tests against
+a real tool, TaskGraph ties or trails plain Claude Code
+on score and costs more: about 60% more with one task per session. What it
+buys is a plan you can read and review in the repo, and a clean resume: after
+an interruption `taskgraph loop` comes close to its uninterrupted score, for
+14% more than an uninterrupted run, against almost three times as much with
+plain `claude --continue`.
 
 Use TaskGraph when a build is long enough that you will stop and resume it,
 or when you want the plan and its progress kept in the repo. For a build that
@@ -125,9 +104,8 @@ fits in one sitting, plain Claude Code is cheaper and just as good.
 
 [Pros and cons](#pros-and-cons) · [Set up in Claude
 Code](#set-up-in-claude-code) · [How to use it](#how-to-use-it) ·
-[Commands](#commands) · [MCP tool tiers](#mcp-tool-tiers) · [Models](#models)
-· [Upgrading](#upgrading) · [Troubleshooting](#troubleshooting) ·
-[Privacy](#privacy) · [Docs](#documentation) · [Licensing](#licensing)
+[Reference](#reference) · [Upgrading](#upgrading) · [Privacy](#privacy) ·
+[Docs](#documentation) · [Licensing](#licensing)
 
 ## Set up in Claude Code
 
@@ -151,7 +129,8 @@ optional MCP server. To try it without installing, run any command through npx:
 npx -y -p taskgraph-ai taskgraph list
 ```
 
-To build from source instead, see [Working on TaskGraph itself](#troubleshooting).
+To build from source instead, see
+[Working on TaskGraph itself][troubleshooting].
 
 ### 2. Initialize your project
 
@@ -164,9 +143,6 @@ taskgraph init
 This creates `.taskgraph/` (tasks, docs, config) and a `CLAUDE.md` import with
 TaskGraph's workflow guide (`--no-claude` skips the import). It does not install
 slash commands: step 3 does. Don't run it twice; it only re-adds the same files.
-
-`init` doesn't register the MCP server, and you don't need it. Pass `--mcp` to
-add it to the project's `.mcp.json`, or see step 4.
 
 ### 3. Install the plugin
 
@@ -181,10 +157,6 @@ slash commands (as `/taskgraph:<name>`) and two agents (`task-executor`,
 ```txt
 /plugin install taskgraph@taskgraph
 ```
-
-The plugin does not register an MCP server. The `task-checker` agent uses the
-`taskgraph show` CLI, and uses the MCP tool instead if you registered the server
-as `taskgraph-ai` (step 4).
 
 Then check the setup from your project folder. `taskgraph doctor` checks Node,
 Claude Code and its sign-in, the project, the plugin and the MCP server, and
@@ -205,46 +177,24 @@ claude mcp add taskgraph-ai --scope user \
   -- npx -y taskgraph-ai
 ```
 
-Restart Claude Code, then run this in Claude Code and check that `taskgraph-ai`
-shows as connected:
-
-```txt
-/mcp
-```
-
+Restart Claude Code and run `/mcp` to check that `taskgraph-ai` is connected.
 `standard` loads 16 tools, enough for everything in
-[How to use it](#how-to-use-it). See [MCP tool tiers](#mcp-tool-tiers) for the
-others.
-
-To share the setup with your team instead, put it in the project's `.mcp.json`:
-
-```json
-{
-  "mcpServers": {
-    "taskgraph-ai": {
-      "command": "npx",
-      "args": ["-y", "taskgraph-ai@<version>"],
-      "env": { "TASKGRAPH_TOOLS": "standard" }
-    }
-  }
-}
-```
-
-Use the version `taskgraph --version` prints, so the team runs the same server.
-`taskgraph init --mcp` writes this pin, and a re-run after upgrading moves it.
+[How to use it](#how-to-use-it). The [installation guide][installation] has
+the shared `.mcp.json` setup, and [MCP tool tiers][mcp-tiers] the others.
 
 ## How to use it
 
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="images/how-it-works-dark.svg">
+    <!-- markdownlint-disable-next-line MD013 -->
     <img src="images/how-it-works.svg" alt="parse-prd turns your PRD into a task graph stored in .taskgraph/tasks/tasks.json in your repo. Each Claude Code session reads and updates that file, so a new session picks up the next task and the notes from the last one." width="820">
   </picture>
 </p>
 
-With the plugin installed, ask Claude in plain language. Each step below shows
-something you can say, and the [reference table](#3-work-through-them) lists
-the matching slash command and CLI command.
+With the plugin installed, ask Claude in plain language. The
+[quick reference][quick-reference] lists the matching slash command and CLI
+command for each request.
 
 ### 1. Write a PRD
 
@@ -284,49 +234,9 @@ When it's finished and checked:
 Mark task 3 done
 ```
 
-The loop is simple: **next, implement, done, next.** Task IDs look like `3` for
-a task and `3.2` for a subtask. Other things you can ask:
-
-```txt
-Why is task 7 blocked?
-```
-
-```txt
-Break task 4 into subtasks
-```
-
-```txt
-Add a task for rate limiting the login endpoint
-```
-
-```txt
-Update task 5: we now use Postgres
-```
-
-```txt
-Research JWT best practices for this project
-```
-
-The same actions as slash commands and CLI commands:
-
-| You say                     | Slash command                         | CLI                                                |
-| --------------------------- | ------------------------------------- | -------------------------------------------------- |
-| What should I work on next? | `/taskgraph:next`                     | `taskgraph next`                                   |
-| Show me the task graph      | `/taskgraph:graph`                    | `taskgraph graph`                                  |
-| Why is task 7 blocked?      | `/taskgraph:why 7`                    | `taskgraph why 7`                                  |
-| Show task 1                 | `/taskgraph:show 1`                   | `taskgraph show 1`                                 |
-| Start task 3                | `/taskgraph:set-status 3 in-progress` | `taskgraph set-status --id=3 --status=in-progress` |
-| Mark task 3 done            | `/taskgraph:to-done 3`                | `taskgraph set-status --id=3 --status=done`        |
-| Break task 4 into subtasks  | `/taskgraph:expand 4`                 | `taskgraph expand 4`                               |
-| Add a task for ...          | `/taskgraph:add-task <what you want>` | `taskgraph add-task --prompt='...'`                |
-| Update task 5: ...          | `/taskgraph:update-task 5 <change>`   | `taskgraph update 5 --prompt='...'`                |
-| Research ...                | (research skill)                      | `taskgraph research "JWT best practices"`          |
-
-If you use the MCP server instead, research, tags and the dependency editing
-tools (`add_dependency`, `remove_dependency`, `validate_dependencies`,
-`fix_dependencies`) load only with `TASKGRAPH_TOOLS=all`. `dependency_analysis`
-is in `standard` (see [MCP tool tiers](#mcp-tool-tiers)), and everything else
-here works with `standard`.
+The loop is simple: **next, implement, done, next.** You can also ask why a
+task is blocked, to break a task into subtasks, to add or update a task, or to
+research something for the project.
 
 ### Or let it build unattended
 
@@ -341,256 +251,31 @@ commits after each. If it stops partway, run `taskgraph loop` again and it
 picks up from the task statuses. Add `--trust` to run with Claude Code's
 permission prompts off.
 
-### 4. Keep it organized
+## Reference
 
-- **Tags** keep separate task lists per branch, feature or experiment. Ask:
+On the docs site:
 
-  ```txt
-  Make a tag for the auth rewrite
-  ```
-
-  The CLI commands are `taskgraph tags`, `taskgraph tags add` and
-  `taskgraph tags use` (MCP: `list_tags`, `add_tag`, `use_tag`).
-- **Dependencies** decide what counts as "next". If the graph looks wrong, ask:
-
-  ```txt
-  Check the task dependencies and fix any problems
-  ```
-
-- **Statuses:** `pending`, `in-progress`, `review`, `done`, `blocked`,
-  `deferred`, `cancelled`.
-
-## Commands
-
-Plain requests to Claude, slash commands and the `taskgraph` CLI all reach the
-same actions.
-
-### Slash commands
-
-Install the plugin (step 3) and they appear as `/taskgraph:<name>`.
-`taskgraph init` does not write slash commands. To see them all, type this in
-Claude Code:
-
-```txt
-/taskgraph
-```
-
-| Purpose        | Commands                                                                    |
-| -------------- | --------------------------------------------------------------------------- |
-| Daily workflow | `next`, `show`, `list`, `set-status`, `to-done`, `add-task`, `note`, `loop` |
-| Set up         | `init`                                                                      |
-| Plan & update  | `parse-prd`, `update-task`, `analyze-complexity`, `expand`                  |
-| Dependencies   | `graph`, `why`                                                              |
-| Other          | `help`                                                                      |
-
-### CLI cheat sheet
-
-```bash
-taskgraph parse-prd .taskgraph/docs/prd.md   # generate tasks from a PRD
-taskgraph list                               # all tasks and their status
-taskgraph next                               # next task to work on
-taskgraph graph                              # tasks as a dependency tree
-taskgraph why 7                              # why task 7 is blocked
-taskgraph show 1,3,5                         # one or more tasks
-taskgraph set-status --id=3 --status=done    # change status
-taskgraph add-task --prompt='...' --research # add a task
-taskgraph expand 4 --research           # split into subtasks
-taskgraph expand --all                       # expand every eligible task
-taskgraph update 5 --prompt='...'            # change one task
-taskgraph update --from=5 --prompt='...'     # change task 5 onward
-taskgraph note 3.2 'chose argon2'            # log progress, as written
-taskgraph analyze-complexity --research
-taskgraph analyze-complexity --report
-taskgraph depend 5 3
-taskgraph fix-dependencies --check
-taskgraph move --from=5 --from-tag=backlog --to-tag=in-progress
-taskgraph research "latest JWT best practices"
-taskgraph models --setup                     # choose models
-taskgraph completion --install               # Tab completion for your shell
-taskgraph doctor                             # check the setup, with fixes
-```
-
-For Tab completion of commands, flags, task IDs, tags and statuses in bash,
-zsh or fish, run this once, and again after upgrading:
-
-```bash
-taskgraph completion --install
-```
-
-Every command, flag and example is in the [command reference](https://taskgraph-ai.com/capabilities/cli-root-commands).
-
-## MCP tool tiers
-
-Only relevant if you added the optional MCP server. Each tool you load costs
-context. `TASKGRAPH_TOOLS` controls how many are registered. If it's unset, you
-get `core`.
-
-| Value                          | Tools  | Includes                                                                                                                                                                            |
-| ------------------------------ | ------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `core` (default, alias `lean`) | 7      | `get_tasks`, `next_task`, `get_task`, `set_task_status`, `add_note`, `parse_prd`, `expand_task`                                                                                     |
-| `standard`                     | 16     | core, plus `update_subtask`, `initialize_project`, `analyze_project_complexity`, `expand_all`, `add_subtask`, `remove_task`, `add_task`, `complexity_report`, `dependency_analysis` |
-| `all`                          | 40     | everything: updates, dependencies, archive, tags, `research`, `move_task`, `scope_up_task`, `scope_down_task` and `generate`                                                        |
-| a list                         | custom | e.g. `get_tasks,next_task,set_task_status`                                                                                                                                          |
-
-`all` registers every tool. That gives the MCP host full project control: it
-can create, edit and delete tasks and tags, change settings, generate task
-files and write to GitHub. Prefer `core` or `standard` unless you need a tool
-only `all` includes.
-
-Set it when you add the server. `core` is the default:
-
-```bash
-claude mcp add taskgraph-ai --scope user \
-  --env TASKGRAPH_TOOLS=core \
-  -- npx -y taskgraph-ai
-```
-
-Or edit the `env` block in `.mcp.json`, then restart Claude Code.
-
-## Models
-
-TaskGraph uses three roles: **main**, **research** and **fallback** (used if
-either of the others fails). The choices are `opus`, `sonnet` and `haiku`. The
-research role gets web search and fetch only. It cannot read or change your
-files and has no shell.
-
-To change a model, ask Claude:
-
-```txt
-Change the main model to opus
-```
-
-Or pick them in a terminal:
-
-```bash
-taskgraph models --setup
-```
-
-Details are in [Models](docs/models.md) and the
-[Claude Code guide](https://taskgraph-ai.com/capabilities/claude-code).
+- [Commands][quick-reference]: every slash command and CLI command, a cheat
+  sheet, tags, dependencies and statuses.
+- [MCP tool tiers][mcp-tiers]: what `TASKGRAPH_TOOLS` loads.
+- [Models][models]: the main, research and fallback roles.
+- [Troubleshooting][troubleshooting]: `doctor`, sign-in, MCP connection
+  problems and building from source.
+- [Benchmarks][benchmarks]: the full results behind
+  [Pros and cons](#pros-and-cons).
 
 ## Upgrading
 
-**Slash commands now come from the plugin (every existing project).**
-`taskgraph init --rules claude` no longer writes slash commands into
-`.claude/commands/tm/`. Install the plugin ([step 3](#3-install-the-plugin)),
-then refresh it in Claude Code:
-
-```txt
-/plugin marketplace update taskgraph
-```
-
-Then run init once more. It removes the old TaskGraph command files and keeps
-any you added:
-
-```bash
-taskgraph init --rules claude
-```
-
-Details are in the
-[upgrade guide](https://taskgraph-ai.com/upgrading#5-move-slash-commands-to-the-plugin).
-
-Projects created with Task Master, or with a TaskGraph release before 0.47, also
-need a few manual changes:
-
-- **Import `.taskmaster/`.** It copies every tag, the docs and reports, and
-  the settings that still apply, and leaves `.taskmaster/` in place. See
-  [Migrating from Task Master](https://taskgraph-ai.com/migrating-from-taskmaster).
-
-  ```bash
-  taskgraph init --from-taskmaster --yes
-  ```
-
-- **Rename environment variables:** `TASK_MASTER_*` and `TASKMASTER_*` are now
-  `TASKGRAPH_*`. The old names are ignored.
-- **Removed:** the `taskgraph migrate` command and `.taskmasterconfig`.
-  Configuration lives in `.taskgraph/config.json`; run
-  `taskgraph models --setup` to recreate it.
-- **Claude Code only:** other providers and their flags are gone, models are
-  `opus`, `sonnet` and `haiku`, and the only API key still read is the optional
-  `CLAUDE_CODE_API_KEY`.
-
-Full details are in the [upgrade guide](https://taskgraph-ai.com/upgrading).
-
-## Troubleshooting
-
-**Something in the setup doesn't work.** Run this; it prints a line per setup
-step and the fix under each one that failed:
-
-```bash
-taskgraph doctor
-```
-
-**AI commands fail.** Run Claude Code once and make sure you're signed in:
-
-```bash
-claude
-```
-
-**Task files look out of sync.** Ask Claude to fix the task dependencies, or
-run:
-
-```bash
-taskgraph fix-dependencies
-```
-
-Don't hand-edit `.taskgraph/tasks/tasks.json` or `.taskgraph/config.json`; ask
-Claude or use the commands.
-
-**`0 tools enabled`, or the MCP server won't connect.** Restart Claude Code and
-run `/mcp`. Then check that the server starts on its own in a terminal. It
-waits for input; press Ctrl+C to stop it. If it exits instead, its error names
-the problem, such as an unknown `TASKGRAPH_TOOLS` tier or tool name.
-
-```bash
-npx -y taskgraph-ai
-```
-
-**Fewer MCP tools than expected.** `TASKGRAPH_TOOLS` defaults to `core`. Set
-`standard` or `all` (see [MCP tool tiers](#mcp-tool-tiers)).
-
-**Working on TaskGraph itself.** Build from source:
-
-```bash
-git clone https://github.com/stephennmiller/taskgraph-ai.git
-cd taskgraph-ai
-npm install
-npm run build
-```
-
-Then run the CLI from the build:
-
-```bash
-node dist/taskgraph.js
-```
-
-This repository's own `.mcp.json` starts `dist/mcp-server.js` with
-`TASKGRAPH_TOOLS=core`, so build first or the server won't connect. After a
-`git pull`, run `npm run build` again; the CLI and server run from `dist/`.
+Slash commands now come from the plugin, and Task Master projects import with
+`taskgraph init --from-taskmaster --yes`. The [upgrade guide][upgrading] has
+the steps for every existing project, and [Migrating from Task
+Master][migrating] what moves.
 
 ## Privacy
 
 TaskGraph has no account, server or telemetry. Tasks stay in `.taskgraph/` in
-your project. Data leaves your machine only in these cases:
-
-- AI commands go through your own Claude Code to Anthropic, with the task text,
-  a short project summary and the project files Claude reads. `loop` runs
-  Claude Code with permission prompts off, so it can send anything your Claude
-  Code can.
-- The CLI checks `registry.npmjs.org` for updates and fetches release notes
-  from `raw.githubusercontent.com`. It tells you when a newer version is out
-  and installs it only when you run `taskgraph upgrade` or opt in with
-  `TASKGRAPH_AUTO_UPDATE=install` (`TASKGRAPH_SKIP_AUTO_UPDATE=1` skips the
-  check).
-- `loop --parallel --container` installs TaskGraph from npm inside the
-  container when its image doesn't have it.
-- The research skill and command search and fetch web pages.
-- GitHub sync reads and writes GitHub Issues through your `gh` CLI.
-
-The plugin's SessionStart hook adds the task in progress, the tasks ready next
-and TaskGraph's workflow rules to Claude's context, all printed by your locally
-installed `taskgraph prime`. The plugin's hooks make no network calls. Details:
-[taskgraph-ai.com/privacy](https://taskgraph-ai.com/privacy).
+your project. AI commands go through your own Claude Code to Anthropic; the
+[privacy page][privacy] lists everything that leaves your machine.
 
 ## Documentation
 
@@ -606,6 +291,7 @@ structure](https://taskgraph-ai.com/capabilities/task-structure) ·
 ## Contributors
 
 <a href="https://github.com/stephennmiller/taskgraph-ai/graphs/contributors">
+  <!-- markdownlint-disable-next-line MD013 -->
   <img src="https://contrib.rocks/image?repo=stephennmiller/taskgraph-ai" alt="TaskGraph project contributors" />
 </a>
 
@@ -627,3 +313,13 @@ or service whose value derives, entirely or substantially, from the
 functionality of the software.
 
 See [LICENSE](LICENSE) and [licensing details](docs/licensing.md).
+
+[benchmarks]: https://taskgraph-ai.com/best-practices/benchmarks
+[installation]: https://taskgraph-ai.com/getting-started/quick-start/installation
+[mcp-tiers]: https://taskgraph-ai.com/capabilities/mcp#tool-tiers-at-a-glance
+[migrating]: https://taskgraph-ai.com/migrating-from-taskmaster
+[models]: https://taskgraph-ai.com/capabilities/claude-code#models
+[privacy]: https://taskgraph-ai.com/privacy
+[quick-reference]: https://taskgraph-ai.com/capabilities/cli-root-commands#quick-reference
+[troubleshooting]: https://taskgraph-ai.com/getting-started/faq#troubleshooting
+[upgrading]: https://taskgraph-ai.com/upgrading

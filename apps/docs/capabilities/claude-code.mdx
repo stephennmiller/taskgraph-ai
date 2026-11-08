@@ -24,7 +24,7 @@ When neither is set, TaskGraph withholds `ANTHROPIC_API_KEY` from Claude Code so
 
 ## Models
 
-Each of the three roles (`main`, `research`, `fallback`) uses `opus`, `sonnet` or `haiku`:
+Each of the three roles (`main`, `research`, `fallback`) uses `opus`, `sonnet` or `haiku`. `fallback` is used if either of the others fails. To change a model, ask Claude (`Change the main model to opus`), or set it from a terminal:
 
 ```bash
 taskgraph models --set-main sonnet

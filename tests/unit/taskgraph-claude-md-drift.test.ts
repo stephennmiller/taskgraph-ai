@@ -222,11 +222,12 @@ describe('other places that state the tool tier counts', () => {
 	const read = (file: string) =>
 		fs.readFileSync(path.join(rootDir, file), 'utf8');
 
-	it('README tier table and setup text match the registry', () => {
+	it('MCP docs tier table and README setup text match the registry', () => {
+		const table = read('apps/docs/capabilities/mcp.mdx');
 		const readme = read('README.md');
 		const row = (tier: string) =>
 			Number(
-				readme.match(
+				table.match(
 					new RegExp(`\\|\\s*\`${tier}\`[^|]*\\|\\s*(\\d+)\\s*\\|`)
 				)?.[1]
 			);
@@ -249,7 +250,6 @@ describe('TASKGRAPH_TOOLS=all is documented as full project control', () => {
 	const read = (file: string) =>
 		fs.readFileSync(path.join(rootDir, file), 'utf8');
 	const files = [
-		'README.md',
 		'llms-install.md',
 		'.claude/rules/mcp.md',
 		'apps/docs/capabilities/mcp.mdx',
