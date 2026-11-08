@@ -16,6 +16,7 @@ import {
 } from '../dependencies/index.js';
 import { buildPrimeContext, type PrimeContext } from './utils/prime-context.js';
 import { nextTaskSequence } from './utils/next-task.js';
+import { parentDoneGate } from './utils/parent-status.js';
 import { resolveClaimant } from './utils/claim.js';
 import type { Task } from '../../common/types/index.js';
 import { normalizeTaskId } from './validation/task-id.js';
@@ -79,7 +80,10 @@ export class TaskDependencyViews {
 		options: { tag?: string } = {}
 	): Promise<Task[]> {
 		const tasks = await this.taskService.getDependencyView(options.tag);
-		return nextTaskSequence(tasks, limit, { claimant: resolveClaimant() });
+		return nextTaskSequence(tasks, limit, {
+			claimant: resolveClaimant(),
+			guardDone: parentDoneGate(this.configManager.getDefinitionOfDone())
+		});
 	}
 
 	/**

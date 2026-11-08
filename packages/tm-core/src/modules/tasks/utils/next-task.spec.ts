@@ -1,7 +1,7 @@
 import { spawnSync } from 'node:child_process';
 import os from 'node:os';
 import { describe, expect, it } from 'vitest';
-import type { Task } from '../../../common/types/index.js';
+import type { Task, TaskStatus } from '../../../common/types/index.js';
 import { createSubtask, createTask } from '../../../testing/task-fixtures.js';
 import {
 	bottlenecks,
@@ -10,6 +10,7 @@ import {
 	parallelWaves
 } from '../../dependencies/index.js';
 import { isStaleClaim, nextTaskSequence, selectNextTask } from './next-task.js';
+import { parentDoneGate } from './parent-status.js';
 
 /** A pid that was in use and has exited */
 const deadPid = () => spawnSync(process.execPath, ['-e', '']).pid;
@@ -442,5 +443,39 @@ describe('nextTaskSequence', () => {
 			10
 		);
 		expect(ids(picked)).toEqual(['1', '2']);
+	});
+
+	// A parent settles as set-status settles it (#1042)
+	const parentWith = (
+		extra: Partial<Task>,
+		first: TaskStatus = 'pending'
+	): Task[] => [
+		createTask({
+			id: 3,
+			title: 'Profile',
+			status: 'in-progress',
+			...extra,
+			subtasks: [
+				createSubtask({ id: 1, title: 'Form', parentId: '3', status: first }),
+				createSubtask({ id: 2, title: 'Avatar', parentId: '3' })
+			]
+		}),
+		createTask({ id: 4, title: 'Docs', dependencies: ['3'] })
+	];
+
+	it('counts a parent done when its other subtasks were cancelled', () => {
+		expect(ids(nextTaskSequence(parentWith({}, 'cancelled'), 10))).toEqual([
+			'3.2',
+			'4'
+		]);
+	});
+
+	it('picks a parent again when its own criteria stay unchecked', () => {
+		const picked = nextTaskSequence(
+			parentWith({ acceptanceCriteria: ['Profile page loads'] }),
+			10,
+			{ guardDone: parentDoneGate([]) }
+		);
+		expect(ids(picked)).toEqual(['3.1', '3.2', '3', '4']);
 	});
 });

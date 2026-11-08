@@ -14,6 +14,7 @@ import {
 	resolveSubtaskDependency
 } from '../../dependencies/index.js';
 import { createDependencyState } from '../../dependencies/dependency-check.js';
+import { type ParentDoneGuard, withParentStatus } from './parent-status.js';
 import { subtaskInContext } from './subtask-context.js';
 
 export interface SelectNextTaskOptions {
@@ -225,14 +226,14 @@ export function newlyReadyTasks(before: Task[], after: Task[]): ReadyTask[] {
 /**
  * The items `next` would pick one after another, up to `limit`, if each were
  * marked done as it was picked: the order a loop run works them in when
- * every session finishes its task. A subtask's parent is done once its last
- * subtask is; a task picked whole is done with its subtasks. Read only: it
- * works on a copy.
+ * every session finishes its task. A subtask's parent settles as set-status
+ * settles it (`guardDone`: its own checklist); a task picked whole is done
+ * with its subtasks. Read only: it works on a copy.
  */
 export function nextTaskSequence(
 	tasks: Task[],
 	limit: number,
-	options: SelectNextTaskOptions = {}
+	options: SelectNextTaskOptions & { guardDone?: ParentDoneGuard } = {}
 ): Task[] {
 	const view = structuredClone(tasks);
 	const order: Task[] = [];
@@ -250,9 +251,11 @@ export function nextTaskSequence(
 		}
 		const sub = parent.subtasks?.find((st) => String(st.id) === subId);
 		if (sub) sub.status = 'done';
-		if (parent.subtasks?.every((st) => st.status === 'done')) {
-			parent.status = 'done';
-		}
+		view[view.indexOf(parent)] = withParentStatus(
+			parent,
+			options.guardDone,
+			true
+		);
 	}
 	return order;
 }
