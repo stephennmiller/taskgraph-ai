@@ -216,6 +216,7 @@ export {
 	shellRunsUnderClaudeCode,
 	type EnvMap
 } from './modules/config/services/project-env.js';
+export { readCurrentTag } from './modules/config/services/runtime-state-manager.service.js';
 
 // The tag names add-tag accepts
 export {
@@ -228,6 +229,10 @@ export {
 	withBlocks,
 	filterTaskList,
 	filterReadyTasks,
+	calculateTaskStatistics,
+	calculateSubtaskStatistics,
+	calculateDependencyStatistics,
+	type TaskStatistics,
 	parseStatusFilter,
 	ACTIONABLE_STATUSES,
 	selectNextTask,

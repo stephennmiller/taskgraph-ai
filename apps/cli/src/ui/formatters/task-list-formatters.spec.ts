@@ -134,8 +134,9 @@ describe('formatListSummary', () => {
 	it('names the task that holds up the most others, while it is open', () => {
 		const out = plain(formatListSummary(project(), null, { width: 80 }));
 
+		// As list --ready counts: deferred 6 and blocked 7 are neither
 		expect(out).toContain(
-			'Ready     2 ready · 4 waiting on dependencies · task 3 unblocks 3'
+			'Ready     1 ready · 3 waiting on dependencies · task 3 unblocks 3'
 		);
 	});
 

@@ -177,18 +177,11 @@ async function updateOne(
 	}
 
 	await runUpdate(command, options, async (tmCore, tag, hooks, stop) => {
-		// First, so a bad login fails before the AI call is paid for
-		if (assignee !== undefined) {
-			const assigned = await tmCore.tasks.assign(id, assignee, tag);
-			console.log(
-				formatAssigned({ id, title: assigned.title }, assigned.assignee)
-			);
-		}
-		if (!prompt) return;
-		const result = await tmCore.tasks.updateWithPrompt(
+		const { update: result } = await tmCore.tasks.updateTask(
 			{
 				id,
 				prompt,
+				assignee,
 				research: options.research,
 				append: options.append,
 				tag,
@@ -196,12 +189,17 @@ async function updateOne(
 			},
 			{
 				...hooks,
+				onAssigned: (assigned) =>
+					console.log(
+						formatAssigned({ id, title: assigned.title }, assigned.assignee)
+					),
 				onAiCall: ([task]) =>
 					hooks.startSpinner(
 						`Updating task ${terminalSafe(task.id)}: ${truncate(terminalSafe(task.title), 50)}${options.research ? ' (with research)' : ''}`
 					)
 			}
 		);
+		if (!result) return;
 		stop();
 		const { task } = result;
 		if (result.skipped === 'done') {

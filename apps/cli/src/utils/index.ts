@@ -37,7 +37,6 @@ export {
 	checkForUpdate,
 	performAutoUpdate,
 	displayUpgradeNotification,
-	compareVersions,
 	restartWithNewVersion
 } from './auto-update/index.js';
 

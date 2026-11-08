@@ -195,7 +195,7 @@ export function filterTaskList<T extends TaskWithBlocks>(
  * // Task 3 is not ready because dependency '2' is still pending
  * ```
  */
-export function filterReadyTasks<T extends TaskWithBlocks>(
+export function filterReadyTasks<T extends Task>(
 	tasks: T[],
 	archivedIds: ReadonlySet<string> = new Set()
 ): T[] {

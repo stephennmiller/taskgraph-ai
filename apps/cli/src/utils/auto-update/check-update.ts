@@ -10,12 +10,13 @@ import fs from 'node:fs';
 import https from 'https';
 import path from 'node:path';
 
+import { compareVersions } from '@tm/core';
 import { PACKAGE_NAME } from './constants.js';
 
 import { SEMVER_RE, fetchChangelogHighlights } from './changelog.js';
 import { resolveHome } from './policy.js';
 import type { UpdateInfo } from './types.js';
-import { compareVersions, getCurrentVersion } from './version.js';
+import { getCurrentVersion } from './version.js';
 
 // ============================================================================
 // Cache Configuration

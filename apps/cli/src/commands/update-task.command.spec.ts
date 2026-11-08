@@ -21,9 +21,18 @@ vi.mock('../utils/display-helpers.js', () => ({
 import { createTmCore } from '@tm/core';
 import { UpdateCommand, UpdateTaskCommand } from './update-task.command.js';
 
+/** tm-core's update result; `tasks.updateTask` wraps it as `update` */
 const updateWithPrompt = vi.fn();
+const updateOne = vi.fn(async (input: unknown, hooks: unknown) => ({
+	update: await updateWithPrompt(input, hooks)
+}));
 const updateFrom = vi.fn();
-const assign = vi.fn();
+/** tm-core assigning without an AI call */
+const assignOnly = (assigned: object) =>
+	updateOne.mockImplementationOnce(async (_input, hooks: any) => {
+		hooks.onAssigned(assigned);
+		return { assigned } as any;
+	});
 const strip = (text: string) => text.replace(/\x1b\[[0-9;]*m/g, '');
 
 const task = { id: '3', title: 'Store \x1b[31msessions', subtasks: [] };
@@ -53,7 +62,7 @@ describe('update-task and update', () => {
 			throw new Error(`exit ${code}`);
 		}) as never);
 		vi.mocked(createTmCore).mockResolvedValue({
-			tasks: { updateWithPrompt, updateFrom, assign },
+			tasks: { updateTask: updateOne, updateFrom },
 			config: { getActiveTag: () => 'master' }
 		} as any);
 		updateWithPrompt.mockResolvedValue({
@@ -77,12 +86,14 @@ describe('update-task and update', () => {
 		new UpdateCommand().parseAsync(args, { from: 'user' });
 
 	it('update-task --assignee assigns without a prompt or the AI', async () => {
-		assign.mockResolvedValue({ ...task, assignee: 'octocat' });
+		assignOnly({ ...task, assignee: 'octocat' });
 
 		await updateTask('3', '--assignee', '@OctoCat');
 
-		expect(assign).toHaveBeenCalledWith('3', '@OctoCat', 'master');
-		expect(updateWithPrompt).not.toHaveBeenCalled();
+		expect(updateOne).toHaveBeenCalledWith(
+			expect.objectContaining({ id: '3', assignee: '@OctoCat', tag: 'master' }),
+			expect.anything()
+		);
 		expect(out).toEqual(['✓ Assigned task 3 to octocat  Store sessions']);
 	});
 
@@ -247,12 +258,18 @@ describe('update-task and update', () => {
 	});
 
 	it('update --id and --assignee work on one task', async () => {
-		assign.mockResolvedValue({ ...task, assignee: 'octocat' });
+		assignOnly({ ...task, assignee: 'octocat' });
 
 		await update('--id=3', '--assignee=octocat');
 
-		expect(assign).toHaveBeenCalledWith('3', 'octocat', 'master');
-		expect(updateWithPrompt).not.toHaveBeenCalled();
+		expect(updateOne).toHaveBeenCalledWith(
+			expect.objectContaining({
+				id: '3',
+				assignee: 'octocat',
+				prompt: undefined
+			}),
+			expect.anything()
+		);
 	});
 
 	it.each([

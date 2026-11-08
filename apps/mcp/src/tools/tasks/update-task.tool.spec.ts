@@ -10,10 +10,14 @@ import path from 'node:path';
 import { TASK_DATA_NOTE } from '@tm/core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+/** tm-core's update result; `tasks.updateTask` wraps it as `update` */
+const updateWithPrompt = vi.fn();
 const tasks = {
-	updateWithPrompt: vi.fn(),
-	updateFrom: vi.fn(),
-	assign: vi.fn()
+	updateWithPrompt,
+	updateTask: vi.fn(async (input: unknown, hooks: unknown) => ({
+		update: await updateWithPrompt(input, hooks)
+	})),
+	updateFrom: vi.fn()
 };
 const config = { getActiveTag: vi.fn(() => 'master') };
 
@@ -207,37 +211,49 @@ describe('update_task', () => {
 		expect(reply(result).data.updatedTask.id).toBe(3);
 	});
 
-	it.each([
-		[
-			{},
-			'Either prompt, metadata or assignee must be provided for update-task'
-		],
-		[{ metadata: '[1]' }, 'Invalid metadata: must be a JSON object']
-	])('refuses %o without calling tm-core', async (args, message) => {
-		const result = await tool().execute(
-			{ id: '3', projectRoot: project, ...args },
-			ctx
-		);
+	it.each([[{ metadata: '[1]' }, 'Invalid metadata: must be a JSON object']])(
+		'refuses %o without calling tm-core',
+		async (args, message) => {
+			const result = await tool().execute(
+				{ id: '3', projectRoot: project, ...args },
+				ctx
+			);
 
-		expect(result.isError).toBe(true);
-		expect(text(result)).toContain(message);
-		expect(tasks.updateWithPrompt).not.toHaveBeenCalled();
-	});
+			expect(result.isError).toBe(true);
+			expect(text(result)).toContain(message);
+			expect(tasks.updateWithPrompt).not.toHaveBeenCalled();
+		}
+	);
 
 	it('assigns without the AI when only an assignee is given', async () => {
-		tasks.assign.mockResolvedValue({ id: 3, title: 'T', assignee: 'octocat' });
+		tasks.updateTask.mockResolvedValueOnce({
+			assigned: { id: 3, title: 'T', assignee: 'octocat' }
+		} as any);
 
 		const result = await tool().execute(
 			{ id: '3', assignee: '@OctoCat', projectRoot: project },
 			ctx
 		);
 
-		expect(tasks.assign).toHaveBeenCalledWith('3', '@OctoCat', 'master');
-		expect(tasks.updateWithPrompt).not.toHaveBeenCalled();
+		expect(tasks.updateTask).toHaveBeenCalledWith(
+			expect.objectContaining({ id: '3', assignee: '@OctoCat', tag: 'master' }),
+			expect.anything()
+		);
 		expect(reply(result).data).toMatchObject({
 			assignee: 'octocat',
 			updated: true
 		});
+	});
+
+	it('replies with an error when tm-core finds nothing to update', async () => {
+		tasks.updateTask.mockRejectedValueOnce(
+			new Error('Nothing to update: give a prompt, metadata or an assignee')
+		);
+
+		const result = await tool().execute({ id: '3', projectRoot: project }, ctx);
+
+		expect(result.isError).toBe(true);
+		expect(text(result)).toContain('Nothing to update');
 	});
 
 	it("refuses a file other than the project's tasks.json", async () => {

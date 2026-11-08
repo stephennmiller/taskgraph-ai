@@ -1,15 +1,15 @@
 /**
- * @fileoverview Tests for dashboard component calculations
+ * @fileoverview Tests for the list summary counts (task-stats.ts)
  * Bug fix: Cancelled tasks should be treated as complete
  */
 
-import type { Subtask, Task, TaskStatus } from '@tm/core';
+import type { Subtask, Task, TaskStatus } from '../../../common/types/index.js';
 import { describe, expect, it } from 'vitest';
 import {
 	calculateDependencyStatistics,
 	calculateSubtaskStatistics,
 	calculateTaskStatistics
-} from './dashboard.component.js';
+} from './task-stats.js';
 
 /**
  * Local test helpers for dashboard statistics tests.
@@ -48,7 +48,7 @@ const createTestSubtask = (
 	testStrategy: ''
 });
 
-describe('dashboard.component - Bug Fix: Cancelled Tasks as Complete', () => {
+describe('task-stats', () => {
 	describe('calculateTaskStatistics', () => {
 		it('should treat cancelled tasks as complete in percentage calculation', () => {
 			// Arrange: 14 done, 1 cancelled = 100% complete
@@ -179,6 +179,39 @@ describe('dashboard.component - Bug Fix: Cancelled Tasks as Complete', () => {
 			// Assert: Task 3 blocked by pending task 2, only task 2 is ready
 			expect(stats.tasksBlockedByDeps).toBe(1);
 			expect(stats.tasksReadyToWork).toBe(1);
+		});
+
+		it('counts a task whose subtask dependency is done as ready, as next does', () => {
+			// Arrange: task 2 depends on subtask 1.1, which is done
+			const tasks: Task[] = [
+				createTestTask({
+					id: '1',
+					status: 'in-progress',
+					subtasks: [createTestSubtask(1, '1', 'done')]
+				}),
+				createTestTask({ id: '2', status: 'pending', dependencies: ['1.1'] })
+			];
+
+			// Act
+			const stats = calculateDependencyStatistics(tasks);
+
+			// Assert: before the fix '1.1' never matched a task ID, so 2 was blocked
+			expect(stats.tasksReadyToWork).toBe(2);
+			expect(stats.tasksBlockedByDeps).toBe(0);
+		});
+
+		it('leaves deferred and blocked tasks out of ready, as list --ready does', () => {
+			const tasks: Task[] = [
+				createTestTask({ id: '1', status: 'deferred' }),
+				createTestTask({ id: '2', status: 'blocked' }),
+				createTestTask({ id: '3', status: 'pending', dependencies: ['9'] })
+			];
+
+			const stats = calculateDependencyStatistics(tasks);
+
+			// Task 3's dependency matches no task, so it waits
+			expect(stats.tasksReadyToWork).toBe(0);
+			expect(stats.tasksBlockedByDeps).toBe(1);
 		});
 	});
 });

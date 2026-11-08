@@ -27,10 +27,37 @@ export function minimumVersion(range: string): string | null {
 export function satisfiesMinimum(version: string, range: string): boolean {
 	const have = parts(version);
 	const min = minimumVersion(range);
-	const need = min ? parts(min) : null;
-	if (!have || !need) return true;
-	for (let i = 0; i < 3; i++) {
-		if (have[i] !== need[i]) return have[i] > need[i];
+	if (!have || !min) return true;
+	// A prerelease of the minimum meets it
+	return compareVersions(have.join('.'), min) >= 0;
+}
+
+/**
+ * Compare semantic versions with proper pre-release handling
+ * @param v1 - First version
+ * @param v2 - Second version
+ * @returns -1 if v1 < v2, 0 if v1 = v2, 1 if v1 > v2
+ */
+export function compareVersions(v1: string, v2: string): number {
+	const toParts = (v: string) => {
+		const [core, pre = ''] = v.split('-', 2);
+		const nums = core.split('.').map((n) => Number.parseInt(n, 10) || 0);
+		return { nums, pre };
+	};
+
+	const a = toParts(v1);
+	const b = toParts(v2);
+	const len = Math.max(a.nums.length, b.nums.length);
+
+	// Compare numeric parts
+	for (let i = 0; i < len; i++) {
+		const d = (a.nums[i] || 0) - (b.nums[i] || 0);
+		if (d !== 0) return d < 0 ? -1 : 1;
 	}
-	return true;
+
+	// Handle pre-release comparison
+	if (a.pre && !b.pre) return -1; // prerelease < release
+	if (!a.pre && b.pre) return 1; // release > prerelease
+	if (a.pre === b.pre) return 0; // same or both empty
+	return a.pre < b.pre ? -1 : 1; // basic prerelease tie-break
 }

@@ -18,6 +18,11 @@ import {
 	type GenerateTaskFilesResult
 } from './services/task-file-generator.service.js';
 import type {
+	UpdateHooks,
+	UpdateTaskInput,
+	UpdateTaskResult
+} from './services/update-task.service.js';
+import type {
 	CreateTagOptions,
 	DeleteTagOptions,
 	CopyTagOptions
@@ -363,6 +368,50 @@ export class TasksDomain {
 		this.ai.saveResearch(...a);
 	updateWithPrompt: TaskAiCommands['updateWithPrompt'] = (...a) =>
 		this.ai.updateWithPrompt(...a);
+
+	/**
+	 * What `update <id>` and the MCP `update_task` tool run: assign the task
+	 * (`assignee`, '' clears it), then rewrite it with the AI or merge
+	 * `metadata` (`updateWithPrompt`). The assignment comes first, so a bad
+	 * login fails before the AI call is paid for. Throws VALIDATION_ERROR
+	 * when there is nothing to do. A subtask ID (`3.2`) works only with an
+	 * assignee alone.
+	 * @returns `assigned` when assigned; `update` unless only assigned
+	 */
+	async updateTask(
+		input: UpdateTaskInput & { assignee?: string },
+		hooks: UpdateHooks & { onAssigned?: (item: Task | Subtask) => void } = {}
+	): Promise<{ assigned?: Task | Subtask; update?: UpdateTaskResult }> {
+		const { assignee, ...rest } = input;
+		const hasPrompt = Boolean(rest.prompt?.trim());
+		if (!hasPrompt && !rest.metadata && assignee === undefined) {
+			throw Object.assign(
+				new TaskGraphError(
+					'Nothing to update: give a prompt, metadata or an assignee',
+					ERROR_CODES.VALIDATION_ERROR
+				),
+				{ hint: 'Say what changed, or who the task is for' }
+			);
+		}
+		const rewrites = hasPrompt || Boolean(rest.metadata);
+		// updateWithPrompt takes only top-level IDs: refuse before assigning
+		if (rewrites && String(rest.id).includes('.')) {
+			throw Object.assign(
+				new TaskGraphError(
+					`Task ${rest.id} is a subtask`,
+					ERROR_CODES.VALIDATION_ERROR
+				),
+				{ hint: 'Update subtasks with `taskgraph update-subtask`' }
+			);
+		}
+		let assigned: Task | Subtask | undefined;
+		if (assignee !== undefined) {
+			assigned = await this.assign(rest.id, assignee, rest.tag);
+			hooks.onAssigned?.(assigned);
+		}
+		if (!rewrites) return { assigned };
+		return { assigned, update: await this.updateWithPrompt(rest, hooks) };
+	}
 	updateFrom: TaskAiCommands['updateFrom'] = (...a) => this.ai.updateFrom(...a);
 	parsePrd: TaskAiCommands['parsePrd'] = (...a) => this.ai.parsePrd(...a);
 	parsePrdTarget: TaskAiCommands['parsePrdTarget'] = (...a) =>
