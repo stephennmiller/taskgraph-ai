@@ -4,6 +4,7 @@ import type {
 	ParallelLoopResult,
 	ParallelTask
 } from './types.js';
+import { TRUST_LOST } from '../loop-trust.js';
 import { runMergingWaves } from './wave-merge.js';
 
 const task = (
@@ -95,7 +96,8 @@ function fakeRun(
 			block: async (id: string, note: string) => {
 				calls.blocked.push(id);
 				calls.notes.push(note);
-			}
+			},
+			keepTrust: () => true
 		}
 	};
 }
@@ -436,6 +438,60 @@ describe('runMergingWaves', () => {
 		const result = await runMergingWaves({ parallel: 3 }, deps);
 
 		expect(calls.merged).toEqual([]);
+		expect(result.aborted).toBe(true);
+	});
+
+	it('stops before the next wave once the approval is withdrawn (#1039)', async () => {
+		const { calls, deps } = fakeRun([wave([task('1')]), wave([task('2')])]);
+		let waves = 0;
+		deps.keepTrust = () => waves++ < 1;
+
+		const result = await runMergingWaves({ parallel: 2 }, deps);
+
+		expect(calls.ran).toEqual(['1']);
+		expect(result.errorMessage).toBe(TRUST_LOST);
+	});
+
+	it('merges nothing more and starts no resolve after an abort mid-merge (#1039)', async () => {
+		const controller = new AbortController();
+		const { calls, deps } = fakeRun(
+			[wave([task('1'), task('2'), task('3')])],
+			['taskgraph/task-2']
+		);
+		const merge = deps.merge;
+		deps.merge = async (branch) => {
+			const ok = await merge(branch);
+			// Ctrl-C lands while task 1 merges; task 2 would conflict
+			controller.abort();
+			return ok;
+		};
+
+		const result = await runMergingWaves(
+			{ parallel: 3, signal: controller.signal },
+			deps
+		);
+
+		expect(calls.merged).toEqual(['taskgraph/task-1']);
+		expect(calls.resolved).toEqual([]);
+		expect(calls.setAside).toEqual([]);
+		expect(result.aborted).toBe(true);
+		expect(result.waves).toBe(1);
+	});
+
+	it("doesn't set a branch aside when the abort lands during its resolve (#1039)", async () => {
+		const controller = new AbortController();
+		const { calls, deps } = fakeRun([wave([task('1')])], ['taskgraph/task-1']);
+		deps.resolve = async () => {
+			controller.abort();
+			return { ok: false, costUsd: 0.1, uncommitted: false };
+		};
+
+		const result = await runMergingWaves(
+			{ parallel: 1, signal: controller.signal },
+			deps
+		);
+
+		expect(calls.setAside).toEqual([]);
 		expect(result.aborted).toBe(true);
 	});
 });

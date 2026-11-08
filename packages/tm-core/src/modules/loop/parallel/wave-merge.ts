@@ -11,11 +11,13 @@
  * 2, is set to blocked with a note, as in the serial loop (#1002).
  * A finished task with no changes is marked done; one with uncommitted
  * work, or whose Claude Code failed after finishing it, is left unmerged
- * and reported. Stops too when a wave merges nothing, the run is aborted,
- * or the budget is spent.
+ * and reported. Stops too when a wave merges nothing, the run is aborted
+ * (before the next merge or resolve), the budget is spent, or the run's
+ * approval was withdrawn (#1039).
  */
 
 import { getLogger } from '../../../common/logger/index.js';
+import { TRUST_LOST } from '../loop-trust.js';
 import {
 	MAX_CONSECUTIVE_ERRORS,
 	MAX_STALLED_ITERATIONS
@@ -55,6 +57,8 @@ export interface WaveMergeDeps {
 	) => Promise<string | undefined>;
 	/** Set a stuck task to blocked with a note saying why (LoopDomain's blockTask) */
 	block: (id: string, note: string) => Promise<void>;
+	/** Before each wave: false when the run's approval was withdrawn (keepLoopTrust) */
+	keepTrust: () => boolean;
 }
 
 /** Less than this left and no wave starts, as in the sequential loop (#971) */
@@ -104,6 +108,11 @@ export async function runMergingWaves(
 		) {
 			break;
 		}
+		// parse-prd or github import added tasks nobody approved, as in the serial loop
+		if (!deps.keepTrust()) {
+			total.errorMessage = TRUST_LOST;
+			break;
+		}
 		const wave = await deps.runWave({ ...options, maxBudgetUsd: left });
 		if (!total.waves) total.readyCount = wave.readyCount;
 		total.waves = (total.waves ?? 0) + 1;
@@ -133,6 +142,7 @@ export async function runMergingWaves(
 		// Tasks merged or done this wave: none means the next wave would find the same
 		let merged = 0;
 		for (const task of wave.tasks) {
+			if (options.signal?.aborted) break;
 			// Merging would drop uncommitted work, or work Claude Code didn't finish cleanly
 			if (
 				(task.finished && task.uncommitted) ||
@@ -150,8 +160,10 @@ export async function runMergingWaves(
 				await deps.markDone(task.id).catch(() => notDone.push(task.id));
 				continue;
 			}
+			// No new Claude Code session to resolve once the run is aborted
 			const resolved =
-				(await deps.merge(task.branch)) || (await resolveAndMerge(task));
+				(await deps.merge(task.branch)) ||
+				(!options.signal?.aborted && (await resolveAndMerge(task)));
 			if (resolved === 'uncommitted') {
 				task.uncommitted = true;
 				task.outcome = 'unmerged';
@@ -159,6 +171,8 @@ export async function runMergingWaves(
 				continue;
 			}
 			if (!resolved) {
+				// Stopped mid-merge: the branch and its task stay as they are
+				if (options.signal?.aborted) break;
 				const kept =
 					!conflicted.has(task.id) &&
 					(await deps.setAside(task.id, task.worktree, task.branch));
@@ -178,6 +192,10 @@ export async function runMergingWaves(
 			merged++;
 			await deps.remove(task.worktree, task.branch);
 			await deps.markDone(task.id).catch(() => notDone.push(task.id));
+		}
+		if (options.signal?.aborted) {
+			total.aborted = true;
+			break;
 		}
 		await blockStuck(wave.tasks, attempts, setAside, deps.block);
 		if (total.conflictBranch || merged === 0) break;

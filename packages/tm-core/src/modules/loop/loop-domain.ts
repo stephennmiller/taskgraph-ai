@@ -229,7 +229,8 @@ export class LoopDomain {
 						commit,
 						command: options.command,
 						maxBudgetUsd: budgetUsd,
-						model: options.model
+						model: options.model,
+						signal: options.signal
 					});
 					const { uncommitted } = await git.work(
 						task.worktree,
@@ -245,7 +246,8 @@ export class LoopDomain {
 					if (kept) await tasks.updateStatus(id, 'pending', options.tag);
 					return kept;
 				},
-				block: (id, note) => blockTask(tasks, id, note, options.tag)
+				block: (id, note) => blockTask(tasks, id, note, options.tag),
+				keepTrust: () => !approved || keepLoopTrust(this.projectRoot)
 			});
 		} finally {
 			// The tasks' own changes (notes, new subtasks) stay approved for the next run
