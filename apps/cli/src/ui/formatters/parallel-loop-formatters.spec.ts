@@ -387,6 +387,19 @@ describe('formatParallelSummary', () => {
 		]);
 	});
 
+	it('with --merge, says why the run stopped early (#1039)', () => {
+		const out = summary(
+			result([task('1', { finished: true, outcome: 'merged' })], {
+				waves: 1,
+				errorMessage: 'Approval for this project was withdrawn during the run'
+			})
+		);
+
+		expect(out.split('\n')[2]).toBe(
+			'Approval for this project was withdrawn during the run'
+		);
+	});
+
 	it('says when nothing is ready', () => {
 		expect(summary(result([]))).toBe(
 			'No tasks are ready to run\nRun taskgraph graph to see what the rest wait on'

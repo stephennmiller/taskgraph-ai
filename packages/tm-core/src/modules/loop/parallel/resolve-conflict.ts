@@ -37,6 +37,8 @@ export function resolveConflict(options: {
 	command?: string;
 	maxBudgetUsd?: number;
 	model?: string;
+	/** Kills Claude Code when the run is aborted */
+	signal?: AbortSignal;
 }): Promise<{ ok: boolean; costUsd: number }> {
 	const args = [
 		'-p',
@@ -58,6 +60,7 @@ export function resolveConflict(options: {
 					[PROJECT_ROOT_ENV]: path.resolve(options.projectRoot)
 				}),
 				timeout: loopIterationTimeoutMs(),
+				signal: options.signal,
 				maxBuffer: 64 * 1024 * 1024
 			},
 			(error, stdout) => {
