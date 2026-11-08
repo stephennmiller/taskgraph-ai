@@ -20,21 +20,21 @@ Paths are under `packages/tm-core/src/modules/` unless they say otherwise.
 
 ## Index
 
-| # | Machine | Where the state lives |
-| - | ------- | --------------------- |
-| 1 | Task status | `task.status` |
-| 2 | Parent status from subtasks | derived, written on parent |
-| 3 | Claim | `metadata.claimedBy`, `claimedAt` |
-| 4 | Task ID | live IDs, archive `highestId` |
-| 5 | tasks.json write | lock file, temp file |
-| 6 | File format | shape of tasks.json |
-| 7 | Serial loop run | locals in `LoopService.run` |
-| 8 | Parallel task | `ParallelTask.state`, `outcome` |
-| 9 | Merge waves | `runMergingWaves` |
-| 10 | Loop trust | trust file, hash per project |
-| 11 | Task worktree | git, recorded branch tip |
-| 12 | GitHub link | `metadata.github` |
-| 13 | Auto-update | cache file, `update.lock` |
+| #   | Machine                     | Where the state lives             |
+| --- | --------------------------- | --------------------------------- |
+| 1   | Task status                 | `task.status`                     |
+| 2   | Parent status from subtasks | derived, written on parent        |
+| 3   | Claim                       | `metadata.claimedBy`, `claimedAt` |
+| 4   | Task ID                     | live IDs, archive `highestId`     |
+| 5   | tasks.json write            | lock file, temp file              |
+| 6   | File format                 | shape of tasks.json               |
+| 7   | Serial loop run             | locals in `LoopService.run`       |
+| 8   | Parallel task               | `ParallelTask.state`, `outcome`   |
+| 9   | Merge waves                 | `runMergingWaves`                 |
+| 10  | Loop trust                  | trust file, hash per project      |
+| 11  | Task worktree               | git, recorded branch tip          |
+| 12  | GitHub link                 | `metadata.github`                 |
+| 13  | Auto-update                 | cache file, `update.lock`         |
 
 ## 1. Task status
 
@@ -44,21 +44,19 @@ States: `pending`, `in-progress`, `review`, `blocked`, `deferred`, `done`,
 What each status means is one table, `TASK_STATUS_MEANINGS` in
 `common/constants/index.ts`. Every status set (complete, pickable,
 actionable, finished, active, open, importable) is derived from it. Never
-write a status list or set by hand.
+write a status list or set by hand. A complete status satisfies a dependency
+and counts toward progress; `next` and claims offer only pickable ones; the
+loop counts a finished task as handled.
 
-| Status | complete | pickable | actionable | finished |
-| ------ | -------- | -------- | ---------- | -------- |
-| pending | no | yes | yes | no |
-| in-progress | no | yes | yes | no |
-| review | no | no | yes | yes |
-| blocked | no | no | no | no |
-| deferred | no | no | no | no |
-| done | yes | no | no | yes |
-| cancelled | yes | no | no | no |
-
-- complete: satisfies a dependency and counts toward progress.
-- pickable: `next` and claims may offer it.
-- finished: the loop counts the task as handled.
+| Status      | complete | pickable | actionable | finished |
+| ----------- | -------- | -------- | ---------- | -------- |
+| pending     | no       | yes      | yes        | no       |
+| in-progress | no       | yes      | yes        | no       |
+| review      | no       | no       | yes        | yes      |
+| blocked     | no       | no       | no         | no       |
+| deferred    | no       | no       | no         | no       |
+| done        | yes      | no       | no         | yes      |
+| cancelled   | yes      | no       | no         | no       |
 
 Transitions: any status to any other, through `TaskStatusCommands`
 (`tasks/tasks-status-commands.ts`). People need that freedom, so there is
@@ -83,13 +81,13 @@ Invariants:
 When a subtask's status changes, `setSubtaskStatusIn`
 (`storage/adapters/file-storage/task-updates.ts`) recomputes the parent:
 
-| Subtasks after the change | Parent becomes |
-| ------------------------- | -------------- |
+| Subtasks after the change      | Parent becomes                           |
+| ------------------------------ | ---------------------------------------- |
 | all complete, one or more done | done, or in-progress if its gate refuses |
-| all cancelled | unchanged |
-| any in-progress or done | in-progress |
-| all pending | pending (claim cleared) |
-| other mixes | unchanged |
+| all cancelled                  | unchanged                                |
+| any in-progress or done        | in-progress                              |
+| all pending                    | pending (claim cleared)                  |
+| other mixes                    | unchanged                                |
 
 Invariants the rest of the code relies on:
 
@@ -119,12 +117,12 @@ an explicit user action.
 A claim marks who is working on an in-progress task:
 `metadata.claimedBy` and `metadata.claimedAt` (`tasks/utils/claim.ts`).
 
-| From | Event | To |
-| ---- | ----- | -- |
-| unclaimed | `next --claim`, parallel runner | claimed, in-progress |
-| claimed | status to pending, blocked, deferred | unclaimed |
-| claimed | status to done, review, cancelled | kept as a record |
-| claimed | parallel settle: abort, failure, no work | unclaimed |
+| From      | Event                                    | To                   |
+| --------- | ---------------------------------------- | -------------------- |
+| unclaimed | `next --claim`, parallel runner          | claimed, in-progress |
+| claimed   | status to pending, blocked, deferred     | unclaimed            |
+| claimed   | status to done, review, cancelled        | kept as a record     |
+| claimed   | parallel settle: abort, failure, no work | unclaimed            |
 
 Invariants:
 
@@ -143,12 +141,12 @@ Known breaks, tracked in #1044:
 
 ## 4. Task ID
 
-| From | Event | To |
-| ---- | ----- | -- |
-| free | add-task, parse-prd, expand to tasks, move | live |
-| live | archive | archived, ID reserved by archive `highestId` |
-| archived | restore | live |
-| live | remove-task, move off the ID | free again |
+| From     | Event                        | To                 |
+| -------- | ---------------------------- | ------------------ |
+| free     | add-task, parse-prd, move    | live               |
+| live     | archive                      | archived (ID kept) |
+| archived | restore                      | live               |
+| live     | remove-task, move off the ID | free again         |
 
 `nextTaskId` (`tasks/utils/archive.ts`) is the highest live ID or archive
 `highestId`, plus one.
@@ -165,13 +163,13 @@ GitHub push then lands on the unrelated new task.
 
 `storage/adapters/file-storage/file-operations.ts`:
 
-| From | Event | To |
-| ---- | ----- | -- |
-| idle | write requested | queued (in-process queue) |
-| queued | `proper-lockfile` acquired | locked |
-| locked | re-read, modify, temp file, rename | written |
-| locked | modifier throws | idle, file unchanged |
-| written | `afterWrite`, unlock | idle |
+| From    | Event                              | To                        |
+| ------- | ---------------------------------- | ------------------------- |
+| idle    | write requested                    | queued (in-process queue) |
+| queued  | `proper-lockfile` acquired         | locked                    |
+| locked  | re-read, modify, temp file, rename | written                   |
+| locked  | modifier throws                    | idle, file unchanged      |
+| written | `afterWrite`, unlock               | idle                      |
 
 Invariants:
 
@@ -185,12 +183,12 @@ A 4-process stress run (20 mixed writes each) lost no update.
 
 ## 6. File format
 
-| From | Event | To |
-| ---- | ----- | -- |
-| missing or `{}` | first write | tagged `{tag: {tasks, metadata}}` |
-| standard `{tasks, metadata}` | write to master | standard |
-| standard | write to another tag | tagged, master kept |
-| any | write | `schemaVersion` = max(2, on disk) |
+| From            | Event                | To                  |
+| --------------- | -------------------- | ------------------- |
+| missing or `{}` | first write          | tagged              |
+| standard        | write to master      | standard            |
+| standard        | write to another tag | tagged, master kept |
+| any             | write                | schemaVersion >= 2  |
 
 IDs are saved as strings. The git merge driver
 (`git/merge-driver/merge-tasks-json.ts`) is a pure three-way merge that
@@ -204,16 +202,16 @@ side with its references.
 Iteration result: `success`, `blocked`, `error`, `complete`. Final status:
 `all_complete`, `max_iterations`, `budget_reached`, `blocked`, `error`.
 
-| From | Event | To |
-| ---- | ----- | -- |
-| iterating | `complete`, nothing ready | all_complete |
-| iterating | `complete`, a task still ready | iterating (as success) |
-| iterating | `blocked`, tasks changed, a task ready | iterating |
-| iterating | 3 errors or 2 stalls in a row | task blocked, iterating |
-| iterating | nothing else ready after blocking | error |
-| iterating | trust withdrawn | stops with `TRUST_LOST` |
-| iterating | resume fails with 0 turns | same iteration, fresh session |
-| iterating | budget or iteration cap | budget_reached, max_iterations |
+| From      | Event                          | To                      |
+| --------- | ------------------------------ | ----------------------- |
+| iterating | `complete`, nothing ready      | all_complete            |
+| iterating | `complete`, a task still ready | iterating (as success)  |
+| iterating | `blocked`, a task ready        | iterating               |
+| iterating | 3 errors or 2 stalls in a row  | task blocked, iterating |
+| iterating | nothing ready after that       | error                   |
+| iterating | trust withdrawn                | `TRUST_LOST`            |
+| iterating | resume fails with 0 turns      | retried fresh           |
+| iterating | budget or iteration cap        | budget or iteration end |
 
 Invariants:
 
@@ -230,15 +228,15 @@ Invariants:
 `state`: `running`, then `done` (exit 0), `failed` or `stopped`. When the
 process is gone, settle sets one `outcome`:
 
-| state | worktree | outcome |
-| ----- | -------- | ------- |
-| done | removed | no-changes |
-| done | kept | kept |
-| stopped | kept | stopped |
-| failed | removed | failed |
-| failed | kept, claim released | released |
-| failed | kept, still claimed | failed-kept |
-| any | container may run | container-running |
+| state   | worktree             | outcome           |
+| ------- | -------------------- | ----------------- |
+| done    | removed              | no-changes        |
+| done    | kept                 | kept              |
+| stopped | kept                 | stopped           |
+| failed  | removed              | failed            |
+| failed  | kept, claim released | released          |
+| failed  | kept, still claimed  | failed-kept       |
+| any     | container may run    | container-running |
 
 With `--merge`, the wave then moves a kept task to `merged`, `set-aside`
 (task back to pending), `conflict` (run ends) or `unmerged` (uncommitted
@@ -250,14 +248,14 @@ Invariant: settle releases the claim on abort, failure, or no work.
 
 `loop/parallel/wave-merge.ts`, `runMergingWaves`:
 
-| From | Event | To |
-| ---- | ----- | -- |
-| wave start | run tasks | each task settled |
-| settled | merge clean | merged, task done |
-| settled | conflict, resolver succeeds | merged, task done |
-| settled | conflict, set aside | set-aside, task pending |
-| settled | conflict, cannot set aside | run ends |
-| wave end | nothing merged, abort, budget | run ends |
+| From       | Event                         | To                      |
+| ---------- | ----------------------------- | ----------------------- |
+| wave start | run tasks                     | each task settled       |
+| settled    | merge clean                   | merged, task done       |
+| settled    | conflict, resolver succeeds   | merged, task done       |
+| settled    | conflict, set aside           | set-aside, task pending |
+| settled    | conflict, cannot set aside    | run ends                |
+| wave end   | nothing merged, abort, budget | run ends                |
 
 Invariants an approved run must hold, broken today (#1039):
 
@@ -290,13 +288,13 @@ the recorded tip.
 
 Pull (`pull-planner.ts`) is a three-way merge against `lastPushedStatus`:
 
-| Local vs base | Remote vs base | Plan |
-| ------------- | -------------- | ---- |
-| same | same | skip |
-| changed | same | skip (local wins until push) |
-| changed | changed to the same | sync |
-| same | changed | apply (forced) |
-| changed | changed, differs | conflict, local kept |
+| Local vs base | Remote vs base      | Plan                         |
+| ------------- | ------------------- | ---------------------------- |
+| same          | same                | skip                         |
+| changed       | same                | skip (local wins until push) |
+| changed       | changed to the same | sync                         |
+| same          | changed             | apply (forced)               |
+| changed       | changed, differs    | conflict, local kept         |
 
 Push runs in two passes: create every missing issue, then update bodies
 and state. Links are recovered by a `(tag, id)` marker in the issue body.
