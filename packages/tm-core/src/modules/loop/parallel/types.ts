@@ -146,4 +146,6 @@ export interface ParallelLoopResult {
 	unmergedIds?: string[];
 	/** --merge: tasks that kept failing, set to blocked and left out of later waves */
 	setAside?: SetAsideTask[];
+	/** --merge: why the run stopped early, when it failed (TRUST_LOST) */
+	errorMessage?: string;
 }
