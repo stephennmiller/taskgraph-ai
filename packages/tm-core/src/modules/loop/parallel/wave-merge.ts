@@ -193,13 +193,12 @@ export async function runMergingWaves(
 			await deps.remove(task.worktree, task.branch);
 			await deps.markDone(task.id).catch(() => notDone.push(task.id));
 		}
-		if (options.signal?.aborted) {
-			total.aborted = true;
-			break;
-		}
+		if (options.signal?.aborted) break;
 		await blockStuck(wave.tasks, attempts, setAside, deps.block);
 		if (total.conflictBranch || merged === 0) break;
 	}
+	// However late the abort landed, the run stopped early
+	if (options.signal?.aborted) total.aborted = true;
 
 	if (notDone.length) total.notDoneIds = notDone;
 	if (unmerged.length) total.unmergedIds = unmerged;

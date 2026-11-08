@@ -478,6 +478,28 @@ describe('runMergingWaves', () => {
 		expect(result.waves).toBe(1);
 	});
 
+	it('reports the run aborted when the abort lands after the merges (#1039)', async () => {
+		const controller = new AbortController();
+		const idle = () => task('8', { finished: false, outcome: 'no-changes' });
+		const { deps } = fakeRun([
+			wave([task('1'), idle()]),
+			wave([task('2'), idle()])
+		]);
+		const block = deps.block;
+		deps.block = async (id, note) => {
+			await block(id, note);
+			// Ctrl-C lands while the stuck task is set to blocked
+			controller.abort();
+		};
+
+		const result = await runMergingWaves(
+			{ parallel: 2, signal: controller.signal },
+			deps
+		);
+
+		expect(result.aborted).toBe(true);
+	});
+
 	it("doesn't set a branch aside when the abort lands during its resolve (#1039)", async () => {
 		const controller = new AbortController();
 		const { calls, deps } = fakeRun([wave([task('1')])], ['taskgraph/task-1']);
