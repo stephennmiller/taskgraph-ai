@@ -29,8 +29,8 @@
  *   the earlier, `schemaVersion` and `highestId` (a tag's or the archive's)
  *   the higher one, lists of plain values (dependencies, tags) take both
  *   sides' additions and removals, `details` that both sides appended to
- *   keeps both appendices, a task's `spend` adds both sides' additions,
- *   and a tag's `taskCount`/`completedCount` are recounted.
+ *   keeps both appendices, and a tag's `taskCount`/`completedCount` are
+ *   recounted.
  * - A task removed on one side and changed on the other is kept, as a
  *   conflict. Removed on one side and untouched on the other, it goes.
  *
@@ -55,7 +55,6 @@ import {
 	own,
 	put,
 	same,
-	summed,
 	withIdType
 } from './merge-json-utils.js';
 import {
@@ -436,8 +435,6 @@ function mergeField(
 	id: string | undefined,
 	ctx: Context
 ): unknown {
-	const sum = id === undefined ? undefined : summed(path, base, ours, theirs);
-	if (sum !== undefined) return sum;
 	if (same(ours, theirs)) return ours;
 	if (same(base, ours)) return theirs;
 	if (same(base, theirs)) return ours;

@@ -59,26 +59,3 @@ export const byKey = (items: Item[] | undefined) =>
 /** Keep the ID's JSON type: a number stays a number */
 export const withIdType = (original: unknown, id: number) =>
 	typeof original === 'number' ? id : String(id);
-
-/** A task's loop spend: counters both sides only add to */
-const SUMMED_FIELDS = new Set([
-	'spend.usd',
-	'spend.durationMs',
-	'spend.iterations'
-]);
-
-/**
- * Both sides' additions to a summed counter (a task's field path), or
- * undefined for any other field. Checked before equality: both sides adding
- * the same amount is two additions.
- */
-export function summed(
-	path: string,
-	base: unknown,
-	ours: unknown,
-	theirs: unknown
-): number | undefined {
-	if (!SUMMED_FIELDS.has(path)) return undefined;
-	if (typeof ours !== 'number' || typeof theirs !== 'number') return undefined;
-	return ours + theirs - (typeof base === 'number' ? base : 0);
-}
