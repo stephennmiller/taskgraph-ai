@@ -123,11 +123,6 @@ export function registerUpdateTaskTool(server: FastMCP) {
 					createErrorResponse
 				);
 				if (error) return error;
-				if (!args.prompt && !parsedMetadata && args.assignee === undefined) {
-					return createErrorResponse(
-						'Either prompt, metadata or assignee must be provided for update-task'
-					);
-				}
 				const tag = args.tag || tmCore.config.getActiveTag();
 				const taskId = String(args.id);
 				const warnings: string[] = [];
@@ -136,30 +131,11 @@ export function registerUpdateTaskTool(server: FastMCP) {
 					context,
 					'Error updating task',
 					async () => {
-						if (args.assignee !== undefined) {
-							const assigned = await tmCore.tasks.assign(
-								taskId,
-								args.assignee,
-								tag
-							);
-							if (!args.prompt && !parsedMetadata) {
-								return {
-									tag,
-									data: {
-										message: assigned.assignee
-											? `Assigned task ${taskId} to ${assigned.assignee}`
-											: `Unassigned task ${taskId}`,
-										taskId,
-										assignee: assigned.assignee ?? null,
-										updated: true
-									}
-								};
-							}
-						}
-						const result = await tmCore.tasks.updateWithPrompt(
+						const { assigned, update: result } = await tmCore.tasks.updateTask(
 							{
 								id: taskId,
 								prompt: args.prompt,
+								assignee: args.assignee,
 								research: args.research === true,
 								append: args.append === true,
 								metadata: parsedMetadata,
@@ -169,6 +145,19 @@ export function registerUpdateTaskTool(server: FastMCP) {
 							},
 							reportTo(context, warnings)
 						);
+						if (!result) {
+							return {
+								tag,
+								data: {
+									message: assigned?.assignee
+										? `Assigned task ${taskId} to ${assigned.assignee}`
+										: `Unassigned task ${taskId}`,
+									taskId,
+									assignee: assigned?.assignee ?? null,
+									updated: true
+								}
+							};
+						}
 						if (args.append && args.prompt && result.appended === '') {
 							reportTo(context, warnings).onWarning?.(
 								'AI response was empty or whitespace after trimming. Original details remain unchanged.'

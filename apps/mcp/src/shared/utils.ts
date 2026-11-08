@@ -7,10 +7,11 @@ import path from 'node:path';
 import {
 	createTmCore,
 	namedProjectRoot,
+	readCurrentTag,
 	realpathOfExistingPrefix,
 	resolvePathInsideRoot,
-	storedTagOrDefault,
-	stringifyJson
+	stringifyJson,
+	TAG_NAME_PATTERN
 } from '@tm/core';
 import type { ContentResult, Context } from 'fastmcp';
 import packageJson from '../../../../package.json' with { type: 'json' };
@@ -88,25 +89,6 @@ Current Tag: ${tagInfo.currentTag}`;
 }
 
 /**
- * Get current tag for a project root
- */
-export function getCurrentTag(projectRoot: string): string | null {
-	try {
-		// Try to read current tag from state.json
-		const stateJsonPath = path.join(projectRoot, '.taskgraph', 'state.json');
-
-		if (fs.existsSync(stateJsonPath)) {
-			const stateData = JSON.parse(fs.readFileSync(stateJsonPath, 'utf-8'));
-			return storedTagOrDefault(stateData.currentTag);
-		}
-
-		return 'master';
-	} catch {
-		return null;
-	}
-}
-
-/**
  * Handle API result with standardized error handling and response formatting
  * This provides a consistent response structure for all MCP tools
  */
@@ -143,7 +125,7 @@ export async function handleApiResult<T>(options: {
 		providedTag !== undefined
 			? providedTag
 			: projectRoot
-				? getCurrentTag(projectRoot)
+				? await readCurrentTag(projectRoot)
 				: null;
 
 	if (!result.success) {
@@ -254,8 +236,6 @@ function getProjectRootsFromSession(session: any): string[] {
 	}
 }
 
-const TAG_PATTERN = /^[A-Za-z0-9_-]+$/;
-
 /**
  * Wrapper to normalize project root in args, in the order the CLI uses
  * (namedProjectRoot in @tm/core):
@@ -278,7 +258,7 @@ export function withNormalizedProjectRoot<T extends { projectRoot?: string }>(
 		const tag = (args as { tag?: unknown }).tag;
 		if (
 			tag !== undefined &&
-			!(typeof tag === 'string' && TAG_PATTERN.test(tag))
+			!(typeof tag === 'string' && TAG_NAME_PATTERN.test(tag))
 		) {
 			return createErrorResponse(
 				`Invalid tag "${String(tag)}": use only letters, numbers, hyphens and underscores`

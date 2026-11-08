@@ -101,6 +101,55 @@ describe('tasks.updateWithPrompt', () => {
 		fs.rmSync(projectDir, { recursive: true, force: true });
 	});
 
+	describe('tasks.updateTask', () => {
+		it('assigns without an AI call when only an assignee is given', async () => {
+			const onAssigned = vi.fn();
+
+			const result = await tmCore.tasks.updateTask(
+				{ id: '1', assignee: '@OctoCat' },
+				{ onAssigned }
+			);
+
+			expect(result.update).toBeUndefined();
+			expect(result.assigned?.assignee).toBe('octocat');
+			expect(onAssigned).toHaveBeenCalledWith(result.assigned);
+			expect(saved().assignee).toBe('octocat');
+			expect(generateObject).not.toHaveBeenCalled();
+		});
+
+		it('assigns first, then rewrites with the AI', async () => {
+			const result = await tmCore.tasks.updateTask({
+				id: '1',
+				prompt: 'Rewrite it',
+				assignee: 'octocat'
+			});
+
+			expect(result.update?.task.title).toBe('Updated Task');
+			expect(saved()).toMatchObject({
+				title: 'Updated Task',
+				assignee: 'octocat'
+			});
+		});
+
+		it('fails on a bad login before the AI call', async () => {
+			await expect(
+				tmCore.tasks.updateTask({
+					id: '1',
+					prompt: 'Rewrite it',
+					assignee: 'not a login'
+				})
+			).rejects.toThrow();
+
+			expect(generateObject).not.toHaveBeenCalled();
+		});
+
+		it('refuses when there is nothing to update', async () => {
+			await expect(
+				tmCore.tasks.updateTask({ id: '1', prompt: '  ' })
+			).rejects.toMatchObject({ code: 'VALIDATION_ERROR' });
+		});
+	});
+
 	it('saves the rewrite with its usage, under the stored string ID', async () => {
 		answer(fromAi({ dependencies: [2] }));
 		write(stored(), stored({ id: '2', title: 'Two' }));

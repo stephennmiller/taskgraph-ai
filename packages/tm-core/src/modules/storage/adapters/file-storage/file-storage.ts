@@ -37,11 +37,11 @@ import {
 	selectArchivable,
 	takeFromArchive
 } from '../../../tasks/utils/archive.js';
-import {
-	type ClaimNextOptions,
-	type TaskClaim,
-	claimNextInTasks
+import type {
+	ClaimNextOptions,
+	TaskClaim
 } from '../../../tasks/utils/claim.js';
+import { claimNextInTasks } from '../../../tasks/utils/claim-next.js';
 import { FileOperations } from './file-operations.js';
 import { FormatHandler } from './format-handler.js';
 import { PathResolver } from './path-resolver.js';

@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { minimumVersion, satisfiesMinimum } from './version-range.js';
+import {
+	compareVersions,
+	minimumVersion,
+	satisfiesMinimum
+} from './version-range.js';
 
 describe('minimumVersion', () => {
 	it.each([
@@ -35,5 +39,20 @@ describe('satisfiesMinimum', () => {
 	it('lets a version or range it cannot read through', () => {
 		expect(satisfiesMinimum('unknown', '>=0.57.2')).toBe(true);
 		expect(satisfiesMinimum('0.1.0', '^1.0.0')).toBe(true);
+	});
+});
+
+describe('compareVersions', () => {
+	it('compares semantic versions', () => {
+		expect(compareVersions('1.0.0', '1.0.0')).toBe(0);
+		expect(compareVersions('1.0.0', '1.0.1')).toBe(-1);
+		expect(compareVersions('1.0.1', '1.0.0')).toBe(1);
+		expect(compareVersions('1.0.0', '1.1.0')).toBe(-1);
+		expect(compareVersions('1.1.0', '1.0.0')).toBe(1);
+		expect(compareVersions('1.0.0', '2.0.0')).toBe(-1);
+		expect(compareVersions('2.0.0', '1.0.0')).toBe(1);
+		expect(compareVersions('1.0', '1.0.0')).toBe(0);
+		expect(compareVersions('1.0.0.0', '1.0.0')).toBe(0);
+		expect(compareVersions('1.0.0', '1.0.0.1')).toBe(-1);
 	});
 });

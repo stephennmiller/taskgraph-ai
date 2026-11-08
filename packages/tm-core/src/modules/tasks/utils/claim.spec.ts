@@ -3,12 +3,8 @@ import os from 'node:os';
 import { describe, expect, it } from 'vitest';
 import type { Task } from '../../../common/types/index.js';
 import { setTaskStatusIn } from '../../storage/adapters/file-storage/task-updates.js';
-import {
-	claimNextInTasks,
-	recordClaimWorkerIn,
-	resolveClaimant,
-	withoutClaim
-} from './claim.js';
+import { claimNextInTasks } from './claim-next.js';
+import { recordClaimWorkerIn, resolveClaimant, withoutClaim } from './claim.js';
 
 const task = (id: string, fields: Partial<Task> = {}): Task => ({
 	id,

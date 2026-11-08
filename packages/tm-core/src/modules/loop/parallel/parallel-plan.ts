@@ -10,6 +10,10 @@ import { TASKGRAPH_WORKTREES_DIR } from '../../../common/constants/paths.js';
 import type { RelevantFile } from '../../../common/types/index.js';
 import { TASK_DATA_RULE } from '../../../common/utils/prompt-tag.js';
 import { taskCommitTag } from '../../tasks/utils/task-commits.js';
+import {
+	STORED_TAG_PATTERN,
+	TAG_NAME_PATTERN
+} from '../../tasks/utils/tag-names.js';
 import { isSafeTaskId } from '../../../common/utils/safe-task-id.js';
 import { LoopError } from '../loop-task.js';
 
@@ -140,10 +144,10 @@ export function buildParallelPrompt(options: {
 }): string {
 	const { taskId, tag, activeTag, container } = options;
 	const branch = taskBranchName(taskId);
-	if (tag !== undefined && !/^[A-Za-z0-9_-]+$/.test(tag)) {
+	if (tag !== undefined && !TAG_NAME_PATTERN.test(tag)) {
 		throw new ParallelLoopError(`"${tag}" isn't a tag name`);
 	}
-	if (activeTag !== undefined && !/^[A-Za-z0-9_./-]+$/.test(activeTag)) {
+	if (activeTag !== undefined && !STORED_TAG_PATTERN.test(activeTag)) {
 		throw new ParallelLoopError(`"${activeTag}" isn't a tag name`);
 	}
 	// show finds a task's commits by this marker (#1027)

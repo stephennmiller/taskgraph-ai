@@ -9,7 +9,6 @@
  */
 
 // Re-export version utilities
-export { compareVersions } from './version.js';
 
 // Re-export update checking
 export { checkForUpdate } from './check-update.js';

@@ -29,6 +29,10 @@
 import {
 	type InvalidDependency,
 	TAG_NAME_PATTERN,
+	type TaskStatistics,
+	calculateDependencyStatistics,
+	calculateSubtaskStatistics,
+	calculateTaskStatistics,
 	fullSubtaskId,
 	isTaskComplete,
 	resolveSubtaskDependency,
@@ -37,12 +41,6 @@ import {
 	type Task
 } from '@tm/core';
 import chalk from 'chalk';
-import {
-	type TaskStatistics,
-	calculateDependencyStatistics,
-	calculateSubtaskStatistics,
-	calculateTaskStatistics
-} from '../components/dashboard.component.js';
 import { terminalWidth, wrapLine } from '../layout/helpers.js';
 import { getSuggestedActions } from '../suggested-actions.js';
 import { theme } from '../theme.js';

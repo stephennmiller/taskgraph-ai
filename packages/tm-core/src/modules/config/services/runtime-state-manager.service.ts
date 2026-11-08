@@ -13,7 +13,7 @@ import { DEFAULT_CONFIG_VALUES } from '../../../common/interfaces/configuration.
 import { getLogger } from '../../../common/logger/index.js';
 import { FileOperations } from '../../storage/adapters/file-storage/file-operations.js';
 import { storedTagOrDefault } from '../../tasks/utils/tag-names.js';
-import type { EnvMap } from './project-env.js';
+import { type EnvMap, readProjectEnv } from './project-env.js';
 
 /**
  * Runtime state data structure
@@ -185,5 +185,24 @@ export class RuntimeStateManager {
 		this.currentState = {
 			currentTag: DEFAULT_CONFIG_VALUES.TAGS.DEFAULT_TAG
 		};
+	}
+}
+
+/**
+ * The current tag as every command resolves it: TASKGRAPH_TAG (from the shell
+ * or the project's .env), else state.json, else master
+ * @returns Null when state.json can't be read
+ */
+export async function readCurrentTag(
+	projectRoot: string
+): Promise<string | null> {
+	try {
+		const manager = new RuntimeStateManager(
+			projectRoot,
+			readProjectEnv(projectRoot)
+		);
+		return (await manager.loadState()).currentTag;
+	} catch {
+		return null;
 	}
 }
