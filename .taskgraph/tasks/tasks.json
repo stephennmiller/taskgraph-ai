@@ -978,6 +978,18 @@
         "priority": "medium",
         "subtasks": [],
         "createdAt": "2026-11-08T02:28:45.763Z"
+      },
+      {
+        "id": "76",
+        "title": "Keep a parallel claim while its orphaned worker still runs (#1051)",
+        "description": "After a SIGKILLed loop --parallel, a rerun must not resume a task whose Claude Code worker still runs. Record the worker pid on the claim; stale only when runner and worker are both dead.",
+        "details": "",
+        "testStrategy": "",
+        "status": "done",
+        "dependencies": [],
+        "priority": "medium",
+        "subtasks": [],
+        "createdAt": "2026-11-08T03:09:37.486Z"
       }
     ],
     "metadata": {
@@ -986,9 +998,9 @@
       "schemaVersion": 2,
       "updated": "2026-10-24T00:05:11.748Z",
       "version": "1.0.0",
-      "lastModified": "2026-11-08T02:28:45.763Z",
-      "taskCount": 75,
-      "completedCount": 67,
+      "lastModified": "2026-11-08T03:09:37.486Z",
+      "taskCount": 76,
+      "completedCount": 73,
       "tags": [
         "master"
       ]
