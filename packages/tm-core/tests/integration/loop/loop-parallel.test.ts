@@ -274,7 +274,8 @@ describe('loop --parallel', () => {
 					expect(taskById(t.id)?.metadata).toMatchObject({
 						claimedBy: 'tester',
 						claimPid: process.pid,
-						claimHost: os.hostname()
+						claimHost: os.hostname(),
+						claimWorkerPid: expect.any(Number)
 					})
 			}
 		});

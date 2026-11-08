@@ -12,7 +12,7 @@ taskgraph loop --parallel 3 --trust
 
 TaskGraph picks the tasks from the graph: wave 1 of `taskgraph graph`, the tasks whose dependencies are all done. For each one it:
 
-1. Claims the task, the same way `taskgraph next --claim` does: the task goes `in-progress` with `claimedBy` and `claimedAt` in its metadata, so another session won't pick it up. The claim also records the run's process (`claimPid`) and machine (`claimHost`): if that process is gone, a later run on the same machine takes the task over and resumes it.
+1. Claims the task, the same way `taskgraph next --claim` does: the task goes `in-progress` with `claimedBy` and `claimedAt` in its metadata, so another session won't pick it up. The claim also records the run's process (`claimPid`), its machine (`claimHost`) and, once started, the task's worker (`claimWorkerPid`): once the run and its worker are both gone, a later run on the same machine takes the task over and resumes it.
 2. Creates a git worktree at `.taskgraph/worktrees/task-<id>` on a new branch `taskgraph/task-<id>`, starting from your current commit.
 3. Starts one Claude Code process in that worktree. Its output goes to `.taskgraph/worktrees/task-<id>.log`, as Claude Code's `stream-json` events (one JSON object per line); the last line is the `result` event with what the task cost.
 

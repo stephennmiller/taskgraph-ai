@@ -361,6 +361,20 @@ describe('isStaleClaim', () => {
 		);
 	});
 
+	it('is not stale while the worker it spawned is alive (#1051)', () => {
+		const dead = deadPid();
+		expect(
+			isStaleClaim({
+				claimPid: dead,
+				claimHost: host,
+				claimWorkerPid: process.pid
+			})
+		).toBe(false);
+		expect(
+			isStaleClaim({ claimPid: dead, claimHost: host, claimWorkerPid: dead })
+		).toBe(true);
+	});
+
 	it('never calls a claim without a pid, or from another host, stale', () => {
 		expect(isStaleClaim({ claimedBy: 'a' })).toBe(false);
 		expect(isStaleClaim(undefined)).toBe(false);
