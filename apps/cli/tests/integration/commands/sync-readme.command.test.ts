@@ -1,19 +1,18 @@
-import { execFileSync } from 'child_process';
-import fs from 'fs';
-import os from 'os';
-import path from 'path';
-import { fileURLToPath } from 'url';
-import { vi } from 'vitest';
+import { execFileSync } from 'node:child_process';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
+import { getCliBinPath, RM_OPTS } from '../../helpers/test-utils.js';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const binPath = path.join(__dirname, '..', '..', '..', 'dist', 'taskgraph.js');
+const binPath = getCliBinPath();
 
 // Each case runs the built CLI in a throwaway project
 vi.setConfig({ testTimeout: 60000, hookTimeout: 60000 });
 
 describe('taskgraph sync-readme', () => {
-	let dir;
-	const run = (...args) =>
+	let dir: string;
+	const run = (...args: string[]) =>
 		execFileSync('node', [binPath, ...args], {
 			cwd: dir,
 			encoding: 'utf8',
@@ -43,7 +42,7 @@ describe('taskgraph sync-readme', () => {
 		);
 	});
 
-	afterEach(() => fs.rmSync(dir, { recursive: true, force: true }));
+	afterEach(() => fs.rmSync(dir, RM_OPTS));
 
 	test('writes the task list into README.md instead of crashing', () => {
 		run('sync-readme');
