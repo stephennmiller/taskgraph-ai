@@ -6,7 +6,10 @@
  * in progress (#1042).
  */
 
-import { isTaskComplete } from '../../../common/constants/index.js';
+import {
+	isTaskComplete,
+	TASK_STATUS_MEANINGS
+} from '../../../common/constants/index.js';
 import type { Task, TaskStatus } from '../../../common/types/index.js';
 import { checkDoneGate } from './acceptance-criteria.js';
 import { releaseClaimIfGivenUp } from './claim.js';
@@ -27,17 +30,22 @@ export const parentDoneGate =
  * - All complete, some done: done, unless `guardDone` refuses (in progress
  *   then) or the user put it in review.
  * - Some in progress or done: in progress.
- * - All pending: pending, only when `resetToPending` (a subtask set back).
- *   add-subtask or expand on a claimed parent keeps its claim.
+ * - All pending: pending, only when `subtaskStatusChanged` (a subtask set
+ *   back). add-subtask or expand on a claimed parent keeps its claim.
  * - Otherwise a done parent with open subtasks reopens in progress.
+ * Unless a subtask's own status changed, a parent the user put in review,
+ * blocked, deferred or cancelled keeps that status.
  */
 export function withParentStatus<T extends Task>(
 	parent: T,
 	guardDone?: ParentDoneGuard,
-	resetToPending = false
+	subtaskStatusChanged = false
 ): T {
 	const subs = parent.subtasks ?? [];
 	if (subs.length === 0) return parent;
+	const held =
+		parent.status !== 'done' && !TASK_STATUS_MEANINGS[parent.status]?.pickable;
+	if (held && !subtaskStatusChanged) return parent;
 	const norm = (s: { status?: TaskStatus }) => s.status || 'pending';
 	let status = parent.status;
 	if (subs.every((s) => isTaskComplete(norm(s)))) {
@@ -49,7 +57,7 @@ export function withParentStatus<T extends Task>(
 		}
 	} else if (subs.some((s) => ['in-progress', 'done'].includes(norm(s)))) {
 		status = 'in-progress';
-	} else if (resetToPending && subs.every((s) => norm(s) === 'pending')) {
+	} else if (subtaskStatusChanged && subs.every((s) => norm(s) === 'pending')) {
 		status = 'pending';
 	} else if (parent.status === 'done') {
 		status = 'in-progress';

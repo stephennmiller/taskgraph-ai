@@ -40,3 +40,17 @@ describe('withParentStatus', () => {
 		expect(withParentStatus(cancelled)).toBe(cancelled);
 	});
 });
+
+it('leaves a parent the user held back as it is when only the subtask list changes', () => {
+	for (const held of ['blocked', 'deferred', 'cancelled', 'review'] as const) {
+		const started = parent(held, 'done', 'pending');
+		const finished = parent(held, 'done', 'done');
+
+		expect(withParentStatus(started)).toBe(started);
+		expect(withParentStatus(finished)).toBe(finished);
+	}
+	// A subtask's own status change still moves it, as set-status always did
+	expect(
+		withParentStatus(parent('blocked', 'in-progress'), undefined, true).status
+	).toBe('in-progress');
+});
