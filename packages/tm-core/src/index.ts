@@ -224,6 +224,8 @@ export {
 // Task filtering utilities
 export {
 	buildBlocksMap,
+	withBlocks,
+	filterTaskList,
 	filterReadyTasks,
 	filterBlockingTasks,
 	filterByStatus,
