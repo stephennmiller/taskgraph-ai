@@ -1,7 +1,15 @@
 {
-	"version": "0.62.34",
+	"version": "0.63.2",
 	"commands": {
-		"add-dependency": ["depends-on", "id", "project", "tag", "type"],
+		"add-dependency": [
+			"check",
+			"depends-on",
+			"id",
+			"project",
+			"remove",
+			"tag",
+			"type"
+		],
 		"add-subtask": [
 			"dependencies",
 			"description",
@@ -32,6 +40,7 @@
 			"id",
 			"model",
 			"output",
+			"report",
 			"research",
 			"tag",
 			"threshold",
@@ -49,6 +58,7 @@
 		],
 		"completion": ["install", "script"],
 		"complexity-report": ["file", "tag"],
+		"depend": ["check", "depends-on", "id", "project", "remove", "tag", "type"],
 		"doctor": ["json", "project"],
 		"expand": [
 			"all",
@@ -61,7 +71,15 @@
 			"research",
 			"tag"
 		],
-		"fix-dependencies": ["depends-on", "id", "project", "tag", "type"],
+		"fix-dependencies": [
+			"check",
+			"depends-on",
+			"id",
+			"project",
+			"remove",
+			"tag",
+			"type"
+		],
 		"generate": ["format", "json", "output", "project", "tag"],
 		"github": [
 			"all-tags",
@@ -193,7 +211,15 @@
 			"unmet-criteria",
 			"unnoted-since"
 		],
-		"remove-dependency": ["depends-on", "id", "project", "tag", "type"],
+		"remove-dependency": [
+			"check",
+			"depends-on",
+			"id",
+			"project",
+			"remove",
+			"tag",
+			"type"
+		],
 		"remove-subtask": [
 			"all",
 			"convert",
@@ -224,6 +250,7 @@
 			"tag",
 			"tree"
 		],
+		"scope": ["id", "prompt", "research", "strength", "tag"],
 		"scope-down": ["id", "prompt", "research", "strength", "tag"],
 		"scope-up": ["id", "prompt", "research", "strength", "tag"],
 		"set-status": [
@@ -274,7 +301,15 @@
 			"tag"
 		],
 		"upgrade": [],
-		"validate-dependencies": ["depends-on", "id", "project", "tag", "type"],
+		"validate-dependencies": [
+			"check",
+			"depends-on",
+			"id",
+			"project",
+			"remove",
+			"tag",
+			"type"
+		],
 		"why": ["format", "id", "json", "project", "tag"]
 	}
 }

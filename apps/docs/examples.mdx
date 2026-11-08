@@ -189,7 +189,7 @@ We need to choose between Redis and Memcached for caching. Can you research the 
 I'm starting work on a new feature branch for user authentication. Can you create a matching task tag?
 ```
 
-(Agent runs: `taskgraph add-tag --from-branch`)
+(Agent runs: `taskgraph tags add --from-branch`)
 
 ### Creating Named Tags
 
@@ -197,7 +197,7 @@ I'm starting work on a new feature branch for user authentication. Can you creat
 Create a new tag called 'api-v2' for our API redesign work.
 ```
 
-(Agent runs: `taskgraph add-tag api-v2 --description="API v2 redesign tasks"`)
+(Agent runs: `taskgraph tags add api-v2 --description="API v2 redesign tasks"`)
 
 ### Switching Tag Contexts
 
@@ -205,7 +205,7 @@ Create a new tag called 'api-v2' for our API redesign work.
 Switch to the 'testing' tag so I can work on QA tasks.
 ```
 
-(Agent runs: `taskgraph use-tag testing`)
+(Agent runs: `taskgraph tags use testing`)
 
 ### Copying Tasks Between Tags
 
@@ -213,7 +213,7 @@ Switch to the 'testing' tag so I can work on QA tasks.
 I need to copy the current tasks to a new 'hotfix' tag for urgent fixes.
 ```
 
-(Agent runs: `taskgraph add-tag hotfix --copy-from-current --description="Urgent hotfix tasks"`)
+(Agent runs: `taskgraph tags copy <current tag> hotfix --description="Urgent hotfix tasks"`)
 
 ### Managing Multiple Contexts
 
@@ -229,7 +229,7 @@ Show me all available tags and their current status.
 I've finished the 'user-auth' feature and merged the branch. Can you clean up the tag?
 ```
 
-(Agent runs: `taskgraph delete-tag user-auth`)
+(Agent runs: `taskgraph tags remove user-auth`)
 
 ### Working with Tag-Specific Tasks
 
@@ -237,7 +237,7 @@ I've finished the 'user-auth' feature and merged the branch. Can you clean up th
 List all tasks in the 'api-v2' tag context.
 ```
 
-(Agent runs: `taskgraph use-tag api-v2` then `taskgraph list`)
+(Agent runs: `taskgraph tags use api-v2` then `taskgraph list`)
 
 ### Branch-Based Development Workflow
 
@@ -247,7 +247,7 @@ I'm switching to work on the 'feature/payments' branch. Can you set up the task 
 
 (Agent runs:
 1. `git checkout feature/payments`
-2. `taskgraph add-tag --from-branch --description="Payment system implementation"`
+2. `taskgraph tags add --from-branch --description="Payment system implementation"`
 3. `taskgraph list` to show tasks in the new context)
 
 ### Parallel Feature Development
@@ -257,6 +257,6 @@ I need to work on both authentication and payment features simultaneously. How s
 ```
 
 (Agent suggests and runs:
-1. `taskgraph add-tag auth --description="Authentication feature tasks"`
-2. `taskgraph add-tag payments --description="Payment system tasks"`
-3. `taskgraph use-tag auth` to start with authentication work)
+1. `taskgraph tags add auth --description="Authentication feature tasks"`
+2. `taskgraph tags add payments --description="Payment system tasks"`
+3. `taskgraph tags use auth` to start with authentication work)

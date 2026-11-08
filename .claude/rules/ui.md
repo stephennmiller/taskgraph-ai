@@ -37,7 +37,7 @@ Run taskgraph expand <id> to add new ones
 - **Lead with the result.** One line starting with a green `✓`: `✓ Saved to task 3`, `✓ Analyzed 5 tasks · skipped 1 done`, `✓ Main model  sonnet → opus`. Don't use "Successfully", "Operation complete" or emoji (✅ ❌ 💾 🔍).
 - **Details as aligned rows,** indented two spaces under the result. Cut titles to fit the terminal width (`terminalWidth()` from `apps/cli/src/ui/layout/helpers.ts`, which honors `COLUMNS` when output is piped), not to a fixed 14 or 30 characters.
 - **Secondary facts are muted** (`theme.muted`), joined with ` · `: counts, dates, "with web research".
-- **At most one next step,** as a plain line: `Next: taskgraph expand --all, or taskgraph complexity-report to see why`. Never a numbered "Next Steps" box.
+- **At most one next step,** as a plain line: `Next: taskgraph expand --all, or taskgraph analyze-complexity --report to see why`. Never a numbered "Next Steps" box.
 - **Paths are relative to the project root:** `Saved to .taskgraph/reports/task-complexity-report.json`, not an absolute path that wraps.
 - **Say each thing once.** No "Analyzing… / Analyzing complete / ✓ Analysis complete" sequences, and no printing the same message from both the core function and the command.
 - **Don't confirm non-events.** If nothing changed, either say nothing or say it in one line (`The complexity report is unchanged`). Don't add a confirmation that repeats what the previous lines already showed.
