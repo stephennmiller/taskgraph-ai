@@ -72,8 +72,10 @@ command, such as `note.command.ts` or `removal.command.ts`.
 - Hide it with `hidden: true` in its registry entry. A class with its own
   `static register` ignores that flag and passes `{ hidden: true }` to
   `program.addCommand` itself.
-- A removed command goes in `REMOVED_COMMANDS` in `utils/error-handler.ts`,
-  so typing it points at its replacement.
+- A command that `loop` replaced goes in `REMOVED_COMMANDS` in
+  `utils/error-handler.ts` (the value is the extra `loop` flags), so typing
+  it prints `Run taskgraph loop -n 1 --id <id>...`. Any other replacement
+  needs its own hint in `formatCommanderError`.
 
 ## Startup time
 
@@ -85,7 +87,8 @@ markdown, inquirer) inside the function that uses them, as `confirm()` in
 
 ## Update check
 
-`runCLI` checks for a new version before the command runs and only
-notifies; `taskgraph upgrade` installs. When the check is skipped (no
+`runCLI` checks for a new version before the command runs. It notifies,
+and installs and restarts only when the user opted in to auto-install;
+`taskgraph upgrade` installs. When the check is skipped (no
 terminal, CI, `--json`, loop children and others) is decided in
 `apps/cli/src/utils/auto-update/policy.ts`.

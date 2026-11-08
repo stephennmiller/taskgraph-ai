@@ -15,9 +15,11 @@ ID types and the bugs reviews keep finding are in
 ## Layout
 
 - `tasks-domain.ts` is the facade the CLI and MCP call as `tmCore.tasks`.
-  It hands each call to `tasks-status-commands.ts` (status and the done
-  gate), `tasks-edit-commands.ts` (no-AI edits) or `tasks-ai-commands.ts`
-  (add, expand, scope, research, update, parse-prd, analyze-complexity).
+  It hands calls to `tasks-status-commands.ts` (status and the done
+  gate), `tasks-edit-commands.ts` (no-AI edits), `tasks-ai-commands.ts`
+  (add, expand, scope, research, update, parse-prd, analyze-complexity),
+  `tasks-dependency-views.ts`, or a service in `services/` (removal, tags,
+  dependencies).
   A new AI command goes in `tasks-ai-commands.ts`.
 - `services/` hold the work that needs storage or the AI; `utils/` hold
   pure functions on a tag's `Task[]` (`task-removal.ts`, `task-moves.ts`,

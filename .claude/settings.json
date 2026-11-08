@@ -10,7 +10,7 @@
 			"Bash(npm test)",
 			"Bash(npm test:*)",
 			"Bash(npm run test:*)",
-			"Bash(npm run test -w:*)",
+			"Bash(npm run test:coverage *)",
 			"Bash(npx vitest:*)",
 			"Bash(bin/agent-cli --help)",
 			"Bash(bin/agent-cli ready:*)",
@@ -25,9 +25,6 @@
 			"Bash(taskgraph graph:*)",
 			"Bash(taskgraph why:*)",
 			"Bash(git status:*)",
-			"Bash(git diff:*)",
-			"Bash(git log:*)",
-			"Bash(git show:*)",
 			"Bash(git worktree list:*)"
 		]
 	}
