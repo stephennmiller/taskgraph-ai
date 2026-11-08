@@ -78,16 +78,29 @@ Invariants:
 
 ## 2. Parent status from subtasks
 
-When a subtask's status changes, `setSubtaskStatusIn`
-(`storage/adapters/file-storage/task-updates.ts`) recomputes the parent:
+`withParentStatus` (`tasks/utils/parent-status.ts`) recomputes a parent
+from its subtasks. Every writer that changes a parent's subtasks runs it:
+subtask `set-status` (`setSubtaskStatusIn`), add-subtask, move (each parent
+of a dotted source or destination), remove-subtask, remove-task of a
+subtask, and expand. Each passes the parent's done gate (acceptance
+criteria and Definition of Done).
 
 | Subtasks after the change      | Parent becomes                           |
 | ------------------------------ | ---------------------------------------- |
 | all complete, one or more done | done, or in-progress if its gate refuses |
 | all cancelled                  | unchanged                                |
 | any in-progress or done        | in-progress                              |
-| all pending                    | pending (claim cleared)                  |
+| all pending                    | pending (claim cleared), set-status only |
+| other mixes, parent done       | in-progress                              |
 | other mixes                    | unchanged                                |
+
+Exceptions:
+
+- A parent in `review` stays in review when its last subtask finishes.
+- Only a subtask's own status change moves a parent in `review`,
+  `blocked`, `deferred` or `cancelled`; the other writers leave it.
+- clear-subtasks and moving a whole task (in a tag or between tags) leave
+  the parent's status as it is.
 
 Invariants the rest of the code relies on:
 
@@ -97,20 +110,15 @@ Invariants the rest of the code relies on:
 - I2: an `in-progress` parent has at least one open subtask. Claims and the
   loop never pick an in-progress task, so a parent whose subtasks are all
   complete stays stuck there.
-- I3: a subtask has no subtasks.
+- I3: a subtask has no subtasks. Move and `add-subtask --task-id` refuse a
+  task that has subtasks.
 
-Known breaks, tracked in #1042 and #1043:
-
-- add-subtask, move into or out of a parent, remove-subtask,
-  clear-subtasks and expand do not run the recompute, so they can break I1
-  and I2.
-- A parent in `review` is moved to done when its last subtask finishes.
-- `add-subtask --task-id` of a task that has subtasks breaks I3.
-- Converting between task and subtask drops `acceptanceCriteria` and other
-  fields, which takes the work out from under the done gate.
+Converting between task and subtask (move, `add-subtask --task-id`,
+`remove-subtask --convert`) keeps every field of the source, including
+`acceptanceCriteria` and metadata, except `subtasks` and `parentId`.
 
 `set-status <parent> done` with open subtasks is allowed on purpose: it is
-an explicit user action.
+an explicit user action. The next writer to touch its subtasks reopens it.
 
 ## 3. Claim
 
