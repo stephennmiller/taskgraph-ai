@@ -6,6 +6,7 @@
  * if even that save fails, the hidden marker lets the next run find the issue).
  */
 
+import type { TaskStatus } from '../../../common/types/index.js';
 import type { TasksDomain } from '../../tasks/tasks-domain.js';
 import { assigneeOf } from '../../tasks/utils/assignee.js';
 import type { GitHubClient } from '../adapters/github-client.interface.js';
@@ -23,6 +24,7 @@ import type {
 	SyncTask
 } from '../types.js';
 import { BASE_LABEL, hashIssue, renderIssue } from './issue-renderer.js';
+import { statusFromIssue } from './issue-status.js';
 import { getLink } from './sync-planner.js';
 
 /** The slice of TasksDomain the executor needs */
@@ -94,12 +96,17 @@ export async function executePush(
 			issueNumbers: numbers.get(tag)
 		});
 
-	/** `assignee` is what GitHub now holds, as far as the push knows */
+	/**
+	 * `status` and `assignee` are what GitHub now holds, as far as the push
+	 * knows: a pull compares against them, so a push cut short between passes
+	 * must not claim a state GitHub never got
+	 */
 	const saveLink = async (
 		{ tag, task }: SyncTask,
 		issueNumber: number,
 		url: string,
 		bodyHash: string,
+		status: TaskStatus,
 		assignee: string | undefined
 	) => {
 		const link: GitHubLink = {
@@ -107,7 +114,7 @@ export async function executePush(
 			issueNumber,
 			url,
 			syncedAt: now().toISOString(),
-			lastPushedStatus: task.status,
+			lastPushedStatus: status,
 			bodyHash,
 			...(assignee && { assignee })
 		};
@@ -176,7 +183,14 @@ export async function executePush(
 		if (!target || step.issueNumber === undefined) continue;
 		setNumber(step.tag, step.taskId, step.issueNumber);
 		// GitHub's assignee is unknown here: no base, so pass 2 writes the task's
-		await saveLink(target, step.issueNumber, step.url ?? '', '', undefined);
+		await saveLink(
+			target,
+			step.issueNumber,
+			step.url ?? '',
+			'',
+			step.remoteStatus ?? target.task.status,
+			undefined
+		);
 	}
 
 	const labels = new Set<string>([BASE_LABEL]);
@@ -209,6 +223,7 @@ export async function executePush(
 			issue.number,
 			issue.url,
 			hashIssue(asCreated(rendered)),
+			statusFromIssue(issue),
 			heldBy(issue, assignee)
 		);
 		counts.created++;
@@ -241,7 +256,14 @@ export async function executePush(
 				taskId: step.taskId
 			});
 		}
-		await saveLink(target, link.issueNumber, link.url, hash, base);
+		await saveLink(
+			target,
+			link.issueNumber,
+			link.url,
+			hash,
+			target.task.status,
+			base
+		);
 		if (step.action === 'update') counts.updated++;
 	}
 
