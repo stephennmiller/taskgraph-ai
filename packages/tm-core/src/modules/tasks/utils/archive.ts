@@ -253,6 +253,28 @@ export function nextTaskId(
 }
 
 /**
+ * The highest task ID a tag of tasks.json has held: its `metadata.highestId`
+ * high-water mark or a live task's ID, whichever is higher. Every write keeps
+ * the mark, so a removed task's ID is never handed out again (#1040).
+ * Tolerates a hand-edited file.
+ * @param section - The tag's `{ tasks, metadata }` in tasks.json
+ */
+export function highestTaskId(section: unknown): number {
+	const tag = section as
+		| { tasks?: unknown; metadata?: { highestId?: unknown } }
+		| null
+		| undefined;
+	const stored = Number(tag?.metadata?.highestId);
+	const tasks = Array.isArray(tag?.tasks) ? (tag.tasks as Task[]) : [];
+	return (
+		nextTaskId(
+			tasks.map((t) => t?.id ?? 0),
+			Number.isFinite(stored) ? Math.max(stored, 0) : 0
+		) - 1
+	);
+}
+
+/**
  * Whether a full dependency ID (`"3"` or `"3.2"`) names an archived task or a
  * subtask of one. Resolve a subtask's sibling reference first
  * (resolveSubtaskDependency).
@@ -368,18 +390,22 @@ export function readArchiveSync(archivePath: string): ArchiveData {
 	}
 }
 
-/** What the archive reserves in one tag */
+/** What the archive and the tag's high-water mark reserve in one tag */
 export interface ArchivedIds {
 	/** IDs of the tasks archived in the tag */
 	ids: Set<string>;
-	/** Highest ID ever archived in the tag; new IDs go above it */
+	/**
+	 * Highest ID the tag has used: archived, live, or removed (highestTaskId);
+	 * new IDs go above it
+	 */
 	highestId: number;
 }
 
 /**
- * The archived IDs for a tag of the tasks file at `tasksPath`, read
- * synchronously. Read tasks.json before calling this: archive writes
- * archive.json first, so a task is always in at least one of them.
+ * The archived IDs for a tag of the tasks file at `tasksPath`, and the
+ * highest ID the tag has used, read synchronously. Read tasks.json before
+ * calling this: archive writes archive.json first, so a task is always in at
+ * least one of them.
  */
 export function readArchivedIdsSync(
 	tasksPath: string,
@@ -388,8 +414,28 @@ export function readArchivedIdsSync(
 	const section = archiveTag(readArchiveSync(archivePathFor(tasksPath)), tag);
 	return {
 		ids: new Set(section.tasks.map((t) => String(t.id))),
-		highestId: section.metadata.highestId
+		highestId: Math.max(
+			section.metadata.highestId,
+			highestTaskId(readTagSync(tasksPath, tag))
+		)
 	};
+}
+
+/** A tag's `{ tasks, metadata }` in tasks.json; undefined when missing */
+function readTagSync(tasksPath: string, tag: string): unknown {
+	let data: unknown;
+	try {
+		data = JSON.parse(fs.readFileSync(tasksPath, 'utf8'));
+	} catch (error: any) {
+		if (error?.code === 'ENOENT' || error instanceof SyntaxError) return;
+		throw error;
+	}
+	if (!data || typeof data !== 'object') return;
+	// A legacy file is its master tag
+	if (Array.isArray((data as { tasks?: unknown }).tasks)) {
+		return tag === 'master' ? data : undefined;
+	}
+	return ownSection(data, tag);
 }
 
 /**

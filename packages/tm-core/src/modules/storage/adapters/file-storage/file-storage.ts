@@ -32,6 +32,7 @@ import {
 	type ArchiveData,
 	addToArchive,
 	archivedTaskIds,
+	highestTaskId,
 	insertById,
 	selectArchivable,
 	takeFromArchive
@@ -237,7 +238,10 @@ export class FileStorage implements IStorage {
 	 */
 	private async mutateTasks<R>(
 		tag: string | undefined,
-		mutate: (tasks: Task[]) => MutateOutcome<R> | Promise<MutateOutcome<R>>,
+		mutate: (
+			tasks: Task[],
+			metadata: TaskMetadata | null
+		) => MutateOutcome<R> | Promise<MutateOutcome<R>>,
 		{ requireTag = false } = {}
 	): Promise<R> {
 		const filePath = this.pathResolver.getTasksPath();
@@ -265,7 +269,10 @@ export class FileStorage implements IStorage {
 					existingData,
 					resolvedTag
 				);
-				const outcome = await mutate(current);
+				const outcome = await mutate(
+					current,
+					this.formatHandler.extractMetadata(existingData, resolvedTag)
+				);
 				result = outcome.result;
 				afterWrite = outcome.afterWrite;
 				if (outcome.tasks === null) {
@@ -349,8 +356,14 @@ export class FileStorage implements IStorage {
 	async appendTasks(tasks: Task[], tag?: string): Promise<Task[]> {
 		return this.mutateTasks(
 			tag,
-			async (existing) =>
-				withFreeIds(existing, tasks, await this.readArchive(), tag || 'master'),
+			async (existing, metadata) =>
+				withFreeIds(
+					existing,
+					tasks,
+					await this.readArchive(),
+					tag || 'master',
+					highestTaskId({ metadata })
+				),
 			{ requireTag: true }
 		);
 	}
