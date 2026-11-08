@@ -12,15 +12,15 @@ TaskGraph's output follows Apple's Human Interface Guidelines and Emil Kowalski'
 
 ## Where output code goes
 
-- **Format in `apps/cli/src/ui/formatters/<name>-formatters.ts`.** A formatter is a pure function: data in, string out, no `console.log`. Export it from `apps/cli/src/ui/index.ts`. Legacy JS reaches it through `ui` from `@tm/cli`:
+- **Format in `apps/cli/src/ui/formatters/<name>-formatters.ts`.** A formatter is a pure function: data in, string out, no `console.log`. The command imports it from its file:
 
-  ```javascript
-  import { printError, ui } from '@tm/cli';
+  ```typescript
+  import { formatClearedSubtasks } from '../ui/formatters/clear-subtasks-formatters.js';
 
-  console.log(ui.formatClearedSubtasks(result));
+  console.log(formatClearedSubtasks(result));
   ```
 
-- **Core functions return data and print nothing.** The command (or the `outputFormat === 'text'` branch) prints the formatted result. `tmCore.tasks.clearSubtasks` returns `{ cleared, empty }`, and the `clear-subtasks` command prints it.
+- **Core functions return data and print nothing.** The command prints the formatted result. `tmCore.tasks.clearSubtasks` returns `{ cleared, empty }`, and the `clear-subtasks` command prints it.
 - **Test the formatter with a `.spec.ts` next to it.** Assert on plain text with ANSI codes stripped. Check line widths at 80 columns (and narrower when text wraps). Add an integration test against the built CLI for exit codes and stdout/stderr.
 - Start each formatter file with a `@fileoverview` showing example output, as the existing formatters do.
 
@@ -42,14 +42,14 @@ Run taskgraph expand <id> to add new ones
 - **Say each thing once.** No "Analyzing… / Analyzing complete / ✓ Analysis complete" sequences, and no printing the same message from both the core function and the command.
 - **Don't confirm non-events.** If nothing changed, either say nothing or say it in one line (`The complexity report is unchanged`). Don't add a confirmation that repeats what the previous lines already showed.
 - **No boxes.** A box makes everyday output look like an alert. Don't add `boxen` back, and don't draw boxes by hand.
-- **No progress logs in normal output.** "Reading tasks from…", "AI service call complete" and "Found 6 tasks" go to `log('debug', …)`. Warnings and errors still print.
+- **No progress logs in normal output.** "Reading tasks from…", "AI service call complete" and "Found 6 tasks" go to tm-core's debug logger (`getLogger(name).debug(…)`, `common/logger/`) or nowhere. Warnings and errors still print.
 - **Fit 80 columns.** Wrap long text (reasoning, research answers) to the terminal width, capped at about 100 columns, with a hanging indent for list items.
 
 ## Errors
 
-Use `printError(message, hint)` from `@tm/cli`, then exit 1:
+Use `printError(message, hint)` from `apps/cli/src/utils/error-handler.ts`, then exit 1:
 
-```javascript
+```typescript
 printError(
   `Task 9 doesn't exist in tag '${tag}'`,
   'Run `taskgraph list` to see task IDs'
