@@ -310,8 +310,8 @@ Pass 1 records the status of the issue it created or recovered, and pass 2
 records the task's status once it has written it, so a push cut off between
 the passes never makes a pull revert the task (#1041).
 
-Known break, tracked in #1040: ID reuse lets a new task recover a removed
-task's link.
+A removed task's ID is never handed to a new task (machine 4), so link
+recovery by `(tag, id)` can't adopt another task's issue (#1040).
 
 ## 13. Auto-update
 
