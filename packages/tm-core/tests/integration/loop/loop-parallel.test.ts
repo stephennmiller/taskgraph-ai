@@ -10,6 +10,7 @@
  * @integration
  */
 
+import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import { createRequire } from 'node:module';
 import os from 'node:os';
@@ -254,6 +255,34 @@ describe('loop --parallel', () => {
 		expect(rerun.tasks.map((t) => t.id)).toEqual(['1']);
 		expect(rerun.tasks[0].costUsd).toBeUndefined();
 		expect(rerun.totalCostUsd).toBeUndefined();
+	}, 60_000);
+
+	it('a rerun resumes a task whose run was killed before it settled (#1044)', async () => {
+		writePlan({ 'task-1': 'nothing' });
+		// What a hard-killed run leaves: task 1 in-progress, claimed by a pid that's gone
+		const deadPid = spawnSync(process.execPath, ['-e', '']).pid;
+		await tmCore.tasks.claimNext({ claimant: 'tester', pid: deadPid });
+		expect(taskById('1')?.metadata?.claimPid).toBe(deadPid);
+
+		const rerun = await tmCore.loop.runParallel({
+			parallel: 1,
+			trusted: true,
+			claimant: 'tester',
+			command: fakeClaude(),
+			callbacks: {
+				onTaskStart: (t) =>
+					expect(taskById(t.id)?.metadata).toMatchObject({
+						claimedBy: 'tester',
+						claimPid: process.pid,
+						claimHost: os.hostname()
+					})
+			}
+		});
+
+		expect(rerun.tasks.map((t) => t.id)).toEqual(['1']);
+		// Settled with no work: released, the pid with it
+		expect(taskById('1')?.status).toBe('pending');
+		expect(taskById('1')?.metadata).toBeUndefined();
 	}, 60_000);
 
 	it('stops a worker past TASKGRAPH_LOOP_TIMEOUT_MS, keeps its work and releases it', async () => {

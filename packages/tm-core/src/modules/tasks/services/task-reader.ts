@@ -16,6 +16,7 @@ import {
 	satisfyArchivedDependencies,
 	withStoredDependencies
 } from '../utils/archive.js';
+import { resolveClaimant } from '../utils/claim.js';
 import { selectNextTask } from '../utils/next-task.js';
 import { filterBySearch } from '../utils/task-filters.js';
 import { TaskEntity } from '../entities/task.entity.js';
@@ -336,12 +337,17 @@ export class TaskReader {
 
 	/**
 	 * Get next available task to work on
-	 * Prioritizes eligible subtasks from in-progress parent tasks before falling back to top-level tasks
+	 * Prioritizes eligible subtasks from in-progress parent tasks before falling back to top-level tasks.
+	 * Skips what a live claim by anyone but `claimant` holds.
 	 */
-	async getNextTask(tag?: string): Promise<Task | null> {
+	async getNextTask(
+		tag?: string,
+		claimant: string = resolveClaimant()
+	): Promise<Task | null> {
 		const { tasks } = await this.getTaskList({ tag });
 		const picked = selectNextTask(
-			satisfyArchivedDependencies(tasks, await this.getArchivedTaskIds(tag))
+			satisfyArchivedDependencies(tasks, await this.getArchivedTaskIds(tag)),
+			{ claimant }
 		);
 		// Show the dependencies it really has; archived ones count as done
 		return picked ? withStoredDependencies(picked, tasks) : null;

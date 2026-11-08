@@ -107,8 +107,10 @@ export class TaskEditCommands {
 	 * Pick the next task nobody has started, set it in-progress and record who
 	 * claimed it, in one locked write. Setting it back to pending clears the
 	 * claim. `among` limits the pick to those top-level task IDs (one
-	 * parallel wave, say). `assignee`, a GitHub login, is given the claimed
-	 * task unless someone is assigned to it already.
+	 * parallel wave, say). `pid` is the process holding the claim while it
+	 * works (see ClaimNextOptions); once it dies, a later claim resumes the
+	 * task. `assignee`, a GitHub login, is given the claimed task unless
+	 * someone is assigned to it already.
 	 * @returns The claim, or null when no task is ready
 	 */
 	async claimNext(
@@ -116,6 +118,7 @@ export class TaskEditCommands {
 			tag?: string;
 			claimant?: string;
 			among?: ReadonlySet<string>;
+			pid?: number;
 			assignee?: string;
 		} = {}
 	): Promise<TaskClaim | null> {
@@ -124,7 +127,7 @@ export class TaskEditCommands {
 		const claim = await this.taskService.claimNextTask(
 			options.tag,
 			options.claimant,
-			options.among
+			{ among: options.among, pid: options.pid }
 		);
 		if (!claim || !options.assignee || claim.task.assignee) return claim;
 		const { assignee } = await this.assign(

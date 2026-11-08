@@ -46,7 +46,8 @@ taskgraph list --search auth
 
 ```bash
 # Show the next task to work on: dependencies done, then priority,
-# then most unblocked work, then fewer dependencies, then lowest ID
+# then most unblocked work, then fewer dependencies, then lowest ID.
+# Skips a task another session or a running loop --parallel has claimed
 taskgraph next
 
 # Take the next task nobody has started: set it in-progress and record

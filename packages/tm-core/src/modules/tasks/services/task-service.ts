@@ -11,7 +11,11 @@ import type {
 	UpdateStatusOptions,
 	UpdateStatusResult
 } from '../../../common/interfaces/storage.interface.js';
-import { type TaskClaim, resolveClaimant } from '../utils/claim.js';
+import {
+	type ClaimNextOptions,
+	type TaskClaim,
+	resolveClaimant
+} from '../utils/claim.js';
 import { normalizeTaskIds } from '../utils/task-ids.js';
 import { appendNote } from '../utils/notes.js';
 import { assertTaskStatus } from '../../../common/constants/index.js';
@@ -63,13 +67,13 @@ export class TaskService extends TaskReader {
 	 * @param tag - Tag to claim from; the active tag when omitted
 	 * @param claimant - Recorded as `metadata.claimedBy`; the session ID or user
 	 *   name when omitted (see resolveClaimant)
-	 * @param among - Only these top-level task IDs (one parallel wave, say)
+	 * @param options - `among` and `pid`, as ClaimNextOptions describes
 	 * @returns The claim, or null when no task is ready
 	 */
 	async claimNextTask(
 		tag?: string,
 		claimant?: string,
-		among?: ReadonlySet<string>
+		options?: ClaimNextOptions
 	): Promise<TaskClaim | null> {
 		if (!this.storage) {
 			throw new TaskGraphError(
@@ -81,7 +85,7 @@ export class TaskService extends TaskReader {
 		return this.storage.claimNextTask(
 			claimant?.trim() || resolveClaimant(),
 			activeTag,
-			among
+			options
 		);
 	}
 

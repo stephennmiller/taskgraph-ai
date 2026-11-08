@@ -1,3 +1,5 @@
+import { spawnSync } from 'node:child_process';
+import os from 'node:os';
 import { describe, expect, it } from 'vitest';
 import type { Task } from '../../../common/types/index.js';
 import { setTaskStatusIn } from '../../storage/adapters/file-storage/task-updates.js';
@@ -190,10 +192,75 @@ describe('claimNextInTasks', () => {
 	});
 });
 
+describe('claimNextInTasks and the claiming process (#1044)', () => {
+	const host = os.hostname();
+	const deadPid = spawnSync(process.execPath, ['-e', '']).pid;
+
+	it('records the process that holds the claim', () => {
+		const result = claimNextInTasks([task('1')], 'alice', 'now', undefined, {
+			pid: process.pid
+		});
+
+		expect(result?.tasks[0].metadata).toEqual({
+			claimedBy: 'alice',
+			claimedAt: 'now',
+			claimPid: process.pid,
+			claimHost: host
+		});
+	});
+
+	it('resumes a task whose claiming process died, before unstarted ones', () => {
+		const tasks = [
+			task('1', { priority: 'high' }),
+			task('2', {
+				status: 'in-progress',
+				metadata: {
+					claimedBy: 'alice',
+					claimedAt: 'then',
+					claimPid: deadPid,
+					claimHost: host
+				}
+			})
+		];
+
+		const result = claimNextInTasks(tasks, 'bob', 'now');
+
+		expect(result?.claim.task.id).toBe('2');
+		// No pid this time, so none of the dead one's is kept
+		expect(result?.tasks[1].metadata).toEqual({
+			claimedBy: 'bob',
+			claimedAt: 'now'
+		});
+	});
+
+	it('leaves a live, pid-less or other-host claim alone', () => {
+		const claimed = (id: string, metadata: Record<string, unknown>) =>
+			task(id, {
+				status: 'in-progress',
+				metadata: { claimedBy: 'alice', ...metadata }
+			});
+		const tasks = [
+			claimed('1', { claimPid: process.pid, claimHost: host }),
+			claimed('2', {}),
+			claimed('3', { claimPid: deadPid, claimHost: 'elsewhere' }),
+			task('4')
+		];
+
+		expect(claimNextInTasks(tasks, 'bob')?.claim.task.id).toBe('4');
+		expect(claimNextInTasks(tasks, 'alice')?.claim.task.id).toBe('4');
+	});
+});
+
 describe('withoutClaim', () => {
 	it('removes only the claim keys', () => {
 		expect(
-			withoutClaim({ claimedBy: 'a', claimedAt: 'b', externalId: 'x' })
+			withoutClaim({
+				claimedBy: 'a',
+				claimedAt: 'b',
+				claimPid: 1,
+				claimHost: 'h',
+				externalId: 'x'
+			})
 		).toEqual({ externalId: 'x' });
 	});
 

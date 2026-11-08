@@ -1,3 +1,5 @@
+import { spawnSync } from 'node:child_process';
+import os from 'node:os';
 import { describe, expect, it } from 'vitest';
 import type { Task } from '../../../common/types/index.js';
 import { createSubtask, createTask } from '../../../testing/task-fixtures.js';
@@ -7,7 +9,14 @@ import {
 	explainBlockers,
 	parallelWaves
 } from '../../dependencies/index.js';
-import { selectNextTask } from './next-task.js';
+import { isStaleClaim, selectNextTask } from './next-task.js';
+
+/** A pid that was in use and has exited */
+const deadPid = () => spawnSync(process.execPath, ['-e', '']).pid;
+const claimed = (task: Task, metadata: Record<string, unknown>): Task => ({
+	...task,
+	metadata
+});
 
 describe('selectNextTask', () => {
 	it('ranks critical above high', () => {
@@ -100,13 +109,50 @@ describe('selectNextTask', () => {
 		expect(next?.id).toBe('2');
 	});
 
-	it('skips in-progress tasks when only unstarted work is wanted', () => {
+	it('skips a task someone else claimed, for the claimant asking (#1044)', () => {
+		const tasks = [
+			claimed(createTask({ id: 1, title: 'Claimed', status: 'in-progress' }), {
+				claimedBy: 'parallel-run',
+				claimedAt: 'then'
+			}),
+			createTask({ id: 2, title: 'Free' })
+		];
+
+		expect(selectNextTask(tasks, { claimant: 'me' })?.id).toBe('2');
+		expect(selectNextTask(tasks, { claimant: 'parallel-run' })?.id).toBe('1');
+		expect(selectNextTask(tasks)?.id).toBe('1');
+	});
+
+	it('skips the subtasks of a task someone else claimed (#1044)', () => {
 		const next = selectNextTask(
 			[
-				createTask({ id: 1, title: 'Pending', priority: 'low' }),
-				createTask({ id: 2, title: 'Claimed', status: 'in-progress' })
+				claimed(
+					createTask({
+						id: 1,
+						title: 'Claimed',
+						status: 'in-progress',
+						subtasks: [createSubtask({ id: 1, title: 'Step', parentId: '1' })]
+					}),
+					{ claimedBy: 'other' }
+				),
+				createTask({ id: 2, title: 'Free' })
 			],
-			{ unstartedOnly: true }
+			{ claimant: 'me' }
+		);
+
+		expect(next?.id).toBe('2');
+	});
+
+	it('hands out a task whose claiming process died (#1044)', () => {
+		const next = selectNextTask(
+			[
+				claimed(
+					createTask({ id: 1, title: 'Stranded', status: 'in-progress' }),
+					{ claimedBy: 'other', claimPid: deadPid(), claimHost: os.hostname() }
+				),
+				createTask({ id: 2, title: 'Free' })
+			],
+			{ claimant: 'me' }
 		);
 
 		expect(next?.id).toBe('1');
@@ -288,5 +334,25 @@ describe('selectNextTask', () => {
 			expect(bottlenecks(tasks)).toEqual([]);
 			expect(criticalPath(tasks)).toEqual(['14']);
 		});
+	});
+});
+
+describe('isStaleClaim', () => {
+	const host = os.hostname();
+
+	it('is stale only when its process on this host is gone', () => {
+		expect(isStaleClaim({ claimPid: deadPid(), claimHost: host })).toBe(true);
+		expect(isStaleClaim({ claimPid: process.pid, claimHost: host })).toBe(
+			false
+		);
+	});
+
+	it('never calls a claim without a pid, or from another host, stale', () => {
+		expect(isStaleClaim({ claimedBy: 'a' })).toBe(false);
+		expect(isStaleClaim(undefined)).toBe(false);
+		expect(isStaleClaim({ claimPid: deadPid(), claimHost: 'elsewhere' })).toBe(
+			false
+		);
+		expect(isStaleClaim({ claimPid: '1', claimHost: host })).toBe(false);
 	});
 });

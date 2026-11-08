@@ -222,10 +222,11 @@ export class TasksDomain {
 	}
 
 	/**
-	 * Get next available task to work on
+	 * Get next available task to work on, skipping what a live claim by
+	 * anyone but `claimant` (resolveClaimant() when omitted) holds
 	 */
-	async getNext(tag?: string): Promise<Task | null> {
-		return this.taskService.getNextTask(tag);
+	async getNext(tag?: string, claimant?: string): Promise<Task | null> {
+		return this.taskService.getNextTask(tag, claimant);
 	}
 
 	claimNext: TaskEditCommands['claimNext'] = (...a) =>

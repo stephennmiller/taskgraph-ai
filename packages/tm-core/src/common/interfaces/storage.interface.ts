@@ -3,7 +3,10 @@
  * This file defines the contract for all storage implementations
  */
 
-import type { TaskClaim } from '../../modules/tasks/utils/claim.js';
+import type {
+	ClaimNextOptions,
+	TaskClaim
+} from '../../modules/tasks/utils/claim.js';
 import type {
 	Subtask,
 	Task,
@@ -169,13 +172,14 @@ export interface IStorage {
 	 * the claim in its metadata, all in one locked write
 	 * @param claimant - Recorded as `metadata.claimedBy`
 	 * @param tag - Optional tag context
-	 * @param among - Only these top-level task IDs (one parallel wave, say)
+	 * @param options - Only `among` these top-level task IDs (one parallel
+	 *   wave, say); the holding process `pid`, if it outlives the call
 	 * @returns The claim, or null when no task is ready
 	 */
 	claimNextTask(
 		claimant: string,
 		tag?: string,
-		among?: ReadonlySet<string>
+		options?: ClaimNextOptions
 	): Promise<TaskClaim | null>;
 
 	/**
