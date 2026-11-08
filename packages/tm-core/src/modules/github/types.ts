@@ -74,6 +74,8 @@ export interface PlanStep {
 	issueNumber?: number;
 	/** The link was rebuilt from the hidden marker, not from metadata */
 	recovered?: boolean;
+	/** Status a recovered link's issue holds on GitHub */
+	remoteStatus?: TaskStatus;
 	/** Issue URL, known when the issue already exists */
 	url?: string;
 	reason?: string;

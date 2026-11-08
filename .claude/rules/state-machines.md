@@ -300,11 +300,12 @@ Push runs in two passes: create every missing issue, then update bodies
 and state. Links are recovered by a `(tag, id)` marker in the issue body.
 
 Invariant: `lastPushedStatus` is the status GitHub holds for the issue.
+Pass 1 records the status of the issue it created or recovered, and pass 2
+records the task's status once it has written it, so a push cut off between
+the passes never makes a pull revert the task (#1041).
 
-Known break, tracked in #1041: pass 1 records the task's status for an
-issue GitHub still holds as open, so a push cut off before pass 2 makes
-the next pull reopen done tasks. ID reuse (#1040) also lets a new task
-recover a removed task's link.
+Known break, tracked in #1040: ID reuse lets a new task recover a removed
+task's link.
 
 ## 13. Auto-update
 

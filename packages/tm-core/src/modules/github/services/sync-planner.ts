@@ -13,6 +13,7 @@ import type {
 } from '../types.js';
 import { assigneeOf } from '../../tasks/utils/assignee.js';
 import { hashIssue, parseMarker, renderIssue } from './issue-renderer.js';
+import { statusFromIssue } from './issue-status.js';
 
 export interface PlanInput {
 	repo: string;
@@ -80,6 +81,7 @@ export function planSync(input: PlanInput): PushPlan {
 					issueNumber: number,
 					recovered: true,
 					url: recovered?.url,
+					remoteStatus: recovered && statusFromIssue(recovered),
 					reason: 'link recovered from issue marker'
 				};
 			}

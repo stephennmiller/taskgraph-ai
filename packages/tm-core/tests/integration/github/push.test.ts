@@ -30,6 +30,8 @@ class InMemoryGitHub implements GitHubClient {
 	writes = 0;
 	/** Throw on the Nth createIssue call (1-based) */
 	failCreateOn?: number;
+	/** Throw on every updateIssue call, as a rate limit would */
+	failUpdates = false;
 	/** Runs while an issue is being created, as another session would */
 	duringCreate?: () => Promise<unknown>;
 	private creates = 0;
@@ -66,6 +68,7 @@ class InMemoryGitHub implements GitHubClient {
 		number: number,
 		input: UpdateIssueInput
 	): Promise<RemoteIssue> {
+		if (this.failUpdates) throw new Error('secondary rate limit');
 		this.writes++;
 		const issue = this.issues.find((i) => i.number === number);
 		if (!issue) throw new Error(`no issue ${number}`);
@@ -208,6 +211,43 @@ describe('GitHub push - integration', () => {
 		expect(rerun.created).toBe(0);
 		expect(github.issues).toHaveLength(1);
 		expect(((await readTasks())[0].metadata as any).github.issueNumber).toBe(1);
+	});
+
+	it('keeps a done task done when a push stops before closing its new issue (#1041)', async () => {
+		await setup([makeTask('1', { status: 'done' })]);
+		github.failUpdates = true;
+
+		await expect(push()).rejects.toThrow('secondary rate limit');
+		expect(github.issues[0].state).toBe('open');
+		const pulled = await domain.pull({ repo: REPO, tag: 'master' });
+
+		expect(pulled.applied).toBe(0);
+		expect((await readTasks())[0].status).toBe('done');
+
+		github.failUpdates = false;
+		await push();
+
+		expect(github.issues[0].state).toBe('closed');
+		expect(((await readTasks())[0].metadata as any).github).toMatchObject({
+			lastPushedStatus: 'done'
+		});
+	});
+
+	it('keeps a recovered link at the status its issue holds when the push stops (#1041)', async () => {
+		await setup([makeTask('1')]);
+		await push();
+		await tmCore.tasks.modifyTask(
+			'1',
+			() => ({ status: 'done', metadata: {} }),
+			'master'
+		);
+		github.failUpdates = true;
+
+		await expect(push()).rejects.toThrow('secondary rate limit');
+		const pulled = await domain.pull({ repo: REPO, tag: 'master' });
+
+		expect(pulled.applied).toBe(0);
+		expect((await readTasks())[0].status).toBe('done');
 	});
 
 	it('leaves an issue opened by another account alone when relinking', async () => {

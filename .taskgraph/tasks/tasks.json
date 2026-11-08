@@ -937,7 +937,7 @@
         "description": "Record the status GitHub holds after pass 1, not the task status.",
         "details": "",
         "testStrategy": "",
-        "status": "pending",
+        "status": "done",
         "dependencies": [],
         "priority": "high",
         "subtasks": [],
