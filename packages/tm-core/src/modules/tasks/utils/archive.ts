@@ -41,6 +41,8 @@ export interface ArchiveTagData {
 		/** Highest task ID ever archived in this tag; never goes down */
 		highestId: number;
 		lastModified?: string;
+		/** On a renamed tag's tombstone: the name it was renamed to */
+		renamedTo?: string;
 	};
 }
 
@@ -443,7 +445,8 @@ function readTagSync(tasksPath: string, tag: string): unknown {
  * rename. A section already under the new name (a deleted tag's tombstone,
  * or one left by a delete before deletes cleaned up the archive) is
  * replaced, keeping its `highestId`. The old name keeps a tombstone (see
- * dropArchiveTag).
+ * dropArchiveTag) that notes the new name in `renamedTo`, so the tag can
+ * be renamed back.
  * @param highestId - The highest ID the tag held in tasks.json (highestTaskId)
  * @returns null when there is nothing to record
  */
@@ -457,7 +460,16 @@ export function renameArchiveTag(
 		ownSection(archive, oldTag) === undefined
 			? archive
 			: { ...archive, [newTag]: sectionFor(archive, oldTag, newTag) };
-	return dropArchiveTag(moved, oldTag, highestId);
+	const dropped = dropArchiveTag(moved, oldTag, highestId);
+	if (!dropped || !Object.hasOwn(dropped, oldTag)) return dropped;
+	const tombstone = dropped[oldTag];
+	return {
+		...dropped,
+		[oldTag]: {
+			...tombstone,
+			metadata: { ...tombstone.metadata, renamedTo: newTag }
+		}
+	};
 }
 
 /**

@@ -12,9 +12,11 @@ import {
 import type { IStorage } from '../../../../common/interfaces/storage.interface.js';
 import {
 	type ArchiveData,
+	archiveTag,
 	copyArchiveTag,
 	dropArchiveTag,
 	highestTaskId,
+	readArchiveSync,
 	renameArchiveTag
 } from '../../../tasks/utils/archive.js';
 import { CLAIM_KEYS, withoutClaim } from '../../../tasks/utils/claim.js';
@@ -91,6 +93,7 @@ export class TagOperations {
 			const tasks = copyTasks(
 				options?.copyFrom ? getOwnKey(data, options.copyFrom)?.tasks : undefined
 			);
+			this.assertNoRetiredIds(tagName, tasks);
 			tasksCopied = tasks.length;
 			const now = new Date().toISOString();
 			setOwnKey(data, tagName, {
@@ -138,6 +141,7 @@ export class TagOperations {
 				);
 			}
 			const tasks = copyTasks(source.tasks);
+			this.assertNoRetiredIds(targetTag, tasks);
 			tasksCopied = tasks.length;
 			const now = new Date().toISOString();
 			setOwnKey(data, targetTag, {
@@ -220,6 +224,7 @@ export class TagOperations {
 				);
 			}
 			highestId = highestTaskId(getOwnKey(data, oldTag));
+			this.assertNoRetiredIds(newTag, getOwnKey(data, oldTag).tasks, oldTag);
 			const tagData = { ...getOwnKey(data, oldTag) };
 			if (tagData.metadata) {
 				tagData.metadata = {
@@ -241,6 +246,32 @@ export class TagOperations {
 				if (error?.code !== 'ENOENT') throw error;
 			});
 		}
+	}
+
+	/**
+	 * Refuse to put tasks under the name of a removed or renamed tag when one
+	 * of their IDs is one that tag used: GitHub link recovery finds an issue
+	 * by tag and ID, so the task would take over the old task's issue. A tag
+	 * renamed back to its old name (the tombstone's `renamedTo`) is its own.
+	 */
+	private assertNoRetiredIds(
+		tag: string,
+		tasks: unknown,
+		renamedFrom?: string
+	): void {
+		const { metadata } = archiveTag(
+			readArchiveSync(this.pathResolver.getArchivePath()),
+			tag
+		);
+		if (renamedFrom !== undefined && metadata.renamedTo === renamedFrom) {
+			return;
+		}
+		const ids = Array.isArray(tasks) ? tasks.map((t) => Number(t?.id)) : [];
+		if (!ids.some((id) => id <= metadata.highestId)) return;
+		throw new TaskGraphError(
+			`Tag "${tag}" was removed or renamed, and its tasks used IDs up to ${metadata.highestId}. Tasks put under that name would reuse them and take over their GitHub issues; use another name`,
+			ERROR_CODES.VALIDATION_ERROR
+		);
 	}
 
 	/** A tag's complexity report; undefined for a name that can't name a file */

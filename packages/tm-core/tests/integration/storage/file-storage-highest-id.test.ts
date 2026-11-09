@@ -151,4 +151,35 @@ describe('FileStorage tag delete and rename keep used IDs (#1064)', () => {
 		expect(fs.existsSync(reportOf('other'))).toBe(false);
 		expect(fs.existsSync(reportOf('renamed'))).toBe(true);
 	});
+
+	it('refuses a copy or rename onto a removed tag’s name that would reuse its IDs', async () => {
+		await storage.deleteTag('other');
+
+		await expect(storage.copyTag('master', 'other')).rejects.toThrow(
+			/used IDs up to 4/
+		);
+		await expect(
+			storage.createTag('other', { copyFrom: 'master' })
+		).rejects.toThrow(/used IDs up to 4/);
+		await expect(storage.renameTag('master', 'other')).rejects.toThrow(
+			/used IDs up to 4/
+		);
+		expect(await storage.getAllTags()).toEqual(['master']);
+	});
+
+	it('lets a renamed tag be renamed back, but not another tag onto its old name', async () => {
+		await storage.renameTag('other', 'renamed');
+		await expect(storage.renameTag('master', 'other')).rejects.toThrow(
+			/used IDs up to 4/
+		);
+
+		await storage.renameTag('renamed', 'other');
+
+		expect((await storage.loadTasks('other')).map((t) => t.id)).toEqual([
+			'1',
+			'2',
+			'3',
+			'4'
+		]);
+	});
 });
