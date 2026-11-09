@@ -58,10 +58,6 @@ describe('BaseAIProvider', () => {
 				this.name = 'TestProvider';
 			}
 
-			getRequiredApiKeyName() {
-				return 'TEST_API_KEY';
-			}
-
 			async getClient() {
 				return mockClient;
 			}
@@ -73,30 +69,10 @@ describe('BaseAIProvider', () => {
 	});
 
 	describe('1. Parameter Validation - Catches Invalid Inputs', () => {
-		describe('validateAuth', () => {
-			it('should throw when API key is missing', () => {
-				expect(() => testProvider.validateAuth({})).toThrow(
-					'TestProvider API key is required'
-				);
-			});
-
-			it('should pass when API key is provided', () => {
-				expect(() =>
-					testProvider.validateAuth({ apiKey: 'test-key' })
-				).not.toThrow();
-			});
-		});
-
 		describe('validateParams', () => {
 			it('should throw when model ID is missing', () => {
-				expect(() => testProvider.validateParams({ apiKey: 'key' })).toThrow(
-					'TestProvider Model ID is required'
-				);
-			});
-
-			it('should throw when both API key and model ID are missing', () => {
 				expect(() => testProvider.validateParams({})).toThrow(
-					'TestProvider API key is required'
+					'TestProvider Model ID is required'
 				);
 			});
 		});
@@ -143,7 +119,6 @@ describe('BaseAIProvider', () => {
 			it('should throw for null/undefined messages', async () => {
 				await expect(
 					testProvider.generateText({
-						apiKey: 'key',
 						modelId: 'model',
 						messages: null
 					})
@@ -151,7 +126,6 @@ describe('BaseAIProvider', () => {
 
 				await expect(
 					testProvider.generateText({
-						apiKey: 'key',
 						modelId: 'model',
 						messages: undefined
 					})
@@ -161,7 +135,6 @@ describe('BaseAIProvider', () => {
 			it('should throw for empty messages array', async () => {
 				await expect(
 					testProvider.generateText({
-						apiKey: 'key',
 						modelId: 'model',
 						messages: []
 					})
@@ -171,7 +144,6 @@ describe('BaseAIProvider', () => {
 			it('should throw for messages without role or content', async () => {
 				await expect(
 					testProvider.generateText({
-						apiKey: 'key',
 						modelId: 'model',
 						messages: [{ content: 'test' }] // missing role
 					})
@@ -181,7 +153,6 @@ describe('BaseAIProvider', () => {
 
 				await expect(
 					testProvider.generateText({
-						apiKey: 'key',
 						modelId: 'model',
 						messages: [{ role: 'user' }] // missing content
 					})
@@ -199,7 +170,6 @@ describe('BaseAIProvider', () => {
 
 			await expect(
 				testProvider.generateText({
-					apiKey: 'key',
 					modelId: 'model',
 					messages: [{ role: 'user', content: 'test' }]
 				})
@@ -214,7 +184,6 @@ describe('BaseAIProvider', () => {
 
 			await expect(
 				testProvider.generateText({
-					apiKey: 'key',
 					modelId: 'model',
 					messages: [{ role: 'user', content: 'test' }]
 				})
@@ -241,9 +210,6 @@ describe('BaseAIProvider', () => {
 
 			expect(() => provider.getClient()).toThrow(
 				'getClient must be implemented by provider'
-			);
-			expect(() => provider.getRequiredApiKeyName()).toThrow(
-				'getRequiredApiKeyName must be implemented by provider'
 			);
 		});
 	});
@@ -279,7 +245,6 @@ describe('BaseAIProvider', () => {
 			});
 
 			let result = await testProvider.generateText({
-				apiKey: 'key',
 				modelId: 'model',
 				messages: [{ role: 'user', content: 'test' }]
 			});
@@ -298,7 +263,6 @@ describe('BaseAIProvider', () => {
 			});
 
 			result = await testProvider.generateText({
-				apiKey: 'key',
 				modelId: 'model',
 				messages: [{ role: 'user', content: 'test' }]
 			});
@@ -318,7 +282,6 @@ describe('BaseAIProvider', () => {
 			});
 
 			const result = await testProvider.generateText({
-				apiKey: 'key',
 				modelId: 'model',
 				messages: [{ role: 'user', content: 'test' }]
 			});
@@ -342,7 +305,6 @@ describe('BaseAIProvider', () => {
 			});
 
 			const result = await testProvider.generateText({
-				apiKey: 'key',
 				modelId: 'model',
 				messages: [{ role: 'user', content: 'test' }]
 			});
@@ -357,7 +319,6 @@ describe('BaseAIProvider', () => {
 			});
 
 			const result = await testProvider.generateText({
-				apiKey: 'key',
 				modelId: 'model',
 				messages: [{ role: 'user', content: 'test' }]
 			});
@@ -370,7 +331,6 @@ describe('BaseAIProvider', () => {
 		it('should throw when schema is missing for generateObject', async () => {
 			await expect(
 				testProvider.generateObject({
-					apiKey: 'key',
 					modelId: 'model',
 					messages: [{ role: 'user', content: 'test' }],
 					objectName: 'TestObject'
@@ -382,7 +342,6 @@ describe('BaseAIProvider', () => {
 		it('should throw when objectName is missing for generateObject', async () => {
 			await expect(
 				testProvider.generateObject({
-					apiKey: 'key',
 					modelId: 'model',
 					messages: [{ role: 'user', content: 'test' }],
 					schema: { type: 'object' }
@@ -394,7 +353,6 @@ describe('BaseAIProvider', () => {
 		it('should throw when schema is missing for streamObject', async () => {
 			await expect(
 				testProvider.streamObject({
-					apiKey: 'key',
 					modelId: 'model',
 					messages: [{ role: 'user', content: 'test' }]
 					// missing schema
@@ -410,7 +368,6 @@ describe('BaseAIProvider', () => {
 			});
 
 			await testProvider.generateObject({
-				apiKey: 'key',
 				modelId: 'model',
 				messages: [{ role: 'user', content: 'test' }],
 				schema: { type: 'object' },
@@ -434,7 +391,6 @@ describe('BaseAIProvider', () => {
 			});
 
 			const params = {
-				apiKey: 'test-key',
 				modelId: 'test-model',
 				messages: [{ role: 'user', content: 'test' }],
 				customParam: 'custom-value'
@@ -452,7 +408,6 @@ describe('BaseAIProvider', () => {
 			});
 
 			await testProvider.generateText({
-				apiKey: 'key',
 				modelId: 'gpt-4-turbo',
 				messages: [{ role: 'user', content: 'test' }]
 			});
@@ -499,7 +454,6 @@ describe('BaseAIProvider', () => {
 
 			const promises = Array.from({ length: 10 }, (_, i) =>
 				testProvider.generateText({
-					apiKey: 'key',
 					modelId: `model-${i}`,
 					messages: [{ role: 'user', content: `test-${i}` }]
 				})
@@ -508,35 +462,6 @@ describe('BaseAIProvider', () => {
 			const results = await Promise.all(promises);
 			expect(results).toHaveLength(10);
 			expect(mockClient).toHaveBeenCalledTimes(10);
-		});
-	});
-
-	describe('10. Default Behavior - isRequiredApiKey', () => {
-		it('should return true by default for isRequiredApiKey', () => {
-			expect(testProvider.isRequiredApiKey()).toBe(true);
-		});
-
-		it('should allow override of isRequiredApiKey', () => {
-			class NoAuthProvider extends BaseAIProvider {
-				constructor() {
-					super(log);
-				}
-				isRequiredApiKey() {
-					return false;
-				}
-				validateAuth() {
-					// Override to not require API key
-				}
-				getClient() {
-					return mockClient;
-				}
-				getRequiredApiKeyName(): null {
-					return null;
-				}
-			}
-
-			const provider = new NoAuthProvider();
-			expect(provider.isRequiredApiKey()).toBe(false);
 		});
 	});
 
@@ -557,7 +482,6 @@ describe('BaseAIProvider', () => {
 			});
 
 			await testProvider.generateText({
-				apiKey: 'key',
 				modelId: 'model',
 				messages: [{ role: 'user', content: 'test' }],
 				temperature: 0.7
@@ -576,7 +500,6 @@ describe('BaseAIProvider', () => {
 			});
 
 			await testProvider.generateText({
-				apiKey: 'key',
 				modelId: 'model',
 				messages: [{ role: 'user', content: 'test' }],
 				temperature: 0.7
@@ -594,7 +517,6 @@ describe('BaseAIProvider', () => {
 			});
 
 			await testProvider.generateText({
-				apiKey: 'key',
 				modelId: 'model',
 				messages: [{ role: 'user', content: 'test' }],
 				temperature: undefined

@@ -58,7 +58,6 @@ describe('ClaudeCodeProvider', () => {
 		it('should work with any params passed', () => {
 			expect(() =>
 				provider.validateAuth({
-					apiKey: 'some-key',
 					baseURL: 'https://example.com'
 				})
 			).not.toThrow();
@@ -462,20 +461,6 @@ describe('ClaudeCodeProvider', () => {
 					})
 				})
 			);
-		});
-	});
-
-	describe('model support', () => {
-		it('should return supported models', () => {
-			const models = provider.getSupportedModels();
-			expect(models).toEqual(['opus', 'sonnet', 'haiku']);
-		});
-
-		it('should check if model is supported', () => {
-			expect(provider.isModelSupported('sonnet')).toBe(true);
-			expect(provider.isModelSupported('opus')).toBe(true);
-			expect(provider.isModelSupported('haiku')).toBe(true);
-			expect(provider.isModelSupported('unknown')).toBe(false);
 		});
 	});
 

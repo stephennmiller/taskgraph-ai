@@ -17,10 +17,6 @@ class TestProvider extends BaseAIProvider {
 	getClient() {
 		return (modelId: string) => modelId as any;
 	}
-	getRequiredApiKeyName() {
-		return null;
-	}
-	validateAuth() {}
 }
 
 const params = {

@@ -148,35 +148,6 @@ describe('AiConfig', () => {
 		});
 	});
 
-	describe('resolveEnv', () => {
-		it('reads the session, then .env, then process.env', () => {
-			fs.writeFileSync(path.join(projectRoot, '.env'), 'KEY=from-file\n');
-			vi.stubEnv('KEY', 'from-process');
-			vi.stubEnv('OTHER', 'from-process');
-			const config = aiConfig({});
-
-			expect(config.resolveEnv('KEY', { env: { KEY: 'from-session' } })).toBe(
-				'from-session'
-			);
-			expect(config.resolveEnv('KEY')).toBe('from-file');
-			expect(config.resolveEnv('OTHER')).toBe('from-process');
-			expect(config.resolveEnv('MISSING')).toBeUndefined();
-		});
-
-		it('ignores a project .env and a session for TASKGRAPH_NO_TASK_DATA_FENCE (#929)', () => {
-			fs.writeFileSync(
-				path.join(projectRoot, '.env'),
-				'TASKGRAPH_NO_TASK_DATA_FENCE=1\n'
-			);
-
-			expect(
-				aiConfig({}).resolveEnv('TASKGRAPH_NO_TASK_DATA_FENCE', {
-					env: { TASKGRAPH_NO_TASK_DATA_FENCE: '1' }
-				})
-			).toBeUndefined();
-		});
-	});
-
 	describe('hasCodebaseAnalysis', () => {
 		it('is on for the main role with Claude Code, off for research', () => {
 			const config = aiConfig({});
@@ -196,6 +167,19 @@ describe('AiConfig', () => {
 					env: { TASKGRAPH_ENABLE_CODEBASE_ANALYSIS: '1' }
 				})
 			).toBe(true);
+		});
+
+		it("reads the flag from the project's .env, and the shell wins over it", () => {
+			fs.writeFileSync(
+				path.join(projectRoot, '.env'),
+				'TASKGRAPH_ENABLE_CODEBASE_ANALYSIS=false\n'
+			);
+
+			expect(aiConfig({}).hasCodebaseAnalysis(false)).toBe(false);
+
+			vi.stubEnv('TASKGRAPH_ENABLE_CODEBASE_ANALYSIS', 'true');
+
+			expect(aiConfig({}).hasCodebaseAnalysis(false)).toBe(true);
 		});
 	});
 

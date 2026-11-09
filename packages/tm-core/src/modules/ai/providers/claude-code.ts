@@ -246,17 +246,15 @@ function getRoleRestrictions(
  * - Command-specific configuration support
  */
 export class ClaudeCodeProvider extends BaseAIProvider {
-	readonly supportedModels: string[];
 	private readonly getSettingsForCommand: ClaudeCodeProviderOptions['getSettingsForCommand'];
 
 	constructor(options: ClaudeCodeProviderOptions) {
 		super(options.log);
 		this.name = 'Claude Code';
-		this.supportedModels = options.supportedModels;
 		this.getSettingsForCommand = options.getSettingsForCommand;
 
 		// Validate that models were loaded successfully
-		if (this.supportedModels.length === 0) {
+		if (options.supportedModels.length === 0) {
 			this.log(
 				'warn',
 				'No supported models found for claude-code provider. Check supported-models.json configuration.'
@@ -267,20 +265,6 @@ export class ClaudeCodeProvider extends BaseAIProvider {
 		this.needsExplicitJsonSchema = true;
 		// Claude Code does not support temperature parameter
 		this.supportsTemperature = false;
-	}
-
-	/**
-	 * @returns The environment variable name for API key (not used)
-	 */
-	getRequiredApiKeyName(): string {
-		return 'CLAUDE_CODE_API_KEY';
-	}
-
-	/**
-	 * @returns False - Claude Code doesn't require API keys
-	 */
-	isRequiredApiKey(): boolean {
-		return false;
 	}
 
 	/**
@@ -432,20 +416,5 @@ export class ClaudeCodeProvider extends BaseAIProvider {
 			);
 			return call({ ...params, withholdFileTools: true });
 		}
-	}
-
-	/**
-	 * @returns List of supported model IDs
-	 */
-	getSupportedModels(): string[] {
-		return this.supportedModels;
-	}
-
-	/**
-	 * Check if a model is supported
-	 */
-	isModelSupported(modelId: unknown): boolean {
-		if (!modelId) return false;
-		return this.supportedModels.includes(String(modelId).toLowerCase());
 	}
 }

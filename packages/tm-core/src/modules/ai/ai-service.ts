@@ -54,12 +54,6 @@ export interface AiServiceHost {
 		projectRoot: string | null | undefined
 	) => string | null | undefined;
 	getCurrentTag: (projectRoot: string) => string | null | undefined;
-	/** Reads a variable from the MCP session, the environment or the project's .env */
-	resolveEnvVariable: (
-		name: string,
-		session: unknown,
-		projectRoot: string | null | undefined
-	) => string | null | undefined;
 	getClaudeCodeSettingsForCommand: (
 		commandName?: string
 	) => ClaudeCodeConfigSettings | null | undefined;
@@ -373,36 +367,6 @@ export class AiService {
 		}
 	}
 
-	private resolveApiKey(
-		provider: ClaudeCodeProvider,
-		providerName: string,
-		session: unknown,
-		projectRoot: string | null | undefined
-	): string | null {
-		const envVarName = provider.getRequiredApiKeyName();
-		if (envVarName === null) {
-			return null;
-		}
-
-		const apiKey = this.host.resolveEnvVariable(
-			envVarName,
-			session,
-			projectRoot
-		);
-
-		// Providers that can use alternative auth or no API key
-		if (!provider.isRequiredApiKey()) {
-			return apiKey || null;
-		}
-
-		if (!apiKey) {
-			throw new Error(
-				`Required API key ${envVarName} for provider '${providerName}' is not set in environment, session, or .env file.`
-			);
-		}
-		return apiKey;
-	}
-
 	private async callWithRetries(
 		provider: ClaudeCodeProvider,
 		serviceType: AiServiceType,
@@ -466,6 +430,7 @@ export class AiService {
 	): Promise<AiServiceResult> {
 		const {
 			role: initialRole,
+			// Left out of what the provider gets; AiConfig reads its env, not this
 			session,
 			projectRoot,
 			systemPrompt,
@@ -550,12 +515,6 @@ export class AiService {
 					currentRole,
 					effectiveProjectRoot
 				);
-				const apiKey = this.resolveApiKey(
-					provider,
-					providerName.toLowerCase(),
-					session,
-					effectiveProjectRoot
-				);
 
 				const responseLanguage =
 					this.host.getResponseLanguage(effectiveProjectRoot);
@@ -571,7 +530,6 @@ export class AiService {
 				}
 
 				const callParams = {
-					apiKey,
 					modelId,
 					maxTokens: roleParams.maxTokens,
 					temperature: roleParams.temperature,

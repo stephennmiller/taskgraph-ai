@@ -1,13 +1,10 @@
 /**
  * @fileoverview The AiService host for tm-core's own commands: role models,
- * model parameters, Claude Code settings and API-key lookup read from
+ * model parameters and Claude Code settings read from
  * ConfigManager, the way the legacy config-manager.js read them (its role
  * defaults, the supported-models.json token caps, the claudeCode schema).
  */
 
-import fs from 'node:fs';
-import path from 'node:path';
-import { parseEnv } from 'node:util';
 import {
 	CUSTOM_PROVIDERS,
 	CUSTOM_PROVIDERS_ARRAY
@@ -15,10 +12,7 @@ import {
 import { getLogger } from '../../common/logger/index.js';
 import type { ConfigManager } from '../config/managers/config-manager.js';
 import { dropOldNumTasksDefault } from '../config/services/config-file.js';
-import {
-	isShellOnlyEnv,
-	shellEnvBeforeProject
-} from '../config/services/project-env.js';
+import { readProjectEnv } from '../config/services/project-env.js';
 import type { AiServiceHost } from './ai-service.js';
 import { ClaudeCodeSettingsSchema } from './claude-code-settings.js';
 import supportedModels from './supported-models.json' with { type: 'json' };
@@ -227,29 +221,6 @@ export class AiConfig {
 		};
 	}
 
-	/** A variable from the MCP session, then the project's .env, then process.env */
-	resolveEnv(name: string, session?: unknown): string | undefined {
-		// A project file or an MCP session cannot set a shell-only variable
-		if (isShellOnlyEnv(name)) return shellEnvBeforeProject(name) || undefined;
-		const fromSession = (session as { env?: Record<string, string> })?.env?.[
-			name
-		];
-		if (fromSession) return fromSession;
-		try {
-			const fromFile = parseEnv(
-				fs.readFileSync(path.join(this.projectRoot, '.env'), 'utf-8')
-			)[name];
-			if (fromFile) return fromFile;
-		} catch (error) {
-			if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
-				this.warn(
-					`Could not read or parse ${path.join(this.projectRoot, '.env')}: ${(error as Error).message}`
-				);
-			}
-		}
-		return process.env[name] || undefined;
-	}
-
 	/**
 	 * Whether the model may explore the codebase: on unless
 	 * TASKGRAPH_ENABLE_CODEBASE_ANALYSIS or `global.enableCodebaseAnalysis`
@@ -257,7 +228,11 @@ export class AiConfig {
 	 * Claude Code as the main provider.
 	 */
 	hasCodebaseAnalysis(useResearch: boolean, session?: unknown): boolean {
-		const flag = this.resolveEnv('TASKGRAPH_ENABLE_CODEBASE_ANALYSIS', session);
+		const name = 'TASKGRAPH_ENABLE_CODEBASE_ANALYSIS';
+		// The MCP session's env, then the shell, then the project's .env (allowlisted)
+		const flag =
+			(session as { env?: Record<string, string> })?.env?.[name] ||
+			readProjectEnv(this.projectRoot)[name];
 		const enabled = flag
 			? flag.toLowerCase() === 'true' || flag === '1'
 			: this.raw.global?.enableCodebaseAnalysis !== false;
@@ -282,7 +257,6 @@ export class AiConfig {
 			getResponseLanguage: () => this.configManager.getResponseLanguage(),
 			getUserId: () => this.userId,
 			getCurrentTag: () => this.configManager.getActiveTag(),
-			resolveEnvVariable: (name, session) => this.resolveEnv(name, session),
 			getClaudeCodeSettingsForCommand: (commandName) =>
 				this.claudeCodeSettingsFor(commandName),
 			getSupportedModels: (provider) =>

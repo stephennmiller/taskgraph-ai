@@ -366,29 +366,6 @@ describe('FileOperations', () => {
 		});
 	});
 
-	describe('writeJson', () => {
-		it('should write JSON atomically', async () => {
-			const data = { test: 'value' };
-
-			await fileOps.writeJson(testFilePath, data);
-
-			const result = JSON.parse(await fs.readFile(testFilePath, 'utf-8'));
-			expect(result.test).toBe('value');
-		});
-
-		it('should not leave temp files on success', async () => {
-			await fileOps.writeJson(testFilePath, { test: true });
-
-			const files = await fs.readdir(tempDir);
-			const tempFiles = files.filter((f) => f.includes('.tmp'));
-			expect(tempFiles).toHaveLength(0);
-
-			// Also verify no lock files remain
-			const lockFiles = files.filter((f) => f.endsWith('.lock'));
-			expect(lockFiles).toHaveLength(0);
-		});
-	});
-
 	describe('symlinks (#616)', () => {
 		let outside: string;
 
@@ -402,7 +379,6 @@ describe('FileOperations', () => {
 			const planted = path.join(tempDir, '.test.json.tmp');
 			fsSync.symlinkSync(outside, planted);
 
-			await fileOps.writeJson(testFilePath, { a: 1 });
 			await fileOps.modifyJson(testFilePath, () => ({ a: 2 }));
 
 			expect(fsSync.readFileSync(outside, 'utf-8')).toBe('keep me');
@@ -415,9 +391,6 @@ describe('FileOperations', () => {
 		it('refuses to write when the file itself is a symlink', async () => {
 			fsSync.symlinkSync(outside, testFilePath);
 
-			await expect(fileOps.writeJson(testFilePath, { a: 1 })).rejects.toThrow(
-				/symlink/
-			);
 			await expect(
 				fileOps.modifyJson(testFilePath, () => ({ a: 1 }))
 			).rejects.toThrow(/symlink/);
@@ -447,9 +420,6 @@ describe('FileOperations', () => {
 				];
 
 				for (const file of files) {
-					await expect(fileOps.writeJson(file, { a: 1 })).rejects.toThrow(
-						/symlink/
-					);
 					await expect(
 						fileOps.modifyJson(file, () => ({ a: 1 }))
 					).rejects.toThrow(/symlink/);
@@ -471,7 +441,7 @@ describe('FileOperations', () => {
 				fsSync.symlinkSync(real, linkedRoot);
 				const file = path.join(linkedRoot, '.taskgraph', 'tasks', 'tasks.json');
 
-				await fileOps.writeJson(file, { a: 1 });
+				await fileOps.modifyJson(file, () => ({ a: 1 }));
 
 				expect(
 					JSON.parse(
@@ -500,7 +470,7 @@ describe('FileOperations', () => {
 			);
 			vi.mocked(fs.rename).mockImplementation(rename);
 
-			await fileOps.writeJson(testFilePath, { a: 1 });
+			await fileOps.modifyJson(testFilePath, () => ({ a: 1 }));
 
 			expect(JSON.parse(fsSync.readFileSync(testFilePath, 'utf-8'))).toEqual({
 				a: 1
@@ -513,9 +483,9 @@ describe('FileOperations', () => {
 				Object.assign(new Error('nope'), { code: 'EXDEV' })
 			);
 
-			await expect(fileOps.writeJson(testFilePath, { a: 1 })).rejects.toThrow(
-				'nope'
-			);
+			await expect(
+				fileOps.modifyJson(testFilePath, () => ({ a: 1 }))
+			).rejects.toThrow('nope');
 			expect(tempFiles()).toHaveLength(0);
 		});
 	});
@@ -545,18 +515,6 @@ describe('FileOperations', () => {
 			expect(fsSync.existsSync(lockPath)).toBe(false);
 		});
 
-		it('writeJson takes over a stale lock file', async () => {
-			await fs.writeFile(testFilePath, '{}');
-			const lockPath = leaveStaleLockFile();
-
-			await fileOps.writeJson(testFilePath, { ok: true });
-
-			expect(JSON.parse(await fs.readFile(testFilePath, 'utf-8'))).toEqual({
-				ok: true
-			});
-			expect(fsSync.existsSync(lockPath)).toBe(false);
-		});
-
 		it('reports why a stale lock file could not be moved aside', async () => {
 			await fs.writeFile(testFilePath, '{}');
 			const lockPath = leaveStaleLockFile();
@@ -571,7 +529,7 @@ describe('FileOperations', () => {
 
 			try {
 				await expect(
-					fileOps.writeJson(testFilePath, { ok: true })
+					fileOps.modifyJson(testFilePath, () => ({ ok: true }))
 				).rejects.toMatchObject({ code: 'EACCES' });
 			} finally {
 				vi.restoreAllMocks();

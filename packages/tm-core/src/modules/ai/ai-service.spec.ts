@@ -10,9 +10,7 @@ import { ClaudeCodeProvider } from './providers/claude-code.js';
 const mockClaudeProvider = vi.hoisted(() => ({
 	generateText: vi.fn(),
 	streamText: vi.fn(),
-	generateObject: vi.fn(),
-	getRequiredApiKeyName: vi.fn(() => 'CLAUDE_CODE_API_KEY'),
-	isRequiredApiKey: vi.fn(() => false)
+	generateObject: vi.fn()
 }));
 
 vi.mock('./providers/claude-code.js', () => ({
@@ -31,7 +29,6 @@ const host = {
 	getResponseLanguage: vi.fn(),
 	getUserId: vi.fn(),
 	getCurrentTag: vi.fn(() => 'master'),
-	resolveEnvVariable: vi.fn(),
 	getClaudeCodeSettingsForCommand: vi.fn(() => ({})),
 	getSupportedModels: vi.fn(() => ['sonnet']),
 	getModelMap: () => ({
@@ -68,7 +65,6 @@ describe('AiService', () => {
 			return { maxTokens: 100, temperature: 0.5 };
 		});
 		host.getResponseLanguage.mockReturnValue('English');
-		host.resolveEnvVariable.mockReturnValue(null);
 		host.findProjectRoot.mockReturnValue(fakeProjectRoot);
 		host.getDebugFlag.mockReturnValue(false);
 		host.getUserId.mockReturnValue('test-user-id');

@@ -97,22 +97,4 @@ export class ConfigMerger {
 	getSources(): ConfigSource[] {
 		return [...this.configSources].sort((a, b) => b.precedence - a.precedence);
 	}
-
-	/**
-	 * Check if a source exists
-	 */
-	hasSource(name: string): boolean {
-		return this.configSources.some((source) => source.name === name);
-	}
-
-	/**
-	 * Remove a source by name
-	 */
-	removeSource(name: string): boolean {
-		const initialLength = this.configSources.length;
-		this.configSources = this.configSources.filter(
-			(source) => source.name !== name
-		);
-		return this.configSources.length < initialLength;
-	}
 }
