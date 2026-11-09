@@ -165,18 +165,17 @@ export async function runMergingWaves(
 		return merged;
 	};
 
+	const budgetLeft = () =>
+		options.maxBudgetUsd === undefined
+			? undefined
+			: options.maxBudgetUsd - spent;
+	const tooLittle = (left: number | undefined) =>
+		left !== undefined &&
+		left < Math.min(MIN_WAVE_BUDGET_USD, options.maxBudgetUsd ?? 0);
+
 	while (!options.signal?.aborted) {
-		const left =
-			options.maxBudgetUsd === undefined
-				? undefined
-				: options.maxBudgetUsd - spent;
-		if (
-			left !== undefined &&
-			total.waves &&
-			left < Math.min(MIN_WAVE_BUDGET_USD, options.maxBudgetUsd ?? 0)
-		) {
-			break;
-		}
+		let left = budgetLeft();
+		if (total.waves && tooLittle(left)) break;
 		// parse-prd or github import added tasks nobody approved, as in the serial loop
 		if (!deps.keepTrust()) {
 			total.errorMessage = TRUST_LOST;
@@ -189,6 +188,9 @@ export async function runMergingWaves(
 			total.tasks = inReview.tasks;
 			await mergeFinished(inReview.tasks);
 			if (options.signal?.aborted || total.conflictBranch) break;
+			// What resolving their conflicts cost comes off the first wave's budget
+			left = budgetLeft();
+			if (tooLittle(left)) break;
 		}
 		const wave = await deps.runWave({ ...options, maxBudgetUsd: left });
 		if (!total.waves) total.readyCount = wave.readyCount;

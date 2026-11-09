@@ -171,6 +171,31 @@ describe('runMergingWaves', () => {
 		]);
 	});
 
+	it("takes what resolving a review task's conflict cost off the first wave's budget", async () => {
+		const { calls, deps } = fakeRun(
+			[wave([task('3')])],
+			['taskgraph/task-1'],
+			false,
+			['taskgraph/task-1'],
+			[],
+			[task('1')]
+		);
+
+		await runMergingWaves(
+			{ parallel: 2, maxBudgetUsd: 1 },
+			{
+				...deps,
+				resolve: async (t, budgetUsd) => ({
+					...(await deps.resolve(t, budgetUsd)),
+					costUsd: 0.4
+				})
+			}
+		);
+
+		expect(calls.resolved).toEqual(['1:0.5']);
+		expect(calls.budgets[0]).toBe(0.6);
+	});
+
 	it("doesn't touch tasks in review once the approval was withdrawn", async () => {
 		const { calls, deps } = fakeRun([], [], false, [], [], [task('1')]);
 
