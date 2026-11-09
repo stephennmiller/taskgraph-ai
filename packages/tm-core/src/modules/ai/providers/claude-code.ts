@@ -93,11 +93,17 @@ function isWithin(root: string, candidate: string): boolean {
  * a repository.
  */
 function repositoryRoot(root: string): string {
-	const home = os.homedir();
+	// Also where a linked home folder leads: `root` may be a resolved path
+	const homes = [os.homedir()];
+	try {
+		homes.push(fs.realpathSync(homes[0]));
+	} catch {
+		// Use the home folder as given
+	}
 	return (
 		(foldersToTop(root) ?? [])
 			.map((dir) => path.resolve(root, dir))
-			.filter((dir) => !isWithin(dir, home))
+			.filter((dir) => !homes.some((home) => isWithin(dir, home)))
 			.at(-1) ?? root
 	);
 }

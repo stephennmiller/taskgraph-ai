@@ -145,6 +145,15 @@ describe('isTrustedClaudeExecutable', () => {
 				isTrustedClaudeExecutable(path.join(repo, 'tools', 'claude'), app)
 			).toBe(true);
 		});
+
+		it('keeps it too when the home folder is a link to the repository', () => {
+			vi.stubEnv('HOME', path.join(base, 'repo-link'));
+			vi.stubEnv('USERPROFILE', path.join(base, 'repo-link'));
+
+			expect(
+				isTrustedClaudeExecutable(path.join(repo, 'tools', 'claude'), app)
+			).toBe(true);
+		});
 	});
 
 	describe('claude on PATH', () => {
