@@ -105,7 +105,7 @@ on purpose.
 | all cancelled                  | unchanged                                |
 | any in-progress or done        | in-progress                              |
 | all pending                    | pending (claim cleared), set-status only |
-| other mixes, parent done       | in-progress                              |
+| other mixes, parent done       | in-progress, if the change reopens it    |
 | other mixes                    | unchanged                                |
 
 Exceptions:
@@ -113,12 +113,20 @@ Exceptions:
 - A parent in `review` stays in review when its last subtask finishes.
 - Only a subtask's own status change moves a parent in `review`,
   `blocked`, `deferred` or `cancelled`; the other writers leave it.
+- A `done` parent moves back only when the change added a subtask,
+  reopened a complete one, or set one to `pending` or `in-progress`
+  (`reopensDoneParent`, used by both callers). Cancelling, finishing or
+  removing the subtasks it was marked done over leaves it done, and so
+  does setting one of them to `blocked`, `deferred` or `review`: the parent
+  would stay in progress once the rest were cancelled (#1107). The funnel
+  tells subtasks apart by ID and title.
 - clear-subtasks and moving a whole task (in a tag or between tags) leave
   the parent's status as it is.
 
 Invariants the rest of the code relies on:
 
-- I1: a `done` parent has only complete subtasks. Dependents treat a done
+- I1: a `done` parent has only complete subtasks, unless the user marked
+  it done over open ones (below). Dependents treat a done
   parent as satisfied, and `next` offers subtasks only of in-progress
   parents, so an open subtask under a done parent is never offered.
 - I2: an `in-progress` parent has at least one open subtask. Claims and the
@@ -132,7 +140,21 @@ Converting between task and subtask (move, `add-subtask --task-id`,
 `acceptanceCriteria` and metadata, except `subtasks` and `parentId`.
 
 `set-status <parent> done` with open subtasks is allowed on purpose: it is
-an explicit user action. The next writer to touch its subtasks reopens it.
+an explicit user action. The next writer to add a subtask, reopen a
+complete one or set one to `pending` or `in-progress` moves it back;
+closing, holding or removing the leftover ones doesn't.
+
+The git merge driver writes tasks.json outside the funnel, so it settles
+too (`git/merge-driver/merge-settle.ts`, #1093): a task whose merged
+status and subtasks together are neither branch's as written goes through
+`settleChangedParents` against each branch's subtasks, with the done gate
+(the Definition of Done from the project's config files). A task whose
+status and subtasks one branch wrote is left as that branch wrote it, also
+when the other edited another field. It also drops, and reports, a
+dependency on a task one branch removed while the other added the
+dependency. A dependency on a done or cancelled task the incoming branch
+took out stays: that branch may have archived it, and its archive.json
+isn't readable during the merge.
 
 ## 3. Claim
 
@@ -185,20 +207,31 @@ and the archive's `highestId`. That covers add-task, parse-prd (including
 `tags remove` and `tags rename` leave a tombstone
 `{ tasks: [], metadata: { highestId } }` under the old name in
 archive.json, so a tag recreated with that name numbers above it (#1064).
-A copy or rename onto that name is refused when one of its task IDs is
-at or below the tombstone's `highestId`, except a rename back (the
-tombstone's `renamedTo`).
+A copy, a rename or a `move --to-tag` onto that name is refused when one of
+its task IDs is at or below the tombstone's `highestId`, except a rename
+back (the tombstone's `renamedTo`): `assertNoRetiredIds` in
+`tag-operations.ts`, which `FileStorage.mutateTags` runs for any tag a write
+creates (#1095).
+`tags add` on that name copies the tombstone's `highestId` into the new
+tag's metadata, so a `move --to-tag` into the recreated tag takes IDs above
+it.
 A tag copy strips `metadata.github` and the claim keys from every task
 and subtask, so two tags never link the same issue (#1063).
 The merge driver merges the mark as a max and renumbers an incoming new
-task whose ID this branch used and removed (#1040).
+task whose ID this branch used and removed (#1040). An incoming task under
+an archived ID keeps it only when it is the archived task restored: the
+same `createdAt` and title, or every field when `createdAt` isn't
+recorded (#1094).
 
 Invariant everything relies on: an ID names one task for its whole life.
 The merge driver, GitHub link recovery and every in-flight AI write find a
 task by ID only.
 
 Known limits: `move --to=<id>` within a tag may name a removed ID on
-purpose, and subtask IDs within a parent can still be reused.
+purpose, and subtask IDs within a parent can still be reused. The
+destination must pass `isAssignableTaskId` (`validation/task-id.ts`): each
+part 1 or more and at most 15 digits, so `0`, `4.0` and a number past 2^53
+are refused (#1096).
 
 ## 5. tasks.json write
 

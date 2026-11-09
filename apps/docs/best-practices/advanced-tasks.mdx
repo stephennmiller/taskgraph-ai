@@ -117,22 +117,21 @@ I think subtask 5.2 would fit better as part of task 7 instead. Can you move it 
 The agent will execute:
 
 ```bash
-taskgraph move --from=5.2 --to=7.3
+taskgraph move --from=5.2 --to=7.4
 ```
 
 You can reorganize tasks in various ways:
 
-- Moving a standalone task to become a subtask: `--from=5 --to=7`
-- Moving a subtask to become a standalone task: `--from=5.2 --to=7`
-- Moving a subtask to a different parent: `--from=5.2 --to=7.3`
+- Moving a standalone task to become a subtask: `--from=6 --to=7.4` (a free subtask ID under task 7), or `taskgraph add-subtask --parent=7 --task-id=6`. A task that has subtasks of its own is refused
+- Moving a subtask to become a standalone task: `--from=5.2 --to=9` (a free task ID)
+- Moving a subtask to a different parent: `--from=5.2 --to=7.4` (a free subtask ID)
 - Reordering subtasks within the same parent: `--from=5.2 --to=5.4`
-- Moving a task to a new ID position: `--from=5 --to=25` (even if task 25 doesn't exist yet)
+- Moving a task to a new ID position: `--from=5 --to=25` (25 must be a free ID)
 - Moving multiple tasks at once: `--from=10,11,12 --to=16,17,18` (must have same number of IDs, TaskGraph will look through each position)
 
 When moving tasks to new IDs:
 
-- The system automatically creates placeholder tasks for non-existent destination IDs
-- This prevents accidental data loss during reorganization
+- The destination ID must be free: a move onto an existing task or subtask in another parent is refused, so nothing is overwritten
 - Any tasks that depend on moved tasks will have their dependencies updated
 - When moving a parent task, all its subtasks are automatically moved with it and renumbered
 

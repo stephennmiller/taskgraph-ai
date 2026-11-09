@@ -50,7 +50,8 @@ describe("mergeTasksJson with the older 'completed' status", () => {
 		const result = mergeTasksJson(base, ours, theirs);
 
 		expect(result.conflicts).toEqual([]);
-		expect(tasksOf(result.merged)[0].status).toBe('in-progress');
+		// Its only subtask is done, so the merged parent is too (#1093)
+		expect(tasksOf(result.merged)[0].status).toBe('done');
 		expect(tasksOf(result.merged)[0].subtasks).toEqual([sub('2', 'done')]);
 	});
 

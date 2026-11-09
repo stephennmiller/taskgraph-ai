@@ -1,3 +1,4 @@
+import * as os from 'node:os';
 import { describe, expect, it, vi } from 'vitest';
 import { TASK_STATUSES } from '../../../common/constants/index.js';
 import type { Task, TaskStatus } from '../../../common/types/index.js';
@@ -309,7 +310,8 @@ describe('TaskService.getTaskList', () => {
 		activeTag = 'master'
 	): TaskService => {
 		const service = new TaskService({
-			getActiveTag: () => activeTag
+			getActiveTag: () => activeTag,
+			getProjectRoot: () => os.tmpdir()
 		} as unknown as ConfigManager);
 		(service as any).storage = {
 			loadTasks: async () => (tags.length > 0 ? [task(1)] : []),

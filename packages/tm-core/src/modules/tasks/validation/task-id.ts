@@ -65,6 +65,15 @@ export function canonicalTaskId(id: string | number): string | undefined {
 	);
 }
 
+/**
+ * Whether a canonical ID can be given to a task or subtask: every part is 1
+ * or more and short enough (15 digits) that the next ID after it is still an
+ * exact number. `0`, `4.0` and `99999999999999999999` are not (#1096).
+ */
+export function isAssignableTaskId(id: string): boolean {
+	return /^[1-9]\d{0,14}(\.[1-9]\d{0,14})?$/.test(id);
+}
+
 /** canonicalTaskId, or the ID trimmed when it isn't one, for lookups to miss */
 export function normalizeTaskId(id: string | number): string {
 	return canonicalTaskId(id) ?? String(id).trim();

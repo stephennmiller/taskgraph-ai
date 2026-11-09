@@ -4,6 +4,10 @@
  *
  *   ✓ Merged tasks.json; renumbered incoming 3 → 5, 1.2 → 1.4 · feature: 2 → 3
  *
+ * or, when one branch added a dependency on a task the other removed:
+ *
+ *   ✓ Merged tasks.json; dropped dependencies on removed tasks: 5 → 2
+ *
  * or, when both branches changed the same field:
  *
  *   ✗ 2 changes to tasks.json clash; kept this branch's values
@@ -43,6 +47,13 @@ export interface MergeConflictRow {
 	kind: 'changed-both' | 'removed-ours' | 'removed-theirs' | 'archived-theirs';
 	ours: unknown;
 	theirs: unknown;
+}
+
+/** A dependency the merge took out: task `id` depended on removed `dependency` */
+export interface MergeDroppedRow {
+	tag: string;
+	id: string;
+	dependency: string;
 }
 
 /** The tag every project has; its name is left out of the output */
@@ -106,6 +117,34 @@ export function formatMergeRenumbered(
 	return `${chalk.green('✓')}${lead.slice(1)}${describeRenumbered(rows, width - lead.length)}`;
 }
 
+/**
+ * The one line for dependencies the merge dropped because the other branch
+ * removed their target, as `<task> → <removed task>`. Empty when there are
+ * none.
+ *
+ * @param clean - false when the merge also conflicted, as in
+ *   formatMergeRenumbered
+ */
+export function formatMergeDropped(
+	rows: MergeDroppedRow[],
+	clean = true,
+	width = terminalWidth()
+): string {
+	rows = sanitizeForTerminal(rows);
+	if (rows.length === 0) return '';
+	const moves = rows.map((row) => ({
+		tag: row.tag,
+		from: row.id,
+		to: row.dependency
+	}));
+	if (!clean) {
+		const lead = 'Dropped dependencies on removed tasks: ';
+		return theme.muted(lead + describeRenumbered(moves, width - lead.length));
+	}
+	const lead = '✓ Merged tasks.json; dropped dependencies on removed tasks: ';
+	return `${chalk.green('✓')}${lead.slice(1)}${describeRenumbered(moves, width - lead.length)}`;
+}
+
 const show = (value: unknown): string => {
 	if (value === undefined) return 'none';
 	if (typeof value === 'string') return value.replace(/\s+/g, ' ');
@@ -117,12 +156,14 @@ const show = (value: unknown): string => {
  *
  * @param tasksFile - The path git passed (`%P`): tasks.json or archive.json
  * @param renumbered - Incoming items that were also renumbered, as a note
+ * @param dropped - Dependencies on removed tasks that were dropped, as a note
  */
 export function formatMergeConflicts(
 	conflicts: MergeConflictRow[],
 	tasksFile: string,
 	renumbered: MergeRenumberedRow[] = [],
-	width = terminalWidth()
+	width = terminalWidth(),
+	dropped: MergeDroppedRow[] = []
 ): string {
 	conflicts = sanitizeForTerminal(conflicts);
 	renumbered = sanitizeForTerminal(renumbered);
@@ -165,7 +206,10 @@ export function formatMergeConflicts(
 		return `${indent}${text}`;
 	});
 
-	const note = formatMergeRenumbered(renumbered, false, width);
+	const notes = [
+		formatMergeRenumbered(renumbered, false, width),
+		formatMergeDropped(dropped, false, width)
+	].filter(Boolean);
 	// Renumbering this branch's task frees the ID for the archived one
 	const reused = conflicts.filter((row) => row.kind === 'archived-theirs');
 	const from = reused.length === 1 ? reused[0].id : '<id>';
@@ -177,7 +221,7 @@ export function formatMergeConflicts(
 		reused.length > 0
 			? `Run taskgraph move --from=${from} --to=<free ID>${tag}, then git add both files`
 			: `Edit ${tasksFile} to choose, then git add it`;
-	return [head, ...rows, ...(note ? [note] : []), theme.muted(fix)].join('\n');
+	return [head, ...rows, ...notes, theme.muted(fix)].join('\n');
 }
 
 export type MergeDriverSetup = {

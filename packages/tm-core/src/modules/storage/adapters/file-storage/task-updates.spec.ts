@@ -102,6 +102,40 @@ describe('setTaskStatusIn parent auto-status', () => {
 		expect(tasks?.[0].status).toBe('review');
 	});
 
+	it('keeps a parent marked done when a leftover subtask is cancelled or finished, reopens it when one is started (#1107)', () => {
+		const done = () => parent('done', 'pending');
+
+		const cancelled = setTaskStatusIn(done(), '1.1', 'cancelled', {}).tasks;
+		const finished = setTaskStatusIn(done(), '1.1', 'done', {}).tasks;
+		const started = setTaskStatusIn(done(), '1.1', 'in-progress', {}).tasks;
+
+		expect(cancelled?.[0].status).toBe('done');
+		expect(finished?.[0].status).toBe('done');
+		expect(started?.[0].status).toBe('in-progress');
+	});
+
+	it.each(['deferred', 'blocked', 'review'] as const)(
+		'keeps a parent marked done when a leftover subtask is set %s, so cancelling it later leaves the parent done (#1107)',
+		(held) => {
+			const first = setTaskStatusIn(parent('done', 'pending'), '1.1', held, {});
+			const then = setTaskStatusIn(first.tasks ?? [], '1.1', 'cancelled', {});
+
+			expect(first.tasks?.[0].status).toBe('done');
+			expect(then.tasks?.[0].status).toBe('done');
+		}
+	);
+
+	it('reopens a parent marked done when a finished subtask is set blocked', () => {
+		const { tasks } = setTaskStatusIn(
+			parent('done', 'done'),
+			'1.1',
+			'blocked',
+			{}
+		);
+
+		expect(tasks?.[0].status).toBe('in-progress');
+	});
+
 	it('leaves the parent as it was when every subtask is cancelled', () => {
 		const { tasks } = setTaskStatusIn(
 			parent('pending', 'cancelled'),
