@@ -7,7 +7,7 @@
  * the caller shows the result.
  */
 
-import { execFileSync } from 'node:child_process';
+import { runGitSync } from '../../common/utils/git-utils.js';
 import fs from 'node:fs';
 import path from 'node:path';
 import {
@@ -289,10 +289,7 @@ export function initializeProject(
 	// A repository unless --no-git or there already is one
 	try {
 		if (initGit && !isInsideGitWorkTree(targetDir)) {
-			execFileSync('git', ['init'], {
-				cwd: targetDir,
-				stdio: ['ignore', 'ignore', 'pipe']
-			});
+			runGitSync(['init'], { cwd: targetDir });
 		}
 	} catch (error) {
 		const failure = error as NodeJS.ErrnoException & { stderr?: Buffer };

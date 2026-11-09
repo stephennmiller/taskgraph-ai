@@ -6,7 +6,7 @@
  * either since (another branch, a pull, a hand edit) needs a new one.
  */
 
-import { execFileSync } from 'node:child_process';
+import { runGitSync } from '../../common/utils/git-utils.js';
 import { createHash, randomUUID } from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
@@ -174,24 +174,9 @@ function trackedFiles(
 	files: string[]
 ): (file: string) => boolean {
 	try {
-		const out = execFileSync(
-			'git',
-			[
-				'-c',
-				'core.fsmonitor=false',
-				'-c',
-				'safe.bareRepository=explicit',
-				'ls-files',
-				'-z',
-				'--',
-				...files.map((file) => `:(icase)${file}`)
-			],
-			{
-				cwd: root,
-				encoding: 'utf8',
-				stdio: ['ignore', 'pipe', 'ignore'],
-				timeout: 10000
-			}
+		const out = runGitSync(
+			['ls-files', '-z', '--', ...files.map((file) => `:(icase)${file}`)],
+			{ cwd: root, timeoutMs: 10000 }
 		);
 		const tracked = new Set(out.toLowerCase().split('\0'));
 		return (file) => tracked.has(file.toLowerCase());

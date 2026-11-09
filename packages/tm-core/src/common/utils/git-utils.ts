@@ -3,12 +3,87 @@
  * Git integration utilities using raw git commands and gh CLI
  */
 
-import { type ChildProcess, exec, execFile } from 'child_process';
-import { promisify } from 'util';
+import { type ChildProcess, execFile, execFileSync } from 'node:child_process';
+import { promisify } from 'node:util';
 import { ERROR_CODES, errorWithHint } from '../errors/taskgraph-error.js';
 import { formatTimeout } from './timeout-from-env.js';
 
-const execAsync = promisify(exec);
+/** How long one git call may run before it is killed, unless the caller says */
+const GIT_TIMEOUT_MS = 5 * 60_000;
+
+interface GitOptions {
+	cwd: string;
+	/** Default 5 minutes; 0 for no limit */
+	timeoutMs?: number;
+	/** Added to the environment git runs with */
+	env?: NodeJS.ProcessEnv;
+}
+
+/**
+ * The argv and options every git call runs with: an argument array, never a
+ * shell; no pager or credential prompt; no program named by the repository's
+ * `core.fsmonitor`; no bare repository found by walking up; and on Windows
+ * no git.exe from the project folder for a hook or shell git starts (GHSA-3fgc;
+ * the CLI and MCP entry points set the same for the lookup of git itself)
+ */
+function gitCall(args: string[], options: GitOptions) {
+	return {
+		args: [
+			'--no-pager',
+			'-c',
+			'core.fsmonitor=false',
+			'-c',
+			'safe.bareRepository=explicit',
+			...args
+		],
+		options: {
+			cwd: options.cwd,
+			encoding: 'utf8' as const,
+			timeout: options.timeoutMs ?? GIT_TIMEOUT_MS,
+			maxBuffer: 64 * 1024 * 1024,
+			windowsHide: true,
+			env: {
+				...process.env,
+				...options.env,
+				GIT_TERMINAL_PROMPT: '0',
+				NoDefaultCurrentDirectoryInExePath: '1'
+			}
+		}
+	};
+}
+
+/**
+ * Run git. Rejects on a non-zero exit, a timeout or a missing git with
+ * execFile's error, which keeps git's stderr in its message and carries
+ * `code` (the exit code, or `ENOENT`), `stdout` and `stderr`.
+ */
+export async function runGit(
+	args: string[],
+	options: GitOptions
+): Promise<{ stdout: string; stderr: string }> {
+	const call = gitCall(args, options);
+	return promisify(execFile)('git', call.args, call.options);
+}
+
+/** runGit for callers that must stay synchronous; returns stdout */
+export function runGitSync(args: string[], options: GitOptions): string {
+	const call = gitCall(args, options);
+	return execFileSync('git', call.args, {
+		...call.options,
+		stdio: ['ignore', 'pipe', 'pipe']
+	});
+}
+
+/**
+ * `ref` for a git argument list where git takes no `--` before it; throws on
+ * one starting with `-`, which git would read as an option
+ */
+export function gitRef(ref: string): string {
+	if (ref.startsWith('-')) {
+		throw new Error(`"${ref}" isn't a git ref: it starts with "-"`);
+	}
+	return ref;
+}
 
 /**
  * GitHub repository information
@@ -28,7 +103,7 @@ export async function isGitRepository(projectRoot: string): Promise<boolean> {
 	}
 
 	try {
-		await execAsync('git rev-parse --git-dir', { cwd: projectRoot });
+		await runGit(['rev-parse', '--git-dir'], { cwd: projectRoot });
 		return true;
 	} catch (error) {
 		return false;
@@ -43,9 +118,12 @@ export async function getHeadCommit(
 	projectRoot: string
 ): Promise<string | null> {
 	try {
-		const { stdout } = await execAsync('git rev-parse --verify --quiet HEAD', {
-			cwd: projectRoot
-		});
+		const { stdout } = await runGit(
+			['rev-parse', '--verify', '--quiet', 'HEAD'],
+			{
+				cwd: projectRoot
+			}
+		);
 		return stdout.trim() || null;
 	} catch {
 		return null;
@@ -63,7 +141,7 @@ export async function getCurrentBranch(
 	}
 
 	try {
-		const { stdout } = await execAsync('git rev-parse --abbrev-ref HEAD', {
+		const { stdout } = await runGit(['rev-parse', '--abbrev-ref', 'HEAD'], {
 			cwd: projectRoot
 		});
 		return stdout.trim();
