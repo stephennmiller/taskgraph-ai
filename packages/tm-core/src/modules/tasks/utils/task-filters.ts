@@ -311,3 +311,23 @@ export function parseStatusFilter(status?: string): TaskStatus[] | undefined {
 	for (const s of statuses) assertTaskStatus(s);
 	return statuses as TaskStatus[];
 }
+
+/**
+ * The task with only its subtasks of these statuses, and the statuses kept
+ * with the number of subtasks before filtering; the task as it is without
+ * statuses
+ */
+export function filterSubtasks(
+	task: Task,
+	statuses: TaskStatus[] | undefined
+): { task: Task; subtaskFilter?: { statuses: TaskStatus[]; total: number } } {
+	if (!statuses) return { task };
+	const subtasks = task.subtasks ?? [];
+	return {
+		task: {
+			...task,
+			subtasks: subtasks.filter((st) => statuses.includes(st.status))
+		},
+		subtaskFilter: { statuses, total: subtasks.length }
+	};
+}

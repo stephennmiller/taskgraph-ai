@@ -250,7 +250,7 @@ describe('archive', () => {
 		expect(ids(readArchive().master.tasks)).toEqual(['1']);
 	});
 
-	it("moves a tag's archived tasks when the tag is renamed, and drops them when it is deleted", async () => {
+	it("moves a tag's archived tasks when the tag is renamed, and drops them when it is deleted, keeping each old name's highest ID", async () => {
 		await setup({
 			master: [createTask({ id: 1, title: 'Main' })],
 			feature: [
@@ -260,12 +260,14 @@ describe('archive', () => {
 		await tmCore.tasks.archive({ tag: 'feature' });
 		const storage = new FileStorage(projectDir);
 
+		const tombstone = { tasks: [], metadata: { highestId: 1 } };
+
 		await storage.renameTag('feature', 'launch');
-		expect(readArchive().feature).toBeUndefined();
+		expect(readArchive().feature).toMatchObject(tombstone);
 		expect(ids(readArchive().launch.tasks)).toEqual(['1']);
 
 		await storage.deleteTag('launch');
-		expect(readArchive().launch).toBeUndefined();
+		expect(readArchive().launch).toMatchObject(tombstone);
 	});
 	it("gives a copied tag the source's archive, so it never reuses an archived ID", async () => {
 		await setup({

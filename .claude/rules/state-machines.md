@@ -68,7 +68,8 @@ Guards and side effects:
   Definition of Done) and, in a loop, `loop.smokeCommand`. `force` skips
   both. GitHub pull always forces.
 - Moving to `pending`, `blocked` or `deferred` clears the claim (machine 3).
-- `update-task` and `update-subtask` never change a status. Only
+- `update-task` and `update-subtask` never change a status, except that
+  a rewrite that drops subtasks settles the parent (section 2). Only
   `set-status`, the loop, GitHub pull and the parallel runner do.
 
 Invariants:
@@ -82,7 +83,8 @@ Invariants:
 from its subtasks. Every writer that changes a parent's subtasks runs it:
 subtask `set-status` (`setSubtaskStatusIn`), add-subtask, move (each parent
 of a dotted source or destination), remove-subtask, remove-task of a
-subtask, and expand. Each passes the parent's done gate (acceptance
+subtask, expand, and an AI rewrite that drops subtasks (update-task,
+`update --from`). Each passes the parent's done gate (acceptance
 criteria and Definition of Done).
 
 | Subtasks after the change      | Parent becomes                           |
@@ -168,6 +170,14 @@ held, on every write (`applyTagUpdate` in `tag-update.ts`). `nextTaskId`
 and `withFreeIds` hand out IDs above the highest of that mark, the live IDs
 and the archive's `highestId`. That covers add-task, parse-prd (including
 `--force`), `remove-task --convert`, GitHub import and moves between tags.
+`tags remove` and `tags rename` leave a tombstone
+`{ tasks: [], metadata: { highestId } }` under the old name in
+archive.json, so a tag recreated with that name numbers above it (#1064).
+A copy or rename onto that name is refused when one of its task IDs is
+at or below the tombstone's `highestId`, except a rename back (the
+tombstone's `renamedTo`).
+A tag copy strips `metadata.github` and the claim keys from every task
+and subtask, so two tags never link the same issue (#1063).
 The merge driver merges the mark as a max and renumbers an incoming new
 task whose ID this branch used and removed (#1040).
 

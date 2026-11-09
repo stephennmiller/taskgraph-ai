@@ -16,6 +16,7 @@ import type { Subtask } from '@tm/core';
 import chalk from 'chalk';
 import { Command } from 'commander';
 import { formatTaskDetail } from '../ui/formatters/task-detail-formatters.js';
+import { formatPlainTaskList } from '../ui/formatters/task-list-formatters.js';
 import { displayCommandHeader } from '../utils/display-helpers.js';
 import { displayError, printError } from '../utils/error-handler.js';
 import { jsonOption, printJson } from '../utils/json-output.js';
@@ -74,6 +75,8 @@ export class ShowCommand extends Command {
 	private blocked = false;
 	/** Commits that name the single task shown (#954) */
 	private commits: Array<{ sha: string; subject: string }> = [];
+	/** `--status` kept these subtask statuses of the single task, out of `total` */
+	private subtaskFilter?: { statuses: string[]; total: number };
 
 	constructor(name?: string) {
 		super(name || 'show');
@@ -185,7 +188,10 @@ export class ShowCommand extends Command {
 
 		// Get the task
 		this.requestedId = taskId;
-		const result = await this.tmCore.tasks.get(taskId, options.tag);
+		const result = await this.tmCore.tasks.get(taskId, options.tag, {
+			subtaskStatus: options.status
+		});
+		if ('subtaskFilter' in result) this.subtaskFilter = result.subtaskFilter;
 		if (result.task) {
 			this.blocked = (
 				await this.tmCore.tasks.explainBlockers(taskId, { tag: options.tag })
@@ -230,7 +236,9 @@ export class ShowCommand extends Command {
 
 		// Get each task individually
 		for (const taskId of taskIds) {
-			const result = await this.tmCore.tasks.get(taskId, options.tag);
+			const result = await this.tmCore.tasks.get(taskId, options.tag, {
+				subtaskStatus: options.status
+			});
 			const task = await this.withPrdSection(taskId, result.task, options.tag);
 			if (task) {
 				tasks.push(task);
@@ -321,7 +329,7 @@ export class ShowCommand extends Command {
 			formatTaskDetail(result.task, {
 				id: result.originalTaskId,
 				prdSection: result.task.prdSection,
-				statusFilter: options.status,
+				subtaskFilter: this.subtaskFilter,
 				blocked: this.blocked,
 				rawText: !process.stdout.isTTY,
 				checklist: this.tmCore?.tasks.getChecklist(
@@ -365,6 +373,22 @@ export class ShowCommand extends Command {
 				chalk.yellow(`${gap}⚠ Not found: ${result.notFound.join(', ')}`)
 			);
 			printed = true;
+		}
+
+		// A pipe gets list's plain lines: no heading, box or color (#1069)
+		if (
+			!process.stdout.isTTY &&
+			this.getOptionValueSource('format') !== 'cli'
+		) {
+			const gap = printed ? '\n' : '';
+			console.log(
+				gap +
+					formatTaskData(
+						formatPlainTaskList(result.tasks, { withSubtasks: true }),
+						!shellOptsOutOfTaskDataFence()
+					)
+			);
+			return;
 		}
 
 		// Task table
