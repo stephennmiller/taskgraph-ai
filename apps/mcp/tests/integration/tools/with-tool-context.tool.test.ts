@@ -117,6 +117,62 @@ describe('tools wrapped in withToolContext (#268)', () => {
 		expect(readTasks()[0].subtasks).toEqual([]);
 	}, 30000);
 
+	it('refuses a projectRoot inside the project and starts no project there (#1108)', () => {
+		const sub = path.join(testDir, 'sub');
+		fs.mkdirSync(sub);
+
+		expect(() => callMCPTool('get_tasks', { projectRoot: sub })).toThrow(
+			'No TaskGraph project at'
+		);
+		expect(() =>
+			callMCPTool('add_task', {
+				projectRoot: sub,
+				title: 'Stray',
+				description: 'Would start a second project'
+			})
+		).toThrow('No TaskGraph project at');
+		expect(fs.readdirSync(sub)).toEqual([]);
+	}, 60000);
+
+	it('refuses a projectRoot that does not exist without creating it (#1108)', () => {
+		const missing = path.join(testDir, 'missing');
+
+		expect(() =>
+			callMCPTool('set_task_status', {
+				projectRoot: missing,
+				id: '1',
+				status: 'done'
+			})
+		).toThrow('No TaskGraph project at');
+		expect(fs.existsSync(missing)).toBe(false);
+	}, 30000);
+
+	it('move_task with toTag alone moves from the current tag (#1109)', () => {
+		callMCPTool('move_task', {
+			from: '2',
+			toTag: 'feature',
+			projectRoot: testDir
+		});
+
+		const file = JSON.parse(fs.readFileSync(tasksPath, 'utf8'));
+		expect(file.master.tasks.map((t: any) => String(t.id))).toEqual(['1']);
+		expect(file.feature.tasks.map((t: any) => String(t.id))).toEqual(['2']);
+	}, 30000);
+
+	it('move_task refuses a destination ID with toTag instead of renumbering in the current tag (#1109)', () => {
+		const before = fs.readFileSync(tasksPath, 'utf8');
+
+		expect(() =>
+			callMCPTool('move_task', {
+				from: '2',
+				to: '50',
+				toTag: 'feature',
+				projectRoot: testDir
+			})
+		).toThrow('takes no destination ID');
+		expect(fs.readFileSync(tasksPath, 'utf8')).toBe(before);
+	}, 30000);
+
 	it('models replies with the configured models', () => {
 		const out = callMCPTool('models', { projectRoot: testDir });
 		expect(typeof out.data.activeModels.main.modelId).toBe('string');

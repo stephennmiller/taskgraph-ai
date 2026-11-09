@@ -11,7 +11,15 @@ import {
 } from '@tm/core';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const tasks = { move: vi.fn(), moveToTag: vi.fn() };
+const tasks = {
+	move: vi.fn(),
+	moveToTag: vi.fn(),
+	// tm-core's rule is tested there; this stands in for a request it accepts
+	moveTags: vi.fn((request: { fromTag?: string; toTag?: string }) => ({
+		fromTag: request.fromTag ?? 'master',
+		toTag: request.toTag
+	}))
+};
 const config = { getActiveTag: vi.fn(() => 'master') };
 
 vi.mock('@tm/core', async (importOriginal) => ({
@@ -94,6 +102,34 @@ describe('move_task', () => {
 			fromTag: 'feat',
 			toTag: 'master'
 		});
+	});
+
+	it('moves from the tag tm-core resolves when only toTag is given (#1109)', async () => {
+		tasks.moveToTag.mockResolvedValue({ movedTasks: [] });
+
+		await register().execute({ from: '2', toTag: 'feat', projectRoot }, ctx);
+
+		expect(tasks.moveToTag).toHaveBeenCalledWith(['2'], 'master', 'feat', {
+			withDependencies: false,
+			ignoreDependencies: false
+		});
+		expect(tasks.move).not.toHaveBeenCalled();
+	});
+
+	it('replies with the error and moves nothing when tm-core refuses the request (#1109)', async () => {
+		tasks.moveTags.mockImplementationOnce(() => {
+			throw new Error('takes no destination ID');
+		});
+
+		const result = await register().execute(
+			{ from: '2', to: '50', toTag: 'feat', projectRoot },
+			ctx
+		);
+
+		expect(result.isError).toBe(true);
+		expect(result.content[0].text).toContain('takes no destination ID');
+		expect(tasks.move).not.toHaveBeenCalled();
+		expect(tasks.moveToTag).not.toHaveBeenCalled();
 	});
 
 	describe('a cross-tag move refused for dependency conflicts (#819)', () => {

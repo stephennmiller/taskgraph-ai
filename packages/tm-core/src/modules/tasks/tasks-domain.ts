@@ -224,6 +224,7 @@ export class TasksDomain {
 	addSubtask: TaskEditCommands['addSubtask'] = (...a) =>
 		this.edits.addSubtask(...a);
 	move: TaskEditCommands['move'] = (...a) => this.edits.move(...a);
+	moveTags: TaskEditCommands['moveTags'] = (...a) => this.edits.moveTags(...a);
 	moveToTag: TaskEditCommands['moveToTag'] = (...a) =>
 		this.edits.moveToTag(...a);
 

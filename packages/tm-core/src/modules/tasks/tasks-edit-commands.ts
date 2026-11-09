@@ -292,6 +292,30 @@ export class TaskEditCommands {
 	}
 
 	/**
+	 * Which tags a move request means, for the CLI and MCP alike: the source
+	 * is `fromTag`, else `tag`, else the current tag, and `toTag` is set only
+	 * when the move goes to another tag. Such a move keeps task IDs, so it is
+	 * refused with a destination ID (`to`) instead of ignoring one of the two.
+	 */
+	moveTags(request: {
+		to?: string;
+		tag?: string;
+		fromTag?: string;
+		toTag?: string;
+	}): { fromTag: string; toTag?: string } {
+		const fromTag =
+			request.fromTag || request.tag || this.configManager.getActiveTag();
+		if (!request.toTag || request.toTag === fromTag) return { fromTag };
+		if (request.to) {
+			throw new TaskGraphError(
+				`A move to another tag keeps task IDs, so it takes no destination ID. Leave out the destination ID to move to tag "${request.toTag}", or the target tag to renumber within "${fromTag}"`,
+				ERROR_CODES.VALIDATION_ERROR
+			);
+		}
+		return { fromTag, toTag: request.toTag };
+	}
+
+	/**
 	 * Move tasks, with their subtasks, to another tag (created if missing),
 	 * keeping their IDs where the target tag doesn't use them (a taken ID
 	 * becomes the next free one), in one locked write. Dependencies left in the source
