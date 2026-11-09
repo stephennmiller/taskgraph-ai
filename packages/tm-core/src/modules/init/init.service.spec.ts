@@ -244,6 +244,39 @@ describe('initializeProject', () => {
 		]);
 	});
 
+	it('says once that the old unanchored ignore lines stopped hiding other tasks folders', () => {
+		write('.gitignore', '# Task files\ntasks.json\ntasks/\n');
+		write('tasks/notes.txt', 'private');
+
+		const first = initializeProject({
+			projectRoot: projectDir,
+			claudeCode: false
+		});
+		const second = initializeProject({
+			projectRoot: projectDir,
+			claudeCode: false
+		});
+
+		expect(first.hints).toEqual([
+			{
+				path: '.gitignore',
+				note: 'now ignores only `.taskgraph/tasks/`; a `tasks/` folder or `tasks.json` elsewhere is no longer ignored'
+			}
+		]);
+		expect(second.hints).toEqual([]);
+	});
+
+	it("gives no hint when the old lines were commented out or are the user's own", () => {
+		write('.gitignore', 'tasks/\n\n# Task files\n# tasks.json\n# tasks/\n');
+
+		const result = initializeProject({
+			projectRoot: projectDir,
+			claudeCode: false
+		});
+
+		expect(result.hints).toEqual([]);
+	});
+
 	it('reports a step that failed and carries on', () => {
 		write('.taskgraph/config.json', '{ not json');
 

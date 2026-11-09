@@ -283,6 +283,26 @@ export function readStoreTasksInGit(targetPath: string): boolean | undefined {
 }
 
 /**
+ * Does init's section hold an uncommented line of the pair older releases
+ * wrote? Rewriting it to the anchored line stops ignoring every other
+ * `tasks/` folder and `tasks.json` in the repo, so init says so.
+ * @param {string} targetPath - Path to the .gitignore file
+ */
+export function ignoresLegacyTaskPaths(targetPath: string): boolean {
+	try {
+		let underHeader = false;
+		for (const line of fs.readFileSync(targetPath, 'utf8').split('\n')) {
+			if (line.trim() === TASK_FILES_COMMENT) underHeader = true;
+			else if (!underHeader || !isTaskLine(line)) underHeader = false;
+			else if (LEGACY_TASK_PATTERNS.includes(line.trim())) return true;
+		}
+	} catch {
+		// No .gitignore: nothing was ignored
+	}
+	return false;
+}
+
+/**
  * Manages .gitignore file creation and updates with task file preferences
  * @param {string} targetPath - Path to the .gitignore file
  * @param {string} content - Template content for .gitignore
