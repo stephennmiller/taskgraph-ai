@@ -328,7 +328,17 @@ export class FileStorage implements IStorage {
 				const outcome = await mutateTagsIn(
 					this.formatHandler,
 					data,
-					mutate,
+					async (tags, metadata) => {
+						const had = new Set(tags.keys());
+						const change = await mutate(tags, metadata);
+						// A tag this write creates (move --to-tag) is checked as a copy is (#1095)
+						for (const tag of change.changed) {
+							if (!had.has(tag)) {
+								this.tagOps.assertNoRetiredIds(tag, tags.get(tag));
+							}
+						}
+						return change;
+					},
 					this.guardDone()
 				);
 				result = outcome.result;

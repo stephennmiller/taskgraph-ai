@@ -242,7 +242,9 @@ export class TagService {
 			return { tagName: name, deleted: false, cancelled: true };
 		}
 
-		if (wasCurrentTag) await assertStateWritable(this.context.projectRoot);
+		if (wasCurrentTag) {
+			await assertStateWritable(this.context.projectRoot, 'master');
+		}
 		await this.storage.deleteTag(name);
 		if (wasCurrentTag) {
 			await recordCurrentTag(this.context.projectRoot, 'master');
@@ -285,7 +287,9 @@ export class TagService {
 		}
 
 		const wasCurrentTag = this.context.getActiveTag() === oldName;
-		if (wasCurrentTag) await assertStateWritable(this.context.projectRoot);
+		if (wasCurrentTag) {
+			await assertStateWritable(this.context.projectRoot, newName);
+		}
 		await this.storage.renameTag(oldName, newName);
 		if (wasCurrentTag) {
 			await recordCurrentTag(this.context.projectRoot, newName);

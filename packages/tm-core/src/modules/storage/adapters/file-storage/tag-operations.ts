@@ -254,11 +254,7 @@ export class TagOperations {
 	 * by tag and ID, so the task would take over the old task's issue. A tag
 	 * renamed back to its old name (the tombstone's `renamedTo`) is its own.
 	 */
-	private assertNoRetiredIds(
-		tag: string,
-		tasks: unknown,
-		renamedFrom?: string
-	): void {
+	assertNoRetiredIds(tag: string, tasks: unknown, renamedFrom?: string): void {
 		const { metadata } = archiveTag(
 			readArchiveSync(this.pathResolver.getArchivePath()),
 			tag

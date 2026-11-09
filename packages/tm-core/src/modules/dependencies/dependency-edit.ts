@@ -102,6 +102,33 @@ function findTarget(
 	return { item: subtask, parentId: String(parent.id) };
 }
 
+/**
+ * Refuse a dependency on a task or subtask the tag doesn't have: the
+ * dependent would never be ready
+ * @param dependencyId - A full ID, `3` or `3.2`
+ * @param archivedIds - The tag's archived task IDs
+ */
+export function assertDependencyExists(
+	tasks: Task[],
+	dependencyId: string,
+	archivedIds: ReadonlySet<string>
+): void {
+	if (createTaskLookup(tasks)(dependencyId)) return;
+	if (isArchivedReference(dependencyId, archivedIds)) {
+		const archivedId = dependencyId.split('.')[0];
+		throw errorWithHint(
+			ERROR_CODES.TASK_NOT_FOUND,
+			`Task ${archivedId} is archived, so it already counts as done`,
+			`Run \`taskgraph archive restore ${archivedId}\` to depend on it again`
+		);
+	}
+	throw errorWithHint(
+		ERROR_CODES.TASK_NOT_FOUND,
+		`Task ${dependencyId} not found`,
+		LIST_HINT
+	);
+}
+
 /** `related to task 3`, `marked as discovered from task 3` */
 function describeLink(type: NonBlockingLinkType, dependencyId: string): string {
 	return type === 'related'
@@ -165,21 +192,7 @@ export function addDependencyIn(
 		message
 	});
 
-	if (!createTaskLookup(tasks)(dependencyId)) {
-		if (isArchivedReference(dependencyId, archivedIds)) {
-			const archivedId = dependencyId.split('.')[0];
-			throw errorWithHint(
-				ERROR_CODES.TASK_NOT_FOUND,
-				`Task ${archivedId} is archived, so it already counts as done`,
-				`Run \`taskgraph archive restore ${archivedId}\` to depend on it again`
-			);
-		}
-		throw errorWithHint(
-			ERROR_CODES.TASK_NOT_FOUND,
-			`Task ${dependencyId} not found`,
-			LIST_HINT
-		);
-	}
+	assertDependencyExists(tasks, dependencyId, archivedIds);
 
 	const { item, parentId } = findTarget(tasks, taskId);
 	if (!item.dependencies) item.dependencies = [];
