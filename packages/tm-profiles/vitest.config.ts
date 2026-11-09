@@ -2,7 +2,7 @@ import { defineConfig } from 'vitest/config';
 
 /**
  * Package-specific Vitest configuration for @tm/profiles
- * Covers the shell utilities and the plugin command files
+ * Covers the cleanup of old slash command files
  */
 export default defineConfig({
 	test: {

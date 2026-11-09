@@ -32,7 +32,6 @@
 				"jsonrepair",
 				"ora",
 				"proper-lockfile",
-				"simple-git",
 				"terminal-link"
 			]
 		},

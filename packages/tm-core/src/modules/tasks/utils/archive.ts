@@ -20,7 +20,6 @@ import path from 'node:path';
 import { isTaskComplete } from '../../../common/constants/index.js';
 import type { Task } from '../../../common/types/index.js';
 import { resolveSubtaskDependency } from '../../dependencies/subtask-dependency.js';
-import { FileOperations } from '../../storage/adapters/file-storage/file-operations.js';
 import { normalizeTaskStatuses } from './legacy-status.js';
 
 /** Days a finished task stays in tasks.json before `archive` moves it */
@@ -538,55 +537,4 @@ export function dropArchiveTag(
 	if (ownSection(archive, tag) === undefined) return null;
 	const { [tag]: _dropped, ...rest } = archive;
 	return rest;
-}
-
-/**
- * Apply a tag change to archive.json under its lock (the same lock tm-core's
- * archive and restore take), with an atomic write, so a concurrent archive
- * run's tasks are never lost. Does nothing when there is no archive or the
- * tag has nothing archived.
- */
-async function updateArchiveFile(
-	tasksPath: string,
-	change: (archive: ArchiveData) => ArchiveData | null
-): Promise<void> {
-	const archivePath = archivePathFor(tasksPath);
-	const fileOps = new FileOperations();
-	if (!(await fileOps.exists(archivePath))) return;
-	await fileOps.modifyJson(
-		archivePath,
-		(current: ArchiveData) => change(current ?? {}) ?? current
-	);
-}
-
-/** Move a renamed tag's archived tasks to its new name (see renameArchiveTag) */
-export function renameArchivedTag(
-	tasksPath: string,
-	oldTag: string,
-	newTag: string
-): Promise<void> {
-	return updateArchiveFile(tasksPath, (archive) =>
-		renameArchiveTag(archive, oldTag, newTag)
-	);
-}
-
-/** Remove a deleted tag's archived tasks (see dropArchiveTag) */
-export function deleteArchivedTag(
-	tasksPath: string,
-	tag: string
-): Promise<void> {
-	return updateArchiveFile(tasksPath, (archive) =>
-		dropArchiveTag(archive, tag)
-	);
-}
-
-/** Copy a tag's archived tasks to a copy of the tag (see copyArchiveTag) */
-export function copyArchivedTag(
-	tasksPath: string,
-	fromTag: string,
-	toTag: string
-): Promise<void> {
-	return updateArchiveFile(tasksPath, (archive) =>
-		copyArchiveTag(archive, fromTag, toTag)
-	);
 }
