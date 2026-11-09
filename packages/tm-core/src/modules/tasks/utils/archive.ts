@@ -440,25 +440,55 @@ function readTagSync(tasksPath: string, tag: string): unknown {
 
 /**
  * The archive with a tag's section moved to a new tag name, for a tag
- * rename. A section already under the new name (left by a tag deleted
- * before deletes cleaned up the archive) is replaced.
- * @returns null when the old tag has nothing archived
+ * rename. A section already under the new name (a deleted tag's tombstone,
+ * or one left by a delete before deletes cleaned up the archive) is
+ * replaced, keeping its `highestId`. The old name keeps a tombstone (see
+ * dropArchiveTag).
+ * @param highestId - The highest ID the tag held in tasks.json (highestTaskId)
+ * @returns null when there is nothing to record
  */
 export function renameArchiveTag(
 	archive: ArchiveData,
 	oldTag: string,
-	newTag: string
+	newTag: string,
+	highestId = 0
 ): ArchiveData | null {
-	const section = ownSection(archive, oldTag);
-	if (section === undefined) return null;
-	const { [oldTag]: _old, ...rest } = archive;
-	return { ...rest, [newTag]: section as ArchiveTagData };
+	const moved =
+		ownSection(archive, oldTag) === undefined
+			? archive
+			: { ...archive, [newTag]: sectionFor(archive, oldTag, newTag) };
+	return dropArchiveTag(moved, oldTag, highestId);
+}
+
+/**
+ * A copy of `fromTag`'s section for `toTag`, with `highestId` covering what
+ * both names reserve, so a tombstone under `toTag` is never lowered
+ */
+function sectionFor(
+	archive: ArchiveData,
+	fromTag: string,
+	toTag: string
+): ArchiveTagData {
+	const section = structuredClone(
+		ownSection(archive, fromTag)
+	) as ArchiveTagData;
+	return {
+		...section,
+		metadata: {
+			...section.metadata,
+			highestId: Math.max(
+				archiveTag(archive, fromTag).metadata.highestId,
+				archiveTag(archive, toTag).metadata.highestId
+			)
+		}
+	};
 }
 
 /**
  * The archive with a copy of a tag's section under a new tag name, for a tag
  * copy: the copied tasks keep their dependencies on archived tasks (which
- * still count as done), and the new tag never reuses an archived ID
+ * still count as done), and the new tag never reuses an archived ID or one
+ * a deleted tag of that name used
  * @returns null when the source tag has nothing archived
  */
 export function copyArchiveTag(
@@ -466,20 +496,33 @@ export function copyArchiveTag(
 	fromTag: string,
 	toTag: string
 ): ArchiveData | null {
-	const section = ownSection(archive, fromTag);
-	if (section === undefined) return null;
-	return { ...archive, [toTag]: structuredClone(section) as ArchiveTagData };
+	if (ownSection(archive, fromTag) === undefined) return null;
+	return { ...archive, [toTag]: sectionFor(archive, fromTag, toTag) };
 }
 
 /**
- * The archive without a tag's section, for a tag delete: its archived tasks
- * go with the tag
- * @returns null when the tag has nothing archived
+ * The archive with a tag's archived tasks dropped, for a tag delete. A
+ * tombstone `{ tasks: [], metadata: { highestId } }` stays under the name,
+ * so a tag created later with that name never reuses one of its IDs (an ID
+ * names one task for its whole life, and GitHub link recovery relies on it).
+ * @param highestId - The highest ID the tag held in tasks.json (highestTaskId)
+ * @returns null when there is nothing to record
  */
 export function dropArchiveTag(
 	archive: ArchiveData,
-	tag: string
+	tag: string,
+	highestId = 0
 ): ArchiveData | null {
+	const kept = Math.max(highestId, archiveTag(archive, tag).metadata.highestId);
+	if (kept > 0) {
+		return {
+			...archive,
+			[tag]: {
+				tasks: [],
+				metadata: { highestId: kept, lastModified: new Date().toISOString() }
+			}
+		};
+	}
 	if (ownSection(archive, tag) === undefined) return null;
 	const { [tag]: _dropped, ...rest } = archive;
 	return rest;

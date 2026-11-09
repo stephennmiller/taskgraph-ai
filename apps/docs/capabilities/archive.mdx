@@ -34,6 +34,6 @@ The age is the task's last update (`updatedAt`, or a subtask's when later). A fi
 
 ## Tags and safety
 
-- Archived tasks belong to their tag: `tags rename` takes them along, `tags remove` deletes them with the tag, and `tags copy` (or `tags add --copy-from`) copies them, so the copy's dependencies on them still count as done and their IDs stay reserved there too.
+- Archived tasks belong to their tag: `tags rename` takes them along, `tags remove` deletes them with the tag, and `tags copy` (or `tags add --copy-from`) copies them, so the copy's dependencies on them still count as done and their IDs stay reserved there too. A removed or renamed tag leaves its highest ID under its old name in `archive.json`, so a tag created later with that name never reuses one of its IDs.
 - Archive and restore take the same lock as every other write to tasks.json, so a change another session saves at the same time isn't lost. Every change to archive.json also takes its own lock and replaces the file in one step.
 - Archive writes archive.json before tasks.json, and restore writes tasks.json first. If the process stops between the two writes, the task is in both files, never in neither. The copy in tasks.json is the one that counts.

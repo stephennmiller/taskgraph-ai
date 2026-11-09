@@ -22,7 +22,7 @@ export interface TaskClaim {
 }
 
 const HOLDER_KEYS = ['claimPid', 'claimHost', 'claimWorkerPid'] as const;
-const CLAIM_KEYS = ['claimedBy', 'claimedAt', ...HOLDER_KEYS] as const;
+export const CLAIM_KEYS = ['claimedBy', 'claimedAt', ...HOLDER_KEYS] as const;
 
 /**
  * The name a claim is recorded under: the session ID when one is set
