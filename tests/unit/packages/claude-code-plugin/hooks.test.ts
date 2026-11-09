@@ -39,14 +39,16 @@ import {
 afterAll(removeTempDirs);
 
 describe('plugin hooks.json', () => {
-	it('registers a SessionStart hook for every session source, a UserPromptSubmit hook, a TodoWrite hook and a Stop hook', () => {
+	it('registers a SessionStart hook for every session source, a UserPromptSubmit hook, a todo list hook and a Stop hook', () => {
 		expect(Object.keys(config.hooks)).toEqual([
 			'SessionStart',
 			'UserPromptSubmit',
 			'PostToolUse',
 			'Stop'
 		]);
-		expect(config.hooks.PostToolUse[0].matcher).toBe('TodoWrite');
+		expect(config.hooks.PostToolUse[0].matcher).toBe(
+			'TodoWrite|TaskCreate|TaskUpdate'
+		);
 		// No matcher: startup, resume, clear and compact all re-prime. That
 		// covers compaction: a PreCompact hook's output never reaches Claude
 		expect(config.hooks.SessionStart[0].matcher).toBeUndefined();

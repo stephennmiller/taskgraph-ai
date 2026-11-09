@@ -1,6 +1,7 @@
 /**
- * The TodoWrite hook hands Claude Code's todo list to `taskgraph log-todos`
- * on stdin (#953), and only starts the CLI while a task is in progress.
+ * The todo list hook hands Claude Code's TodoWrite, TaskCreate and
+ * TaskUpdate calls to `taskgraph log-todos` on stdin (#953, #1074), and only
+ * starts the CLI while a task is in progress.
  */
 
 import fs from 'node:fs';
@@ -8,6 +9,7 @@ import path from 'node:path';
 import {
 	fakeCli,
 	hookInput,
+	markerDir,
 	projectWithTask,
 	removeTempDirs,
 	runHook,
@@ -21,7 +23,7 @@ afterAll(removeTempDirs);
 const recordingCli = (log: string) =>
 	fakeCli(`printf '%s\\n' "$*" > '${log}'; cat >> '${log}'`);
 
-describe('TodoWrite hook', () => {
+describe('todo list hook', () => {
 	it('pipes the todo list to taskgraph log-todos for the project', () => {
 		const dir = projectWithTask('tg-hook-todos-', 'in-progress');
 		const log = path.join(tempDir('tg-hook-log-'), 'calls');
@@ -37,6 +39,21 @@ describe('TodoWrite hook', () => {
 		expect(fs.readFileSync(log, 'utf8')).toBe(
 			`log-todos --project ${dir}\n${input}`
 		);
+	});
+
+	it("names its private folder, where the CLI keeps the task tools' list", () => {
+		const dir = projectWithTask('tg-hook-todos-', 'in-progress');
+		const tmp = tempDir('tg-hook-tmp-');
+		const log = path.join(tempDir('tg-hook-log-'), 'env');
+		const cli = fakeCli(`printf '%s' "$TASKGRAPH_HOOK_DIR" > '${log}'`);
+		const input = hookInput({ tool_name: 'TaskUpdate' });
+
+		runHook(todoWrite, dir, cli, { input, tmp });
+		expect(fs.readFileSync(log, 'utf8')).toBe('');
+
+		fs.mkdirSync(markerDir(tmp), { mode: 0o700 });
+		runHook(todoWrite, dir, cli, { input, tmp });
+		expect(fs.readFileSync(log, 'utf8')).toBe(markerDir(tmp));
 	});
 
 	it('does not start the CLI when no task is in progress', () => {
