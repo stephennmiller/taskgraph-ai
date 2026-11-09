@@ -213,7 +213,9 @@ describe('git calls before approval, in a repository with a hostile config', () 
 		});
 
 		expect(prompts[0]).toContain('Work on task 1 only');
-		expect(prompts[0]).not.toContain('was interrupted');
+		// Told to look for itself; the host never listed the files
+		expect(prompts[0]).toContain('Task 1 was in progress');
+		expect(prompts[0]).not.toContain('README.md');
 		expect(hostGit).not.toEqual([]);
 		expect(ran()).toBe('');
 	});
@@ -236,7 +238,10 @@ describe('git calls before approval, in a repository with a hostile config', () 
 		);
 
 		expect(prompts).toHaveLength(2);
-		expect(prompts.join('\n')).not.toContain('was interrupted');
+		for (const prompt of prompts) {
+			expect(prompt).toContain('Task 1 was in progress');
+			expect(prompt).not.toContain('README.md');
+		}
 		expect(ran()).toBe('');
 		// The last commit, before the first iteration and after each one
 		expect(hostGit).toEqual(Array(3).fill('rev-parse --verify --quiet HEAD'));

@@ -29,10 +29,13 @@ async function resolvePrompt(prompt: string, tag?: string): Promise<string> {
 	return content;
 }
 
-/** An in-progress task an earlier run stopped on, and the files it left uncommitted */
+/**
+ * An in-progress task an earlier run stopped on, and the files it left
+ * uncommitted. No `files` in a sandboxed run, which doesn't look them up
+ */
 export interface InterruptedTask {
 	taskId: string;
-	files: string[];
+	files?: string[];
 }
 
 /** The most file names the header lists */
@@ -57,6 +60,9 @@ const quoteFileName = (name: string): string =>
 
 /** Tells the session where the interrupted task's work is, so it doesn't start over */
 function interruptedLine({ taskId, files }: InterruptedTask): string {
+	if (!files) {
+		return `Task ${taskId} was in progress when an earlier run stopped. Run git status, and if it shows uncommitted changes, check them and continue from them rather than starting over.`;
+	}
 	const listed = files.slice(0, MAX_LISTED_FILES).map(quoteFileName);
 	const more =
 		files.length > MAX_LISTED_FILES
