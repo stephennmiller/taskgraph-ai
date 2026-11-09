@@ -7,7 +7,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { runStep } from './go.command.js';
+import { runStep, stepExitCode } from './go.command.js';
 
 describe('runStep', () => {
 	let dir: string;
@@ -55,17 +55,28 @@ describe('runStep', () => {
 		expect(process.listenerCount('SIGTERM')).toBe(before);
 	});
 
-	it.each(['SIGINT', 'SIGTERM', 'SIGHUP'] as const)(
-		'stops a step that has no handler with %s',
-		async (signal) => {
+	it.each([
+		['SIGINT', 130],
+		['SIGTERM', 143],
+		['SIGHUP', 129]
+	] as const)(
+		'stops a step that has no handler with %s, for exit code %i',
+		async (signal, exitCode) => {
 			const running = runStep(process.execPath, step(''));
 			await untilReady();
 
 			process.emit(signal, signal);
 
-			expect(await running).toEqual({ code: null, signal, stopped: true });
+			const result = await running;
+			expect(result).toEqual({ code: null, signal, stopped: true });
+			expect(stepExitCode(result)).toBe(exitCode);
 		}
 	);
+
+	it('keeps the exit code of a step that stopped itself, and fails one stopped at 0', () => {
+		expect(stepExitCode({ code: 7, signal: null, stopped: true })).toBe(7);
+		expect(stepExitCode({ code: 0, signal: null, stopped: true })).toBe(1);
+	});
 
 	it("fails a step that can't start", async () => {
 		const result = await runStep(path.join(dir, 'missing'), []);

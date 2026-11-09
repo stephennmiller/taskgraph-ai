@@ -195,21 +195,25 @@ describe.skipIf(!built)('go (fake claude)', { timeout: 120000 }, () => {
 					timeout: 60000,
 					interval: 100
 				});
-				step = readTrace(fake.dir)[0].ppid;
+				const [claude] = readTrace(fake.dir);
+				step = claude.ppid;
 				expect(alive(step)).toBe(true);
 
 				// Only `go`, as a supervisor or `timeout` would; not the group
 				go.kill('SIGTERM');
 
-				// The step's own exit code, or null when the signal ended both
-				expect(await ended).not.toBe(0);
-				await vi.waitFor(() => expect(alive(step)).toBe(false), {
-					timeout: 20000,
-					interval: 100
-				});
+				// What a shell reports for SIGTERM, and neither parse-prd nor the
+				// Claude it started is left running
+				expect(await ended).toBe(143);
+				await vi.waitFor(
+					() => {
+						expect(alive(step)).toBe(false);
+						expect(alive(claude.pid)).toBe(false);
+					},
+					{ timeout: 20000, interval: 100 }
+				);
 			} finally {
 				go.kill('SIGKILL');
-				// The fake claude outlives a killed parse-prd: it's still holding
 				for (const { pid } of readTrace(fake.dir)) {
 					if (alive(pid)) process.kill(pid, 'SIGKILL');
 				}

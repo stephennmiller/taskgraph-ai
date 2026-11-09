@@ -32,7 +32,12 @@ function canonical(p: string): string {
 	try {
 		return fs.realpathSync(p);
 	} catch {
-		return path.resolve(p);
+		// Missing: resolve the part that exists, as git does for a worktree
+		// whose folder is gone
+		const parent = path.dirname(p);
+		return parent === p
+			? path.resolve(p)
+			: path.join(canonical(parent), path.basename(p));
 	}
 }
 
@@ -267,10 +272,16 @@ export class TaskWorktrees {
 		branch: string,
 		base: string
 	): Promise<{ createdBranch: boolean }> {
+		const listed = canonical(worktree);
+		let existing = (await this.worktreeBranches()).get(listed);
 		// Deleted by hand (`rm -rf`, not `git worktree remove`): git still lists
-		// it, so drop that record and make the worktree again (#1104)
-		if (!lstatOrNull(worktree)) await this.git(['worktree', 'prune']);
-		const existing = (await this.worktreeBranches()).get(canonical(worktree));
+		// it, so drop that record and make the worktree again (#1104). Not
+		// `git worktree prune`: that drops every worktree whose folder is away,
+		// one on an unplugged drive too, with what was staged in it
+		if (existing !== undefined && !lstatOrNull(worktree)) {
+			await this.git(['worktree', 'remove', '--force', listed]);
+			existing = undefined;
+		}
 		if (existing !== undefined) {
 			if (existing === `refs/heads/${branch}`) return { createdBranch: false };
 			throw new ParallelLoopError(

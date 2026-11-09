@@ -274,12 +274,22 @@ await tmCore.loop.runParallel({ parallel: 1, trusted: true, claimant: 'a', comma
 		expect(first).toMatchObject({ commits: 1, outcome: 'released' });
 		// Not `git worktree remove`: git still lists the worktree
 		fs.rmSync(first.worktree, { recursive: true, force: true });
+		// The user's own worktree, on a drive that isn't plugged in right now
+		const mine = path.join(path.dirname(root), 'mine');
+		git(root, 'worktree', 'add', '-q', '-b', 'mine', mine);
+		fs.writeFileSync(path.join(mine, 'staged.txt'), 'x\n');
+		git(mine, 'add', 'staged.txt');
+		fs.renameSync(mine, `${mine}-away`);
 
 		const [again] = (await tmCore.loop.runParallel(options('a'))).tasks;
 
 		// Claude ran, in a worktree holding the branch's commit
 		expect(again).toMatchObject({ error: 'exit 1', commits: 1 });
 		expect(fs.existsSync(path.join(again.worktree, 'work.txt'))).toBe(true);
+		// Only the task's record was dropped: `git worktree prune` would have
+		// taken the other worktree's too, with its index
+		fs.renameSync(`${mine}-away`, mine);
+		expect(git(mine, 'status', '--short')).toBe('A  staged.txt');
 	}, 60_000);
 
 	it('says the working folder is missing, not that claude is', async () => {

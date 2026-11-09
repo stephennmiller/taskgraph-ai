@@ -10,6 +10,7 @@
 
 import { spawn } from 'node:child_process';
 import fs from 'node:fs';
+import os from 'node:os';
 import {
 	SKIP_AUTO_UPDATE_ENV,
 	createTmCore,
@@ -78,6 +79,13 @@ export function runStep(command: string, args: string[]): Promise<StepResult> {
 	});
 }
 
+/**
+ * `go`'s exit code for a step that failed or was stopped. For one a signal
+ * ended, what a shell reports (143 for SIGTERM, 130 for Ctrl-C)
+ */
+export const stepExitCode = ({ code, signal }: StepResult): number =>
+	signal ? 128 + os.constants.signals[signal] : code || 1;
+
 export class GoCommand extends Command {
 	constructor(name?: string) {
 		super(name || 'go');
@@ -126,11 +134,8 @@ export class GoCommand extends Command {
 				await this.printResume(projectRoot).catch(() => {});
 			}
 			const step = await runStep(process.execPath, [process.argv[1], ...args]);
-			// A step a signal ended: end the same way, so whoever started `go`
-			// sees the signal and not an exit code
-			if (step.signal) process.kill(process.pid, step.signal);
 			if (step.code !== 0 || step.stopped) {
-				process.exitCode = step.code || 1;
+				process.exitCode = stepExitCode(step);
 				return;
 			}
 		}
