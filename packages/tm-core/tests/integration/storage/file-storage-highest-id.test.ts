@@ -170,18 +170,15 @@ describe('FileStorage tag delete and rename keep used IDs (#1064)', () => {
 			await expect(storage.renameTag('other', 'renamed')).rejects.toThrow(
 				/symlink/
 			);
-			// The tag itself was renamed before its report was refused
-			fs.writeFileSync(
-				path.join(elsewhere, path.basename(reportOf('renamed'))),
-				'{}'
-			);
-			await expect(storage.deleteTag('renamed')).rejects.toThrow(/symlink/);
+			await expect(storage.deleteTag('other')).rejects.toThrow(/symlink/);
 
 			expect(fs.readdirSync(elsewhere).sort()).toEqual([
 				'kept.json',
-				'task-complexity-report_other.json',
-				'task-complexity-report_renamed.json'
+				'task-complexity-report_other.json'
 			]);
+			// Refused before the tag changed: a command that fails leaves it as it was
+			expect(await storage.getAllTags()).toContain('other');
+			expect(await storage.getAllTags()).not.toContain('renamed');
 			fs.rmSync(elsewhere, { recursive: true, force: true });
 		}
 	);

@@ -22,6 +22,7 @@ import { CLAIM_KEYS, withoutClaim } from '../../../tasks/utils/claim.js';
 import { complexityReportPath } from '../../../reports/managers/complexity-report-manager.js';
 import {
 	type FileOperations,
+	refuseSymlinkedFolders,
 	removeProjectFile,
 	renameProjectFile
 } from './file-operations.js';
@@ -202,6 +203,7 @@ export class TagOperations {
 	 * Uses modifyJson for atomic read-modify-write to prevent lost updates
 	 */
 	async deleteTag(tag: string): Promise<void> {
+		this.refuseLinkedReports(tag);
 		let highestId = 0;
 		await this.modifyTagged(this.pathResolver.getTasksPath(), (data) => {
 			if (!Object.hasOwn(data, tag)) throw tagNotFound(tag);
@@ -223,6 +225,7 @@ export class TagOperations {
 	 * Uses modifyJson for atomic read-modify-write to prevent lost updates
 	 */
 	async renameTag(oldTag: string, newTag: string): Promise<void> {
+		this.refuseLinkedReports(oldTag);
 		let highestId = 0;
 		await this.modifyTagged(this.pathResolver.getTasksPath(), (data) => {
 			if (!Object.hasOwn(data, oldTag)) throw tagNotFound(oldTag);
@@ -280,6 +283,16 @@ export class TagOperations {
 			`Tag "${tag}" was removed or renamed, and its tasks used IDs up to ${metadata.highestId}. Tasks put under that name would reuse them and take over their GitHub issues; use another name`,
 			ERROR_CODES.VALIDATION_ERROR
 		);
+	}
+
+	/**
+	 * Before the tag changes: removeProjectFile and renameProjectFile refuse a
+	 * linked reports folder, and refused afterwards the command would fail
+	 * with the tag already removed or renamed
+	 */
+	private refuseLinkedReports(tag: string): void {
+		const report = this.reportPath(tag);
+		if (report) refuseSymlinkedFolders(report);
 	}
 
 	private get projectRoot(): string {

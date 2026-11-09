@@ -9,8 +9,11 @@
  * example that needs a task, tag or file gets it from the fixture.
  *
  * Needs dist/taskgraph.js (`npm run build`; CI's test job downloads it).
- * No network, GitHub sign-in or Claude. The "current version" of
- * json-output.mdx is pinned in taskgraph-claude-md-drift.test.ts.
+ * No network, GitHub sign-in or Claude: the CLI runs with an environment
+ * built here, a home folder in the fixture, and stand-ins first on PATH for
+ * the programs it could start (OUTSIDE_PROGRAMS). A stand-in that is
+ * called fails the run. The "current version" of json-output.mdx is pinned
+ * in taskgraph-claude-md-drift.test.ts.
  */
 
 import {
@@ -45,6 +48,20 @@ const AI_COMMANDS = new Set([
 /** Whether a line would call the AI: never run, it bills the user's Claude */
 const callsAi = (line: string) =>
 	AI_COMMANDS.has(line.split(/\s+/)[1]) || /--(prompt|research)\b/.test(line);
+
+/**
+ * Programs the CLI could start that bill, sign in or reach the network. Each
+ * gets a stand-in that records the call and exits 1, so a line that slips
+ * past callsAi fails here instead of running the machine's own.
+ */
+const OUTSIDE_PROGRAMS = ['claude', 'gh', 'npm', 'npx', 'docker'];
+
+/** `gh api user` answers a login for `list --mine`; any other call is recorded */
+const standIn = (name: string, calls: string) =>
+	`#!/bin/sh
+${name === 'gh' ? 'if [ "$1 $2" = "api user" ]; then echo octocat; exit 0; fi\n' : ''}echo "${name} $*" >> '${calls}'
+exit 1
+`;
 
 /** Example lines that are not run, each with why */
 const SKIPPED: Record<string, string> = {
@@ -186,6 +203,8 @@ describe.skipIf(process.platform === 'win32')('CLI reference examples', () => {
 	let base: string;
 	let template: string;
 	let env: NodeJS.ProcessEnv;
+	/** Written by a stand-in when the CLI starts an outside program */
+	let outsideCalls: string;
 
 	beforeAll(() => {
 		if (!fs.existsSync(cli)) {
@@ -194,10 +213,18 @@ describe.skipIf(process.platform === 'win32')('CLI reference examples', () => {
 		base = fs.mkdtempSync(path.join(os.tmpdir(), 'tg-docs-'));
 		template = path.join(base, 'template');
 		const home = path.join(base, 'home');
-		fs.mkdirSync(template);
-		fs.mkdirSync(home);
+		const bin = path.join(base, 'bin');
+		outsideCalls = path.join(base, 'outside-calls');
+		for (const dir of [template, home, bin]) fs.mkdirSync(dir);
+		for (const name of OUTSIDE_PROGRAMS) {
+			fs.writeFileSync(path.join(bin, name), standIn(name, outsideCalls), {
+				mode: 0o755
+			});
+		}
+		// Not process.env: no API key or token, no CLAUDECODE, and no
+		// XDG_CONFIG_HOME or ZDOTDIR to send `completion --install` out of `home`
 		env = {
-			...process.env,
+			PATH: `${bin}${path.delimiter}${process.env.PATH}`,
 			HOME: home,
 			USERPROFILE: home,
 			SHELL: '/bin/bash',
@@ -279,4 +306,13 @@ describe.skipIf(process.platform === 'win32')('CLI reference examples', () => {
 		},
 		90_000
 	);
+
+	// After the examples above: vitest runs a test that isn't concurrent on its own
+	it('started no outside program (Claude, GitHub, npm, Docker)', () => {
+		const calls = fs.existsSync(outsideCalls)
+			? fs.readFileSync(outsideCalls, 'utf8')
+			: '';
+
+		expect(calls).toBe('');
+	});
 });
