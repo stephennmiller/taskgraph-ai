@@ -72,6 +72,9 @@ export function parseWorktreeList(output: string): Map<string, string | null> {
 	return worktrees;
 }
 
+/** Second line of a branch record whose Claude Code ended without an error */
+const FINISHED = 'finished';
+
 /**
  * TaskGraph's own files that change while tasks are claimed and worked on,
  * relative to the project: they don't count as uncommitted work. Anything
@@ -355,9 +358,10 @@ export class TaskWorktrees {
 
 	/**
 	 * Note where this run left `branch` (or that it's gone), so the next run
-	 * can pick it up again: see assertBranchReusable
+	 * can pick it up again: see assertBranchReusable. `finished`: its Claude
+	 * Code ended without an error, so `--merge` may merge it (isWhereRunLeft)
 	 */
-	async recordBranch(branch: string): Promise<void> {
+	async recordBranch(branch: string, finished = false): Promise<void> {
 		const [file, tip] = await Promise.all([
 			this.recordFile(branch),
 			this.tip(branch)
@@ -367,7 +371,7 @@ export class TaskWorktrees {
 			return;
 		}
 		fs.mkdirSync(path.dirname(file), { recursive: true });
-		fs.writeFileSync(file, tip);
+		fs.writeFileSync(file, finished ? `${tip}\n${FINISHED}` : tip);
 	}
 
 	/**
@@ -390,12 +394,7 @@ export class TaskWorktrees {
 	): Promise<void> {
 		const tip = await this.tip(branch);
 		if (tip === undefined || tip === base) return;
-		const recorded = await fs.promises
-			.readFile(await this.recordFile(branch), 'utf8')
-			.then(
-				(s) => s.trim(),
-				() => ''
-			);
+		const recorded = (await this.recorded(branch)).tip;
 		if (recorded === tip) return;
 		if (
 			recorded &&
@@ -409,6 +408,30 @@ export class TaskWorktrees {
 		throw new ParallelLoopError(
 			`${branch} already exists with commits the loop didn't record (made outside a run, or by a --container run), so its files weren't approved. Review it with \`git diff ${base} ${branch}\`, then rename it (\`git branch -m ${branch} <new-name>\`) or delete it (\`git branch -D ${branch}\`, after \`git worktree remove\` if a worktree has it), and run again`
 		);
+	}
+
+	/** What recordBranch noted for `branch`: its tip ('' when there's none) and whether it was finished */
+	private async recorded(
+		branch: string
+	): Promise<{ tip: string; finished: boolean }> {
+		const [tip = '', mark] = await fs.promises
+			.readFile(await this.recordFile(branch), 'utf8')
+			.then(
+				(s) => s.trim().split('\n'),
+				() => []
+			);
+		return { tip, finished: mark === FINISHED };
+	}
+
+	/**
+	 * `branch` exists and is at the commit a run left it at, after its Claude
+	 * Code ended without an error (recordBranch). Not so while its worker is
+	 * still running in another run, nor after one that failed or was stopped.
+	 */
+	async isWhereRunLeft(branch: string): Promise<boolean> {
+		const tip = await this.tip(branch);
+		const recorded = await this.recorded(branch);
+		return tip !== undefined && recorded.finished && tip === recorded.tip;
 	}
 
 	async branchExists(branch: string): Promise<boolean> {
