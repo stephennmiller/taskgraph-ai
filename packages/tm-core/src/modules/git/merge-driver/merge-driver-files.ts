@@ -27,6 +27,7 @@ import {
 	archivePathFor,
 	readArchiveSync
 } from '../../tasks/utils/archive.js';
+import { writeProjectFile } from '../../storage/adapters/file-storage/file-operations.js';
 import { mergeArchiveJson } from './merge-archive-json.js';
 import { type TasksMergeResult, mergeTasksJson } from './merge-tasks-json.js';
 
@@ -321,10 +322,12 @@ export function installMergeDriver(
 	}
 	if (missing.length > 0) {
 		const separator = existing && !existing.endsWith('\n') ? '\n' : '';
-		fs.writeFileSync(
+		// A root file, so a link to another project file is allowed, as init allows
+		writeProjectFile(
+			projectRoot,
 			attributesFile,
 			`${existing ?? ''}${separator}${missing.join('\n')}\n`,
-			'utf8'
+			{ linkInProject: true }
 		);
 		if (attributes !== 'kept') {
 			attributes = existing === null ? 'created' : 'updated';

@@ -69,7 +69,7 @@ Guards and side effects:
   both. GitHub pull always forces.
 - Moving to `pending`, `blocked` or `deferred` clears the claim (machine 3).
 - `update-task` and `update-subtask` never change a status, except that
-  a rewrite that drops subtasks settles the parent (section 2). Only
+  a rewrite that adds or drops subtasks settles the parent (section 2). Only
   `set-status`, the loop, GitHub pull and the parallel runner do.
 
 Invariants:
@@ -80,12 +80,22 @@ Invariants:
 ## 2. Parent status from subtasks
 
 `withParentStatus` (`tasks/utils/parent-status.ts`) recomputes a parent
-from its subtasks. Every writer that changes a parent's subtasks runs it:
-subtask `set-status` (`setSubtaskStatusIn`), add-subtask, move (each parent
-of a dotted source or destination), remove-subtask, remove-task of a
-subtask, expand, and an AI rewrite that drops subtasks (update-task,
-`update --from`). Each passes the parent's done gate (acceptance
-criteria and Definition of Done).
+from its subtasks. The write funnel runs it, so no writer has to:
+`FileStorage.mutateTasks` and `mutateTagsIn` compare each task's subtask
+IDs and statuses before and after the change (`settleChangedParents`) and
+settle every task that was there before and whose list changed, with the
+parent's done gate (acceptance criteria and Definition of Done). Only a
+status change on the same subtasks (same IDs and titles) counts as the
+subtask's own; expand --force reuses IDs for new subtasks. A task the
+write added (add-task, parse-prd, a move to a new ID or tag, restore)
+keeps its status. That covers add-subtask, move, remove-subtask,
+remove-task of a subtask, expand, scope and AI rewrites (update-task,
+`update --from`).
+
+Subtask `set-status` is the exception: it opts out of the funnel and
+settles the parent itself after each ID (`setSubtaskStatusIn`), so a
+batch such as `set-status 3.1,3 done` gives the parent the status it set
+on purpose.
 
 | Subtasks after the change      | Parent becomes                           |
 | ------------------------------ | ---------------------------------------- |
@@ -310,7 +320,9 @@ atomic rename.
 created or reused, then kept, removed, merged or renamed aside. The branch
 tip is recorded under `.git/taskgraph/branches/<branch>`.
 `assertBranchReusable` refuses a branch whose tip is neither the base nor
-the recorded tip.
+the recorded tip, except when the run took over its own claimant's stale
+claim (`TaskClaim.resumedFrom`): then a tip that descends from the recorded
+one, checked out in the task's worktree, is the dead run's worker's work.
 
 ## 12. GitHub link
 

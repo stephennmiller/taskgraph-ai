@@ -375,9 +375,18 @@ export class TaskWorktrees {
 	 * here is used only when it's at `base` or where an earlier run left it
 	 * (recordBranch); any other commits on it (`gh pr checkout`, a pull, a
 	 * `--container` run, a commit of your own) weren't approved.
+	 *
+	 * `resumeIn` is the task worktree when this run took over its own dead
+	 * run's claim: that run's worker committed there after the last record
+	 * (a crash skipped settle), so a tip that still has the recorded one as
+	 * an ancestor, checked out in that worktree, is its work.
 	 * @throws ParallelLoopError naming the branch and how to set it aside
 	 */
-	async assertBranchReusable(branch: string, base: string): Promise<void> {
+	async assertBranchReusable(
+		branch: string,
+		base: string,
+		resumeIn?: string
+	): Promise<void> {
 		const tip = await this.tip(branch);
 		if (tip === undefined || tip === base) return;
 		const recorded = await fs.promises
@@ -387,6 +396,15 @@ export class TaskWorktrees {
 				() => ''
 			);
 		if (recorded === tip) return;
+		if (
+			recorded &&
+			resumeIn &&
+			(await this.worktreeBranches()).get(canonical(resumeIn)) ===
+				`refs/heads/${branch}` &&
+			(await this.succeeds(['merge-base', '--is-ancestor', recorded, tip]))
+		) {
+			return;
+		}
 		throw new ParallelLoopError(
 			`${branch} already exists with commits the loop didn't record (made outside a run, or by a --container run), so its files weren't approved. Review it with \`git diff ${base} ${branch}\`, then rename it (\`git branch -m ${branch} <new-name>\`) or delete it (\`git branch -D ${branch}\`, after \`git worktree remove\` if a worktree has it), and run again`
 		);

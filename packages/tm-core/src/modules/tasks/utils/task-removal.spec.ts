@@ -9,6 +9,11 @@ import { describe, expect, it } from 'vitest';
 import type { Task } from '../../../common/types/index.js';
 import { validateTaskDependencies } from '../../dependencies/dependency-check.js';
 import {
+	type ParentDoneGuard,
+	settleChangedParents,
+	subtaskShapes
+} from './parent-status.js';
+import {
 	clearSubtasksIn,
 	previewTaskRemoval,
 	removeSubtasksIn,
@@ -355,13 +360,23 @@ describe('parent status after a subtask is removed (#1042)', () => {
 		tasks[1].metadata = { claimedBy: 'alice' };
 		return tasks;
 	};
+	// As FileStorage saves a write: parents whose subtasks changed settle
+	const save = (tasks: Task[], write: () => void, guard?: ParentDoneGuard) => {
+		const before = subtaskShapes(tasks);
+		write();
+		settleChangedParents(before, tasks, guard);
+	};
 
 	it('marks the parent done, keeping its claim, when the last open subtask goes', () => {
 		const viaSubtask = started();
 		const viaTask = started();
 
-		removeSubtasksIn(asTasks(viaSubtask), ['2.1'], options);
-		removeTasksIn(asTasks(viaTask), ['2.1'], 'master', none);
+		save(asTasks(viaSubtask), () =>
+			removeSubtasksIn(asTasks(viaSubtask), ['2.1'], options)
+		);
+		save(asTasks(viaTask), () =>
+			removeTasksIn(asTasks(viaTask), ['2.1'], 'master', none)
+		);
 
 		for (const tasks of [viaSubtask, viaTask]) {
 			expect(tasks[1].status).toBe('done');
@@ -373,11 +388,14 @@ describe('parent status after a subtask is removed (#1042)', () => {
 		const gated = started();
 		const review = started('review');
 
-		removeSubtasksIn(asTasks(gated), ['2.1'], {
-			...options,
-			guardDone: () => new Error('unchecked')
-		});
-		removeSubtasksIn(asTasks(review), ['2.1'], options);
+		save(
+			asTasks(gated),
+			() => removeSubtasksIn(asTasks(gated), ['2.1'], options),
+			() => new Error('unchecked')
+		);
+		save(asTasks(review), () =>
+			removeSubtasksIn(asTasks(review), ['2.1'], options)
+		);
 
 		expect(gated[1].status).toBe('in-progress');
 		expect(review[1].status).toBe('review');

@@ -17,11 +17,15 @@
  */
 
 import fs from 'node:fs';
+import path from 'node:path';
 import {
 	ERROR_CODES,
 	TaskGraphError
 } from '../../common/errors/taskgraph-error.js';
-import { refuseSymlinkSync } from '../storage/adapters/file-storage/file-operations.js';
+import {
+	refuseSymlinkSync,
+	writeProjectFile
+} from '../storage/adapters/file-storage/file-operations.js';
 
 /** The most questions one `--clarify` run asks */
 export const MAX_CLARIFYING_QUESTIONS = 5;
@@ -225,12 +229,15 @@ export function writeClarifications(
 	prdPath: string,
 	clarifications: Clarification[]
 ): ApplyClarificationsResult {
+	// The PRD is wherever the user named, so only a symlinked file is refused
 	refuseSymlinkSync(prdPath);
 	const result = applyClarifications(
 		fs.readFileSync(prdPath, 'utf8'),
 		clarifications
 	);
-	if (result.changed) fs.writeFileSync(prdPath, result.content, 'utf8');
+	if (result.changed) {
+		writeProjectFile(path.dirname(prdPath), prdPath, result.content);
+	}
 	return result;
 }
 

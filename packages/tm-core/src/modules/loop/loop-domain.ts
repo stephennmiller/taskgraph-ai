@@ -289,6 +289,7 @@ export class LoopDomain {
 				resolve: async (task, budgetUsd) => {
 					if (options.container) return { ok: false, costUsd: 0 };
 					const commit = await git.head();
+					const started = Date.now();
 					const resolved = await resolveConflict({
 						projectRoot: this.projectRoot,
 						worktree: task.worktree,
@@ -299,6 +300,23 @@ export class LoopDomain {
 						model: options.model,
 						signal: options.signal
 					});
+					// The resolve is work on this task: its spend goes on it, not as a loop iteration
+					await tasks
+						.addSpend(
+							task.id,
+							{
+								usd: resolved.costUsd,
+								durationMs: Date.now() - started,
+								iterations: 0
+							},
+							options.tag
+						)
+						.catch((error) =>
+							this.logger.warn(
+								`Couldn't add task ${task.id}'s conflict resolve spend to it:`,
+								error
+							)
+						);
 					const { uncommitted } = await git.work(
 						task.worktree,
 						task.branch,

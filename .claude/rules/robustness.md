@@ -18,4 +18,6 @@ Reviews of the October 2026 issue batches kept catching the same six bugs. Check
 - **Exit codes.** A command that failed exits non-zero, including partial failures such as `show 98,99` when no ID exists. A multi-ID command validates every ID before changing anything (#318).
 - **ID types.** tm-core stores task IDs, subtask IDs (schema version 2, #748) and top-level dependency IDs as strings, but older files may still hold numbers, so compare with `String()`. In a subtask's dependencies, a bare number up to 99 means a sibling subtask (see `dependencies.md`; #290, #383).
 
+Files tm-core writes into the project go through `writeProjectFile` or `appendProjectFile` (`storage/adapters/file-storage/file-operations.ts`), which refuse a symlinked file or folder, not `fs.writeFileSync` with hand-placed `refuseSymlink*` checks; `packages/tm-core/src/project-writes.spec.ts` fails on a direct write outside its allowlist (GHSA-62pv, #1072).
+
 Free text you pass to a shell (prompts, notes, plugin command bodies) goes in single quotes, with `'` written as `'\''` (#298, #360).

@@ -1,7 +1,8 @@
 /**
  * @fileoverview `taskgraph go <prd>` against the built CLI with the fake
  * `claude` program (#957): it plans the PRD with `parse-prd --append`, then
- * hands over to `loop`, and the first step that fails stops it.
+ * hands over to `loop`, saying what it resumes on a rerun, and the first
+ * step that fails stops it.
  *
  * Needs the build (`npm run build`); skipped when dist/ is missing.
  *
@@ -108,5 +109,43 @@ describe.skipIf(!built)('go (fake claude)', { timeout: 120000 }, () => {
 		// loop asks before turning permission prompts off; no terminal here
 		expect(res.status).toBe(1);
 		expect(`${res.stdout}${res.stderr}`).toContain('--trust');
+		// A first run has nothing to resume
+		expect(res.stdout).not.toContain('Resuming');
+	});
+
+	it('says what it resumes on a rerun, before loop', () => {
+		spawnSync('git', ['init', '-q'], { cwd: project });
+		expect(run(project, {}, 'init', '--yes').status).toBe(0);
+		const file = path.join(project, '.taskgraph', 'tasks', 'tasks.json');
+		const data = JSON.parse(fs.readFileSync(file, 'utf8'));
+		const task = (id: string, status: string) => ({
+			id,
+			title: `Task ${id}`,
+			description: 'd',
+			status,
+			priority: 'medium',
+			dependencies: [],
+			subtasks: []
+		});
+		data.master.tasks = [
+			task('1', 'done'),
+			task('2', 'in-progress'),
+			task('3', 'pending')
+		];
+		fs.writeFileSync(file, JSON.stringify(data));
+		fs.mkdirSync(path.join(project, 'docs'));
+		fs.writeFileSync(path.join(project, 'docs', 'prd.md'), PRD);
+		const fake = installFakeClaude({
+			projectDir: project,
+			workDir: work,
+			replies: [{ object: { tasks: [], metadata: null } }]
+		});
+
+		const res = run(project, fake.env, 'go', 'docs/prd.md');
+
+		expect(res.stdout).toContain(
+			'Resuming: 1 done, task 2 in progress, 1 pending'
+		);
+		expect(res.status).toBe(1);
 	});
 });

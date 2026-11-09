@@ -3,7 +3,7 @@
  * tasks.json, with the fake Claude Code from loop-parallel-fixture.ts: what
  * becomes of a task Claude set to review without committing its work (#1012)
  * or with nothing to commit (#1013), and of a resolved conflict whose fixes
- * Claude left uncommitted (#1026).
+ * Claude left uncommitted (#1026), and whose cost goes on the task.
  *
  * @integration
  */
@@ -160,5 +160,21 @@ describe('loop --parallel --merge', () => {
 		expect(
 			fs.readFileSync(path.join(two?.worktree ?? '', 'shared.txt'), 'utf8')
 		).toBe('both, fixed\n');
+	}, 120_000);
+
+	it("puts a conflict resolve's cost on the task's own spend, not as an iteration", async () => {
+		const result = await run({
+			'task-1': 'merge-conflict-uncommitted',
+			'task-2': 'merge-conflict-uncommitted'
+		});
+
+		const spend = (id: string) =>
+			JSON.parse(
+				fs.readFileSync(path.join(root, '.taskgraph/tasks/tasks.json'), 'utf8')
+			).master.tasks.find((t: { id: string }) => t.id === id).spend;
+		// Each worker reports $0.25; task 2's conflict resolve another $0.50
+		expect(result.totalCostUsd).toBe(1);
+		expect(spend('1')).toMatchObject({ usd: 0.25, iterations: 1 });
+		expect(spend('2')).toMatchObject({ usd: 0.75, iterations: 1 });
 	}, 120_000);
 });

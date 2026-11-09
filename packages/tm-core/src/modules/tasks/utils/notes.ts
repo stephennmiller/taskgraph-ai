@@ -79,6 +79,13 @@ export function appendNote(
 	return details ? `${details}\n${block}` : block;
 }
 
+/** The text of the timestamped block that ends `details`, if one does */
+export function lastNote(details: string | undefined): string | undefined {
+	return details?.match(
+		/<info added on ([^>\n]+)>\n([\s\S]*)\n<\/info added on \1>\s*$/
+	)?.[2];
+}
+
 /** Opening tag of a timestamped block; the closing tag starts with `</` */
 const NOTE_BLOCK_START = /<info added on ([^>\n]+)>/g;
 

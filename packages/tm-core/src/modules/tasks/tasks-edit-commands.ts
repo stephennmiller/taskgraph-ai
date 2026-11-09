@@ -13,8 +13,12 @@ import {
 } from '../../common/errors/taskgraph-error.js';
 import { normalizeAssignee } from './utils/assignee.js';
 import { recordClaimWorkerIn, type TaskClaim } from './utils/claim.js';
-import { normalizeNoteText, type TaskNote } from './utils/notes.js';
-import { parentDoneGate } from './utils/parent-status.js';
+import {
+	appendNote,
+	lastNote,
+	normalizeNoteText,
+	type TaskNote
+} from './utils/notes.js';
 import {
 	type AddSubtaskInput,
 	addSubtaskToTag,
@@ -191,19 +195,25 @@ export class TaskEditCommands {
 	 * Append a progress note to a task or subtask's details, as written and
 	 * timestamped, in one locked write that changes only that item. No AI
 	 * call: use update-subtask/update-task for an AI rewrite.
+	 * With `skipRepeat`, a note identical to the item's last one isn't added
+	 * again (the result then describes the note not added).
 	 * Throws INVALID_INPUT for an empty note (before touching the file) and
 	 * TASK_NOT_FOUND for an unknown ID.
 	 */
 	async addNote(
 		taskId: string,
 		text: string,
-		options: { tag?: string } = {}
+		options: { tag?: string; skipRepeat?: boolean } = {}
 	): Promise<TaskNote> {
 		const note = normalizeNoteText(text);
 		const id = normalizeTaskId(taskId);
-		const { saved, addedAt } = await this.taskService.appendToDetails(
+		const addedAt = new Date().toISOString();
+		const saved = await this.taskService.modifyTask(
 			id,
-			note,
+			(task) =>
+				options.skipRepeat && lastNote(task.details) === note
+					? {}
+					: { details: appendNote(task.details, note, addedAt) },
 			options.tag
 		);
 		return {
@@ -221,12 +231,14 @@ export class TaskEditCommands {
 	 * Add one loop iteration's cost and time to a task's `spend`, in one
 	 * locked write. A subtask's go to its parent, so `expand --force`
 	 * replacing the subtasks can't drop them. A cost Claude Code didn't
-	 * report adds nothing to `usd`. Throws TASK_NOT_FOUND for an unknown ID.
+	 * report adds nothing to `usd`. `iterations` (default 1) is how many
+	 * loop iterations it counts as: 0 for a merge conflict resolve.
+	 * Throws TASK_NOT_FOUND for an unknown ID.
 	 * @returns The task's spend as saved
 	 */
 	async addSpend(
 		taskId: string,
-		run: { usd?: number; durationMs?: number },
+		run: { usd?: number; durationMs?: number; iterations?: number },
 		tag?: string
 	): Promise<TaskSpend> {
 		const id = normalizeTaskId(taskId).split('.')[0];
@@ -236,7 +248,7 @@ export class TaskEditCommands {
 				spend: {
 					usd: count(spend?.usd) + count(run.usd),
 					durationMs: count(spend?.durationMs) + count(run.durationMs),
-					iterations: count(spend?.iterations) + 1
+					iterations: count(spend?.iterations) + (run.iterations ?? 1)
 				}
 			}),
 			tag
@@ -259,13 +271,7 @@ export class TaskEditCommands {
 	): Promise<{ subtask: Subtask; tag: string }> {
 		const tag = options.tag || this.configManager.getActiveTag();
 		const storage = this.taskService.getStorage();
-		const subtask = await addSubtaskToTag(
-			storage,
-			tag,
-			parentId,
-			input,
-			parentDoneGate(this.configManager.getDefinitionOfDone())
-		);
+		const subtask = await addSubtaskToTag(storage, tag, parentId, input);
 		return { subtask, tag };
 	}
 
@@ -281,13 +287,7 @@ export class TaskEditCommands {
 	): Promise<WithinTagMoveResult & { tag: string }> {
 		const tag = options.tag || this.configManager.getActiveTag();
 		const storage = this.taskService.getStorage();
-		const moved = await moveTasksWithinTag(
-			storage,
-			tag,
-			from,
-			to,
-			parentDoneGate(this.configManager.getDefinitionOfDone())
-		);
+		const moved = await moveTasksWithinTag(storage, tag, from, to);
 		return { ...moved, tag };
 	}
 
