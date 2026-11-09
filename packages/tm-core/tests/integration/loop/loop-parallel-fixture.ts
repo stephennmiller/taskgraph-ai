@@ -64,15 +64,18 @@ if (mode === 'merge-conflict-uncommitted') {
 if (mode.startsWith('merge-')) {
 	const id = name.slice('task-'.length);
 	if (mode !== 'merge-nothing') fs.writeFileSync('work-' + id + '.txt', 'done\\n');
-	if (mode === 'merge-commit') {
+	if (mode.startsWith('merge-commit')) {
 		execFileSync('git', ['add', 'work-' + id + '.txt']);
 		execFileSync('git', ['commit', '-q', '-m', 'work on ' + name]);
 	}
 	taskgraph('set-status', '--id=' + id, '--status=review');
-	process.exit(0);
+	// merge-commit-fail: Claude Code failed after it marked the task (#1124)
+	process.exit(mode === 'merge-commit-fail' ? 1 : 0);
 }
 if (mode === 'fail') process.exit(1);
-if (mode === 'sleep' || mode === 'dirty-sleep' || mode === 'commit-sleep' || mode === 'deaf-sleep') {
+if (mode.endsWith('sleep')) {
+	// review-sleep: marked for review with nothing committed, and still running (#1124)
+	if (mode === 'review-sleep') taskgraph('set-status', '--id=' + name.slice('task-'.length), '--status=review');
 	// Deaf to SIGTERM: only SIGKILL after the grace period stops it (#1121)
 	if (mode === 'deaf-sleep') process.on('SIGTERM', () => {});
 	if (mode === 'dirty-sleep') fs.writeFileSync('partial.txt', 'wip\\n');

@@ -262,6 +262,72 @@ describe('loop --parallel --merge', () => {
 			);
 		}, 120_000);
 
+		it('leaves a task alone whose Claude Code failed after marking it, as the run that ran it did', async () => {
+			const first = await run({
+				'task-1': 'merge-commit-fail',
+				'task-2': 'merge-nothing'
+			});
+			expect(first.unmergedIds).toEqual(['1']);
+
+			const result = await run({});
+
+			expect(result.leftInReviewIds).toEqual(['1']);
+			expect(status('1')).toBe('review');
+			expect(fs.existsSync(path.join(root, 'work-1.txt'))).toBe(false);
+			expect(git(root, 'branch', '--list', 'taskgraph/*')).toContain(
+				'taskgraph/task-1'
+			);
+		}, 120_000);
+
+		it('leaves a task alone that another run is still working on', async () => {
+			// That run's Claude Code marked both for review before committing anything
+			const controller = new AbortController();
+			fs.writeFileSync(
+				planFile,
+				JSON.stringify({
+					'task-1': 'review-sleep',
+					'task-2': 'review-sleep',
+					pidDir: binDir
+				})
+			);
+			const other = tmCore.loop.runParallel({
+				parallel: 2,
+				trusted: true,
+				claimant: 'other',
+				command: path.join(binDir, 'claude'),
+				signal: controller.signal
+			});
+			await vi.waitFor(
+				() => {
+					expect([status('1'), status('2')]).toEqual(['review', 'review']);
+					expect(fs.existsSync(path.join(binDir, 'task-2'))).toBe(true);
+				},
+				{ timeout: 60_000, interval: 50 }
+			);
+
+			try {
+				const result = await tmCore.loop.runParallel({
+					parallel: 2,
+					merge: true,
+					trusted: true,
+					claimant: 'test',
+					command: path.join(binDir, 'claude')
+				});
+
+				expect(result.leftInReviewIds).toEqual(['1', '2']);
+				expect(result.tasks).toEqual([]);
+				expect([status('1'), status('2')]).toEqual(['review', 'review']);
+				for (const id of ['1', '2']) {
+					expect(
+						fs.existsSync(path.join(root, `.taskgraph/worktrees/task-${id}`))
+					).toBe(true);
+				}
+			} finally {
+				controller.abort();
+				await other;
+			}
+		}, 120_000);
+
 		it('leaves a review task alone, and names it, when it has no branch or its branch moved since the run', async () => {
 			await interruptBeforeMerging();
 			// Task 1's branch gets a commit no run made; task 2's is deleted

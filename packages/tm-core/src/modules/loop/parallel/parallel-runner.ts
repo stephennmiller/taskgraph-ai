@@ -511,7 +511,7 @@ export class ParallelLoopRunner {
 			}
 			// A container's commits weren't made here: note only that its branch is gone
 			if (hasWorktree && !(workers && (await git.branchExists(task.branch)))) {
-				await this.recordBranch(git, task.branch);
+				await this.recordBranch(git, task.branch, task.state === 'done');
 			}
 			if (releaseClaim || !hasWork) {
 				await this.release(task.id, tag, claimant);
@@ -541,10 +541,11 @@ export class ParallelLoopRunner {
 	/** TaskWorktrees.recordBranch; a failure only costs the next run that shortcut */
 	private async recordBranch(
 		git: TaskWorktrees,
-		branch: string
+		branch: string,
+		finished = false
 	): Promise<void> {
 		try {
-			await git.recordBranch(branch);
+			await git.recordBranch(branch, finished);
 		} catch (error) {
 			this.logger.warn(`Couldn't record where ${branch} was left:`, error);
 		}

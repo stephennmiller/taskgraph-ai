@@ -16,10 +16,12 @@ import type { ParallelTask } from './types.js';
 
 /**
  * The tag's `review` tasks, split in two: `tasks` have a branch that is
- * still where a run left it (TaskWorktrees.recordBranch), so it holds only
- * work a run's Claude Code made, and are ready for the merge step. `leftIds`
- * have no such branch (set to review by hand, branch deleted or moved since,
- * or made by a `--container` run) and are left alone.
+ * still where a run left it when its Claude Code ended without an error
+ * (TaskWorktrees.isWhereRunLeft), so it holds only work that session made,
+ * and are ready for the merge step. `leftIds` have no such branch (set to
+ * review by hand, branch deleted or moved since, made by a `--container`
+ * run, Claude Code failed or was stopped, or another run's is still
+ * working) and are left alone.
  */
 export async function tasksLeftInReview(
 	projectRoot: string,

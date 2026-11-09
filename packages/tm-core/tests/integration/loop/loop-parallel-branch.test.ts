@@ -234,8 +234,9 @@ await tmCore.loop.runParallel({ parallel: 1, trusted: true, claimant: 'a', comma
 				commits: 1,
 				outcome: 'kept'
 			});
+			// Its Claude Code ended without an error: `--merge` may merge it (#1124)
 			expect(fs.readFileSync(record('taskgraph/task-1'), 'utf8')).toBe(
-				git(root, 'rev-parse', 'taskgraph/task-1')
+				`${git(root, 'rev-parse', 'taskgraph/task-1')}\nfinished`
 			);
 		}, 90_000);
 
