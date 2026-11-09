@@ -36,6 +36,7 @@ import { statusesWhere } from '../../common/constants/index.js';
 import { readPrdSection } from '../prd/prd-coverage.js';
 import { getPrdSource } from '../prd/prd-sections.js';
 import { subtaskInContext } from './utils/subtask-context.js';
+import { filterSubtasks, parseStatusFilter } from './utils/task-filters.js';
 import { normalizeTaskId } from './validation/task-id.js';
 import {
 	type ReadmeExportOptions,
@@ -178,16 +179,27 @@ export class TasksDomain {
 	 * - Subtask IDs with dot notation (e.g., "1.2"), returned with their
 	 *   parentId and the parent's priority when they have none
 	 *
+	 * @param options.subtaskStatus - Keep only the task's subtasks with these
+	 *   statuses (`done` or `done,pending`, as `list --status` takes them).
+	 *   Checked before anything is read: an unknown status throws a
+	 *   VALIDATION_ERROR. `subtaskFilter` then gives the statuses kept and the
+	 *   number of subtasks before filtering. A subtask ID ignores it.
 	 * @returns Discriminated union indicating task/subtask with proper typing
 	 */
 	async get(
 		taskId: string,
-		tag?: string
+		tag?: string,
+		options: { subtaskStatus?: string } = {}
 	): Promise<
-		| { task: Task; isSubtask: false }
+		| {
+				task: Task;
+				isSubtask: false;
+				subtaskFilter?: { statuses: TaskStatus[]; total: number };
+		  }
 		| { task: Subtask; isSubtask: true }
 		| { task: null; isSubtask: boolean }
 	> {
+		const statuses = parseStatusFilter(options.subtaskStatus);
 		// Parse ID - check for dot notation (subtask); "01.03" is 1.3
 		const parts = normalizeTaskId(taskId).split('.');
 		const parentId = parts[0];
@@ -212,7 +224,7 @@ export class TasksDomain {
 		}
 
 		// It's a regular task
-		return { task, isSubtask: false };
+		return { ...filterSubtasks(task, statuses), isSubtask: false };
 	}
 
 	/**

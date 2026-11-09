@@ -476,6 +476,27 @@ describe('show command output', () => {
 		expect(res.stdout).not.toContain('Sessions table');
 	});
 
+	// #1070: CLI text, --json and MCP each filtered differently, and any value passed
+	it('filters subtasks by several statuses, the same in text and --json', () => {
+		const text = show('2', '--status=done,pending');
+		const json = show('2', '--status=done', '--json');
+
+		expect(text.status).toBe(0);
+		expect(text.stdout).toContain('Subtasks · 2 of 2 done or pending');
+		expect(json.status).toBe(0);
+		expect(
+			JSON.parse(json.stdout).task.subtasks.map((s: { id: string }) => s.id)
+		).toEqual(['2.1']);
+	});
+
+	it('refuses an unknown subtask status and exits 1', () => {
+		const res = show('2', '--status=bogus');
+
+		expect(res.status).toBe(1);
+		expect(res.stdout).not.toContain('Email and password sign-in');
+		expect(res.stderr).toContain('"bogus" isn\'t a status');
+	});
+
 	it('prints a missing task as an error on stderr with a hint and exits 1', () => {
 		const res = show('9');
 
@@ -485,7 +506,7 @@ describe('show command output', () => {
 		expect(res.stderr).toContain('taskgraph list');
 	});
 
-	it('fences the task table for several IDs as data', () => {
+	it('fences the tasks for several IDs as data', () => {
 		const res = show('1,2');
 		const fence = res.stdout.match(/<[\s/]*task-data[^\n]*/gi);
 
@@ -494,6 +515,23 @@ describe('show command output', () => {
 		const inside = res.stdout.split('<task-data>')[1].split('</task-data>')[0];
 		expect(inside).toContain('Set up the database schema');
 		expect(inside).toContain('Email and password sign-in');
+	});
+
+	// #1069: a pipe got a cli-table3 box with ANSI codes in its borders
+	it("prints list's plain lines for several IDs in a pipe", () => {
+		const res = show('1,2');
+
+		expect(res.status).toBe(0);
+		expect(res.stdout).not.toContain('\x1b');
+		expect(res.stdout).not.toMatch(/[┌│└]/);
+		expect(res.stdout).toContain(
+			[
+				'1    done         medium  Set up the database schema',
+				'2    in-progress  high    Email and password sign-in with sessions  deps:1',
+				'2.1  done         medium  Password hashing helpers',
+				'2.2  pending      medium  Sessions table and cookie middleware  deps:2.1'
+			].join('\n')
+		);
 	});
 
 	it('neutralizes the task-data tag in --json output, for one ID and several (#777)', () => {

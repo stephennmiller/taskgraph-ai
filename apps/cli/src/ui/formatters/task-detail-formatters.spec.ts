@@ -467,21 +467,31 @@ describe('formatTaskDetail', () => {
 		);
 	});
 
-	it('lists only subtasks with the requested status', () => {
-		const output = plain(
-			formatTaskDetail(signIn(), { width: 80, statusFilter: 'pending' })
-		);
+	/** signIn() as `tasks.get` returns it with a subtask status filter */
+	const filtered = (...statuses: string[]) => {
+		const task = signIn();
+		return {
+			task: {
+				...task,
+				subtasks: task.subtasks.filter((s) => statuses.includes(s.status))
+			},
+			subtaskFilter: { statuses, total: task.subtasks.length }
+		};
+	};
+
+	it('says which statuses the subtasks were filtered to, out of how many', () => {
+		const { task, subtaskFilter } = filtered('pending', 'done');
+		const output = plain(formatTaskDetail(task, { width: 80, subtaskFilter }));
 
 		expect(output).toContain(
-			'Subtasks · 1 of 3 pending\n  2.3  ○ pending  Sign-in rate limiting  after 2.2'
+			'Subtasks · 2 of 3 pending or done\n  2.1  ✓ done     Password hashing helpers'
 		);
-		expect(output).not.toContain('Password hashing helpers');
+		expect(output).not.toContain('Sessions table');
 	});
 
 	it('says so in one line when no subtask has the requested status', () => {
-		const output = plain(
-			formatTaskDetail(signIn(), { width: 80, statusFilter: 'blocked' })
-		);
+		const { task, subtaskFilter } = filtered('blocked');
+		const output = plain(formatTaskDetail(task, { width: 80, subtaskFilter }));
 
 		expect(output).toContain('\nNo blocked subtasks\n');
 		expect(output).not.toContain('Subtasks ·');

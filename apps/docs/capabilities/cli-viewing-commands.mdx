@@ -71,7 +71,12 @@ taskgraph show 1.2
 
 # Show a task from another tag without switching the active tag
 taskgraph show 6 --tag=feature-x
+
+# Only the subtasks with these statuses
+taskgraph show 6 --status=pending,in-progress
 ```
+
+`--status` takes the statuses `list --status` takes, in text, `--json` and the MCP `get_task` tool's `status`. An unknown status exits 1, naming the valid ones.
 
 When the task came from a PRD (`metadata.source`), `show` prints that PRD section as written, subsections included, so routes and field names reach you exactly. A subtask shows its parent's section. Only a PRD inside the project is read; for one outside it, `show` prints just the source. `show --json` and the MCP `get_task` tool carry the same section on each task as `prdSection: { source, text }`.
 
