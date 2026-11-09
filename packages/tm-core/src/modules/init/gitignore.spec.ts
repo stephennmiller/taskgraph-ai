@@ -545,6 +545,19 @@ describe('manageGitignoreFile and task lines init did not write (#1105)', () => 
 		}
 	);
 
+	test("keeps a tasks/ line of the user's after the section's blank line", () => {
+		fs.writeFileSync(
+			target,
+			'# Task files\n# tasks.json\n# tasks/ \n\ntasks/\n'
+		);
+
+		manageGitignoreFile(target, template, true);
+
+		expect(fs.readFileSync(target, 'utf8')).toBe(
+			'tasks/\n\n# Logs\nlogs\n\n# Task files\n# .taskgraph/tasks/\n'
+		);
+	});
+
 	test("reads no choice from the user's own tasks.json line", () => {
 		fs.writeFileSync(target, 'tasks.json\n');
 

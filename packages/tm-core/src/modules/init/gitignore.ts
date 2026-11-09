@@ -62,15 +62,20 @@ export function isTaskLine(line: string): boolean {
  */
 function removeExistingTaskSection(existingLines: string[]): string[] {
 	const cleanedLines: string[] = [];
-	let inTaskSection = false;
+	let section: 'none' | 'tasks' | 'blanks' = 'none';
 
 	for (const line of existingLines) {
 		if (line.trim() === TASK_FILES_COMMENT) {
-			inTaskSection = true;
+			section = 'tasks';
 			continue;
 		}
-		if (inTaskSection && (isTaskLine(line) || !line.trim())) continue;
-		inTaskSection = false;
+		if (section === 'tasks' && isTaskLine(line)) continue;
+		// A task line after the blank lines is no longer under the header
+		if (section !== 'none' && !line.trim()) {
+			section = 'blanks';
+			continue;
+		}
+		section = 'none';
 		cleanedLines.push(line);
 	}
 
