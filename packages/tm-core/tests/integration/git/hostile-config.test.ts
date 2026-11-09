@@ -18,7 +18,10 @@ import {
 	runGitSync
 } from '../../../src/common/utils/git-utils.js';
 import { getRepoSummary } from '../../../src/modules/codebase/repo-summary.js';
-import { isLoopTrusted, trustLoop } from '../../../src/modules/loop/loop-trust.js';
+import {
+	isLoopTrusted,
+	trustLoop
+} from '../../../src/modules/loop/loop-trust.js';
 import { findTaskCommits } from '../../../src/modules/tasks/utils/task-commits.js';
 
 /** Hooks git could run on a read, were one of these calls to write the index or a ref */
@@ -126,7 +129,9 @@ describe('git calls before approval, in a repository with a hostile config', () 
 		isLoopTrusted(repo, home);
 		trustLoop(repo, home);
 
-		expect(commits).toEqual([expect.objectContaining({ subject: 'work [task 1]' })]);
+		expect(commits).toEqual([
+			expect.objectContaining({ subject: 'work [task 1]' })
+		]);
 		expect(fs.existsSync(marker) ? fs.readFileSync(marker, 'utf8') : '').toBe(
 			''
 		);
