@@ -290,7 +290,7 @@ describe('formatPrimeContext', () => {
 		);
 
 		expect(text).toContain(
-			"Tag gone isn't in tasks.json. Switch with taskgraph tags use <tag>"
+			"Tag gone isn't in tasks.json. Switch with taskgraph tags use <tag>, or change TASKGRAPH_TAG if it is set"
 		);
 		expect(text).not.toContain('No tasks yet');
 		expect(text).toContain('Rules');

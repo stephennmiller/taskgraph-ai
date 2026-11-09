@@ -16,6 +16,7 @@ import {
 } from '../../../common/errors/taskgraph-error.js';
 import { assertTaskStatus } from '../../../common/constants/index.js';
 import type { Subtask, Task } from '../../../common/types/index.js';
+import { assertDependencyExists } from '../../dependencies/dependency-edit.js';
 import { assignMetadata } from '../../dependencies/dependency-provenance.js';
 import { wouldSubtaskCloseLoop } from '../../dependencies/dependency-edges.js';
 import { resolveSubtaskDependency } from '../../dependencies/subtask-dependency.js';
@@ -165,12 +166,15 @@ const nextSubtaskId = (parent: Item) =>
  * Add a subtask to `parentId`: a new one, or the task `fromTaskId` turned
  * into one (what depended on that task then depends on the subtask).
  * The parent's status then follows its subtasks (FileStorage settles it).
+ * @param archivedIds - The tag's archived task IDs: a new subtask can't
+ *   depend on one, or on an ID the tag doesn't have (#1097)
  * @returns The subtask as stored
  */
 export function addSubtaskIn(
 	tasks: Task[],
 	parentId: string,
-	source: { fromTaskId: string } | { subtask: NewSubtaskInput }
+	source: { fromTaskId: string } | { subtask: NewSubtaskInput },
+	archivedIds: ReadonlySet<string> = new Set()
 ): Subtask {
 	const items = tasks as Item[];
 	// "01" is task 1; parseInt also read "1x" and subtask "8.1" as a task
@@ -187,6 +191,9 @@ export function addSubtaskIn(
 		const dependencies = (data.dependencies || []).map((dep) =>
 			resolveSubtaskDependency(parentKey, dep)
 		);
+		for (const dep of dependencies) {
+			assertDependencyExists(tasks, dep, archivedIds);
+		}
 		if (wouldSubtaskCloseLoop(tasks, parentKey, { dependencies })) {
 			fail(
 				`Cannot add a subtask to task ${parentKey} that depends on ${dependencies.join(', ')}: that would make a dependency loop`,

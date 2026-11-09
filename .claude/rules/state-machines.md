@@ -183,9 +183,14 @@ and the archive's `highestId`. That covers add-task, parse-prd (including
 `tags remove` and `tags rename` leave a tombstone
 `{ tasks: [], metadata: { highestId } }` under the old name in
 archive.json, so a tag recreated with that name numbers above it (#1064).
-A copy or rename onto that name is refused when one of its task IDs is
-at or below the tombstone's `highestId`, except a rename back (the
-tombstone's `renamedTo`).
+A copy, a rename or a `move --to-tag` onto that name is refused when one of
+its task IDs is at or below the tombstone's `highestId`, except a rename
+back (the tombstone's `renamedTo`): `assertNoRetiredIds` in
+`tag-operations.ts`, which `FileStorage.mutateTags` runs for any tag a write
+creates (#1095).
+`tags add` on that name copies the tombstone's `highestId` into the new
+tag's metadata, so a `move --to-tag` into the recreated tag takes IDs above
+it.
 A tag copy strips `metadata.github` and the claim keys from every task
 and subtask, so two tags never link the same issue (#1063).
 The merge driver merges the mark as a max and renumbers an incoming new
@@ -196,7 +201,10 @@ The merge driver, GitHub link recovery and every in-flight AI write find a
 task by ID only.
 
 Known limits: `move --to=<id>` within a tag may name a removed ID on
-purpose, and subtask IDs within a parent can still be reused.
+purpose, and subtask IDs within a parent can still be reused. The
+destination must pass `isAssignableTaskId` (`validation/task-id.ts`): each
+part 1 or more and at most 15 digits, so `0`, `4.0` and a number past 2^53
+are refused (#1096).
 
 ## 5. tasks.json write
 

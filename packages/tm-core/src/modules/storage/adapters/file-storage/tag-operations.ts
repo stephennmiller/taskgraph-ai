@@ -95,13 +95,20 @@ export class TagOperations {
 			);
 			this.assertNoRetiredIds(tagName, tasks);
 			tasksCopied = tasks.length;
+			const retired = archiveTag(
+				readArchiveSync(this.pathResolver.getArchivePath()),
+				tagName
+			).metadata.highestId;
 			const now = new Date().toISOString();
 			setOwnKey(data, tagName, {
 				tasks,
 				metadata: {
 					created: now,
 					updated: now,
-					description: options?.description
+					description: options?.description,
+					// A removed tag's IDs stay taken under its name: move --to-tag
+					// numbers above this mark, as add-task does from the archive (#1095)
+					...(retired > 0 && { highestId: retired })
 				}
 			});
 			return data;
@@ -254,11 +261,7 @@ export class TagOperations {
 	 * by tag and ID, so the task would take over the old task's issue. A tag
 	 * renamed back to its old name (the tombstone's `renamedTo`) is its own.
 	 */
-	private assertNoRetiredIds(
-		tag: string,
-		tasks: unknown,
-		renamedFrom?: string
-	): void {
+	assertNoRetiredIds(tag: string, tasks: unknown, renamedFrom?: string): void {
 		const { metadata } = archiveTag(
 			readArchiveSync(this.pathResolver.getArchivePath()),
 			tag

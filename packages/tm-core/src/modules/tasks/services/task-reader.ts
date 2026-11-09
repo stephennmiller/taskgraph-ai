@@ -16,6 +16,7 @@ import {
 	satisfyArchivedDependencies,
 	withStoredDependencies
 } from '../utils/archive.js';
+import { missingActiveTagHint } from '../utils/branch-tag.js';
 import { resolveClaimant } from '../utils/claim.js';
 import { selectNextTask } from '../utils/next-task.js';
 import { filterBySearch } from '../utils/task-filters.js';
@@ -232,9 +233,7 @@ export class TaskReader {
 				ERROR_CODES.NOT_FOUND,
 				{ tagName: resolved }
 			),
-			{
-				hint: 'Switch with `taskgraph tags use <tag>`; `taskgraph tags` lists them'
-			}
+			{ hint: missingActiveTagHint(this.configManager.getProjectRoot()) }
 		);
 	}
 

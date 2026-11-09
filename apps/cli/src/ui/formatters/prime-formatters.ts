@@ -113,7 +113,7 @@ export function formatPrimeContext(
 	if (context.tagMissing) {
 		lines.push(
 			'',
-			`Tag ${context.tag} isn't in tasks.json. Switch with ${theme.brand('taskgraph tags use <tag>')}`
+			`Tag ${context.tag} isn't in tasks.json. Switch with ${theme.brand('taskgraph tags use <tag>')}, or change TASKGRAPH_TAG if it is set`
 		);
 	} else if (counts.total === 0) {
 		lines.push(
