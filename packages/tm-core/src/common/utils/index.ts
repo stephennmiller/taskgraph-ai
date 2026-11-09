@@ -6,16 +6,9 @@
 // Export git utilities
 export {
 	isGitRepository,
-	isGitRepositorySync,
 	getCurrentBranch,
-	getCurrentBranchSync,
-	getLocalBranches,
-	getRemoteBranches,
 	isGhCliAvailable,
 	getGitHubRepoInfo,
-	getGitRepositoryRoot,
-	getDefaultBranch,
-	isOnDefaultBranch,
 	sanitizeBranchNameForTag,
 	isValidBranchForTag,
 	type GitHubRepoInfo

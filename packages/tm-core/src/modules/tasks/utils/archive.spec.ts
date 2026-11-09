@@ -9,14 +9,12 @@ import {
 	archiveTag,
 	archivedTaskIds,
 	copyArchiveTag,
-	deleteArchivedTag,
 	dropArchiveTag,
 	isArchivedReference,
 	lastChangedAt,
 	nextTaskId,
 	readArchivedIdsSync,
 	renameArchiveTag,
-	renameArchivedTag,
 	satisfyArchivedDependencies,
 	selectArchivable,
 	takeFromArchive
@@ -386,31 +384,6 @@ describe('tag rename and delete', () => {
 		expect(archiveTag(stored, '__proto__').metadata.highestId).toBe(7);
 		expect(Object.getPrototypeOf(stored)).toBe(Object.prototype);
 		expect(({} as Record<string, unknown>).tasks).toBeUndefined();
-	});
-
-	it('updates archive.json on disk under its lock, and creates none when there is no archive', async () => {
-		const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'tg-archive-tag-'));
-		try {
-			const tasksPath = path.join(dir, 'tasks.json');
-			await renameArchivedTag(tasksPath, 'feature', 'launch');
-			expect(fs.existsSync(archivePathFor(tasksPath))).toBe(false);
-
-			fs.writeFileSync(archivePathFor(tasksPath), JSON.stringify(archive()));
-			await renameArchivedTag(tasksPath, 'feature', 'launch');
-			expect(readArchivedIdsSync(tasksPath, 'launch').ids).toEqual(
-				new Set(['4'])
-			);
-			expect(readArchivedIdsSync(tasksPath, 'feature').highestId).toBe(0);
-
-			await deleteArchivedTag(tasksPath, 'launch');
-			expect(readArchivedIdsSync(tasksPath, 'launch').highestId).toBe(0);
-			expect(readArchivedIdsSync(tasksPath, 'master').ids).toEqual(
-				new Set(['2'])
-			);
-			expect(fs.readdirSync(dir).sort()).toEqual(['archive.json']);
-		} finally {
-			fs.rmSync(dir, { recursive: true, force: true });
-		}
 	});
 });
 
