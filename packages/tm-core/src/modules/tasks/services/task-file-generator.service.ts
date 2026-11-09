@@ -41,6 +41,18 @@ export interface GenerateTaskFilesResult {
 }
 
 /**
+ * The file `generate` writes for a task, which `remove-task` deletes:
+ * task_001.md in master, task_001_<tag>.md in other tags
+ */
+export function taskFileName(taskId: string | number, tag: string): string {
+	assertTagName(tag);
+	const paddedId = String(taskId).padStart(3, '0');
+	return tag === 'master'
+		? `task_${paddedId}.md`
+		: `task_${paddedId}_${tag}.md`;
+}
+
+/**
  * Service for generating individual task markdown files from tasks.json
  */
 export class TaskFileGeneratorService {
@@ -103,7 +115,7 @@ export class TaskFileGeneratorService {
 						);
 					}
 					const content = this.formatTaskContent(task, tasks);
-					const fileName = this.getTaskFileName(task.id, tag);
+					const fileName = taskFileName(task.id, tag);
 					const filePath = path.join(outputDir, fileName);
 					await refuseSymlink(filePath);
 					await fs.writeFile(filePath, content, 'utf-8');
@@ -139,18 +151,6 @@ export class TaskFileGeneratorService {
 				error: error.message
 			};
 		}
-	}
-
-	/**
-	 * Get the filename for a task file
-	 * Master tag: task_001.md
-	 * Other tags: task_001_tagname.md
-	 */
-	private getTaskFileName(taskId: string | number, tag: string): string {
-		const paddedId = String(taskId).padStart(3, '0');
-		return tag === 'master'
-			? `task_${paddedId}.md`
-			: `task_${paddedId}_${tag}.md`;
 	}
 
 	/**
