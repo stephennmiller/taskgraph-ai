@@ -97,8 +97,8 @@ describe('LoopCommand', () => {
 					// Mirror the real implementation logic for accurate testing
 					if (opts.userIterations !== undefined) return opts.userIterations;
 					if (opts.taskId !== undefined) return 1;
-					if (opts.preset === 'default' && opts.pendingTaskCount > 0)
-						return opts.pendingTaskCount;
+					if (opts.preset === 'default' && opts.pickableTaskCount > 0)
+						return opts.pickableTaskCount;
 					return 10;
 				}),
 				resolveTask: vi.fn().mockImplementation(async (id: string) => ({
@@ -119,7 +119,7 @@ describe('LoopCommand', () => {
 			},
 			tasks: {
 				getNext: vi.fn().mockResolvedValue({ id: '1', title: 'Test Task' }),
-				getCount: vi.fn().mockResolvedValue(0)
+				getPickableCount: vi.fn().mockResolvedValue(0)
 			},
 			config: {
 				getActiveTag: vi.fn().mockReturnValue('feature-auth')
@@ -436,7 +436,7 @@ describe('LoopCommand', () => {
 			const result = createMockResult();
 			mockLoopRun.mockResolvedValue(result);
 			// Mock empty pending tasks count
-			mockTmCore.tasks.getCount.mockResolvedValue(0);
+			mockTmCore.tasks.getPickableCount.mockResolvedValue(0);
 
 			const execute = (loopCommand as any).execute.bind(loopCommand);
 			await execute({});
@@ -453,7 +453,7 @@ describe('LoopCommand', () => {
 			const result = createMockResult();
 			mockLoopRun.mockResolvedValue(result);
 			// Mock 5 pending items (3 tasks + 2 pending subtasks)
-			mockTmCore.tasks.getCount.mockResolvedValue(5);
+			mockTmCore.tasks.getPickableCount.mockResolvedValue(5);
 
 			const execute = (loopCommand as any).execute.bind(loopCommand);
 			await execute({});
@@ -470,7 +470,7 @@ describe('LoopCommand', () => {
 			const result = createMockResult();
 			mockLoopRun.mockResolvedValue(result);
 			// Mock pending tasks (should be ignored when user provides explicit iterations)
-			mockTmCore.tasks.getCount.mockResolvedValue(10);
+			mockTmCore.tasks.getPickableCount.mockResolvedValue(10);
 
 			const execute = (loopCommand as any).execute.bind(loopCommand);
 			await execute({ iterations: '3' });
@@ -489,8 +489,8 @@ describe('LoopCommand', () => {
 			const execute = (loopCommand as any).execute.bind(loopCommand);
 			await execute({ prompt: 'test-coverage' });
 
-			// getCount should NOT be called for non-default presets
-			expect(mockTmCore.tasks.getCount).not.toHaveBeenCalled();
+			// getPickableCount should NOT be called for non-default presets
+			expect(mockTmCore.tasks.getPickableCount).not.toHaveBeenCalled();
 			expect(mockLoopRun).toHaveBeenCalledWith(
 				expect.objectContaining({
 					iterations: 10,

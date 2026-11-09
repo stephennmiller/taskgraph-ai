@@ -32,6 +32,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { TASKGRAPH_TASKS_FILE } from '../../common/constants/paths.js';
 import type { Subtask, Task, TaskStatus } from '../../common/types/index.js';
+import { statusesWhere } from '../../common/constants/index.js';
 import { readPrdSection } from '../prd/prd-coverage.js';
 import { getPrdSource } from '../prd/prd-sections.js';
 import { subtaskInContext } from './utils/subtask-context.js';
@@ -71,6 +72,8 @@ import type {
 	WatchOptions,
 	WatchSubscription
 } from '../../common/interfaces/storage.interface.js';
+
+const PICKABLE_STATUSES = statusesWhere('pickable');
 
 /**
  * Tasks Domain - Unified API for all task operations
@@ -302,39 +305,19 @@ export class TasksDomain {
 	}
 
 	/**
-	 * Get count of tasks and their subtasks matching a status
-	 * Useful for determining work remaining, progress tracking, or setting loop iterations
-	 *
-	 * @param status - Task status to count (e.g., 'pending', 'done', 'in-progress')
-	 * @param tag - Optional tag to filter tasks
-	 * @returns Total count of matching tasks + matching subtasks
+	 * How many tasks and subtasks a loop run can still pick: pending or
+	 * in-progress, since a resumed run starts on the in-progress one (#1067).
+	 * A subtask with no status counts as pending.
 	 */
-	async getCount(status: TaskStatus, tag?: string): Promise<number> {
-		// Fetch ALL tasks to ensure we count subtasks across all parent tasks
-		// (a parent task may have different status than its subtasks)
-		const result = await this.list({ tag });
-
+	async getPickableCount(tag?: string): Promise<number> {
+		const { tasks } = await this.list({ tag });
+		const pickable = (status?: TaskStatus) =>
+			!status || PICKABLE_STATUSES.includes(status);
 		let count = 0;
-		for (const task of result.tasks) {
-			// Count the task if it matches the status
-			if (task.status === status) {
-				count++;
-			}
-
-			// Count subtasks with matching status
-			if (task.subtasks && task.subtasks.length > 0) {
-				for (const subtask of task.subtasks) {
-					// For pending, also count subtasks without status (default to pending)
-					if (
-						subtask.status === status ||
-						(status === 'pending' && !subtask.status)
-					) {
-						count++;
-					}
-				}
-			}
+		for (const task of tasks) {
+			if (pickable(task.status)) count++;
+			count += (task.subtasks ?? []).filter((s) => pickable(s.status)).length;
 		}
-
 		return count;
 	}
 

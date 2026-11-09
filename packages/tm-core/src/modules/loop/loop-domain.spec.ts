@@ -245,50 +245,50 @@ describe('LoopDomain', () => {
 			const result = loopDomain.resolveIterations({
 				userIterations: 25,
 				preset: 'default',
-				pendingTaskCount: 10
+				pickableTaskCount: 10
 			});
 			expect(result).toBe(25);
 		});
 
-		it('should return pendingTaskCount for default preset when no userIterations', () => {
+		it('should return pickableTaskCount for default preset when no userIterations', () => {
 			const result = loopDomain.resolveIterations({
 				preset: 'default',
-				pendingTaskCount: 15
+				pickableTaskCount: 15
 			});
 			expect(result).toBe(15);
 		});
 
-		it('should return 10 for default preset when pendingTaskCount is 0', () => {
+		it('should return 10 for default preset when pickableTaskCount is 0', () => {
 			const result = loopDomain.resolveIterations({
 				preset: 'default',
-				pendingTaskCount: 0
+				pickableTaskCount: 0
 			});
 			expect(result).toBe(10);
 		});
 
-		it('should return 10 for default preset when pendingTaskCount is undefined', () => {
+		it('should return 10 for default preset when pickableTaskCount is undefined', () => {
 			const result = loopDomain.resolveIterations({
 				preset: 'default'
 			});
 			expect(result).toBe(10);
 		});
 
-		it('should return 10 for non-default presets regardless of pendingTaskCount', () => {
+		it('should return 10 for non-default presets regardless of pickableTaskCount', () => {
 			const presets = ['test-coverage', 'linting', 'duplication', 'entropy'];
 			for (const preset of presets) {
 				const result = loopDomain.resolveIterations({
 					preset,
-					pendingTaskCount: 50
+					pickableTaskCount: 50
 				});
 				expect(result).toBe(10);
 			}
 		});
 
-		it('should prioritize userIterations over pendingTaskCount for default preset', () => {
+		it('should prioritize userIterations over pickableTaskCount for default preset', () => {
 			const result = loopDomain.resolveIterations({
 				userIterations: 5,
 				preset: 'default',
-				pendingTaskCount: 100
+				pickableTaskCount: 100
 			});
 			expect(result).toBe(5);
 		});
