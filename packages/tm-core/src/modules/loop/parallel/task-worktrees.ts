@@ -495,12 +495,21 @@ export class TaskWorktrees {
 		worktree: string,
 		branch: string
 	): Promise<string | undefined> {
-		if (!(await this.succeeds(['worktree', 'remove', worktree]))) return;
+		if (!(await this.removeWorktree(worktree))) return;
 		let n = 1;
 		while (await this.branchExists(`${branch}-conflict-${n}`)) n++;
 		const kept = `${branch}-conflict-${n}`;
 		await this.git(['branch', '-m', branch, kept]);
 		return kept;
+	}
+
+	/**
+	 * `git worktree remove`, never forced. A path git has no worktree for
+	 * (a `--container` task's clone) counts as already removed (#1068).
+	 */
+	private async removeWorktree(worktree: string): Promise<boolean> {
+		if (!(await this.worktreeBranches()).has(canonical(worktree))) return true;
+		return this.succeeds(['worktree', 'remove', worktree]);
 	}
 
 	async deleteBranch(branch: string): Promise<void> {
@@ -535,7 +544,7 @@ export class TaskWorktrees {
 		branch: string,
 		deleteBranch: boolean
 	): Promise<boolean> {
-		if (!(await this.succeeds(['worktree', 'remove', worktree]))) return false;
+		if (!(await this.removeWorktree(worktree))) return false;
 		if (deleteBranch) await this.succeeds(['branch', '-d', branch]);
 		return true;
 	}
