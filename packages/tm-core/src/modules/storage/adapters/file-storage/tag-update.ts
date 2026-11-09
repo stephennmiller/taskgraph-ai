@@ -12,6 +12,10 @@ import type { Task, TaskMetadata } from '../../../../common/types/index.js';
 import type { FormatHandler } from './format-handler.js';
 import { getOwnKey, setOwnKey } from '../../../../common/utils/own-key.js';
 import { withSchemaVersion } from './schema-version.js';
+import {
+	assertNoNewTaskProblems,
+	knownTaskProblems
+} from '../../../tasks/validation/stored-tasks.js';
 import { highestTaskId } from '../../../tasks/utils/archive.js';
 import {
 	type ParentDoneGuard,
@@ -149,7 +153,8 @@ function normalizeTaskIds(tasks: Task[]): Task[] {
  * Run a MutateTags change on the parsed file contents: it gets every tag's
  * tasks (a file without tags has only master) and the tags it names are
  * written back, each parent whose subtasks changed settled first
- * (settleChangedParents)
+ * (settleChangedParents). A status, priority or ID problem the change added
+ * to a tag is refused (assertNoNewTaskProblems)
  */
 export async function mutateTagsIn<R>(
 	formatHandler: FormatHandler,
@@ -170,10 +175,14 @@ export async function mutateTagsIn<R>(
 	const before = new Map(
 		names.map((tag) => [tag, subtaskShapes(tags.get(tag) ?? [])])
 	);
+	const known = new Map(
+		names.map((tag) => [tag, knownTaskProblems(tags.get(tag))])
+	);
 	const { changed, result } = await mutate(tags, metadata);
 	for (const tag of new Set(changed)) {
 		const shapes = before.get(tag);
 		if (shapes) settleChangedParents(shapes, tags.get(tag) ?? [], guardDone);
+		assertNoNewTaskProblems(known.get(tag) ?? new Set(), tags.get(tag), tag);
 		// A missing or empty file starts tagged, as the legacy writers create it
 		if (!data || Object.keys(data).length === 0) {
 			data = {};

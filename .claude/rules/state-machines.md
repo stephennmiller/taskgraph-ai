@@ -251,6 +251,9 @@ Invariants:
   `modifyTagged`, which re-read under the lock. AI results merge into what
   is on disk at write time.
 - A write is all or nothing: temp file, then rename.
+- `mutateTasks` and `mutateTagsIn` refuse a write that adds an unknown
+  status or priority, an ID that isn't 1 or more, or a duplicate ID
+  (`assertNoNewTaskProblems`, #1119). A value already in the file may stay.
 - Lock order is always tasks.json, then archive.json.
 
 A 4-process stress run (20 mixed writes each) lost no update.
