@@ -221,12 +221,14 @@ export class TaskEditCommands {
 	 * Add one loop iteration's cost and time to a task's `spend`, in one
 	 * locked write. A subtask's go to its parent, so `expand --force`
 	 * replacing the subtasks can't drop them. A cost Claude Code didn't
-	 * report adds nothing to `usd`. Throws TASK_NOT_FOUND for an unknown ID.
+	 * report adds nothing to `usd`. `iterations` (default 1) is how many
+	 * loop iterations it counts as: 0 for a merge conflict resolve.
+	 * Throws TASK_NOT_FOUND for an unknown ID.
 	 * @returns The task's spend as saved
 	 */
 	async addSpend(
 		taskId: string,
-		run: { usd?: number; durationMs?: number },
+		run: { usd?: number; durationMs?: number; iterations?: number },
 		tag?: string
 	): Promise<TaskSpend> {
 		const id = normalizeTaskId(taskId).split('.')[0];
@@ -236,7 +238,7 @@ export class TaskEditCommands {
 				spend: {
 					usd: count(spend?.usd) + count(run.usd),
 					durationMs: count(spend?.durationMs) + count(run.durationMs),
-					iterations: count(spend?.iterations) + 1
+					iterations: count(spend?.iterations) + (run.iterations ?? 1)
 				}
 			}),
 			tag
