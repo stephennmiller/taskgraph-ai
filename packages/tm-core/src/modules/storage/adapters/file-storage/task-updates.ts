@@ -5,6 +5,7 @@
  * `tasks: null` means nothing changed.
  */
 
+import { isTaskComplete } from '../../../../common/constants/index.js';
 import {
 	ERROR_CODES,
 	TaskGraphError
@@ -212,16 +213,18 @@ function setSubtaskStatusIn(
 		newStatus
 	);
 
-	// The parent follows its subtasks; one set back can make it pending again
+	// The parent follows its subtasks; one set back can make it pending again.
+	// Closing a leftover subtask of a parent marked done never reopens it (#1107)
+	const settled =
+		parentTask.status === 'done' && isTaskComplete(newStatus)
+			? parentTask
+			: withParentStatus(
+					parentTask,
+					(parent) => options.guardDone?.(parent, String(parent.id), true),
+					true
+				);
 	const updated = [...tasks];
-	updated[parentTaskIndex] = {
-		...withParentStatus(
-			parentTask,
-			(parent) => options.guardDone?.(parent, String(parent.id), true),
-			true
-		),
-		updatedAt: now
-	};
+	updated[parentTaskIndex] = { ...settled, updatedAt: now };
 
 	return { tasks: updated, result };
 }

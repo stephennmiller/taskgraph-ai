@@ -102,6 +102,36 @@ describe('settleChangedParents', () => {
 		expect(added.status).toBe('done');
 	});
 
+	it('keeps a done parent done when its leftover subtasks are removed or cancelled (#1107)', () => {
+		const removed = [parent('done', 'done', 'pending', 'pending')];
+		const cancelled = [parent('done', 'pending', 'pending')];
+		const before = subtaskShapes(removed);
+		const beforeCancel = subtaskShapes(cancelled);
+		removed[0].subtasks.pop();
+		cancelled[0].subtasks[0].status = 'cancelled';
+
+		settleChangedParents(before, removed);
+		settleChangedParents(beforeCancel, cancelled);
+
+		expect(removed[0].status).toBe('done');
+		expect(cancelled[0].status).toBe('done');
+	});
+
+	it('reopens a done parent for a subtask added or set to an open status', () => {
+		const added = [parent('done', 'done', 'pending')];
+		const started = [parent('done', 'pending', 'pending')];
+		const before = subtaskShapes(added);
+		const beforeStart = subtaskShapes(started);
+		added[0].subtasks.push(createSubtask({ id: 3, title: 'Sub 3' }));
+		started[0].subtasks[0].status = 'blocked';
+
+		settleChangedParents(before, added);
+		settleChangedParents(beforeStart, started);
+
+		expect(added[0].status).toBe('in-progress');
+		expect(started[0].status).toBe('in-progress');
+	});
+
 	it('reads a missing subtask status as pending, not as a status change', () => {
 		const tasks = [parent('in-progress', 'pending', 'pending')];
 		for (const s of tasks[0].subtasks) delete (s as { status?: string }).status;

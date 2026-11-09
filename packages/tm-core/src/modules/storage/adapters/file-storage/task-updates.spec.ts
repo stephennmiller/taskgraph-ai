@@ -102,6 +102,18 @@ describe('setTaskStatusIn parent auto-status', () => {
 		expect(tasks?.[0].status).toBe('review');
 	});
 
+	it('keeps a parent marked done when a leftover subtask is cancelled or finished, reopens it when one is started (#1107)', () => {
+		const done = () => parent('done', 'pending');
+
+		const cancelled = setTaskStatusIn(done(), '1.1', 'cancelled', {}).tasks;
+		const finished = setTaskStatusIn(done(), '1.1', 'done', {}).tasks;
+		const started = setTaskStatusIn(done(), '1.1', 'in-progress', {}).tasks;
+
+		expect(cancelled?.[0].status).toBe('done');
+		expect(finished?.[0].status).toBe('done');
+		expect(started?.[0].status).toBe('in-progress');
+	});
+
 	it('leaves the parent as it was when every subtask is cancelled', () => {
 		const { tasks } = setTaskStatusIn(
 			parent('pending', 'cancelled'),

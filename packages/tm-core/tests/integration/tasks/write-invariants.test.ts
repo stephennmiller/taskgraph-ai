@@ -258,3 +258,51 @@ describe('every TasksDomain writer keeps the tasks.json invariants', () => {
 		expect(violations(p.read())).toEqual([]);
 	});
 });
+
+describe('a parent marked done over open subtasks (#1107)', () => {
+	let p: PrdProject;
+	const parent = () => p.read().master.tasks[0];
+
+	beforeEach(async () => {
+		p = await createPrdProject({ analysis: false });
+		p.write({
+			master: {
+				tasks: [
+					existing(1, 'Parent', {
+						status: 'done',
+						subtasks: [sub(1), sub(2), sub(3)]
+					}),
+					existing(2, 'Next', { dependencies: ['1'] })
+				],
+				metadata: { highestId: 2 }
+			}
+		});
+	});
+
+	afterEach(async () => {
+		await p.close();
+	});
+
+	it.each<[string, Writer]>([
+		['set-status cancelled', (tm) => tm.tasks.updateStatus('1.1', 'cancelled')],
+		['remove-task of a subtask', (tm) => tm.tasks.removeTasks('1.1')],
+		['remove-subtask', (tm) => tm.tasks.removeSubtasks(['1.1'])],
+		['move of a subtask to a task', (tm) => tm.tasks.move('1.1', '9')]
+	])(
+		'stays done after %s, and after the rest are cancelled',
+		async (_name, write) => {
+			await write(p.tmCore, p);
+
+			expect(parent().status).toBe('done');
+			await p.tmCore.tasks.updateStatuses(['1.2', '1.3'], 'cancelled');
+			expect(parent().status).toBe('done');
+			expect((await p.tmCore.tasks.getNext())?.id).not.toBe('1');
+		}
+	);
+
+	it('reopens when a leftover subtask is started', async () => {
+		await p.tmCore.tasks.updateStatus('1.1', 'in-progress');
+
+		expect(parent().status).toBe('in-progress');
+	});
+});

@@ -94,7 +94,7 @@ A parent's status follows its subtasks whichever command changes them (`set-stat
 
 In Claude Code, the plugin's `/taskgraph:to-done <id>` does the checking for you: the `task-checker` agent compares your changes with each numbered item, the ones it can show evidence for are checked, and the rest are reported to you. It then saves a three-line summary on the task (what changed, files, follow-ups) and marks it done. It never passes `--force` unless you ask.
 
-Marking a parent task done leaves its subtasks as they are; mark each subtask done (or `cancelled`) yourself.
+Marking a parent task done leaves its subtasks as they are; mark each subtask done (or `cancelled`) yourself. That keeps the parent done; setting a subtask back to an open status, or adding one, moves the parent to `in-progress`.
 
 ## Generate Task Files
 

@@ -32,7 +32,8 @@ export const parentDoneGate =
  * - Some in progress or done: in progress.
  * - All pending: pending, only when `subtaskStatusChanged` (a subtask set
  *   back). add-subtask or expand on a claimed parent keeps its claim.
- * - Otherwise a done parent with open subtasks reopens in progress.
+ * - Otherwise a done parent with open subtasks reopens in progress. Callers
+ *   skip the call when the change only closed or removed subtasks (#1107).
  * Unless a subtask's own status changed, a parent the user put in review,
  * blocked, deferred or cancelled keeps that status.
  */
@@ -74,6 +75,8 @@ interface SubtaskShape {
 	ids: string;
 	statuses: string;
 	titles: string;
+	/** `<id> <status>` of each subtask that isn't complete */
+	open: string[];
 }
 
 /** Each task's SubtaskShape by ID, taken before a write changes `tasks` */
@@ -88,7 +91,10 @@ export function subtaskShapes(tasks: Task[]): Map<string, SubtaskShape> {
 					// Missing reads as pending, as withParentStatus reads it: a rewrite
 					// that writes the default isn't a subtask's status change
 					statuses: JSON.stringify(subs.map((s) => s.status || 'pending')),
-					titles: JSON.stringify(subs.map((s) => s.title))
+					titles: JSON.stringify(subs.map((s) => s.title)),
+					open: subs
+						.filter((s) => !isTaskComplete(s.status || 'pending'))
+						.map((s) => `${s.id} ${s.status || 'pending'}`)
 				}
 			];
 		})
@@ -98,7 +104,8 @@ export function subtaskShapes(tasks: Task[]): Map<string, SubtaskShape> {
 /**
  * The write funnel's step: each task in `tasks` that `before` had and whose
  * subtasks were added, removed or changed status takes the status they give
- * it (withParentStatus). Only a status change on the same subtasks counts as
+ * it (withParentStatus), except that a done parent reopens only for a subtask
+ * added or set to an open status (#1107). Only a status change on the same subtasks counts as
  * `subtaskStatusChanged`: expand --force reuses IDs for new subtasks. A new
  * task (add-task, a move, a restore) keeps its status. Settled in place, so
  * a writer's result that holds the parent sees its new status.
@@ -113,6 +120,14 @@ export function settleChangedParents(
 		const was = before.get(String(task.id));
 		const now = after.get(String(task.id)) as SubtaskShape;
 		if (!was || (was.ids === now.ids && was.statuses === now.statuses)) {
+			continue;
+		}
+		// Cancelling, finishing or removing the subtasks a parent was marked
+		// done over never moves it back; one added or set open does (#1107)
+		if (
+			task.status === 'done' &&
+			now.open.every((key) => was.open.includes(key))
+		) {
 			continue;
 		}
 		const statusOnly = was.ids === now.ids && was.titles === now.titles;
