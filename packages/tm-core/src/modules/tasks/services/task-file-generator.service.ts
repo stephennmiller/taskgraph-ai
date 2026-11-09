@@ -11,7 +11,7 @@ import type { ConfigManager } from '../../config/managers/config-manager.js';
 import { resolveSubtaskDependency } from '../../dependencies/subtask-dependency.js';
 import { isSafeTaskId } from '../../../common/utils/safe-task-id.js';
 import {
-	refuseSymlink,
+	refuseSymlinkedFolders,
 	writeProjectFile
 } from '../../storage/adapters/file-storage/file-operations.js';
 import { assertTagName } from '../utils/tag-names.js';
@@ -81,8 +81,10 @@ export class TaskFileGeneratorService {
 		try {
 			// The tag goes into each file name
 			assertTagName(tag);
-			// Writes and orphan cleanup must not follow a symlinked default folder
-			if (!options.outputDir) await refuseSymlink(outputDir);
+			// Writes and orphan cleanup must not follow a symlinked default
+			// folder, or a symlinked .taskgraph above it
+			if (!options.outputDir)
+				refuseSymlinkedFolders(path.join(outputDir, 'task.md'));
 
 			// Ensure output directory exists
 			await fs.mkdir(outputDir, { recursive: true });

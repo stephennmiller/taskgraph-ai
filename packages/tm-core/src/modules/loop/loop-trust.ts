@@ -193,6 +193,36 @@ const CLAUDE_DIR_MAX_ENTRIES = 5000;
 const CLAUDE_DIR_MAX_BYTES = 8 * 1024 * 1024;
 
 /**
+ * How far imports are followed from an instruction file. Claude Code's
+ * memory docs (code.claude.com/docs/en/memory) say four hops and earlier
+ * versions said five; a hop too many only asks once more
+ */
+const IMPORT_MAX_HOPS = 5;
+
+/** Claude Code loads no instruction file or import larger than this */
+const IMPORT_MAX_BYTES = 4 * 1024 * 1024;
+
+/**
+ * Every path a Claude Code instruction file could import with `@path`,
+ * where a space is written `\ `. Claude Code parses the Markdown first
+ * (no import in a code block or span, one after `**` or a link's `[`, a
+ * path that ends at markup or a `#fragment`). This doesn't parse, so it
+ * can't skip an import that parser takes: any `@` starts a path, and the
+ * path counts whole and cut before each punctuation mark in it.
+ */
+function importPaths(text: string): string[] {
+	const paths = new Set<string>();
+	for (const [, raw] of text.matchAll(/@((?:[^\s\\]|\\ )+)/g)) {
+		const whole = raw.replace(/\\ /g, ' ');
+		paths.add(whole);
+		for (const mark of whole.matchAll(/[^\p{L}\p{N}/ ]/gu))
+			paths.add(whole.slice(0, mark.index));
+	}
+	paths.delete('');
+	return [...paths];
+}
+
+/**
  * Every file under `starts` (paths from the project: `.claude` with its
  * rules, agents, commands, skills, hooks and settings, and the rest) as
  * [path, content] pairs in a fixed order, less Claude Code's
@@ -203,24 +233,64 @@ const CLAUDE_DIR_MAX_BYTES = 8 * 1024 * 1024;
  * byte budget gives its size and change times, which rewriting it changes.
  * Past the entry cap the walk stops and a value that never repeats goes in,
  * so loop asks every time.
+ * With them, each file inside the repository that a Markdown file among
+ * them, or one of `instructions`, imports with `@path` (#1101). A folder, a
+ * path in the home folder (`~`) and a path or link that leaves the
+ * repository are not read.
  * @param tracked - From `trackedFiles`
+ * @param instructions - Files hashed elsewhere, read here only for imports
  */
 function fileTree(
 	root: string,
 	top: string,
 	tracked: (file: string) => boolean,
-	starts: string[]
+	starts: string[],
+	instructions: string[]
 ): unknown {
 	const out: Array<[string, string]> = [];
 	let seen = 0;
 	let bytes = 0;
-	const content = (file: string, stat: fs.Stats) => {
-		if (bytes + stat.size > CLAUDE_DIR_MAX_BYTES)
+	/** The fewest hops each imported file was reached in */
+	const imported = new Map<string, number>();
+	/** @param hop - Imports between an instruction file and those in `text` */
+	const scan = (file: string, text: string, hop: number) => {
+		if (hop > IMPORT_MAX_HOPS) return;
+		for (const target of importPaths(text)) {
+			const full = path.resolve(path.dirname(file), target);
+			if (target.startsWith('~') || !isWithin(top, full)) continue;
+			// Again when reached in fewer hops: its own imports then go further
+			if ((imported.get(full) ?? Infinity) <= hop) continue;
+			const rel = `@${path.relative(root, full)}`;
+			try {
+				const real = fs.realpathSync(full);
+				const stat = fs.statSync(real);
+				if (!isWithin(top, real) || !stat.isFile()) continue;
+				imported.set(full, hop);
+				if (++seen > CLAUDE_DIR_MAX_ENTRIES) return;
+				out.push([rel, content(real, stat, hop + 1)]);
+			} catch (error) {
+				// A missing file adds nothing until it appears
+				const code = (error as NodeJS.ErrnoException).code;
+				if (code !== 'ENOENT' && code !== 'ENOTDIR')
+					out.push([rel, `error:${code}`]);
+			}
+		}
+	};
+	/** @param hop - Set for a file whose imports count */
+	const content = (file: string, stat: fs.Stats, hop?: number) => {
+		// Past the budget a file Claude Code would load is still read, for its imports
+		if (
+			bytes + stat.size > CLAUDE_DIR_MAX_BYTES &&
+			!(hop && stat.size <= IMPORT_MAX_BYTES)
+		)
 			return `${stat.size}:${stat.mtimeMs}:${stat.ctimeMs}`;
 		bytes += stat.size;
+		const data = fs.readFileSync(file);
+		if (hop) scan(file, data.toString('utf8'), hop);
 		// Bytes, not text: decoding would make different binaries look alike
-		return sha256(fs.readFileSync(file));
+		return sha256(data);
 	};
+	const hopOf = (rel: string) => (/\.md$/i.test(rel) ? 1 : undefined);
 	const visit = (rel: string): boolean => {
 		if (++seen > CLAUDE_DIR_MAX_ENTRIES) return false;
 		const full = path.join(root, rel);
@@ -231,7 +301,8 @@ function fileTree(
 				const target = fs.realpathSync(full);
 				if (isWithin(top, target)) {
 					const targetStat = fs.statSync(target);
-					if (targetStat.isFile()) out.push([rel, content(target, targetStat)]);
+					if (targetStat.isFile())
+						out.push([rel, content(target, targetStat, hopOf(rel))]);
 					else if (targetStat.isDirectory()) return walk(rel);
 				}
 			} else if (stat.isDirectory()) {
@@ -239,7 +310,7 @@ function fileTree(
 			} else if (!stat.isFile()) {
 				out.push([rel, 'special']); // A FIFO would block a read
 			} else {
-				out.push([rel, content(full, stat)]);
+				out.push([rel, content(full, stat, hopOf(rel))]);
 			}
 		} catch (error) {
 			out.push([rel, `error:${(error as NodeJS.ErrnoException).code}`]);
@@ -260,7 +331,17 @@ function fileTree(
 		}
 		return true;
 	};
-	return starts.every(visit) ? out : randomUUID();
+	for (const rel of instructions) {
+		try {
+			const file = fs.realpathSync(path.join(root, rel));
+			if (isWithin(top, file)) scan(file, fs.readFileSync(file, 'utf8'), 1);
+		} catch {
+			// Missing: nothing to import
+		}
+	}
+	return starts.every(visit) && seen <= CLAUDE_DIR_MAX_ENTRIES
+		? out
+		: randomUUID();
 }
 
 /**
@@ -272,7 +353,7 @@ function fileTree(
  * task, and the complexity reports, whose expansion prompts come with every
  * task. In a project below the repository's top level, also the
  * instructions, rules and skills of each folder above it, which Claude Code
- * loads at start
+ * loads at start. Also the files those instructions import (see `fileTree`)
  */
 function trustHash(root: string, home: string): string {
 	const folders = foldersToTop(root);
@@ -342,7 +423,7 @@ function trustHash(root: string, home: string): string {
 		JSON.stringify([
 			text,
 			files,
-			fileTree(root, top, tracked, starts),
+			fileTree(root, top, tracked, starts, [...CLAUDE_FILES, ...local]),
 			[...doneItems],
 			prd,
 			...(models === undefined ? [] : [models])

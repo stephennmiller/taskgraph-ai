@@ -210,6 +210,20 @@ describe('TaskFileGeneratorService', () => {
 				expect(fs.readdirSync(outside)).toEqual(['task_009.md']);
 			});
 
+			it('writes and deletes nothing through a symlinked .taskgraph', async () => {
+				fs.mkdirSync(path.join(outside, 'tasks'));
+				fs.writeFileSync(path.join(outside, 'tasks', 'task_009.md'), 'keep');
+				fs.symlinkSync(outside, path.join(tempDir, '.taskgraph'));
+
+				const result = await service.generateTaskFiles();
+
+				expect(result.success).toBe(false);
+				expect(result.error).toContain('symlink');
+				expect(fs.readdirSync(path.join(outside, 'tasks'))).toEqual([
+					'task_009.md'
+				]);
+			});
+
 			it('writes no task file that is a symlink, and still writes the rest', async () => {
 				const dir = path.join(tempDir, '.taskgraph', 'tasks');
 				fs.mkdirSync(dir, { recursive: true });
