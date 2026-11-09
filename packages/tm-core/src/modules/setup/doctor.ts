@@ -41,7 +41,7 @@ export type DoctorCheckName =
 	| 'project'
 	/** config.json, config.local.json, state.json, tasks.json and archive.json parse */
 	| 'data-files'
-	/** Every tag's statuses, priorities, IDs, dependencies and parent statuses */
+	/** Every tag's statuses, priorities, IDs and dependencies */
 	| 'tasks'
 	| 'plugin'
 	| 'mcp';
@@ -324,7 +324,7 @@ function checkMcp(root: string, configFile: string): DoctorCheck {
 /**
  * The `data-files` and `tasks` checks. With `fix`, findings marked fixable
  * are repaired first, but only when every data file parses: a file doctor
- * couldn't read is never rewritten, and the done gate comes from config.json.
+ * couldn't read is never rewritten.
  */
 async function checkData(root: string, fix: boolean): Promise<DoctorCheck[]> {
 	let data = checkDataFiles(root);

@@ -234,11 +234,11 @@ describe('formatDoctorReport', () => {
 				fix: `Edit ${TASKS}. Use one of: pending, in-progress, review, blocked, deferred, done, cancelled`
 			},
 			{
-				kind: 'parent-status' as const,
+				kind: 'dependency' as const,
 				file: TASKS,
 				tag: 'feature',
 				taskId: '5',
-				message: 'Task 5 is done, but its subtasks make it in-progress',
+				message: 'Task 5 depends on non-existent task 99',
 				fixable: true
 			}
 		];
@@ -254,7 +254,7 @@ describe('formatDoctorReport', () => {
 					'  Task 3 has status "finished"',
 					`    Edit ${TASKS}. Use one of: pending, in-progress, review,`,
 					'    blocked, deferred, done, cancelled',
-					'  Task 5 is done, but its subtasks make it in-progress · tag feature',
+					'  Task 5 depends on non-existent task 99 · tag feature',
 					'  Run taskgraph doctor --fix to repair 1 of them'
 				].join('\n')
 			);
@@ -273,7 +273,7 @@ describe('formatDoctorReport', () => {
 						{
 							tag: 'master',
 							taskId: '5',
-							message: 'Task 5 is now in-progress (was done)'
+							message: "Task 5 no longer depends on 99, which doesn't exist"
 						}
 					]
 				}
@@ -282,7 +282,7 @@ describe('formatDoctorReport', () => {
 			expect(output).toBe(
 				[
 					`✓ Repaired 1 problem in ${TASKS}`,
-					'  Task 5 is now in-progress (was done)',
+					"  Task 5 no longer depends on 99, which doesn't exist",
 					'✓ Tasks  4 in 1 tag'
 				].join('\n')
 			);

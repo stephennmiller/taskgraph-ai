@@ -89,11 +89,11 @@ export class FormatHandler {
 
 	/**
 	 * extractTasks for `doctor`: an ID that isn't a number is left for it to
-	 * report, and anything but a list reads as no tasks
+	 * report, and so is anything but a list, as null
 	 */
-	extractTasksUnchecked(data: any, tag: string): Task[] {
+	extractTasksUnchecked(data: any, tag: string): Task[] | null {
 		const tasks = this.storedTasks(data, tag);
-		return Array.isArray(tasks) ? normalizeTaskStatuses(tasks) : [];
+		return Array.isArray(tasks) ? normalizeTaskStatuses(tasks) : null;
 	}
 
 	private storedTasks(data: any, tag: string): Task[] {

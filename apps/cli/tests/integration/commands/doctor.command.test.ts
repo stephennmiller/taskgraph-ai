@@ -139,7 +139,7 @@ describe('doctor command', () => {
 					master: {
 						tasks: [
 							task('1', {
-								status: 'done',
+								status: 'finished',
 								subtasks: [{ id: '1', title: 'Open', status: 'pending' }]
 							}),
 							task('2', { dependencies: ['99'] })
@@ -176,8 +176,8 @@ describe('doctor command', () => {
 			expect(json.status).toBe(1);
 			const findings = check(json.stdout, 'tasks').findings;
 			expect(findings.map((f: { kind: string }) => f.kind)).toEqual([
-				'dependency',
-				'parent-status'
+				'unknown-status',
+				'dependency'
 			]);
 			for (const finding of findings) {
 				expect(text.stdout).toContain(finding.message);
@@ -189,13 +189,31 @@ describe('doctor command', () => {
 			const fixed = run('--fix');
 
 			expect(fixed.stdout).toContain(
-				'✓ Repaired 2 problems in .taskgraph/tasks/tasks.json'
+				'✓ Repaired 1 problem in .taskgraph/tasks/tasks.json'
 			);
-			expect(fixed.stdout).toContain('Task 1 is now in-progress (was done)');
-			expect(fixed.stdout).toContain('✓ Tasks           2 in 1 tag');
-			expect(check(run('--json').stdout, 'tasks').status).toBe('pass');
+			expect(fixed.stdout).toContain(
+				"Task 2 no longer depends on 99, which doesn't exist"
+			);
+			expect(fixed.stdout).toContain(
+				'✗ Tasks           1 problem in .taskgraph/tasks/tasks.json'
+			);
+			expect(fixed.status).toBe(1);
 			const saved = JSON.parse(fs.readFileSync(tasksFile(), 'utf8'));
 			expect(saved.master.tasks[1].dependencies).toEqual([]);
+
+			// The fix doctor names for what is left, then a clean run
+			const set = spawnSync(
+				process.execPath,
+				[getCliBinPath(), 'set-status', '--id=1', '--status=pending'],
+				{
+					cwd: dir,
+					encoding: 'utf8',
+					env: { ...process.env, PATH: bin, TASKGRAPH_PROJECT_ROOT: '' }
+				}
+			);
+			expect(set.status).toBe(0);
+			expect(check(run('--json').stdout, 'tasks').status).toBe('pass');
+			expect(run('--fix').stdout).not.toContain('Repaired');
 		});
 	});
 });

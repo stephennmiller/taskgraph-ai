@@ -6,10 +6,15 @@
  * same locked write every command uses.
  *
  * Each check is another module's rule, read-only: findStoredTaskProblems
- * (what the write funnel refuses), validateTaskDependencies (what
- * `fix-dependencies --check` reports) and withParentStatus (how the funnel
- * settles a parent). The repair runs fixTaskDependencies and
- * withParentStatus, so doctor never decides anything those don't.
+ * (what the write funnel refuses) and validateTaskDependencies (what
+ * `fix-dependencies --check` reports). The repair runs fixTaskDependencies,
+ * so doctor never decides anything that doesn't.
+ *
+ * A parent's status against its subtasks isn't checked: state machine 2
+ * forbids no such state at rest. `set-status` on a parent may leave it done
+ * over open subtasks, or pending over finished ones, and the write funnel
+ * keeps that (settleChangedParents settles only a parent whose subtasks a
+ * write changed), so the file can't tell a deliberate status from a stale one.
  */
 
 import fs from 'node:fs';
@@ -21,7 +26,6 @@ import {
 	TASKGRAPH_TASKS_FILE
 } from '../../common/constants/paths.js';
 import type { Task } from '../../common/types/index.js';
-import { readDefinitionOfDone } from '../config/services/config-file.js';
 import {
 	type DependencyFix,
 	fixTaskDependencies,
@@ -30,11 +34,6 @@ import {
 import { FileStorage } from '../storage/adapters/file-storage/file-storage.js';
 import { FormatHandler } from '../storage/adapters/file-storage/format-handler.js';
 import { archivePathFor, archivedTaskIds } from '../tasks/utils/archive.js';
-import {
-	type ParentDoneGuard,
-	parentDoneGate,
-	withParentStatus
-} from '../tasks/utils/parent-status.js';
 import {
 	STORED_TASK_FIXES,
 	type StoredTaskProblemKind,
@@ -47,7 +46,6 @@ export interface DoctorFinding {
 		| 'unreadable-file'
 		| StoredTaskProblemKind
 		| 'dependency'
-		| 'parent-status'
 		/** A tag too broken to check past the problems listed before it */
 		| 'unchecked';
 	/** The file, relative to the project root, with `/` */
@@ -133,8 +131,13 @@ function readDataFile(
 		if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null;
 		return unreadable(`${file} can't be read`);
 	}
-	// What the write path starts a new file from
-	if (text.trim() === '') return null;
+	// Every reader takes an empty config.local.json as no settings, and
+	// refuses the other four when empty
+	if (text.trim() === '') {
+		return file === TASKGRAPH_LOCAL_CONFIG_FILE
+			? null
+			: unreadable(`${file} is empty`);
+	}
 	let data: unknown;
 	try {
 		data = JSON.parse(text);
@@ -162,22 +165,10 @@ function readDataFile(
 const isFinding = (value: unknown): value is DoctorFinding =>
 	typeof value === 'object' && value !== null && 'fixable' in value;
 
-/** The parents whose status isn't the one their subtasks give them */
-function unsettledParents(
-	tasks: Task[],
-	guardDone: ParentDoneGuard
-): Array<{ index: number; settled: Task }> {
-	return tasks.flatMap((task, index) => {
-		const settled = withParentStatus(task, guardDone);
-		return settled === task ? [] : [{ index, settled }];
-	});
-}
-
 function tagFindings(
 	tag: string,
 	tasks: Task[],
-	archive: unknown,
-	guardDone: ParentDoneGuard
+	archive: unknown
 ): DoctorFinding[] {
 	const tagOption = ` --tag=${tag}`;
 	const findings: DoctorFinding[] = findStoredTaskProblems(tasks).map(
@@ -188,8 +179,12 @@ function tagFindings(
 			taskId: problem.taskId,
 			message: problem.message,
 			fixable: false,
-			// No command: readers refuse the whole tag until the value is fixed
-			fix: `Edit ${TASKS_FILE}. ${STORED_TASK_FIXES[problem.kind]}`
+			// Readers refuse the whole tag over a task's status or priority. Only
+			// set-status reaches one, as stored, and not to done: its gate reads
+			fix:
+				problem.kind === 'unknown-status' && !problem.taskId.includes('#')
+					? `Run \`taskgraph set-status --id=${problem.taskId} --status=pending${tagOption}\`, then set the status it should have`
+					: `Edit ${TASKS_FILE}. ${STORED_TASK_FIXES[problem.kind]}`
 		})
 	);
 	// An ID that isn't a number is never printed, and no command can load the
@@ -217,17 +212,6 @@ function tagFindings(
 					})
 				});
 			}
-		}
-		for (const { index, settled } of unsettledParents(tasks, guardDone)) {
-			const task = tasks[index];
-			findings.push({
-				kind: 'parent-status',
-				file: TASKS_FILE,
-				tag,
-				taskId: String(task.id),
-				message: `Task ${task.id} is ${task.status}, but its subtasks make it ${settled.status}`,
-				fixable: true
-			});
 		}
 	} catch {
 		// A field of the wrong type; say so only if nothing above already did
@@ -260,15 +244,25 @@ export function checkDataFiles(root: string): DataFilesReport {
 
 	const archiveFile = files.get(ARCHIVE_FILE);
 	const archive = isFinding(archiveFile) ? undefined : (archiveFile ?? {});
-	const guardDone = parentDoneGate(readDefinitionOfDone(root));
 	const format = new FormatHandler();
 	const tags = Object.keys(data).length > 0 ? format.extractTags(data) : [];
 	const findings: DoctorFinding[] = [];
 	let taskCount = 0;
 	for (const tag of tags) {
 		const tasks = format.extractTasksUnchecked(data, tag);
+		if (!tasks) {
+			findings.push({
+				kind: 'unchecked',
+				file: TASKS_FILE,
+				tag,
+				message: `Tag '${tag}' holds tasks that aren't a list`,
+				fixable: false,
+				fix: `Edit ${TASKS_FILE}`
+			});
+			continue;
+		}
 		taskCount += tasks.length;
-		findings.push(...tagFindings(tag, tasks, archive, guardDone));
+		findings.push(...tagFindings(tag, tasks, archive));
 	}
 	return {
 		read,
@@ -293,15 +287,12 @@ function dependencyRepair(tag: string, fix: DependencyFix): DoctorRepair {
 
 /**
  * Repair every tag of tasks.json in one locked write: dependencies as
- * `fix-dependencies` does, then each parent whose status disagrees with its
- * subtasks. The caller has checked that every data file parses.
+ * `fix-dependencies` does. The caller has checked that every data file parses.
  * @returns What changed; empty when nothing needed repair
  * @throws What the write funnel throws, with the file untouched
  */
 export async function repairTasks(root: string): Promise<DoctorRepair[]> {
-	const definitionOfDone = () => readDefinitionOfDone(root);
-	const guardDone = parentDoneGate(definitionOfDone());
-	const storage = new FileStorage(root, definitionOfDone);
+	const storage = new FileStorage(root);
 	return storage.mutateTags(async (tags) => {
 		const repairs: DoctorRepair[] = [];
 		const changed: string[] = [];
@@ -310,14 +301,6 @@ export async function repairTasks(root: string): Promise<DoctorRepair[]> {
 			const archived = await storage.loadArchivedTaskIds(tag);
 			for (const fix of fixTaskDependencies(tasks, archived).fixes) {
 				repairs.push(dependencyRepair(tag, fix));
-			}
-			for (const { index, settled } of unsettledParents(tasks, guardDone)) {
-				repairs.push({
-					tag,
-					taskId: String(settled.id),
-					message: `Task ${settled.id} is now ${settled.status} (was ${tasks[index].status})`
-				});
-				tasks[index] = settled;
 			}
 			if (repairs.length > before) changed.push(tag);
 		}

@@ -122,8 +122,8 @@ describe('data files', () => {
 		expect(await tasksCheck()).toEqual({ name: 'tasks', status: 'skip' });
 	});
 
-	it('takes a missing or empty file as fine', () => {
-		write('.taskgraph/state.json', '');
+	it('takes a missing file, and an empty config.local.json, as fine', () => {
+		write('.taskgraph/config.local.json', '');
 		fs.rmSync(path.join(root, TASKS));
 
 		expect(checkDataFiles(root)).toEqual({
@@ -131,6 +131,20 @@ describe('data files', () => {
 			unreadable: [],
 			tasks: null
 		});
+	});
+
+	// Every command fails on one of these; only config.local.json may be empty
+	it.each([
+		'.taskgraph/config.json',
+		'.taskgraph/state.json',
+		TASKS,
+		'.taskgraph/tasks/archive.json'
+	])('reports an empty %s', (file) => {
+		write(file, ' \n');
+
+		expect(checkDataFiles(root).unreadable).toMatchObject([
+			{ kind: 'unreadable-file', file, message: `${file} is empty` }
+		]);
 	});
 });
 
@@ -155,7 +169,27 @@ describe('task rules, in every tag', () => {
 			tag: 'master',
 			message: 'Task 1 has status "finished"',
 			fixable: false,
-			fix: expect.stringContaining('Use one of: pending')
+			// set-status reads the task as stored, so it can still reach it
+			fix: 'Run `taskgraph set-status --id=1 --status=pending --tag=master`, then set the status it should have'
+		});
+		expect(checkDataFiles(root).tasks?.findings[1].fix).toMatch(
+			/^Edit .*Use one of: low/
+		);
+	});
+
+	it('reports a tag whose tasks are not a list', () => {
+		write(TASKS, { master: { tasks: { a: 1 } }, feature: { tasks: [] } });
+
+		expect(checkDataFiles(root).tasks).toMatchObject({
+			taskCount: 0,
+			findings: [
+				{
+					kind: 'unchecked',
+					tag: 'master',
+					message: "Tag 'master' holds tasks that aren't a list",
+					fixable: false
+				}
+			]
 		});
 	});
 
@@ -213,7 +247,9 @@ describe('task rules, in every tag', () => {
 		});
 	});
 
-	it('reports a parent whose status disagrees with its subtasks', () => {
+	// State machine 2 forbids no parent status at rest: set-status on a parent
+	// leaves each of these, and the write funnel keeps them
+	it('passes a parent whose status was set over its subtasks, and --fix leaves it', async () => {
 		write(TASKS, {
 			master: {
 				tasks: [
@@ -222,26 +258,19 @@ describe('task rules, in every tag', () => {
 						subtasks: [sub('1', 'done'), sub('2', 'pending')]
 					}),
 					task('2', { subtasks: [sub('1', 'done'), sub('2', 'cancelled')] }),
-					// Held on purpose, and in step: neither is a finding
-					task('3', { status: 'blocked', subtasks: [sub('1', 'done')] }),
-					task('4', { status: 'in-progress', subtasks: [sub('1', 'pending')] })
+					task('3', { status: 'in-progress', subtasks: [sub('1', 'done')] })
 				]
 			}
 		});
+		const before = read(TASKS);
 
-		expect(checkDataFiles(root).tasks?.findings).toMatchObject([
-			{
-				kind: 'parent-status',
-				taskId: '1',
-				message: 'Task 1 is done, but its subtasks make it in-progress',
-				fixable: true
-			},
-			{
-				kind: 'parent-status',
-				taskId: '2',
-				message: 'Task 2 is pending, but its subtasks make it done'
-			}
-		]);
+		expect(checkDataFiles(root).tasks?.findings).toEqual([]);
+		expect(await tasksCheck(true)).toEqual({
+			name: 'tasks',
+			status: 'pass',
+			detail: '3 in 1 tag'
+		});
+		expect(read(TASKS)).toBe(before);
 	});
 
 	it('survives entries that are not tasks', () => {
@@ -270,7 +299,7 @@ describe('doctor --fix', () => {
 				]
 			},
 			feature: {
-				tasks: [task('1', { subtasks: [sub('1', 'done'), sub('2', 'done')] })]
+				tasks: [task('1', { dependencies: ['1'] })]
 			}
 		});
 
@@ -292,37 +321,18 @@ describe('doctor --fix', () => {
 				message: 'Task 2 no longer depends on itself'
 			},
 			{
-				tag: 'master',
-				taskId: '1',
-				message: 'Task 1 is now in-progress (was done)'
-			},
-			{
 				tag: 'feature',
 				taskId: '1',
-				message: 'Task 1 is now done (was pending)'
+				message: 'Task 1 no longer depends on itself'
 			}
 		]);
+		// The parent marked done over an open subtask is left as it was
+		expect(JSON.parse(read(TASKS)).master.tasks[0].status).toBe('done');
 		expect(await tasksCheck()).toEqual({
 			name: 'tasks',
 			status: 'pass',
 			detail: '3 in 2 tags'
 		});
-	});
-
-	it('keeps a parent in progress when the Definition of Done refuses done', async () => {
-		write('.taskgraph/config.json', {
-			global: { definitionOfDone: ['Tests pass'] }
-		});
-		write(TASKS, {
-			master: {
-				tasks: [
-					task('1', { status: 'in-progress', subtasks: [sub('1', 'done')] })
-				]
-			}
-		});
-
-		expect(await tasksCheck(true)).toMatchObject({ status: 'pass' });
-		expect(JSON.parse(read(TASKS)).master.tasks[0].status).toBe('in-progress');
 	});
 
 	it('leaves what needs a decision, and the file, when nothing is fixable', async () => {

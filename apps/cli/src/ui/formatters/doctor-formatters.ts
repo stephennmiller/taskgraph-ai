@@ -23,15 +23,15 @@
  *       Resolve the conflict in the file, then run taskgraph doctor again
  *   ✗ Tasks           2 problems in .taskgraph/tasks/tasks.json
  *     Task 3 has status "finished"
- *       Edit .taskgraph/tasks/tasks.json. Use one of: pending, in-progress,
- *       done, deferred, cancelled, blocked, review
- *     Task 5 is done, but its subtasks make it in-progress
+ *       Run taskgraph set-status --id=3 --status=pending --tag=master, then set
+ *       the status it should have
+ *     Task 6 depends on non-existent task 99
  *     Run taskgraph doctor --fix to repair 1 of them
  *
  * `doctor --fix` leads with what it changed:
  *
  *   ✓ Repaired 1 problem in .taskgraph/tasks/tasks.json
- *     Task 5 is now in-progress (was done)
+ *     Task 6 no longer depends on 99, which doesn't exist
  *
  * Checks skipped because an earlier one failed (sign-in and plugin without
  * Claude Code, MCP outside a project) get no line: the failure above already
