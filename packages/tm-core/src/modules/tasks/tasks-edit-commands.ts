@@ -13,7 +13,12 @@ import {
 } from '../../common/errors/taskgraph-error.js';
 import { normalizeAssignee } from './utils/assignee.js';
 import { recordClaimWorkerIn, type TaskClaim } from './utils/claim.js';
-import { normalizeNoteText, type TaskNote } from './utils/notes.js';
+import {
+	appendNote,
+	lastNote,
+	normalizeNoteText,
+	type TaskNote
+} from './utils/notes.js';
 import {
 	type AddSubtaskInput,
 	addSubtaskToTag,
@@ -190,19 +195,25 @@ export class TaskEditCommands {
 	 * Append a progress note to a task or subtask's details, as written and
 	 * timestamped, in one locked write that changes only that item. No AI
 	 * call: use update-subtask/update-task for an AI rewrite.
+	 * With `skipRepeat`, a note identical to the item's last one isn't added
+	 * again (the result then describes the note not added).
 	 * Throws INVALID_INPUT for an empty note (before touching the file) and
 	 * TASK_NOT_FOUND for an unknown ID.
 	 */
 	async addNote(
 		taskId: string,
 		text: string,
-		options: { tag?: string } = {}
+		options: { tag?: string; skipRepeat?: boolean } = {}
 	): Promise<TaskNote> {
 		const note = normalizeNoteText(text);
 		const id = normalizeTaskId(taskId);
-		const { saved, addedAt } = await this.taskService.appendToDetails(
+		const addedAt = new Date().toISOString();
+		const saved = await this.taskService.modifyTask(
 			id,
-			note,
+			(task) =>
+				options.skipRepeat && lastNote(task.details) === note
+					? {}
+					: { details: appendNote(task.details, note, addedAt) },
 			options.tag
 		);
 		return {
