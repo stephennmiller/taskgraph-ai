@@ -38,7 +38,7 @@ interface UpdateLock {
 async function installFromNpm(latestVersion: string): Promise<boolean> {
 	// The version reaches a shell on Windows: only a plain semver gets there
 	if (!SEMVER_RE.test(latestVersion)) {
-		console.log(chalk.red('Auto-update failed: not a valid version number'));
+		console.error(chalk.red('Auto-update failed: not a valid version number'));
 		return false;
 	}
 	const args = [
@@ -94,14 +94,14 @@ async function installFromNpm(latestVersion: string): Promise<boolean> {
 				resolve(true);
 			} else {
 				spinner.fail(chalk.red('Auto-update failed'));
-				console.log(
+				console.error(
 					chalk.cyan(
 						`Please run manually: npm install -g ${PACKAGE_NAME}@${latestVersion}`
 					)
 				);
 				if (errorOutput) {
 					// npm's warnings quote registry text, such as a package's deprecation message
-					console.log(
+					console.error(
 						chalk.dim(`Error: ${stripTerminalControls(errorOutput).trim()}`)
 					);
 				}
@@ -111,8 +111,8 @@ async function installFromNpm(latestVersion: string): Promise<boolean> {
 
 		updateProcess.on('error', (error) => {
 			spinner.fail(chalk.red('Auto-update failed'));
-			console.log(chalk.red('Error:'), error.message);
-			console.log(
+			console.error(chalk.red('Error:'), error.message);
+			console.error(
 				chalk.cyan(
 					`Please run manually: npm install -g ${PACKAGE_NAME}@${latestVersion}`
 				)
@@ -206,6 +206,9 @@ function releaseUpdateLock(home: string): void {
  * CI, JSON, a loop child, a parallel worker) or when another install
  * already holds the lock. Callers decide whether to install at all: the
  * default is to notify and not call this.
+ *
+ * Everything here prints on stderr: stdout may be redirected or piped
+ * while stdin is a terminal (#1106).
  */
 export async function performAutoUpdate(
 	latestVersion: string,
@@ -213,13 +216,13 @@ export async function performAutoUpdate(
 ): Promise<boolean> {
 	const reason = autoUpdateSkipReason(options);
 	if (reason) {
-		console.log(chalk.dim(`Skipping auto-update (${reason})`));
+		console.error(chalk.dim(`Skipping auto-update (${reason})`));
 		return false;
 	}
 
 	const home = options.home ?? os.homedir();
 	if (!acquireUpdateLock(home)) {
-		console.log(
+		console.error(
 			chalk.dim('Skipping auto-update (another update is in progress)')
 		);
 		return false;
