@@ -67,7 +67,7 @@ describe('initializeProject', () => {
 		expect(exists('.taskgraph/templates/example_prd.txt')).toBe(true);
 		expect(exists('.taskgraph/templates/example_prd_rpg.txt')).toBe(true);
 		expect(exists('.env.example')).toBe(true);
-		expect(read('.gitignore')).toContain('# Task files\n# tasks.json\n');
+		expect(read('.gitignore')).toContain('# Task files\n# .taskgraph/tasks/\n');
 		expect(read('CLAUDE.md')).toContain('@./.taskgraph/CLAUDE.md');
 		expect(exists('.mcp.json')).toBe(false);
 		// A new repository with the tasks.json merge driver
@@ -124,7 +124,7 @@ describe('initializeProject', () => {
 		});
 		initializeProject({ projectRoot: projectDir, claudeCode: false });
 
-		expect(read('.gitignore')).toContain('# Task files\ntasks.json\n');
+		expect(read('.gitignore')).toContain('# Task files\n.taskgraph/tasks/\n');
 		expect(exists('.gitattributes')).toBe(false);
 	});
 

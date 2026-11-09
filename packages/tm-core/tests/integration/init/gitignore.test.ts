@@ -65,13 +65,9 @@ tasks/ `;
 			expect(content).toContain('# Dependencies');
 			expect(content).toContain('node_modules/');
 			expect(content).toContain('# Task files');
-			expect(content).toContain('tasks.json');
-			expect(content).toContain('tasks/');
 
 			// Verify task lines are commented (storeTasksInGit = true)
-			expect(content).toMatch(
-				/# Task files\s*[\r\n]+# tasks\.json\s*[\r\n]+# tasks\/ /
-			);
+			expect(content).toMatch(/# Task files\n# \.taskgraph\/tasks\/\n/);
 
 			// Verify log message
 			expect(logs).toContainEqual({
@@ -95,9 +91,7 @@ tasks/ `;
 			expect(content).toContain('# Task files');
 
 			// Verify task lines are uncommented (storeTasksInGit = false)
-			expect(content).toMatch(
-				/# Task files\s*[\r\n]+tasks\.json\s*[\r\n]+tasks\/ /
-			);
+			expect(content).toMatch(/# Task files\n\.taskgraph\/tasks\/\n/);
 
 			// Verify log message
 			expect(logs).toContainEqual({
@@ -173,9 +167,7 @@ cache/`;
 			expect(content).toContain('.env');
 
 			// Should replace task section with new preference (storeTasksInGit = false means uncommented)
-			expect(content).toMatch(
-				/# Task files\s*[\r\n]+tasks\.json\s*[\r\n]+tasks\/ /
-			);
+			expect(content).toMatch(/# Task files\n\.taskgraph\/tasks\/\n/);
 
 			// Verify log message
 			expect(logs).toContainEqual({
@@ -205,9 +197,7 @@ existing.txt
 			expect(content).toContain('existing.txt');
 
 			// Should have commented task lines (storeTasksInGit = true)
-			expect(content).toMatch(
-				/# Task files\s*[\r\n]+# tasks\.json\s*[\r\n]+# tasks\/ /
-			);
+			expect(content).toMatch(/# Task files\n# \.taskgraph\/tasks\/\n/);
 		});
 
 		test('should handle switching task preferences from uncommented to commented', () => {
@@ -231,9 +221,7 @@ tasks/ `;
 			expect(content).toContain('existing.txt');
 
 			// Should have uncommented task lines (storeTasksInGit = false)
-			expect(content).toMatch(
-				/# Task files\s*[\r\n]+tasks\.json\s*[\r\n]+tasks\/ /
-			);
+			expect(content).toMatch(/# Task files\n\.taskgraph\/tasks\/\n/);
 		});
 
 		test('should not duplicate existing template content', () => {
@@ -286,9 +274,7 @@ custom.txt
 			const content = fs.readFileSync(testGitignorePath, 'utf8');
 			expect(content).toContain('# Logs');
 			expect(content).toContain('# Task files');
-			expect(content).toMatch(
-				/# Task files\s*[\r\n]+tasks\.json\s*[\r\n]+tasks\/ /
-			);
+			expect(content).toMatch(/# Task files\n\.taskgraph\/tasks\/\n/);
 		});
 
 		test('should handle file with only whitespace', () => {
@@ -300,9 +286,7 @@ custom.txt
 			const content = fs.readFileSync(testGitignorePath, 'utf8');
 			expect(content).toContain('# Logs');
 			expect(content).toContain('# Task files');
-			expect(content).toMatch(
-				/# Task files\s*[\r\n]+# tasks\.json\s*[\r\n]+# tasks\/ /
-			);
+			expect(content).toMatch(/# Task files\n# \.taskgraph\/tasks\/\n/);
 		});
 	});
 
@@ -344,9 +328,7 @@ tasks/ `;
 			expect(content).toContain('new.txt');
 
 			// Should have clean task section (storeTasksInGit = false means uncommented)
-			expect(content).toMatch(
-				/# Task files\s*[\r\n]+tasks\.json\s*[\r\n]+tasks\/ /
-			);
+			expect(content).toMatch(/# Task files\n\.taskgraph\/tasks\/\n/);
 		});
 
 		test('should handle multiple task file variations', () => {
@@ -380,9 +362,7 @@ tasks/ `;
 			expect(content).toContain('more.txt');
 
 			// Should have clean task section with preference applied (storeTasksInGit = true means commented)
-			expect(content).toMatch(
-				/# Task files\s*[\r\n]+# tasks\.json\s*[\r\n]+# tasks\/ /
-			);
+			expect(content).toMatch(/# Task files\n# \.taskgraph\/tasks\/\n/);
 
 			// Should not have multiple task sections
 			const taskFileMatches = content.match(/# Task files/g);
@@ -532,9 +512,7 @@ tasks/ `;
 			expect(content).toContain('build/');
 
 			// Should add task files section with correct preference (storeTasksInGit = false means uncommented)
-			expect(content).toMatch(
-				/# Task files\s*[\r\n]+tasks\.json\s*[\r\n]+tasks\/ /
-			);
+			expect(content).toMatch(/# Task files\n\.taskgraph\/tasks\/\n/);
 
 			// Should not duplicate common entries
 			const nodeModulesMatches = content.match(/node_modules\//g);
@@ -583,9 +561,7 @@ tasks/ `;
 			expect(content).toContain('dist/');
 
 			// Should update task preference to uncommented (storeTasksInGit = false)
-			expect(content).toMatch(
-				/# Task files\s*[\r\n]+tasks\.json\s*[\r\n]+tasks\/ /
-			);
+			expect(content).toMatch(/# Task files\n\.taskgraph\/tasks\/\n/);
 		});
 	});
 });

@@ -5,6 +5,7 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
+import { TASKGRAPH_TASKS_DIR } from '../../common/constants/paths.js';
 import { writeProjectFile } from '../storage/adapters/file-storage/file-operations.js';
 
 /** .gitignore sits in the project root; init allows it to link within the project */
@@ -21,8 +22,14 @@ export type GitignoreLog = (
 
 // Constants
 export const TASK_FILES_COMMENT = '# Task files';
-export const TASK_JSON_PATTERN = 'tasks.json';
-export const TASK_DIR_PATTERN = 'tasks/';
+/** Has a slash before its end, so git matches it from the .gitignore's folder only */
+export const TASK_DIR_PATTERN = `${TASKGRAPH_TASKS_DIR}/`;
+/**
+ * What init wrote before #1105. They match any `tasks` folder or `tasks.json`
+ * in the repo, and a user may have the same lines for their own files, so
+ * they count as init's only under its "# Task files" header.
+ */
+const LEGACY_TASK_PATTERNS = ['tasks.json', 'tasks/'];
 
 /**
  * Normalizes a line by removing comments and trimming whitespace
@@ -34,40 +41,22 @@ export function normalizeLine(line: string): string {
 }
 
 /**
- * Checks if a line is task-related (tasks.json or tasks/)
+ * Checks if a line under the "# Task files" header is one init wrote there,
+ * commented out or not: the tasks folder, or the pair older releases wrote
  * @param {string} line - Line to check
  * @returns {boolean} True if line is task-related
  */
 export function isTaskLine(line: string): boolean {
 	const normalized = normalizeLine(line);
-	return normalized === TASK_JSON_PATTERN || normalized === TASK_DIR_PATTERN;
+	return (
+		normalized === TASK_DIR_PATTERN || LEGACY_TASK_PATTERNS.includes(normalized)
+	);
 }
 
 /**
- * Adjusts task-related lines in template based on storage preference
- * @param {string[]} templateLines - Array of template lines
- * @param {boolean} storeTasksInGit - Whether to comment out task lines
- * @returns {string[]} Adjusted template lines
- */
-function adjustTaskLinesInTemplate(
-	templateLines: string[],
-	storeTasksInGit: boolean
-): string[] {
-	return templateLines.map((line) => {
-		if (isTaskLine(line)) {
-			const normalized = normalizeLine(line);
-			// Preserve original trailing whitespace from the line
-			const originalTrailingSpace = line.match(/\s*$/)?.[0] ?? '';
-			return storeTasksInGit
-				? `# ${normalized}${originalTrailingSpace}`
-				: `${normalized}${originalTrailingSpace}`;
-		}
-		return line;
-	});
-}
-
-/**
- * Removes existing task files section from content
+ * Removes init's task files section: its header, the task lines right under
+ * it and the blank lines after them. A task line anywhere else is the
+ * user's own and stays.
  * @param {string[]} existingLines - Existing file lines
  * @returns {string[]} Lines with task section removed
  */
@@ -76,31 +65,13 @@ function removeExistingTaskSection(existingLines: string[]): string[] {
 	let inTaskSection = false;
 
 	for (const line of existingLines) {
-		// Start of task files section
 		if (line.trim() === TASK_FILES_COMMENT) {
 			inTaskSection = true;
 			continue;
 		}
-
-		// Task lines (commented or not)
-		if (isTaskLine(line)) {
-			continue;
-		}
-
-		// Empty lines within task section
-		if (inTaskSection && !line.trim()) {
-			continue;
-		}
-
-		// End of task section (any non-empty, non-task line)
-		if (inTaskSection && line.trim() && !isTaskLine(line)) {
-			inTaskSection = false;
-		}
-
-		// Keep all other lines
-		if (!inTaskSection) {
-			cleanedLines.push(line);
-		}
+		if (inTaskSection && (isTaskLine(line) || !line.trim())) continue;
+		inTaskSection = false;
+		cleanedLines.push(line);
 	}
 
 	return cleanedLines;
@@ -118,15 +89,7 @@ function filterNewTemplateLines(
 ): string[] {
 	return templateLines.filter((line) => {
 		const trimmed = line.trim();
-		if (!trimmed) return false;
-
-		// Skip task-related lines (handled separately)
-		if (isTaskLine(line) || trimmed === TASK_FILES_COMMENT) {
-			return false;
-		}
-
-		// Include only if not already present
-		return !existingLinesSet.has(trimmed);
+		return trimmed !== '' && !existingLinesSet.has(trimmed);
 	});
 }
 
@@ -136,23 +99,16 @@ function filterNewTemplateLines(
  * @returns {string[]} Task files section lines
  */
 export function buildTaskFilesSection(storeTasksInGit: boolean): string[] {
-	const section = [TASK_FILES_COMMENT];
-
-	if (storeTasksInGit) {
-		section.push(`# ${TASK_JSON_PATTERN}`, `# ${TASK_DIR_PATTERN} `);
-	} else {
-		section.push(TASK_JSON_PATTERN, `${TASK_DIR_PATTERN} `);
-	}
-
-	return section;
+	return [
+		TASK_FILES_COMMENT,
+		storeTasksInGit ? `# ${TASK_DIR_PATTERN}` : TASK_DIR_PATTERN
+	];
 }
 
 /**
- * Add the task files section to a template that has none, laid out the way
- * a merge writes it. The shipped template has no task lines, so without this
- * `--no-git-tasks` left tasks unignored in a new .gitignore, and the next
- * init rewrote the file to add the section.
- * @param {string[]} templateLines - Adjusted template lines
+ * End the template with the task files section, laid out the way a merge
+ * writes it
+ * @param {string[]} templateLines - Template lines without a task section
  * @param {boolean} storeTasksInGit - Whether to comment out task lines
  * @returns {string[]} Lines with exactly one task files section
  */
@@ -160,7 +116,6 @@ function withTaskFilesSection(
 	templateLines: string[],
 	storeTasksInGit: boolean
 ): string[] {
-	if (templateLines.some(isTaskLine)) return templateLines;
 	const lines = [...templateLines];
 	while (lines.length > 0 && !lines[lines.length - 1].trim()) lines.pop();
 	addSeparatorIfNeeded(lines);
@@ -304,16 +259,19 @@ function mergeWithExistingFile(
  * re-running `init --yes` keeps it instead of resetting it to the default.
  * @param {string} targetPath - Path to the .gitignore file
  * @returns {boolean|undefined} true when tasks are committed, false when
- *   they're ignored, undefined when the file has no task lines
+ *   they're ignored, undefined when the file has no task files section
  */
 export function readStoreTasksInGit(targetPath: string): boolean | undefined {
 	try {
 		if (!fs.existsSync(targetPath)) return undefined;
-		const taskLine = fs
-			.readFileSync(targetPath, 'utf8')
-			.split('\n')
-			.find((line) => normalizeLine(line) === TASK_JSON_PATTERN);
-		return taskLine === undefined ? undefined : taskLine.trim().startsWith('#');
+		const lines = fs.readFileSync(targetPath, 'utf8').split('\n');
+		const header = lines.findIndex(
+			(line) => line.trim() === TASK_FILES_COMMENT
+		);
+		const taskLine = header === -1 ? undefined : lines[header + 1];
+		return taskLine === undefined || !isTaskLine(taskLine)
+			? undefined
+			: taskLine.trim().startsWith('#');
 	} catch {
 		return undefined;
 	}
@@ -336,12 +294,8 @@ export function manageGitignoreFile(
 	// Validate inputs
 	validateInputs(targetPath, content, storeTasksInGit);
 
-	// Process template with task preference
-	const templateLines = content.split('\n');
-	const adjustedTemplateLines = adjustTaskLinesInTemplate(
-		templateLines,
-		storeTasksInGit
-	);
+	// The task files section is always written from here, never from the template
+	const adjustedTemplateLines = removeExistingTaskSection(content.split('\n'));
 
 	// Handle file creation or merging
 	if (!fs.existsSync(targetPath)) {

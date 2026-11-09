@@ -26,7 +26,6 @@ import {
 	isTaskLine,
 	buildTaskFilesSection,
 	TASK_FILES_COMMENT,
-	TASK_JSON_PATTERN,
 	TASK_DIR_PATTERN
 } from './gitignore.js';
 
@@ -52,8 +51,7 @@ describe('init .gitignore unit tests', () => {
 	describe('Constants', () => {
 		test('should have correct constant values', () => {
 			expect(TASK_FILES_COMMENT).toBe('# Task files');
-			expect(TASK_JSON_PATTERN).toBe('tasks.json');
-			expect(TASK_DIR_PATTERN).toBe('tasks/');
+			expect(TASK_DIR_PATTERN).toBe('.taskgraph/tasks/');
 		});
 	});
 
@@ -101,12 +99,12 @@ describe('init .gitignore unit tests', () => {
 	describe('buildTaskFilesSection function', () => {
 		test('should build commented section when storeTasksInGit is true (tasks stored in git)', () => {
 			const result = buildTaskFilesSection(true);
-			expect(result).toEqual(['# Task files', '# tasks.json', '# tasks/ ']);
+			expect(result).toEqual(['# Task files', '# .taskgraph/tasks/']);
 		});
 
 		test('should build uncommented section when storeTasksInGit is false (tasks ignored)', () => {
 			const result = buildTaskFilesSection(false);
-			expect(result).toEqual(['# Task files', 'tasks.json', 'tasks/ ']);
+			expect(result).toEqual(['# Task files', '.taskgraph/tasks/']);
 		});
 	});
 
@@ -194,8 +192,7 @@ logs
 *.log
 
 # Task files
-# tasks.json
-# tasks/ 
+# .taskgraph/tasks/
 `,
 					expect.anything()
 				);
@@ -217,8 +214,7 @@ logs
 *.log
 
 # Task files
-tasks.json
-tasks/ 
+.taskgraph/tasks/
 `,
 					expect.anything()
 				);
@@ -322,9 +318,7 @@ more.txt`;
 				expect(writtenContent).toContain('# Dependencies');
 
 				// Should have uncommented task lines (storeTasksInGit = false means ignore tasks)
-				expect(writtenContent).toMatch(
-					/# Task files\s*[\r\n]+tasks\.json\s*[\r\n]+tasks\/ /
-				);
+				expect(writtenContent).toMatch(/# Task files\n\.taskgraph\/tasks\/\n/);
 			});
 
 			test('should handle different task preferences correctly', () => {
@@ -343,7 +337,7 @@ existing.txt
 
 				const writtenContent = writeFileSyncSpy.mock.calls[0][1];
 				expect(writtenContent).toMatch(
-					/# Task files\s*[\r\n]+# tasks\.json\s*[\r\n]+# tasks\/ /
+					/# Task files\n# \.taskgraph\/tasks\/\n/
 				);
 			});
 
@@ -455,8 +449,7 @@ tasks/ `;
 
 				const writtenContent = writeFileSyncSpy.mock.calls[0][1];
 				expect(writtenContent).toBe(`# Task files
-# tasks.json
-# tasks/ 
+# .taskgraph/tasks/
 `);
 			});
 		});
@@ -483,7 +476,7 @@ describe('manageGitignoreFile with a template that has no task lines', () => {
 
 		const lines = fs.readFileSync(target, 'utf8').split('\n');
 		expect(lines).toContain(TASK_FILES_COMMENT);
-		expect(lines).toContain(TASK_JSON_PATTERN);
+		expect(lines).toContain(TASK_DIR_PATTERN);
 	});
 
 	test('leaves the file unchanged when init runs again', () => {
@@ -494,6 +487,68 @@ describe('manageGitignoreFile with a template that has no task lines', () => {
 		manageGitignoreFile(target, template, true);
 
 		expect(fs.readFileSync(target, 'utf8')).toBe(first);
+	});
+});
+
+describe('manageGitignoreFile and task lines init did not write (#1105)', () => {
+	const template = '# Logs\nlogs\n';
+	let dir: string;
+	let target: string;
+
+	beforeEach(() => {
+		dir = fs.mkdtempSync(path.join(os.tmpdir(), 'gitignore-own-lines-'));
+		target = path.join(dir, '.gitignore');
+	});
+
+	afterEach(() => {
+		fs.rmSync(dir, { recursive: true, force: true });
+	});
+
+	test.each([true, false])(
+		"keeps the user's own tasks/ and tasks.json lines (tasks in Git: %s)",
+		(storeTasksInGit) => {
+			fs.writeFileSync(target, 'dist/\ntasks/\n# tasks.json\nsecrets.env\n');
+
+			manageGitignoreFile(target, template, storeTasksInGit);
+
+			expect(fs.readFileSync(target, 'utf8')).toBe(
+				`dist/\ntasks/\n# tasks.json\nsecrets.env\n\n# Logs\nlogs\n\n# Task files\n${storeTasksInGit ? '# ' : ''}.taskgraph/tasks/\n`
+			);
+		}
+	);
+
+	test('ignores only .taskgraph/tasks/ when tasks stay out of Git', () => {
+		manageGitignoreFile(target, template, false);
+
+		const lines = fs.readFileSync(target, 'utf8').split('\n');
+		expect(lines).toContain('.taskgraph/tasks/');
+		expect(lines).not.toContain('tasks/');
+		expect(lines).not.toContain('tasks.json');
+	});
+
+	test.each([
+		['# tasks.json\n# tasks/ ', '# .taskgraph/tasks/'],
+		['tasks.json\ntasks/ ', '.taskgraph/tasks/']
+	])(
+		"migrates the old pair under init's header, keeping the choice",
+		(old, migrated) => {
+			fs.writeFileSync(target, `dist/\n\n# Task files\n${old}\n`);
+
+			manageGitignoreFile(target, template, readStoreTasksInGit(target));
+			const first = fs.readFileSync(target, 'utf8');
+			manageGitignoreFile(target, template, readStoreTasksInGit(target));
+
+			expect(first).toBe(
+				`dist/\n\n# Logs\nlogs\n\n# Task files\n${migrated}\n`
+			);
+			expect(fs.readFileSync(target, 'utf8')).toBe(first);
+		}
+	);
+
+	test("reads no choice from the user's own tasks.json line", () => {
+		fs.writeFileSync(target, 'tasks.json\n');
+
+		expect(readStoreTasksInGit(target)).toBeUndefined();
 	});
 });
 
