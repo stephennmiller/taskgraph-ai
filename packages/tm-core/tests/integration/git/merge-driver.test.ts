@@ -65,7 +65,8 @@ describe('runTasksMergeDriver', () => {
 		expect(outcome).toEqual({
 			status: 'merged',
 			renumbered: [{ tag: 'master', from: '2', to: '3' }],
-			conflicts: []
+			conflicts: [],
+			droppedDependencies: []
 		});
 		const written = fs.readFileSync(at('ours'), 'utf8');
 		expect(written.endsWith('}\n')).toBe(true);
@@ -91,6 +92,33 @@ describe('runTasksMergeDriver', () => {
 			status: 'merged',
 			renumbered: [{ tag: 'master', from: '2', to: '3' }]
 		});
+	});
+
+	it("holds a parent the merge finished at its project's Definition of Done", () => {
+		const parent = (first: string, second: string) =>
+			task(1, 'A', {
+				status: 'in-progress',
+				subtasks: [
+					{ id: 1, title: 'One', status: first },
+					{ id: 2, title: 'Two', status: second }
+				]
+			});
+		write('base', tag([parent('pending', 'pending')]));
+		write('ours', tag([parent('done', 'pending')]));
+		write('theirs', tag([parent('pending', 'done')]));
+		fs.mkdirSync(at('.taskgraph/tasks'), { recursive: true });
+		write('.taskgraph/config.json', {
+			global: { definitionOfDone: ['Docs updated'] }
+		});
+
+		const outcome = runTasksMergeDriver({
+			...files(),
+			path: at('.taskgraph/tasks/tasks.json')
+		});
+
+		expect(outcome).toMatchObject({ status: 'merged' });
+		const merged = JSON.parse(fs.readFileSync(at('ours'), 'utf8'));
+		expect(merged.master.tasks[0].status).toBe('in-progress');
 	});
 
 	it("merges without the archive when it can't be read", () => {

@@ -22,6 +22,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { TASKGRAPH_TASKS_FILE } from '../../../common/constants/paths.js';
 import { writeAtomically } from '../../../common/utils/write-atomically.js';
+import { readDefinitionOfDone } from '../../config/services/config-file.js';
 import {
 	ARCHIVE_FILE_NAME,
 	archivePathFor,
@@ -130,7 +131,7 @@ export function runTasksMergeDriver(
 	}
 
 	const file = files.path;
-	const { merged, renumbered, conflicts } =
+	const { merged, ...report } =
 		file && path.basename(file) === ARCHIVE_FILE_NAME
 			? mergeArchiveJson(parsed.base, parsed.ours, parsed.theirs, {
 					tasks: readJsonOrNone(
@@ -138,16 +139,19 @@ export function runTasksMergeDriver(
 					)
 				})
 			: mergeTasksJson(parsed.base, parsed.ours, parsed.theirs, {
-					archive: file ? readJsonOrNone(archivePathFor(file)) : {}
+					archive: file ? readJsonOrNone(archivePathFor(file)) : {},
+					// tasks.json is two folders below the project root
+					definitionOfDone: file
+						? readDefinitionOfDone(path.resolve(path.dirname(file), '../..'))
+						: []
 				});
 	const content =
 		JSON.stringify(merged, null, 2) + (oursText.endsWith('\n') ? '\n' : '');
 	writeAtomically(files.oursPath, content);
 
 	return {
-		status: conflicts.length > 0 ? 'conflicted' : 'merged',
-		renumbered,
-		conflicts
+		status: report.conflicts.length > 0 ? 'conflicted' : 'merged',
+		...report
 	};
 }
 

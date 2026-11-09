@@ -16,7 +16,13 @@
  *   subtask's `parentId`.
  * - An incoming new task under an archived ID (options.archive), or under
  *   one the current branch used and removed since the base (its tag's
- *   `metadata.highestId`), gets the next ID above every ID either used.
+ *   `metadata.highestId`), gets the next ID above every ID either used. A
+ *   task the incoming branch restored from the archive (same `createdAt`
+ *   and title) keeps its ID.
+ * - A parent whose subtasks both branches changed takes the status the
+ *   merged subtasks give it, and a dependency one branch added on a task the
+ *   other removed is dropped and reported in `droppedDependencies`
+ *   (merge-settle.ts).
  * - archive.json merges the same way (`renumber: false`), except that IDs
  *   never move: the same ID on both sides is one task, merged field by field.
  * - The same field changed to different values on both sides is a conflict.
@@ -34,16 +40,17 @@
  * - A task removed on one side and changed on the other is kept, as a
  *   conflict. Removed on one side and untouched on the other, it goes.
  *
- * The function is pure: parsed JSON in, merged JSON out. See
+ * The function is pure: parsed JSON in, merged JSON out (a parent it settles
+ * gets the current time as `updatedAt`). See
  * `merge-driver-files.ts` for the file I/O git's driver protocol needs.
  */
 
-import {
-	DEPENDENCY_SOURCES_KEY,
-	TASK_LINKS_KEY
-} from '../../dependencies/dependency-provenance.js';
-import { archivedTasksById, highestTaskId } from '../../tasks/utils/archive.js';
+import { archivedTasksById } from '../../tasks/utils/archive.js';
 import { normalizeTaskStatuses } from '../../tasks/utils/legacy-status.js';
+import {
+	type ParentDoneGuard,
+	parentDoneGate
+} from '../../tasks/utils/parent-status.js';
 import {
 	type Item,
 	type Json,
@@ -54,22 +61,15 @@ import {
 	keyOf,
 	own,
 	put,
-	same,
-	withIdType
+	same
 } from './merge-json-utils.js';
+import { type MergeRenumbered, renumberIncoming } from './merge-renumber.js';
 import {
-	isSiblingReference,
-	resolveSubtaskDependency
-} from '../../dependencies/subtask-dependency.js';
+	type MergeDroppedDependency,
+	settleMergedTag
+} from './merge-settle.js';
 
-/** An incoming task or subtask that was given a new ID */
-export interface MergeRenumbered {
-	tag: string;
-	/** The ID on the incoming branch, such as `11` or `5.3` */
-	from: string;
-	/** The ID in the merged file */
-	to: string;
-}
+export type { MergeRenumbered };
 
 /** A change the merge couldn't combine; the current branch's side was kept */
 export interface MergeConflict {
@@ -98,6 +98,8 @@ export interface TasksMergeResult {
 	merged: unknown;
 	renumbered: MergeRenumbered[];
 	conflicts: MergeConflict[];
+	/** Dependencies on a task the other branch removed, taken out */
+	droppedDependencies: MergeDroppedDependency[];
 }
 
 /** Timestamps where both sides moving forward is not a conflict: later wins */
@@ -117,6 +119,8 @@ interface Context {
 	tag: string;
 	renumbered: MergeRenumbered[];
 	conflicts: MergeConflict[];
+	droppedDependencies: MergeDroppedDependency[];
+	guardDone: ParentDoneGuard;
 	archived: ReturnType<typeof archivedTasksById>;
 	/** false for archive.json: an archived task keeps its ID */
 	renumber: boolean;
@@ -127,6 +131,11 @@ export interface MergeTasksOptions {
 	archive?: unknown;
 	/** false keeps every ID, for archive.json (see mergeArchiveJson) */
 	renumber?: boolean;
+	/**
+	 * The project's Definition of Done: a parent whose merged subtasks are
+	 * all finished goes to done only past its own checklist, as on any write
+	 */
+	definitionOfDone?: string[];
 }
 
 /**
@@ -145,6 +154,8 @@ export function mergeTasksJson(
 ): TasksMergeResult {
 	const renumbered: MergeRenumbered[] = [];
 	const conflicts: MergeConflict[] = [];
+	const droppedDependencies: MergeDroppedDependency[] = [];
+	const guardDone = parentDoneGate(options.definitionOfDone ?? []);
 
 	const b = asTagged(base);
 	const o = asTagged(ours);
@@ -158,6 +169,8 @@ export function mergeTasksJson(
 			tag,
 			renumbered,
 			conflicts,
+			droppedDependencies,
+			guardDone,
 			archived,
 			renumber: options.renumber ?? true
 		};
@@ -173,9 +186,14 @@ export function mergeTasksJson(
 	// Write the legacy shape only when neither side had moved on from it
 	const legacy = o.legacy && (t.legacy || Object.keys(t.tags).length === 0);
 	if (legacy && Object.keys(merged).length === 1 && own(merged, LEGACY_TAG)) {
-		return { merged: own(merged, LEGACY_TAG), renumbered, conflicts };
+		return {
+			merged: own(merged, LEGACY_TAG),
+			renumbered,
+			conflicts,
+			droppedDependencies
+		};
 	}
-	return { merged, renumbered, conflicts };
+	return { merged, renumbered, conflicts, droppedDependencies };
 }
 
 /**
@@ -235,190 +253,21 @@ function mergeTag(
 		? renumberIncoming(baseTag, ours, theirs, ctx)
 		: theirs;
 	const merged = mergeObject(baseTag, ours, incoming, '', undefined, ctx);
+	// archive.json holds finished tasks: nothing to settle
+	if (ctx.renumber) {
+		ctx.droppedDependencies.push(
+			...settleMergedTag(
+				merged,
+				ours,
+				incoming,
+				ctx.tag,
+				new Set(ctx.archived.tasks.keys()),
+				ctx.guardDone
+			)
+		);
+	}
 	recount(merged);
 	return merged;
-}
-
-/**
- * Give incoming items whose IDs ours also used for a different new item the
- * next free ID, and point every incoming reference at the new IDs.
- */
-function renumberIncoming(
-	base: Json,
-	ours: Json,
-	theirs: Json,
-	ctx: Context
-): Json {
-	const baseTasks = own(base, 'tasks');
-	const ourTasks = own(ours, 'tasks');
-	const theirTasks = own(theirs, 'tasks');
-	if (!isItemList(ourTasks) || !isItemList(theirTasks)) return theirs;
-	const baseList = isItemList(baseTasks) ? baseTasks : [];
-
-	const baseById = byKey(baseList);
-	const oursById = byKey(ourTasks);
-	const moves = new Map<string, string>();
-
-	// New tasks on both sides under one ID, or incoming under an archived ID
-	// or one this branch used and removed since the base (#1040)
-	const baseHighest = highestTaskId(base);
-	const ourHighest = highestTaskId(ours);
-	let nextTask =
-		Math.max(
-			maxId([baseList, ourTasks, theirTasks]),
-			ctx.archived.highestId,
-			ourHighest,
-			highestTaskId(theirs)
-		) + 1;
-	for (const task of theirTasks) {
-		const key = keyOf(task);
-		if (baseById.has(key)) continue;
-		if (oursById.has(key)) {
-			if (same(task, oursById.get(key))) continue;
-		} else if (
-			!(Number(key) > baseHighest && Number(key) <= ourHighest) &&
-			(!ctx.archived.tasks.has(key) ||
-				// The archived task itself, restored on that branch
-				same(task, ctx.archived.tasks.get(key)))
-		) {
-			continue;
-		}
-		moves.set(key, String(nextTask++));
-	}
-
-	// New subtasks on both sides of a task they both kept
-	for (const task of theirTasks) {
-		const key = keyOf(task);
-		const baseTask = baseById.get(key);
-		const ourTask = oursById.get(key);
-		if (!baseTask || !ourTask) continue;
-		const theirSubs = own(task, 'subtasks');
-		const ourSubs = own(ourTask, 'subtasks');
-		if (!isItemList(theirSubs) || !isItemList(ourSubs)) continue;
-		const baseSubs = own(baseTask, 'subtasks');
-		const baseSubList = isItemList(baseSubs) ? baseSubs : [];
-		const baseSubIds = byKey(baseSubList);
-		const ourSubIds = byKey(ourSubs);
-		let nextSub = maxId([baseSubList, ourSubs, theirSubs]) + 1;
-		for (const sub of theirSubs) {
-			const subKey = keyOf(sub);
-			if (baseSubIds.has(subKey) || !ourSubIds.has(subKey)) continue;
-			if (same(sub, ourSubIds.get(subKey))) continue;
-			moves.set(`${key}.${subKey}`, `${key}.${nextSub++}`);
-		}
-	}
-
-	if (moves.size === 0) return theirs;
-	for (const [from, to] of moves) {
-		ctx.renumbered.push({ tag: ctx.tag, from, to });
-	}
-
-	// A full ID ("11", "11.2", "5.3") as it reads after the moves
-	const remap = (fullId: string): string => {
-		const direct = moves.get(fullId);
-		if (direct !== undefined) return direct;
-		const [head, ...rest] = fullId.split('.');
-		const parent = moves.get(head);
-		return parent === undefined ? fullId : [parent, ...rest].join('.');
-	};
-
-	const tasks = theirTasks.map((task) => {
-		const oldKey = keyOf(task);
-		const newKey = remap(oldKey);
-		const moved: Item = { ...task };
-		if (newKey !== oldKey) moved.id = withIdType(task.id, Number(newKey));
-		rewriteReferences(moved, undefined, undefined, remap);
-
-		const subtasks = own(task, 'subtasks');
-		if (isItemList(subtasks)) {
-			moved.subtasks = subtasks.map((sub) => {
-				const oldFull = `${oldKey}.${keyOf(sub)}`;
-				const newFull = remap(oldFull);
-				const movedSub: Item = { ...sub };
-				const newSubId = Number(newFull.split('.').pop());
-				if (newFull !== `${newKey}.${keyOf(sub)}`) {
-					movedSub.id = withIdType(sub.id, newSubId);
-				}
-				const parentId = own(sub, 'parentId');
-				if (
-					parentId !== undefined &&
-					String(parentId) === oldKey &&
-					newKey !== oldKey
-				) {
-					movedSub.parentId = withIdType(parentId, Number(newKey));
-				}
-				rewriteReferences(movedSub, oldKey, newKey, remap);
-				return movedSub;
-			});
-		}
-		return moved;
-	});
-
-	const result: Json = { ...theirs };
-	put(result, 'tasks', tasks);
-	return result;
-}
-
-/**
- * Rewrite one task's or subtask's dependencies and provenance keys in place.
- *
- * @param oldParent - For a subtask, its task's ID before the moves
- * @param newParent - ...and after
- */
-function rewriteReferences(
-	item: Item,
-	oldParent: string | undefined,
-	newParent: string | undefined,
-	remap: (fullId: string) => string
-): void {
-	const dependencies = own(item, 'dependencies');
-	if (Array.isArray(dependencies)) {
-		item.dependencies = dependencies.map((dep) => {
-			if (typeof dep !== 'number' && typeof dep !== 'string') return dep;
-			const full =
-				oldParent === undefined
-					? String(dep)
-					: resolveSubtaskDependency(oldParent, dep);
-			const moved = remap(full);
-			if (moved === full) return dep;
-			if (typeof dep === 'string') return moved;
-			const parts = moved.split('.');
-			if (oldParent !== undefined && isSiblingReference(dep)) {
-				// A sibling stays a sibling number when it's still a sibling
-				return parts.length === 2 && parts[0] === newParent
-					? Number(parts[1])
-					: moved;
-			}
-			return parts.length === 1 ? Number(moved) : moved;
-		});
-	}
-
-	const metadata = own(item, 'metadata');
-	if (!isObject(metadata)) return;
-	// Provenance marks and non-blocking links are both keyed by full ID
-	let movedMetadata: Json | undefined;
-	for (const mapKey of [DEPENDENCY_SOURCES_KEY, TASK_LINKS_KEY]) {
-		const entries = own(metadata, mapKey);
-		if (!isObject(entries)) continue;
-		const moved: Json = {};
-		for (const [key, value] of Object.entries(entries)) {
-			put(moved, remap(key), value);
-		}
-		movedMetadata ??= { ...metadata };
-		put(movedMetadata, mapKey, moved);
-	}
-	if (movedMetadata) item.metadata = movedMetadata;
-}
-
-function maxId(lists: Item[][]): number {
-	let max = 0;
-	for (const list of lists) {
-		for (const item of list) {
-			const id = Number(item.id);
-			if (Number.isInteger(id) && id > max) max = id;
-		}
-	}
-	return max;
 }
 
 /**

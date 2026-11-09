@@ -13,6 +13,7 @@ import { runTasksMergeDriver } from '@tm/core';
 import { Command } from 'commander';
 import {
 	formatMergeConflicts,
+	formatMergeDropped,
 	formatMergeRenumbered
 } from '../ui/formatters/merge-driver-formatters.js';
 import { printError } from '../utils/error-handler.js';
@@ -65,13 +66,23 @@ export class MergeDriverCommand extends Command {
 
 		if (outcome.status === 'conflicted') {
 			console.error(
-				formatMergeConflicts(outcome.conflicts, file, outcome.renumbered)
+				formatMergeConflicts(
+					outcome.conflicts,
+					file,
+					outcome.renumbered,
+					undefined,
+					outcome.droppedDependencies
+				)
 			);
 			process.exitCode = 1;
 			return;
 		}
 
-		const line = formatMergeRenumbered(outcome.renumbered);
-		if (line) console.log(line);
+		for (const line of [
+			formatMergeRenumbered(outcome.renumbered),
+			formatMergeDropped(outcome.droppedDependencies)
+		]) {
+			if (line) console.log(line);
+		}
 	}
 }

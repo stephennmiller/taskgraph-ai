@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
 	formatMergeConflicts,
 	formatMergeDriverSetup,
+	formatMergeDropped,
 	formatMergeRenumbered
 } from './merge-driver-formatters.js';
 
@@ -55,6 +56,51 @@ describe('formatMergeRenumbered', () => {
 		);
 
 		expect(output).toBe('Renumbered incoming 6 → 7');
+	});
+});
+
+describe('formatMergeDropped', () => {
+	const rows = [
+		{ tag: 'master', id: '5', dependency: '2' },
+		{ tag: 'feature', id: '3.1', dependency: '1' }
+	];
+
+	it('prints nothing when nothing was dropped', () => {
+		expect(formatMergeDropped([])).toBe('');
+	});
+
+	it('names each task and the removed task it depended on', () => {
+		expect(plain(formatMergeDropped(rows, true, 100))).toBe(
+			'✓ Merged tasks.json; dropped dependencies on removed tasks: 5 → 2 · feature: 3.1 → 1'
+		);
+	});
+
+	it('is a note under the clashes when the merge also conflicted', () => {
+		const output = plain(
+			formatMergeConflicts(
+				[
+					{
+						tag: 'master',
+						id: '1',
+						field: 'status',
+						kind: 'changed-both',
+						ours: 'done',
+						theirs: 'review'
+					}
+				],
+				TASKS_FILE,
+				[],
+				80,
+				rows.slice(0, 1)
+			)
+		);
+
+		expect(output.split('\n')).toEqual([
+			"✗ 1 change to tasks.json clashes; kept this branch's value",
+			'  1  status  done · incoming: review',
+			'Dropped dependencies on removed tasks: 5 → 2',
+			`Edit ${TASKS_FILE} to choose, then git add it`
+		]);
 	});
 });
 

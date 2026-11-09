@@ -142,6 +142,18 @@ an explicit user action. The next writer to add a subtask, reopen a
 complete one or set one to `pending` or `in-progress` moves it back;
 closing, holding or removing the leftover ones doesn't.
 
+The git merge driver writes tasks.json outside the funnel, so it settles
+too (`git/merge-driver/merge-settle.ts`, #1093): a task whose merged
+status and subtasks together are neither branch's as written goes through
+`settleChangedParents` against each branch's subtasks, with the done gate
+(the Definition of Done from the project's config files). A task whose
+status and subtasks one branch wrote is left as that branch wrote it, also
+when the other edited another field. It also drops, and reports, a
+dependency on a task one branch removed while the other added the
+dependency. A dependency on a done or cancelled task the incoming branch
+took out stays: that branch may have archived it, and its archive.json
+isn't readable during the merge.
+
 ## 3. Claim
 
 A claim marks who is working on an in-progress task:
@@ -204,7 +216,10 @@ it.
 A tag copy strips `metadata.github` and the claim keys from every task
 and subtask, so two tags never link the same issue (#1063).
 The merge driver merges the mark as a max and renumbers an incoming new
-task whose ID this branch used and removed (#1040).
+task whose ID this branch used and removed (#1040). An incoming task under
+an archived ID keeps it only when it is the archived task restored: the
+same `createdAt` and title, or every field when `createdAt` isn't
+recorded (#1094).
 
 Invariant everything relies on: an ID names one task for its whole life.
 The merge driver, GitHub link recovery and every in-flight AI write find a
