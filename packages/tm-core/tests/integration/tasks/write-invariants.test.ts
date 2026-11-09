@@ -285,6 +285,7 @@ describe('a parent marked done over open subtasks (#1107)', () => {
 
 	it.each<[string, Writer]>([
 		['set-status cancelled', (tm) => tm.tasks.updateStatus('1.1', 'cancelled')],
+		['set-status deferred', (tm) => tm.tasks.updateStatus('1.1', 'deferred')],
 		['remove-task of a subtask', (tm) => tm.tasks.removeTasks('1.1')],
 		['remove-subtask', (tm) => tm.tasks.removeSubtasks(['1.1'])],
 		['move of a subtask to a task', (tm) => tm.tasks.move('1.1', '9')]
@@ -303,6 +304,17 @@ describe('a parent marked done over open subtasks (#1107)', () => {
 	it('reopens when a leftover subtask is started', async () => {
 		await p.tmCore.tasks.updateStatus('1.1', 'in-progress');
 
+		expect(parent().status).toBe('in-progress');
+	});
+
+	it('reopens when expand --force replaces the leftover subtasks under the same IDs', async () => {
+		p.generateObject.mockResolvedValue(
+			answer([1, 2, 3].map((n) => aiSubtask(n, { title: `New ${n}` }))) as any
+		);
+
+		await p.tmCore.tasks.expand({ id: '1', num: 3, force: true });
+
+		expect(parent().subtasks.map((s: any) => Number(s.id))).toEqual([1, 2, 3]);
 		expect(parent().status).toBe('in-progress');
 	});
 });

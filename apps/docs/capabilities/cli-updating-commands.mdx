@@ -94,7 +94,7 @@ A parent's status follows its subtasks whichever command changes them (`set-stat
 
 In Claude Code, the plugin's `/taskgraph:to-done <id>` does the checking for you: the `task-checker` agent compares your changes with each numbered item, the ones it can show evidence for are checked, and the rest are reported to you. It then saves a three-line summary on the task (what changed, files, follow-ups) and marks it done. It never passes `--force` unless you ask.
 
-Marking a parent task done leaves its subtasks as they are; mark each subtask done (or `cancelled`) yourself. That keeps the parent done; setting a subtask back to an open status, or adding one, moves the parent to `in-progress`.
+Marking a parent task done leaves its subtasks as they are; mark each subtask done (or `cancelled`) yourself. That keeps the parent done, and so does setting a leftover subtask to `blocked`, `deferred` or `review`. Adding a subtask, starting one, or reopening one that was done or cancelled moves the parent back to `in-progress` (to `pending` when every subtask is pending again).
 
 ## Generate Task Files
 
@@ -146,9 +146,10 @@ Once `parse-prd` has recorded where tasks came from, `fix-dependencies --check` 
 taskgraph move --from=<id> --to=<id>
 
 # Move task to become a subtask: name a free subtask ID under the new parent
-taskgraph move --from=5 --to=7.4
+# (a task that has subtasks of its own is refused)
+taskgraph move --from=6 --to=7.4
 # or let TaskGraph pick the subtask ID
-taskgraph add-subtask --parent=7 --task-id=5
+taskgraph add-subtask --parent=7 --task-id=6
 
 # Move subtask to become a standalone task (9 is a free task ID)
 taskgraph move --from=5.2 --to=9

@@ -123,13 +123,41 @@ describe('settleChangedParents', () => {
 		const before = subtaskShapes(added);
 		const beforeStart = subtaskShapes(started);
 		added[0].subtasks.push(createSubtask({ id: 3, title: 'Sub 3' }));
-		started[0].subtasks[0].status = 'blocked';
+		started[0].subtasks[0].status = 'in-progress';
 
 		settleChangedParents(before, added);
 		settleChangedParents(beforeStart, started);
 
 		expect(added[0].status).toBe('in-progress');
 		expect(started[0].status).toBe('in-progress');
+	});
+
+	it('keeps a done parent done when a leftover subtask is held, reopens it when a finished one is', () => {
+		const leftover = [parent('done', 'pending', 'pending')];
+		const finished = [parent('done', 'done', 'done')];
+		const before = subtaskShapes(leftover);
+		const beforeFinished = subtaskShapes(finished);
+		leftover[0].subtasks[0].status = 'deferred';
+		finished[0].subtasks[0].status = 'blocked';
+
+		settleChangedParents(before, leftover);
+		settleChangedParents(beforeFinished, finished);
+
+		expect(leftover[0].status).toBe('done');
+		expect(finished[0].status).toBe('in-progress');
+	});
+
+	it('reopens a done parent whose leftover subtasks are replaced under the same IDs (expand --force)', () => {
+		const tasks = [parent('done', 'pending', 'pending')];
+		const before = subtaskShapes(tasks);
+		tasks[0].subtasks = [
+			createSubtask({ id: 1, title: 'New 1' }),
+			createSubtask({ id: 2, title: 'New 2' })
+		];
+
+		settleChangedParents(before, tasks);
+
+		expect(tasks[0].status).toBe('in-progress');
 	});
 
 	it('reads a missing subtask status as pending, not as a status change', () => {
