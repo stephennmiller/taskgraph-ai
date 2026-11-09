@@ -5,7 +5,7 @@
  */
 
 import path from 'node:path';
-import { createTmCore } from '@tm/core';
+import { createTmCore, exitOnStopSignals } from '@tm/core';
 import chalk from 'chalk';
 import { Command, Option } from 'commander';
 import type { Ora } from 'ora';
@@ -97,7 +97,7 @@ export class AnalyzeComplexityCommand extends Command {
 					});
 					return;
 				}
-				await this.executeCommand(options);
+				await exitOnStopSignals(() => this.executeCommand(options));
 			});
 	}
 

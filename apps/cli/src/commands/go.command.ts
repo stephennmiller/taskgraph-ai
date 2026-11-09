@@ -13,6 +13,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import {
 	SKIP_AUTO_UPDATE_ENV,
+	STOP_SIGNALS,
 	createTmCore,
 	isTaskGraphProject,
 	resolveProjectRoot
@@ -20,7 +21,6 @@ import {
 import { Command } from 'commander';
 import { formatGoResume } from '../ui/formatters/go-formatters.js';
 import { printError } from '../utils/error-handler.js';
-import { STOP_SIGNALS } from './loop.command.js';
 
 interface GoCommandOptions {
 	trust?: boolean;

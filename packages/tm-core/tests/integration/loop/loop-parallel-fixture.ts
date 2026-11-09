@@ -4,6 +4,7 @@
  */
 
 import { execFileSync } from 'node:child_process';
+import fs from 'node:fs';
 
 export const FAKE_CLAUDE = `#!/usr/bin/env node
 const fs = require('node:fs');
@@ -71,7 +72,9 @@ if (mode.startsWith('merge-')) {
 	process.exit(0);
 }
 if (mode === 'fail') process.exit(1);
-if (mode === 'sleep' || mode === 'dirty-sleep' || mode === 'commit-sleep') {
+if (mode === 'sleep' || mode === 'dirty-sleep' || mode === 'commit-sleep' || mode === 'deaf-sleep') {
+	// Deaf to SIGTERM: only SIGKILL after the grace period stops it (#1121)
+	if (mode === 'deaf-sleep') process.on('SIGTERM', () => {});
 	if (mode === 'dirty-sleep') fs.writeFileSync('partial.txt', 'wip\\n');
 	if (mode === 'commit-sleep') {
 		fs.writeFileSync('work.txt', 'done\\n');
@@ -128,5 +131,16 @@ export const isAlive = (pid: number) => {
 		return true;
 	} catch {
 		return false;
+	}
+};
+
+/** isAlive, not counting a zombie: a killed process can stay one until its new parent reaps it */
+export const isRunning = (pid: number) => {
+	if (!isAlive(pid)) return false;
+	try {
+		return !/\) Z /.test(fs.readFileSync(`/proc/${pid}/stat`, 'utf8'));
+	} catch {
+		// On Linux a missing stat means the zombie was reaped after the kill check (#911); no /proc elsewhere
+		return process.platform !== 'linux';
 	}
 };

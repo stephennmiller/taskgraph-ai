@@ -295,6 +295,10 @@ Invariants:
 - An interrupted task is picked up again by `interruptedTask`.
 - The progress file only appends. tasks.json is the source of truth.
 
+Every Claude Code the loop starts (iteration, parallel worker, conflict
+resolver) is stopped by `stopProcessGroup` (`loop/process-group.ts`, #1121):
+SIGTERM to its process group, SIGKILL after 5 seconds.
+
 ## 8. Parallel task
 
 `loop/parallel/parallel-runner.ts`, `outcome.ts`.

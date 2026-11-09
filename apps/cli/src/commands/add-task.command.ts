@@ -5,7 +5,7 @@
  * tasks.json lock without dropping changes made while the AI was writing.
  */
 
-import { type AddTaskResult, createTmCore } from '@tm/core';
+import { type AddTaskResult, createTmCore, exitOnStopSignals } from '@tm/core';
 import chalk from 'chalk';
 import { Command } from 'commander';
 import type { Ora } from 'ora';
@@ -98,7 +98,7 @@ export class AddTaskCommand extends Command {
 				'Tag to add the task to (default: the current tag)'
 			)
 			.action(async (options: AddTaskCommandOptions) => {
-				await this.executeCommand(options);
+				await exitOnStopSignals(() => this.executeCommand(options));
 			});
 	}
 
