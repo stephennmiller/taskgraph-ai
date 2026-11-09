@@ -22,6 +22,7 @@ import {
 	refuseSymlinkedFolders,
 	writeProjectFile
 } from '../../storage/adapters/file-storage/file-operations.js';
+import { normalizeDefinitionOfDone } from '../../tasks/utils/acceptance-criteria.js';
 import { mergeMachineConfig, splitMachineConfig } from './machine-config.js';
 import { omitShellOnlyConfig } from './project-env.js';
 
@@ -267,6 +268,33 @@ export function writeSplitConfig(rootPath: string, config: JsonObject): void {
 	);
 }
 
+/** config.local.json over config.json; a file that isn't valid JSON is skipped */
+function readProjectConfig(rootPath: string): JsonObject {
+	const read = (file: string) => {
+		const json = readConfigJson(path.join(rootPath, file));
+		return json === UNREADABLE_CONFIG ? null : json;
+	};
+	return mergeMachineConfig<JsonObject>(
+		read(TASKGRAPH_CONFIG_FILE),
+		read(TASKGRAPH_LOCAL_CONFIG_FILE)
+	);
+}
+
+/**
+ * The project's Definition of Done as the two project config files give it,
+ * read synchronously for the git merge driver, which has no ConfigManager.
+ * Empty when unset or when a file can't be read.
+ */
+export function readDefinitionOfDone(rootPath: string): string[] {
+	try {
+		return normalizeDefinitionOfDone(
+			readProjectConfig(rootPath).global?.definitionOfDone
+		);
+	} catch {
+		return [];
+	}
+}
+
 /**
  * The project's global.logLevel, lower-cased: config.local.json over
  * config.json, 'info' when neither sets it. A file that isn't valid JSON is
@@ -274,15 +302,7 @@ export function writeSplitConfig(rootPath: string, config: JsonObject): void {
  * @throws When a file can't be read (permissions, a directory)
  */
 export function readLogLevel(rootPath: string): string {
-	const read = (file: string) => {
-		const json = readConfigJson(path.join(rootPath, file));
-		return json === UNREADABLE_CONFIG ? null : json;
-	};
-	const config = mergeMachineConfig<JsonObject>(
-		read(TASKGRAPH_CONFIG_FILE),
-		read(TASKGRAPH_LOCAL_CONFIG_FILE)
-	);
-	const level = config.global?.logLevel;
+	const level = readProjectConfig(rootPath).global?.logLevel;
 	return typeof level === 'string'
 		? level.toLowerCase()
 		: DEFAULT_PROJECT_CONFIG.global.logLevel;
