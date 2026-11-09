@@ -1153,11 +1153,12 @@
         "description": "GitHub issue #1075, found by the 2026-11-09 codebase review.",
         "details": "",
         "testStrategy": "",
-        "status": "pending",
+        "status": "done",
         "dependencies": [],
         "priority": "medium",
         "subtasks": [],
-        "createdAt": "2026-11-09T21:04:29.100Z"
+        "createdAt": "2026-11-09T21:04:29.100Z",
+        "updatedAt": "2026-11-09T21:11:15.373Z"
       }
     ],
     "metadata": {
@@ -1166,9 +1167,9 @@
       "schemaVersion": 2,
       "updated": "2026-10-24T00:05:11.748Z",
       "version": "1.0.0",
-      "lastModified": "2026-11-09T21:04:32.724Z",
+      "lastModified": "2026-11-09T21:11:15.374Z",
       "taskCount": 89,
-      "completedCount": 86,
+      "completedCount": 87,
       "tags": [
         "master"
       ],
