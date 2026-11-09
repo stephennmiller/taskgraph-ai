@@ -253,7 +253,7 @@ describe('archive', () => {
 		expect(result.stderr).toContain('taskgraph archive --older-than 30');
 	});
 
-	it('moves archived tasks with a renamed tag and drops them with a deleted one', {
+	it('moves archived tasks with a renamed tag and drops them with a deleted one, keeping each old name as a tombstone', {
 		timeout: spawnTimeout(3)
 	}, () => {
 		const file = readJson(tasksPath);
@@ -269,10 +269,14 @@ describe('archive', () => {
 		expect(archivedIds('feature')).toEqual(['1']);
 
 		expect(run(['tags', 'rename', 'feature', 'launch']).status).toBe(0);
-		expect(readJson(archivePath).feature).toBeUndefined();
+		const tombstone = { tasks: [], metadata: { highestId: 1 } };
+		expect(readJson(archivePath).feature).toMatchObject(tombstone);
 		expect(archivedIds('launch')).toEqual(['1']);
 
 		expect(run(['tags', 'remove', 'launch', '--yes']).status).toBe(0);
-		expect(readJson(archivePath).launch).toBeUndefined();
+		expect(readJson(archivePath).launch).toMatchObject(tombstone);
+		// A tombstone is not a tag
+		const tags = run(['tags', 'list']);
+		expect(tags.stdout).not.toMatch(/launch|feature/);
 	});
 });

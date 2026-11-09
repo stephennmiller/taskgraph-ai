@@ -170,6 +170,14 @@ held, on every write (`applyTagUpdate` in `tag-update.ts`). `nextTaskId`
 and `withFreeIds` hand out IDs above the highest of that mark, the live IDs
 and the archive's `highestId`. That covers add-task, parse-prd (including
 `--force`), `remove-task --convert`, GitHub import and moves between tags.
+`tags remove` and `tags rename` leave a tombstone
+`{ tasks: [], metadata: { highestId } }` under the old name in
+archive.json, so a tag recreated with that name numbers above it (#1064).
+A copy or rename onto that name is refused when one of its task IDs is
+at or below the tombstone's `highestId`, except a rename back (the
+tombstone's `renamedTo`).
+A tag copy strips `metadata.github` and the claim keys from every task
+and subtask, so two tags never link the same issue (#1063).
 The merge driver merges the mark as a max and renumbers an incoming new
 task whose ID this branch used and removed (#1040).
 
