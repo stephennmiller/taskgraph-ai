@@ -15,6 +15,9 @@ import {
 import { sandboxRunArgs } from './docker-sandbox.js';
 import { STREAM_JSON_ARGS } from './stream-events.js';
 
+/** A stop signal this soon after the first is the same Ctrl-C, not a second one */
+const REPEAT_SIGNAL_MS = 500;
+
 /**
  * Start Claude in its own process group. After `timeout` ms with no output
  * the whole group is stopped (SIGTERM, then SIGKILL after `graceMs`), so the
@@ -52,18 +55,25 @@ export function spawnIteration(
 	// left: stop Claude's group (SIGTERM, since a shell's background jobs
 	// ignore SIGINT; SIGKILL after the grace period, or at once on a second
 	// signal), then let the signal stop this process as before
-	let stopping = false;
+	let stoppedAt: number | undefined;
 	const forward = (sig: NodeJS.Signals): void => {
 		const reraise = (): void => {
 			cleanup();
 			process.kill(process.pid, sig);
 		};
 		if (child.exitCode !== null || child.signalCode !== null) return reraise();
-		if (stopping) return killProcessGroup(child, 'SIGKILL');
-		stopping = true;
+		if (stoppedAt !== undefined) {
+			// One Ctrl-C can arrive twice: from the terminal, and passed on by `go` or npm
+			if (Date.now() - stoppedAt >= REPEAT_SIGNAL_MS) {
+				killProcessGroup(child, 'SIGKILL');
+			}
+			return;
+		}
+		stoppedAt = Date.now();
 		clearTimeout(timer);
-		child.once('exit', reraise);
+		// Before reraise, which ends this process: it kills what outlived Claude
 		stopProcessGroup(child, graceMs);
+		child.once('exit', reraise);
 		onStop?.();
 	};
 	const cleanup = (): void => {

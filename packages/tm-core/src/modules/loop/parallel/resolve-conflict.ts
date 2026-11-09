@@ -9,6 +9,7 @@ import { PROJECT_ROOT_ENV } from '../../../common/utils/project-root-finder.js';
 import { childAutoUpdateEnv } from '../child-env.js';
 import {
 	KILL_GRACE_MS,
+	killProcessGroup,
 	spawnInOwnGroup,
 	stopProcessGroup
 } from '../process-group.js';
@@ -78,9 +79,14 @@ export function resolveConflict(options: {
 		};
 		const timer = setTimeout(stop, loopIterationTimeoutMs());
 		options.signal?.addEventListener('abort', stop, { once: true });
+		// If this process exits first (a second Ctrl-C, a crash), Claude Code
+		// mustn't go on alone: no terminal's Ctrl-C reaches its process group
+		const killOnExit = () => killProcessGroup(child, 'SIGKILL');
+		process.on('exit', killOnExit);
 		const done = (code: number | null) => {
 			clearTimeout(timer);
 			options.signal?.removeEventListener('abort', stop);
+			process.off('exit', killOnExit);
 			let costUsd = failed.costUsd;
 			try {
 				const cost = JSON.parse(stdout).total_cost_usd;

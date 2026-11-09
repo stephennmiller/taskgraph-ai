@@ -39,19 +39,24 @@ export function spawnInOwnGroup(
 	return spawner(command, args, { ...options, detached: OWN_PROCESS_GROUP });
 }
 
-/** Signal the child's process group (or just the child on Windows) */
+/**
+ * Signal the child's process group (or just the child on Windows). The group
+ * outlives its leader while a process the child started is still running, so
+ * it is signalled either way; an empty one throws, which is ignored.
+ */
 export function killProcessGroup(
 	child: ChildProcess,
 	sig: NodeJS.Signals
 ): void {
-	if (child.exitCode !== null || child.signalCode !== null) return;
+	const exited = child.exitCode !== null || child.signalCode !== null;
 	try {
 		if (OWN_PROCESS_GROUP && child.pid) {
 			process.kill(-child.pid, sig);
-		} else {
+		} else if (!exited) {
 			child.kill(sig);
 		}
 	} catch {
+		if (exited) return;
 		try {
 			child.kill(sig);
 		} catch {
@@ -62,8 +67,9 @@ export function killProcessGroup(
 
 /**
  * Stop the child's process group: SIGTERM now, SIGKILL after the grace period
- * if the child is still there. On Windows, where a kill can't be ignored,
- * both end just the child.
+ * if the child is still there. Once the child has exited, what it started and
+ * is still running (it ignored the SIGTERM) is killed at once. On Windows,
+ * where a kill can't be ignored, both end just the child.
  */
 export function stopProcessGroup(
 	child: ChildProcess,
@@ -71,9 +77,12 @@ export function stopProcessGroup(
 ): void {
 	killProcessGroup(child, 'SIGTERM');
 	const timer = setTimeout(() => killProcessGroup(child, 'SIGKILL'), graceMs);
-	// Never keeps this process alive; killProcessGroup skips a child that exited
+	// Never keeps this process alive
 	timer.unref();
-	child.once('close', () => clearTimeout(timer));
+	child.once('exit', () => {
+		clearTimeout(timer);
+		killProcessGroup(child, 'SIGKILL');
+	});
 }
 
 /**

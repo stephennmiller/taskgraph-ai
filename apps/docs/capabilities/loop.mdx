@@ -99,7 +99,7 @@ Each iteration runs `claude -p` with permission prompts off, so the first run in
 
 Stop a run any time (Ctrl-C, a crash, closing the laptop) and run `taskgraph loop` again later. Finished tasks are committed, the task that was in progress is picked first, and the new session carries on from the task statuses and commits. The prompt names the files it left uncommitted (up to 20), so the session continues from them.
 
-Ctrl-C, `kill` and closing the terminal tell Claude Code and everything it started to stop. `loop` waits for Claude Code to exit, and after 5 seconds kills what hasn't; a second Ctrl-C kills it at once. An iteration stopped for its [timeout](/best-practices/configuration-advanced#loop-iteration-timeout) is stopped the same way.
+Ctrl-C, `kill` and closing the terminal tell Claude Code and everything it started to stop. `loop` waits for Claude Code to exit, then kills anything it started that is still running; after 5 seconds it kills Claude Code too. A second Ctrl-C kills it at once. An iteration stopped for its [timeout](/best-practices/configuration-advanced#loop-iteration-timeout) is stopped the same way.
 
 ### Smoke check
 

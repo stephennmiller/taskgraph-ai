@@ -124,6 +124,127 @@ describe.skipIf(process.platform === 'win32')(
 			await expectGone();
 		}, 20_000);
 
+		describe('a Claude Code that stops on SIGTERM, when what it started ignores it', () => {
+			beforeEach(() => {
+				fs.writeFileSync(
+					claude,
+					`#!/bin/sh\n(trap '' TERM; exec sleep 30) &\necho "$$ $!" > "${path.join(dir, 'pids')}"\ntrap 'echo bye > "${path.join(dir, 'graceful')}"; exit 0' TERM\nwhile :; do sleep 0.1; done\n`,
+					{ mode: 0o755 }
+				);
+			});
+
+			// A grace period this long never ends in the test: only Claude's exit kills the rest
+			it('kills that once Claude Code has exited: a timed-out iteration', async () => {
+				const child = spawnIteration(
+					claude,
+					[],
+					dir,
+					300,
+					vi.fn(),
+					undefined,
+					60_000
+				);
+				await pidsOnceUp();
+
+				await new Promise((done) => child.once('close', done));
+
+				await expectGone();
+			}, 20_000);
+
+			it('kills that before the signal stops the loop', async () => {
+				const kill = process.kill.bind(process);
+				const killSpy = vi
+					.spyOn(process, 'kill')
+					.mockImplementation((pid, sig) =>
+						pid === process.pid ? true : kill(pid, sig)
+					);
+				const child = spawnIteration(
+					claude,
+					[],
+					dir,
+					60_000,
+					vi.fn(),
+					undefined,
+					60_000
+				);
+				const exited = new Promise((done) => child.once('exit', done));
+				await pidsOnceUp();
+
+				process.emit('SIGTERM', 'SIGTERM');
+				await exited;
+
+				expect(killSpy).toHaveBeenCalledWith(process.pid, 'SIGTERM');
+				await expectGone();
+				child.stdout?.destroy();
+				child.stderr?.destroy();
+			}, 20_000);
+
+			it('kills that when a conflict resolve is aborted', async () => {
+				const controller = new AbortController();
+				const resolving = resolveConflict({
+					projectRoot: dir,
+					worktree: dir,
+					branch: 'taskgraph/task-2',
+					commit: 'abc123',
+					command: claude,
+					signal: controller.signal,
+					killGraceMs: 60_000
+				});
+				await pidsOnceUp();
+
+				controller.abort();
+
+				expect((await resolving).ok).toBe(false);
+				await expectGone();
+			}, 20_000);
+
+			it('lets Claude Code stop by itself when one Ctrl-C arrives twice, as under `go`', async () => {
+				const kill = process.kill.bind(process);
+				vi.spyOn(process, 'kill').mockImplementation((pid, sig) =>
+					pid === process.pid ? true : kill(pid, sig)
+				);
+				const child = spawnIteration(
+					claude,
+					[],
+					dir,
+					60_000,
+					vi.fn(),
+					undefined,
+					60_000
+				);
+				const exited = new Promise((done) => child.once('exit', done));
+				await pidsOnceUp();
+
+				// The terminal's SIGINT, and the one `go` passes on
+				process.emit('SIGINT', 'SIGINT');
+				process.emit('SIGINT', 'SIGINT');
+				await exited;
+
+				// SIGKILL would have left no time to write it
+				expect(fs.existsSync(path.join(dir, 'graceful'))).toBe(true);
+				expect(child.signalCode).toBeNull();
+				child.stdout?.destroy();
+				child.stderr?.destroy();
+			}, 20_000);
+		});
+
+		it('a conflict resolve is killed when this process exits first', async () => {
+			const before = process.listeners('exit');
+			const resolving = resolve();
+			await pidsOnceUp();
+			const added = process
+				.listeners('exit')
+				.filter((l) => !before.includes(l));
+
+			// What a second Ctrl-C or a crash runs: no abort, no timeout
+			for (const listener of added) (listener as () => void)();
+
+			expect(added).toHaveLength(1);
+			expect(await resolving).toEqual({ ok: false, costUsd: 1.5 });
+			expect(process.listeners('exit')).toEqual(before);
+			await expectGone();
+		}, 20_000);
+
 		it('a conflict resolve the run aborted', async () => {
 			const controller = new AbortController();
 			const resolving = resolve(controller.signal);
