@@ -189,6 +189,27 @@ describe('done gate', () => {
 		expect(parent.status).toBe('in-progress');
 	});
 
+	it('keeps a parent in progress, through either write funnel, when the Definition of Done is unchecked', async () => {
+		const started = (id: string) =>
+			createTask({
+				id,
+				title: `Task ${id}`,
+				status: 'in-progress',
+				subtasks: [
+					createSubtask({ id: 1, parentId: id, title: 'One', status: 'done' }),
+					createSubtask({ id: 2, parentId: id, title: 'Two' })
+				]
+			});
+		await setup([started('1'), started('2')], ['Tests pass']);
+
+		// remove-subtask saves through mutateTags, modifyTask through mutateTasks
+		await tmCore.tasks.removeSubtasks(['1.2']);
+		await tmCore.tasks.modifyTask('2.2', () => ({ status: 'done' }));
+
+		expect((await readTask('1')).status).toBe('in-progress');
+		expect((await readTask('2')).status).toBe('in-progress');
+	});
+
 	it('refuses a criterion number the checklist does not have, changing nothing', async () => {
 		await setup([
 			createTask({

@@ -1,9 +1,9 @@
 /**
- * @fileoverview The status a parent task takes from its subtasks. Every
- * writer that changes a parent's subtasks (set-status on a subtask,
- * add-subtask, move, remove-subtask, expand, an update-task rewrite that
- * drops subtasks) applies it, so a done parent never hides open subtasks
- * and finished subtasks never strand a parent in progress (#1042, #1065).
+ * @fileoverview The status a parent task takes from its subtasks. FileStorage
+ * applies it on every write that changes a parent's subtasks
+ * (settleChangedParents), and set-status on a subtask after each ID, so a
+ * done parent never hides open subtasks and finished subtasks never strand
+ * a parent in progress (#1042, #1065).
  */
 
 import {
@@ -69,14 +69,57 @@ export function withParentStatus<T extends Task>(
 	);
 }
 
-/** Apply withParentStatus to each of these tasks in `tasks`, in place */
-export function settleParentsIn(
+/** A task's subtask IDs, statuses and titles, to see what a write changed */
+interface SubtaskShape {
+	ids: string;
+	statuses: string;
+	titles: string;
+}
+
+/** Each task's SubtaskShape by ID, taken before a write changes `tasks` */
+export function subtaskShapes(tasks: Task[]): Map<string, SubtaskShape> {
+	return new Map(
+		tasks.map((task) => {
+			const subs = task.subtasks ?? [];
+			return [
+				String(task.id),
+				{
+					ids: JSON.stringify(subs.map((s) => String(s.id))),
+					// Missing reads as pending, as withParentStatus reads it: a rewrite
+					// that writes the default isn't a subtask's status change
+					statuses: JSON.stringify(subs.map((s) => s.status || 'pending')),
+					titles: JSON.stringify(subs.map((s) => s.title))
+				}
+			];
+		})
+	);
+}
+
+/**
+ * The write funnel's step: each task in `tasks` that `before` had and whose
+ * subtasks were added, removed or changed status takes the status they give
+ * it (withParentStatus). Only a status change on the same subtasks counts as
+ * `subtaskStatusChanged`: expand --force reuses IDs for new subtasks. A new
+ * task (add-task, a move, a restore) keeps its status. Settled in place, so
+ * a writer's result that holds the parent sees its new status.
+ */
+export function settleChangedParents(
+	before: Map<string, SubtaskShape>,
 	tasks: Task[],
-	parentIds: Iterable<string | number>,
 	guardDone?: ParentDoneGuard
 ): void {
-	for (const id of new Set([...parentIds].map(String))) {
-		const index = tasks.findIndex((t) => String(t.id) === id);
-		if (index !== -1) tasks[index] = withParentStatus(tasks[index], guardDone);
+	const after = subtaskShapes(tasks);
+	for (const task of tasks) {
+		const was = before.get(String(task.id));
+		const now = after.get(String(task.id)) as SubtaskShape;
+		if (!was || (was.ids === now.ids && was.statuses === now.statuses)) {
+			continue;
+		}
+		const statusOnly = was.ids === now.ids && was.titles === now.titles;
+		const settled = withParentStatus(task, guardDone, statusOnly);
+		if (settled === task) continue;
+		// withParentStatus drops an emptied metadata key; Object.assign can't
+		if (!('metadata' in settled)) delete task.metadata;
+		Object.assign(task, settled);
 	}
 }

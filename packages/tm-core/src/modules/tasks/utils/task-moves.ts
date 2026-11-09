@@ -24,7 +24,6 @@ import {
 	retargetDependents
 } from '../../dependencies/task-to-subtask.js';
 import { normalizeTaskId } from '../validation/task-id.js';
-import { type ParentDoneGuard, settleParentsIn } from './parent-status.js';
 
 // Tasks as stored: IDs and dependencies may be numbers or strings
 export type Item = Record<string, any>;
@@ -165,14 +164,13 @@ const nextSubtaskId = (parent: Item) =>
 /**
  * Add a subtask to `parentId`: a new one, or the task `fromTaskId` turned
  * into one (what depended on that task then depends on the subtask).
- * The parent's status then follows its subtasks (see withParentStatus).
+ * The parent's status then follows its subtasks (FileStorage settles it).
  * @returns The subtask as stored
  */
 export function addSubtaskIn(
 	tasks: Task[],
 	parentId: string,
-	source: { fromTaskId: string } | { subtask: NewSubtaskInput },
-	guardDone?: ParentDoneGuard
+	source: { fromTaskId: string } | { subtask: NewSubtaskInput }
 ): Subtask {
 	const items = tasks as Item[];
 	// "01" is task 1; parseInt also read "1x" and subtask "8.1" as a task
@@ -204,7 +202,6 @@ export function addSubtaskIn(
 			dependencies: data.dependencies || []
 		};
 		parentTask.subtasks.push(subtask);
-		settleParentsIn(tasks, [parentKey], guardDone);
 		return subtask as unknown as Subtask;
 	}
 
@@ -238,6 +235,5 @@ export function addSubtaskIn(
 	parentTask.subtasks.push(subtask);
 	items.splice(taskIndex, 1);
 	retargetDependents(items, taskKey, `${parentKey}.${newSubtaskId}`);
-	settleParentsIn(tasks, [parentKey], guardDone);
 	return subtask as unknown as Subtask;
 }

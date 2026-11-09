@@ -19,7 +19,6 @@ import {
 	normalizeNoteText,
 	type TaskNote
 } from './utils/notes.js';
-import { parentDoneGate } from './utils/parent-status.js';
 import {
 	type AddSubtaskInput,
 	addSubtaskToTag,
@@ -272,13 +271,7 @@ export class TaskEditCommands {
 	): Promise<{ subtask: Subtask; tag: string }> {
 		const tag = options.tag || this.configManager.getActiveTag();
 		const storage = this.taskService.getStorage();
-		const subtask = await addSubtaskToTag(
-			storage,
-			tag,
-			parentId,
-			input,
-			parentDoneGate(this.configManager.getDefinitionOfDone())
-		);
+		const subtask = await addSubtaskToTag(storage, tag, parentId, input);
 		return { subtask, tag };
 	}
 
@@ -294,13 +287,7 @@ export class TaskEditCommands {
 	): Promise<WithinTagMoveResult & { tag: string }> {
 		const tag = options.tag || this.configManager.getActiveTag();
 		const storage = this.taskService.getStorage();
-		const moved = await moveTasksWithinTag(
-			storage,
-			tag,
-			from,
-			to,
-			parentDoneGate(this.configManager.getDefinitionOfDone())
-		);
+		const moved = await moveTasksWithinTag(storage, tag, from, to);
 		return { ...moved, tag };
 	}
 

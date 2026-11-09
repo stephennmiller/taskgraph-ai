@@ -27,10 +27,6 @@ import {
 	isSiblingReference
 } from '../../dependencies/subtask-dependency.js';
 import { mergeTagChanges } from '../../storage/adapters/file-storage/merge-tag-changes.js';
-import {
-	type ParentDoneGuard,
-	settleParentsIn
-} from '../utils/parent-status.js';
 import { keepStoredFields } from '../utils/stored-fields.js';
 import { fullSubtaskId } from '../validation/task-id.js';
 
@@ -273,22 +269,19 @@ export function rewriteSubtasks(
  * a rewrite removed (#804, #827), then each dependency a rewrite added that
  * would close a loop (#824, #832), checked against `current`, not the tasks
  * read before the AI call. `warn` is told about each removal and drop (#863),
- * links included (#869). A task that lost subtasks then takes the status its
- * remaining subtasks give it (#1065), so `current` may hold a new object for it
+ * links included (#869). FileStorage then settles a task that lost
+ * subtasks from the ones left (#1065)
  */
 export function settleRewrites(
 	current: Task[],
 	rewrites: Array<{ stored: Task; now: Task; saved: Task }>,
-	warn: (message: string) => void,
-	guardDone: ParentDoneGuard
+	warn: (message: string) => void
 ): void {
-	const parents: Array<string | number> = [];
 	const removed = rewrites.flatMap(({ stored, saved }) => {
 		const kept = new Set((saved.subtasks ?? []).map((st) => String(st.id)));
 		const lost = (stored.subtasks ?? []).filter(
 			(st) => !kept.has(String(st.id))
 		);
-		if (lost.length > 0) parents.push(saved.id);
 		return lost.map((st) => fullSubtaskId(saved.id, st.id));
 	});
 	if (removed.length > 0) {
@@ -319,7 +312,6 @@ export function settleRewrites(
 		rewrites.map(({ now, saved }) => ({ before: now, task: saved })),
 		warn
 	);
-	settleParentsIn(current, parents, guardDone);
 }
 
 /** `subtasks` with each done one of `original` restored as it was, no ID twice */

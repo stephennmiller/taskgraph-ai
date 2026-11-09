@@ -3,6 +3,11 @@ import type { Task } from '../../../common/types/index.js';
 import { moveTasksBetweenTags } from './move-between-tags.js';
 import { moveTasksIn } from './move-within-tag.js';
 import { rankNextTasks } from './next-task.js';
+import {
+	type ParentDoneGuard,
+	settleChangedParents,
+	subtaskShapes
+} from './parent-status.js';
 import { addSubtaskIn } from './task-moves.js';
 import { ids, noArchive, sample } from './task-moves.fixture.js';
 
@@ -362,11 +367,19 @@ describe('parent status after add-subtask and move (#1042)', () => {
 	const find = (tasks: Task[], id: string) =>
 		tasks.find((t) => String(t.id) === id) as Task;
 	const refuse = () => new Error('unchecked');
+	// As FileStorage saves a write: parents whose subtasks changed settle
+	const save = (tasks: Task[], write: () => void, guard?: ParentDoneGuard) => {
+		const before = subtaskShapes(tasks);
+		write();
+		settleChangedParents(before, tasks, guard);
+	};
 
 	it('reopens a done parent that gains an open subtask, so next offers it', () => {
 		const tasks = sample();
 
-		addSubtaskIn(tasks, '1', { subtask: { title: 'Follow-up' } });
+		save(tasks, () =>
+			addSubtaskIn(tasks, '1', { subtask: { title: 'Follow-up' } })
+		);
 
 		expect(tasks[0].status).toBe('in-progress');
 		const ranked = rankNextTasks(tasks).map((t) => String(t.id));
@@ -380,10 +393,12 @@ describe('parent status after add-subtask and move (#1042)', () => {
 			const tasks = sample();
 			tasks[1].status = 'in-progress';
 			for (const st of tasks[1].subtasks) st.status = 'done';
-			addSubtaskIn(
+			save(
 				tasks,
-				'2',
-				{ subtask: { title: 'Done too', status: 'done' } },
+				() =>
+					addSubtaskIn(tasks, '2', {
+						subtask: { title: 'Done too', status: 'done' }
+					}),
 				guard
 			);
 			return tasks[1].status;
@@ -399,7 +414,7 @@ describe('parent status after add-subtask and move (#1042)', () => {
 		tasks[1].subtasks[0].status = 'done';
 		tasks[2].status = 'done';
 
-		moveTasksIn(tasks, '2.2', '3.1', 'master', noArchive);
+		save(tasks, () => moveTasksIn(tasks, '2.2', '3.1', 'master', noArchive));
 
 		expect(find(tasks, '2').status).toBe('done');
 		expect(find(tasks, '3').status).toBe('in-progress');
@@ -410,7 +425,7 @@ describe('parent status after add-subtask and move (#1042)', () => {
 		tasks[1].status = 'review';
 		tasks[1].subtasks[0].status = 'done';
 
-		moveTasksIn(tasks, '2.2', '9', 'master', noArchive);
+		save(tasks, () => moveTasksIn(tasks, '2.2', '9', 'master', noArchive));
 
 		expect(find(tasks, '2').status).toBe('review');
 	});
