@@ -413,14 +413,14 @@ export class LoopDomain {
 	 * Resolve the number of iterations to use:
 	 * - the user's `-n`, when given
 	 * - 1 for a pinned task (`--id`)
-	 * - the pending count (tasks + subtasks) for the default preset
+	 * - the pending and in-progress count (tasks + subtasks) for a task preset
 	 * - otherwise 10
 	 */
 	resolveIterations(options: {
 		userIterations?: number;
 		preset: string;
 		taskId?: string;
-		pendingTaskCount?: number;
+		pickableTaskCount?: number;
 	}): number {
 		if (options.userIterations !== undefined) {
 			return options.userIterations;

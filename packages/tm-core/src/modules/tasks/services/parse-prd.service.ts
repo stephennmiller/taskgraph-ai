@@ -52,6 +52,7 @@ import {
 	getPrdSnapshot,
 	hasPrdChanges,
 	prdDeltaContent,
+	trackedPrdSections,
 	withPrdSnapshot
 } from '../../prd/prd-deltas.js';
 import {
@@ -339,27 +340,24 @@ export class ParsePrdService {
 			path: prdPathForSource(projectRoot, prdPath),
 			sections: parsePrdSections(prdContent)
 		};
+		const tracked = trackedPrdSections(prd.sections, prdContent);
 		// A parse without append replaces the tasks, so it drops other PRDs' hashes
-		const snapshot: SnapshotUpdate | undefined =
-			prd.sections.length > 0 || !append
-				? {
-						path: prd.path,
-						snapshot: buildPrdSnapshot(prd.sections),
-						replace: !append
-					}
-				: undefined;
+		const snapshot: SnapshotUpdate = {
+			path: prd.path,
+			snapshot: buildPrdSnapshot(tracked),
+			replace: !append
+		};
 
 		// append sends the AI only the sections added since the last parse.
 		// Changed and removed ones are reported; their tasks are left alone
-		const prdDelta =
-			append && prd.sections.length > 0
-				? diffPrdSections(
-						prd.sections,
-						prd.path,
-						existingTasks,
-						getPrdSnapshot(loaded.metadata, prd.path)
-					)
-				: null;
+		const prdDelta = append
+			? diffPrdSections(
+					tracked,
+					prd.path,
+					existingTasks,
+					getPrdSnapshot(loaded.metadata, prd.path)
+				)
+			: null;
 		const deltaOnly = Boolean(prdDelta?.known);
 		if (deltaOnly) hooks.onPrdDelta?.(prdDelta as PrdDelta);
 		const done = (
@@ -539,7 +537,7 @@ export class ParsePrdService {
 	 */
 	private async save(
 		tag: string,
-		snapshot: SnapshotUpdate | undefined,
+		snapshot: SnapshotUpdate,
 		change: ((current: Task[]) => Task[]) | null
 	): Promise<Task[]> {
 		await this.taskService.initialize();
@@ -555,15 +553,11 @@ export class ParsePrdService {
 				updated: now,
 				// A description set with `tags` is kept
 				description: kept.description || `Tasks for ${tag} context`,
-				...(snapshot
-					? {
-							[PRD_SNAPSHOT_KEY]: withPrdSnapshot(
-								snapshot.replace ? {} : kept,
-								snapshot.path,
-								snapshot.snapshot
-							)
-						}
-					: {})
+				[PRD_SNAPSHOT_KEY]: withPrdSnapshot(
+					snapshot.replace ? {} : kept,
+					snapshot.path,
+					snapshot.snapshot
+				)
 			});
 			return { changed: [tag], result: tasks };
 		});
