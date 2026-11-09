@@ -6,7 +6,8 @@
  * `init` ships to users) and the prime rules name CLI commands, flags, MCP
  * tools and slash commands by hand. This extracts those names and asserts
  * each one is registered, so a rename or removal fails CI instead of silently
- * misleading agents.
+ * misleading agents. The flag check also runs over every user and agent doc
+ * (apps/docs, README, docs/, .claude/rules, the plugin's markdown).
  *
  * Lives in the legacy root suite because it needs both the Commander program
  * (apps/cli) and the MCP tool registry (apps/mcp/). Slash commands
@@ -72,27 +73,40 @@ function unique(values: string[]): string[] {
 const stripComment = (s: string) =>
 	s.replace(/\s+#.*$/, '').replace(/\s+\/\/(?!\s*=\s*taskgraph\b).*$/, '');
 
-/** `taskgraph <command> --flag …` invocations in a line of code */
+/** `taskgraph <command> [subcommand] --flag …` invocations in a line of code */
 function invocations(
 	line: string
-): Array<{ command: string; flags: string[] }> {
+): Array<{ command: string; words: string[]; flags: string[] }> {
 	return [
 		...stripComment(line).matchAll(
-			/(?:^|[\s"'(`=])taskgraph\s+([a-z][a-z-]*)((?:\s+[^\s|;&]+)*)/g
+			/(?:^|[\s"'(`=])taskgraph\s+([a-z][a-z-]*)((?:\s+(?!taskgraph\b)[^\s|;&]+)*)/g
 		)
 	].map((m) => ({
 		command: m[1],
+		words: m[2].split(/\s+/).filter((w) => w && !w.startsWith('-')),
 		flags: [...m[2].matchAll(/(?:^|\s)(--[a-z][a-z-]*)/g)].map((f) => f[1])
 	}));
 }
 
 /** Flags a command doesn't define, as `command --flag` */
 function unknownFlags(calls: ReturnType<typeof invocations>): string[] {
-	return calls.flatMap(({ command, flags }) => {
-		const cmd = commandsByName.get(command);
+	return calls.flatMap(({ command, words, flags }) => {
+		let cmd = commandsByName.get(command);
 		if (!cmd) return [];
-		const known = new Set<string | undefined>(cmd.options.map((o) => o.long));
-		known.add('--help');
+		// Global options and the options of each command on the way down
+		const known = new Set<string | undefined>([
+			'--help',
+			...program.options.map((o) => o.long),
+			...cmd.options.map((o) => o.long)
+		]);
+		for (const word of words) {
+			const sub: Command | undefined = cmd.commands.find(
+				(c) => c.name() === word || c.aliases().includes(word)
+			);
+			if (!sub) break;
+			cmd = sub;
+			for (const o of cmd.options) known.add(o.long);
+		}
 		return flags.filter((f) => !known.has(f)).map((f) => `${command} ${f}`);
 	});
 }
@@ -201,10 +215,12 @@ describe('the plugin skill and hooks', () => {
 	it('name taskgraph commands (guards the extraction)', () => {
 		const names = unique(calls.map((c) => c.command));
 		expect(names).toEqual(expect.arrayContaining(['prime', 'next', 'note']));
-		expect(calls).toContainEqual({
-			command: 'prime',
-			flags: ['--project', '--unnoted-since']
-		});
+		expect(calls).toContainEqual(
+			expect.objectContaining({
+				command: 'prime',
+				flags: ['--project', '--unnoted-since']
+			})
+		);
 	});
 
 	it('only name CLI commands the program registers', () => {
@@ -267,4 +283,36 @@ describe('TASKGRAPH_TOOLS=all is documented as full project control', () => {
 			expect(text).toContain('`core` or `standard`');
 		}
 	);
+});
+
+describe('every doc that shows taskgraph invocations', () => {
+	const pluginDirs = ['commands', 'skills', 'agents'].map(
+		(d) => `packages/claude-code-plugin/${d}`
+	);
+	const files = [
+		'README.md',
+		'.taskgraph/CLAUDE.md',
+		...['apps/docs', 'docs', '.claude/rules', ...pluginDirs].flatMap((dir) =>
+			fs
+				.readdirSync(path.join(rootDir, dir), { recursive: true })
+				.map((f) => `${dir}/${f}`)
+				.filter((f) => /\.mdx?$/.test(f) && !f.includes('node_modules'))
+		)
+	];
+
+	it('finds invocations with flags (guards the extraction)', () => {
+		const withFlags = files.filter((f) =>
+			codeSpans(fs.readFileSync(path.join(rootDir, f), 'utf8'))
+				.flatMap(invocations)
+				.some((c) => c.flags.length > 0)
+		);
+		expect(withFlags.length).toBeGreaterThanOrEqual(20);
+	});
+
+	it.each(files)('%s only uses flags the CLI defines', (file) => {
+		const calls = codeSpans(
+			fs.readFileSync(path.join(rootDir, file), 'utf8')
+		).flatMap(invocations);
+		expect(unknownFlags(calls)).toEqual([]);
+	});
 });
