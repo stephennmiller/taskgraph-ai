@@ -391,6 +391,24 @@ describe('tasks.parsePrd', () => {
 			expect(tag().tasks).toHaveLength(2);
 		});
 
+		it('makes no AI call for an unchanged PRD with no headings (#1066)', async () => {
+			p.write({ master: { tasks: [], metadata: {} } });
+			fs.writeFileSync(
+				p.prdPath,
+				'Build the reporting page for the admin team.'
+			);
+			p.generateObject.mockResolvedValue(
+				reply([generated(1), generated(2)]) as any
+			);
+
+			await parse({ append: true });
+			const again = await parse({ append: true });
+
+			expect(p.generateObject).toHaveBeenCalledTimes(1);
+			expect(again).toMatchObject({ added: 0 });
+			expect(tag().tasks).toHaveLength(2);
+		});
+
 		it('sends only the new sections, and a parse without append forgets other PRDs', async () => {
 			p.write({
 				master: {
