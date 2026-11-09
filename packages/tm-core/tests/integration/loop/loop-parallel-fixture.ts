@@ -71,8 +71,13 @@ if (mode.startsWith('merge-')) {
 	process.exit(0);
 }
 if (mode === 'fail') process.exit(1);
-if (mode === 'sleep' || mode === 'dirty-sleep') {
+if (mode === 'sleep' || mode === 'dirty-sleep' || mode === 'commit-sleep') {
 	if (mode === 'dirty-sleep') fs.writeFileSync('partial.txt', 'wip\\n');
+	if (mode === 'commit-sleep') {
+		fs.writeFileSync('work.txt', 'done\\n');
+		execFileSync('git', ['add', 'work.txt']);
+		execFileSync('git', ['commit', '-q', '-m', 'work on ' + name]);
+	}
 	fs.writeFileSync(path.join(plan.pidDir, name), String(process.pid));
 	setInterval(() => {}, 1000);
 } else {
