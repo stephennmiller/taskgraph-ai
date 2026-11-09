@@ -1,7 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import type { TaskStatus } from '../../../common/types/index.js';
 import { createSubtask, createTask } from '../../../testing/index.js';
-import { withParentStatus } from './parent-status.js';
+import {
+	settleChangedParents,
+	subtaskShapes,
+	withParentStatus
+} from './parent-status.js';
 
 const parent = (status: TaskStatus, ...subs: TaskStatus[]) => ({
 	...createTask({
@@ -53,4 +57,48 @@ it('leaves a parent the user held back as it is when only the subtask list chang
 	expect(
 		withParentStatus(parent('blocked', 'in-progress'), undefined, true).status
 	).toBe('in-progress');
+});
+
+describe('settleChangedParents', () => {
+	it('counts a status change on the same subtasks as the subtask moving the parent', () => {
+		const tasks = [parent('review', 'done', 'pending')];
+		const before = subtaskShapes(tasks);
+		tasks[0].subtasks[1].status = 'done';
+
+		settleChangedParents(before, tasks);
+
+		// set-status would finish it; a review parent stays in review
+		expect(tasks[0].status).toBe('review');
+		tasks[0].status = 'blocked';
+		const blocked = subtaskShapes(tasks);
+		tasks[0].subtasks[1].status = 'in-progress';
+		settleChangedParents(blocked, tasks);
+		expect(tasks[0].status).toBe('in-progress');
+	});
+
+	it('treats new subtasks under reused IDs (expand --force) as a list change', () => {
+		const tasks = [parent('in-progress', 'done', 'done')];
+		const before = subtaskShapes(tasks);
+		tasks[0].subtasks = parent('pending', 'pending', 'pending').subtasks.map(
+			(s) => ({ ...s, title: `New ${s.id}` })
+		);
+
+		settleChangedParents(before, tasks);
+
+		// Only set-status sets a parent back to pending
+		expect(tasks[0].status).toBe('in-progress');
+		expect(tasks[0].metadata).toEqual({ claimedBy: 'alice' });
+	});
+
+	it('leaves a task the write added, and settles in place', () => {
+		const added = parent('done', 'pending');
+		const kept = parent('in-progress', 'done', 'pending');
+		const before = subtaskShapes([kept]);
+		kept.subtasks.pop();
+
+		settleChangedParents(before, [kept, { ...added, id: '2' }]);
+
+		expect(kept.status).toBe('done');
+		expect(added.status).toBe('done');
+	});
 });

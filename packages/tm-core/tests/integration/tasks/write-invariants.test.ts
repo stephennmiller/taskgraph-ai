@@ -78,7 +78,8 @@ function violations(file: Record<string, any>): string[] {
 		const issue = item.metadata?.github?.issueNumber;
 		if (issue === undefined) return;
 		const other = linked.get(issue);
-		if (other) found.push(`${where}: issue #${issue} also linked from ${other}`);
+		if (other)
+			found.push(`${where}: issue #${issue} also linked from ${other}`);
 		linked.set(issue, where);
 	};
 	const unique = (ids: unknown[], where: string) => {
@@ -92,7 +93,9 @@ function violations(file: Record<string, any>): string[] {
 			tasks.map((t: any) => t.id),
 			tag
 		);
-		const highestId = Number(metadata?.highestId ?? 0);
+		// A copied tag records none until its first write; readers then take
+		// the highest live ID (highestTaskId)
+		const highestId = Number(metadata?.highestId ?? Number.POSITIVE_INFINITY);
 		for (const task of tasks) {
 			const where = `${tag} ${task.id}`;
 			if (Number(task.id) > highestId) {
@@ -132,19 +135,43 @@ type Writer = (tm: TmCore, p: PrdProject) => Promise<unknown>;
 
 const WRITERS: Array<[string, Writer]> = [
 	['add-task', (tm) => tm.tasks.add({ title: 'New', description: 'New one' })],
-	['add-subtask to a done parent', (tm) => tm.tasks.addSubtask('5', { title: 'Follow-up' })],
-	['add-subtask --task-id', (tm) => tm.tasks.addSubtask('3', { fromTaskId: '4' })],
-	['remove-subtask of the last open one', (tm) => tm.tasks.removeSubtasks(['2.2'])],
-	['remove-subtask --convert', (tm) => tm.tasks.removeSubtasks(['2.2'], { convert: true })],
+	[
+		'add-subtask to a done parent',
+		(tm) => tm.tasks.addSubtask('5', { title: 'Follow-up' })
+	],
+	[
+		'add-subtask --task-id',
+		(tm) => tm.tasks.addSubtask('3', { fromTaskId: '4' })
+	],
+	[
+		'remove-subtask of the last open one',
+		(tm) => tm.tasks.removeSubtasks(['2.2'])
+	],
+	[
+		'remove-subtask --convert',
+		(tm) => tm.tasks.removeSubtasks(['2.2'], { convert: true })
+	],
 	['remove-task of a subtask', (tm) => tm.tasks.removeTasks('2.2')],
 	['remove-task of a parent', (tm) => tm.tasks.removeTasks('2')],
 	['move a subtask to another parent', (tm) => tm.tasks.move('2.2', '3.2')],
 	['move a subtask to a task', (tm) => tm.tasks.move('2.2', '9')],
 	['move a task under a done parent', (tm) => tm.tasks.move('4', '5.2')],
-	['move a task to another tag', (tm) => tm.tasks.moveToTag(['2'], 'master', 'feature')],
-	['set-status of the last open subtask', (tm) => tm.tasks.updateStatus('2.2', 'done')],
-	['set-status of a subtask back to pending', (tm) => tm.tasks.updateStatus('5.1', 'pending')],
-	['set-status of several', (tm) => tm.tasks.updateStatuses(['3.1', '4'], 'in-progress')],
+	[
+		'move a task to another tag',
+		(tm) => tm.tasks.moveToTag(['2'], 'master', 'feature')
+	],
+	[
+		'set-status of the last open subtask',
+		(tm) => tm.tasks.updateStatus('2.2', 'done')
+	],
+	[
+		'set-status of a subtask back to pending',
+		(tm) => tm.tasks.updateStatus('5.1', 'pending')
+	],
+	[
+		'set-status of several',
+		(tm) => tm.tasks.updateStatuses(['3.1', '4'], 'in-progress')
+	],
 	[
 		'update-task dropping the open subtask',
 		(tm) => {

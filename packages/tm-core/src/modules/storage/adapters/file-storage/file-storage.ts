@@ -90,7 +90,10 @@ export class FileStorage implements IStorage {
 	 * @param definitionOfDone - The project's Definition of Done, read on each
 	 *   write: a parent that finished subtasks would make done must pass it
 	 */
-	constructor(projectPath: string, definitionOfDone: () => string[] = () => []) {
+	constructor(
+		projectPath: string,
+		definitionOfDone: () => string[] = () => []
+	) {
 		this.definitionOfDone = definitionOfDone;
 		this.formatHandler = new FormatHandler();
 		this.fileOps = new FileOperations();
