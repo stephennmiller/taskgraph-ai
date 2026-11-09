@@ -387,7 +387,7 @@ describe('loop --parallel', () => {
 	}, 60_000);
 
 	it('on abort kills the processes, releases the claims and keeps worktrees with work', async () => {
-		writePlan({ 'task-1': 'dirty-sleep', 'task-2': 'sleep' });
+		writePlan({ 'task-1': 'dirty-sleep', 'task-2': 'deaf-sleep' });
 		const controller = new AbortController();
 		const pidFile = (name: string) => path.join(pidDir, name);
 
@@ -397,7 +397,7 @@ describe('loop --parallel', () => {
 			claimant: 'tester',
 			command: fakeClaude(),
 			signal: controller.signal,
-			killGraceMs: 2000
+			killGraceMs: 500
 		});
 		await vi.waitFor(
 			() => {

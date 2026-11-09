@@ -8,7 +8,6 @@
  */
 
 import fs from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
 import readline from 'node:readline';
 import {
@@ -16,6 +15,7 @@ import {
 	type ParsePrdHooks,
 	type TmCore,
 	createTmCore,
+	exitOnStopSignals,
 	neutralizeTaskData,
 	parseClarificationAnswers,
 	writeClarifications
@@ -45,7 +45,6 @@ import {
 import { printJson } from '../utils/json-output.js';
 import { getProjectRoot } from '../utils/project-root.js';
 import { otherTasksFileError } from '../utils/tasks-file-option.js';
-import { STOP_SIGNALS } from './loop.command.js';
 import { collectClarifications } from './parse-prd/clarify-prompts.js';
 
 export interface ParsePrdCommandOptions {
@@ -175,19 +174,9 @@ export class ParsePrdCommand extends Command {
 			.option('-y, --yes', 'With --clarify: accept the suggested answers')
 			.option('--tag <tag>', 'Specify tag context for task operations')
 			.action(
-				async (file: string | undefined, options: ParsePrdCommandOptions) => {
-					// The Agent SDK stops the Claude it started when this process
-					// exits, not when a signal ends it: exit, so a stopped parse-prd
-					// (or `go`) leaves no Claude running (#1103)
-					const stop = (sig: NodeJS.Signals) =>
-						process.exit(128 + os.constants.signals[sig]);
-					for (const sig of STOP_SIGNALS) process.on(sig, stop);
-					try {
-						await this.executeCommand(file, options);
-					} finally {
-						for (const sig of STOP_SIGNALS) process.off(sig, stop);
-					}
-				}
+				// A stopped parse-prd (or `go`) leaves no Claude running (#1103)
+				(file: string | undefined, options: ParsePrdCommandOptions) =>
+					exitOnStopSignals(() => this.executeCommand(file, options))
 			);
 	}
 

@@ -40,7 +40,8 @@ function fakeRun(
 	conflicts: string[] = [],
 	cantSetAside = false,
 	resolves: string[] = [],
-	leftUncommitted: string[] = []
+	leftUncommitted: string[] = [],
+	inReview: ParallelTask[] = []
 ) {
 	const calls = {
 		budgets: [] as (number | undefined)[],
@@ -97,7 +98,8 @@ function fakeRun(
 				calls.blocked.push(id);
 				calls.notes.push(note);
 			},
-			keepTrust: () => true
+			keepTrust: () => true,
+			leftInReview: async () => ({ tasks: inReview, leftIds: [] })
 		}
 	};
 }
@@ -125,6 +127,85 @@ describe('runMergingWaves', () => {
 			['2', 'merged'],
 			['3', 'merged']
 		]);
+	});
+
+	it('merges the tasks an interrupted run left in review before the first wave, without running them (#1124)', async () => {
+		const { calls, deps } = fakeRun(
+			[wave([task('3')])],
+			[],
+			false,
+			[],
+			[],
+			[task('1'), task('2', { uncommitted: true })]
+		);
+		const order: string[] = [];
+		const result = await runMergingWaves(
+			{ parallel: 3 },
+			{
+				...deps,
+				merge: (branch) => {
+					order.push(`merge ${branch}`);
+					return deps.merge(branch);
+				},
+				runWave: (o) => {
+					order.push('wave');
+					return deps.runWave(o);
+				},
+				leftInReview: async () => ({
+					...(await deps.leftInReview()),
+					leftIds: ['8']
+				})
+			}
+		);
+
+		expect(order.slice(0, 2)).toEqual(['merge taskgraph/task-1', 'wave']);
+		expect(calls.ran).toEqual(['3']);
+		expect(calls.done).toEqual(['1', '3']);
+		// Uncommitted work in its worktree: left unmerged, as after a wave
+		expect(result.unmergedIds).toEqual(['2']);
+		expect(result.leftInReviewIds).toEqual(['8']);
+		expect(result.tasks.map((t) => [t.id, t.outcome])).toEqual([
+			['1', 'merged'],
+			['2', 'unmerged'],
+			['3', 'merged']
+		]);
+	});
+
+	it("takes what resolving a review task's conflict cost off the first wave's budget", async () => {
+		const { calls, deps } = fakeRun(
+			[wave([task('3')])],
+			['taskgraph/task-1'],
+			false,
+			['taskgraph/task-1'],
+			[],
+			[task('1')]
+		);
+
+		await runMergingWaves(
+			{ parallel: 2, maxBudgetUsd: 1 },
+			{
+				...deps,
+				resolve: async (t, budgetUsd) => ({
+					...(await deps.resolve(t, budgetUsd)),
+					costUsd: 0.4
+				})
+			}
+		);
+
+		expect(calls.resolved).toEqual(['1:0.5']);
+		expect(calls.budgets[0]).toBe(0.6);
+	});
+
+	it("doesn't touch tasks in review once the approval was withdrawn", async () => {
+		const { calls, deps } = fakeRun([], [], false, [], [], [task('1')]);
+
+		const result = await runMergingWaves(
+			{ parallel: 3 },
+			{ ...deps, keepTrust: () => false }
+		);
+
+		expect(calls.merged).toEqual([]);
+		expect(result.errorMessage).toBe(TRUST_LOST);
 	});
 
 	it('blocks a task that fails three waves in a row and keeps merging the others', async () => {
