@@ -101,4 +101,17 @@ describe('settleChangedParents', () => {
 		expect(kept.status).toBe('done');
 		expect(added.status).toBe('done');
 	});
+
+	it('reads a missing subtask status as pending, not as a status change', () => {
+		const tasks = [parent('in-progress', 'pending', 'pending')];
+		for (const s of tasks[0].subtasks) delete (s as { status?: string }).status;
+		const before = subtaskShapes(tasks);
+		// update-task's merge writes the default on each kept subtask
+		for (const s of tasks[0].subtasks) s.status = 'pending';
+
+		settleChangedParents(before, tasks);
+
+		expect(tasks[0].status).toBe('in-progress');
+		expect(tasks[0].metadata).toEqual({ claimedBy: 'alice' });
+	});
 });

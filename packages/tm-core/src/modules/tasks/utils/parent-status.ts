@@ -85,7 +85,9 @@ export function subtaskShapes(tasks: Task[]): Map<string, SubtaskShape> {
 				String(task.id),
 				{
 					ids: JSON.stringify(subs.map((s) => String(s.id))),
-					statuses: JSON.stringify(subs.map((s) => s.status ?? null)),
+					// Missing reads as pending, as withParentStatus reads it: a rewrite
+					// that writes the default isn't a subtask's status change
+					statuses: JSON.stringify(subs.map((s) => s.status || 'pending')),
 					titles: JSON.stringify(subs.map((s) => s.title))
 				}
 			];
