@@ -34,6 +34,7 @@ import {
 	withoutReservedMetadata
 } from '../../dependencies/dependency-provenance.js';
 import { untrustLoopIfResearch } from '../../loop/untrust-after-research.js';
+import { parentDoneGate } from '../utils/parent-status.js';
 import { keepStoredFields } from '../utils/stored-fields.js';
 import type { TaskService } from './task-service.js';
 import {
@@ -249,8 +250,13 @@ export class UpdateTaskService {
 			const now = relabel(current[index]);
 			const merged = mergeRewrite(stored, updated, now, warn);
 			current[index] = merged;
-			settleRewrites(current, [{ stored, now, saved: merged }], warn);
-			return { tasks: current, result: merged };
+			settleRewrites(
+				current,
+				[{ stored, now, saved: merged }],
+				warn,
+				parentDoneGate(this.configManager.getDefinitionOfDone())
+			);
+			return { tasks: current, result: current[index] };
 		}, tag);
 		return {
 			...result(saved),
@@ -487,10 +493,19 @@ export class UpdateTaskService {
 				current[index] = mergeRewrite(stored, updated, now, warn);
 				done.push({ stored, now, saved: current[index] });
 			}
-			settleRewrites(current, done, warn);
+			settleRewrites(
+				current,
+				done,
+				warn,
+				parentDoneGate(this.configManager.getDefinitionOfDone())
+			);
 			return {
 				tasks: done.length ? current : null,
-				result: done.map(({ saved }) => saved)
+				// settleRewrites may have replaced a task with its settled status
+				result: done.map(
+					({ saved }) =>
+						current.find((t) => String(t.id) === String(saved.id)) ?? saved
+				)
 			};
 		}, tag);
 		debug(`Applied updates to ${saved.length} tasks in the dataset.`);

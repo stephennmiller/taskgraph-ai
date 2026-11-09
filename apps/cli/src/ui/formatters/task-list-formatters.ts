@@ -38,6 +38,7 @@ import {
 	resolveSubtaskDependency,
 	sanitizeForTerminal,
 	stripTerminalControls,
+	type Subtask,
 	type Task
 } from '@tm/core';
 import chalk from 'chalk';
@@ -348,8 +349,11 @@ export function formatNoNextTask(
 	].join('\n');
 }
 
-/** A task as `list` holds it, with its tag when listing every tag */
-type PlainListTask = Task & { tagName?: string };
+/**
+ * A task as `list` holds it, with its tag when listing every tag, or a
+ * subtask `show 2.1,3` got with its full ID
+ */
+type PlainListTask = (Task | Subtask) & { tagName?: string };
 
 interface PlainRow {
 	tag?: string;
@@ -395,7 +399,7 @@ export function formatPlainTaskList(
 			deps: (task.dependencies ?? []).map(oneLine)
 		});
 		if (!options.withSubtasks) continue;
-		for (const subtask of task.subtasks ?? []) {
+		for (const subtask of ('subtasks' in task && task.subtasks) || []) {
 			rows.push({
 				tag,
 				id: oneLine(fullSubtaskId(id, subtask.id)),
