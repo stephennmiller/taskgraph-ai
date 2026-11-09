@@ -48,12 +48,29 @@ describe('todo list hook', () => {
 		const cli = fakeCli(`printf '%s' "$TASKGRAPH_HOOK_DIR" > '${log}'`);
 		const input = hookInput({ tool_name: 'TaskUpdate' });
 
+		// Without the folder the task tools log nothing, so the CLI isn't started
 		runHook(todoWrite, dir, cli, { input, tmp });
-		expect(fs.readFileSync(log, 'utf8')).toBe('');
+		expect(fs.existsSync(log)).toBe(false);
 
 		fs.mkdirSync(markerDir(tmp), { mode: 0o700 });
 		runHook(todoWrite, dir, cli, { input, tmp });
 		expect(fs.readFileSync(log, 'utf8')).toBe(markerDir(tmp));
+	});
+
+	it('keeps task tool calls made before a task is claimed (#1074)', () => {
+		const dir = projectWithTask('tg-hook-todos-', 'pending');
+		const tmp = tempDir('tg-hook-tmp-');
+		const log = path.join(tempDir('tg-hook-log-'), 'calls');
+		const input = hookInput({ tool_name: 'TaskCreate' });
+
+		runHook(todoWrite, dir, recordingCli(log), { input, tmp });
+		expect(fs.existsSync(log)).toBe(false);
+
+		fs.mkdirSync(markerDir(tmp), { mode: 0o700 });
+		runHook(todoWrite, dir, recordingCli(log), { input, tmp });
+		expect(fs.readFileSync(log, 'utf8')).toBe(
+			`log-todos --project ${dir}\n${input}`
+		);
 	});
 
 	it('does not start the CLI when no task is in progress', () => {
