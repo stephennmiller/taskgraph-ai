@@ -82,7 +82,7 @@ interface TaskEvent {
  * and replayed, so hooks for parallel calls can't overwrite each other's.
  */
 function trackTaskList(input: any, listDir: string): TodoItem[] | undefined {
-	const sessionId = input.session_id;
+	const sessionId = input?.session_id;
 	if (typeof sessionId !== 'string' || !/^[\w-]+$/.test(sessionId)) {
 		return undefined;
 	}
