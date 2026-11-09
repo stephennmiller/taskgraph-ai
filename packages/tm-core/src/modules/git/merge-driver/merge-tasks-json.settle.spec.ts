@@ -101,6 +101,32 @@ describe('mergeTasksJson settles parents', () => {
 		expect(byId(result.merged, 3).status).toBe('done');
 	});
 
+	it.each(['done', 'blocked'])(
+		'keeps a status of %s one branch set on purpose when the other only edited the task',
+		(status) => {
+			const base = file([parent('pending', [sub(1), sub(2)])]);
+			// set-status 3.1 done, then set-status 3 over the open subtask
+			const ours = file([parent(status, [sub(1, 'done'), sub(2)])]);
+			// update-task 3: no subtask touched
+			const theirs = file([
+				parent('pending', [sub(1), sub(2)], { description: 'Edited' })
+			]);
+
+			for (const [mine, other] of [
+				[ours, theirs],
+				[theirs, ours]
+			]) {
+				const result = mergeTasksJson(base, mine, other);
+
+				expect(result.conflicts).toEqual([]);
+				expect(byId(result.merged, 3)).toMatchObject({
+					status,
+					description: 'Edited'
+				});
+			}
+		}
+	);
+
 	it("doesn't change the files it was given", () => {
 		const base = file([parent('in-progress', [sub(1), sub(2)])]);
 		const ours = file([parent('in-progress', [sub(1, 'done'), sub(2)])]);
@@ -171,6 +197,58 @@ describe('mergeTasksJson drops dependencies on removed tasks', () => {
 		expect(byId(result.merged, 1).dependencies).toEqual(['2']);
 		expect(byId(result.merged, 3).dependencies).toEqual(['2']);
 		expect(result.droppedDependencies).toEqual([]);
+	});
+});
+
+describe('mergeTasksJson keeps dependencies on a task the incoming branch archived', () => {
+	// The driver sees this branch's archive.json only, so the task is just gone
+	it('keeps a dependency this branch added on a finished task', () => {
+		const base = file([task(1), task(2, { status: 'done' })]);
+		// add-task --dependencies 2
+		const ours = file([
+			task(1),
+			task(2, { status: 'done' }),
+			task(3, {
+				dependencies: ['2'],
+				subtasks: [{ ...sub(1), dependencies: ['2'] }]
+			})
+		]);
+		// archive
+		const theirs = file([task(1)]);
+
+		const result = mergeTasksJson(base, ours, theirs);
+
+		expect(result.droppedDependencies).toEqual([]);
+		expect(byId(result.merged, 3).dependencies).toEqual(['2']);
+		expect(byId(result.merged, 3).subtasks[0].dependencies).toEqual(['2']);
+	});
+
+	it('still drops one on an open task, which can only have been removed', () => {
+		const base = file([task(1), task(2)]);
+		const ours = file([task(1), task(2), task(3, { dependencies: ['2'] })]);
+		// remove-task 2
+		const theirs = file([task(1)]);
+
+		const result = mergeTasksJson(base, ours, theirs);
+
+		expect(result.droppedDependencies).toEqual([
+			{ tag: 'master', id: '3', dependency: '2' }
+		]);
+	});
+
+	it('still drops one on a finished task this branch removed', () => {
+		const base = file([task(1), task(2, { status: 'done' })]);
+		// remove-task 2: not in this branch's archive.json
+		const ours = file([task(1)]);
+		const theirs = file([
+			task(1),
+			task(2, { status: 'done' }),
+			task(3, { dependencies: ['2'] })
+		]);
+
+		const result = mergeTasksJson(base, ours, theirs, { archive: {} });
+
+		expect(byId(result.merged, 3).dependencies).toEqual([]);
 	});
 });
 

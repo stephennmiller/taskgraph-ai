@@ -133,12 +133,16 @@ Converting between task and subtask (move, `add-subtask --task-id`,
 an explicit user action. The next writer to touch its subtasks reopens it.
 
 The git merge driver writes tasks.json outside the funnel, so it settles
-too (`git/merge-driver/merge-settle.ts`, #1093): a task whose merged copy
-is neither branch's as written goes through `settleChangedParents` against
-each branch's subtasks, with the done gate (the Definition of Done from
-the project's config files). A task only one branch changed is left as
-that branch wrote it. It also drops, and reports, a dependency on a task
-one branch removed while the other added the dependency.
+too (`git/merge-driver/merge-settle.ts`, #1093): a task whose merged
+status and subtasks together are neither branch's as written goes through
+`settleChangedParents` against each branch's subtasks, with the done gate
+(the Definition of Done from the project's config files). A task whose
+status and subtasks one branch wrote is left as that branch wrote it, also
+when the other edited another field. It also drops, and reports, a
+dependency on a task one branch removed while the other added the
+dependency. A dependency on a done or cancelled task the incoming branch
+took out stays: that branch may have archived it, and its archive.json
+isn't readable during the merge.
 
 ## 3. Claim
 
