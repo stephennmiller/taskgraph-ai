@@ -17,7 +17,7 @@
  * attributes are safe to commit.
  */
 
-import { execFileSync } from 'node:child_process';
+import { runGitSync } from '../../../common/utils/git-utils.js';
 import fs from 'node:fs';
 import path from 'node:path';
 import { TASKGRAPH_TASKS_FILE } from '../../../common/constants/paths.js';
@@ -275,11 +275,7 @@ export class NotAGitRepositoryError extends Error {
 }
 
 const git = (projectRoot: string, args: string[]) =>
-	execFileSync('git', args, {
-		cwd: projectRoot,
-		encoding: 'utf8',
-		stdio: ['ignore', 'pipe', 'ignore']
-	}).trim();
+	runGitSync(args, { cwd: projectRoot }).trim();
 
 /** Whether `projectRoot` is inside a Git work tree */
 export function isInsideGitWorkTree(projectRoot: string): boolean {

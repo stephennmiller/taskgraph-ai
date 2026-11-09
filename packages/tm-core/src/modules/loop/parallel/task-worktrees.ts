@@ -2,18 +2,14 @@
  * @fileoverview Git operations for `loop --parallel`: the clean-tree check,
  * one worktree and branch per task, and removing the ones nobody used.
  *
- * Every call runs `git` with an argv array through execFile, never a shell,
- * and the branch names and paths it gets come from parallel-plan.ts, which
- * only builds them from checked task IDs.
+ * Every call goes through runGit, and the branch names and paths it gets
+ * come from parallel-plan.ts, which only builds them from checked task IDs.
  */
 
-import { execFile } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
-import { promisify } from 'node:util';
+import { gitRef, runGit } from '../../../common/utils/git-utils.js';
 import { ParallelLoopError } from './parallel-plan.js';
-
-const run = promisify(execFile);
 
 /** What a task's worktree holds once its Claude Code process is done */
 export interface WorktreeWork {
@@ -100,20 +96,7 @@ export class TaskWorktrees {
 	}
 
 	private async git(args: string[], cwd = this.projectRoot): Promise<string> {
-		// No program named by repository config, no bare repository found by walking up
-		const hardened = [
-			'-c',
-			'safe.bareRepository=explicit',
-			'-c',
-			'core.fsmonitor=false',
-			...args
-		];
-		const { stdout } = await run('git', hardened, {
-			cwd,
-			encoding: 'utf8',
-			maxBuffer: 16 * 1024 * 1024
-		});
-		return stdout;
+		return (await runGit(args, { cwd })).stdout;
 	}
 
 	private async succeeds(args: string[]): Promise<boolean> {
@@ -296,7 +279,7 @@ export class TaskWorktrees {
 		}
 		fs.mkdirSync(path.dirname(worktree), { recursive: true });
 		if (await this.branchExists(branch)) {
-			await this.git(['worktree', 'add', '--quiet', worktree, branch]);
+			await this.git(['worktree', 'add', '--quiet', worktree, gitRef(branch)]);
 			return { createdBranch: false };
 		}
 		await this.git([
@@ -304,9 +287,9 @@ export class TaskWorktrees {
 			'add',
 			'--quiet',
 			'-b',
-			branch,
+			gitRef(branch),
 			worktree,
-			base
+			gitRef(base)
 		]);
 		return { createdBranch: true };
 	}
@@ -451,11 +434,8 @@ export class TaskWorktrees {
 	 * refused rather than replacing the branch.
 	 */
 	async fetchFromClone(clone: string, branch: string): Promise<void> {
-		await run(
-			'git',
+		await runGit(
 			[
-				'-c',
-				'core.fsmonitor=false',
 				'-c',
 				'core.hooksPath=/dev/null',
 				'-c',
@@ -473,10 +453,9 @@ export class TaskWorktrees {
 			],
 			{
 				cwd: this.projectRoot,
-				encoding: 'utf8',
-				timeout: 10 * 60_000,
+				timeoutMs: 10 * 60_000,
 				// upload-pack sets this itself; said again so nothing undoes it
-				env: { ...process.env, GIT_NO_LAZY_FETCH: '1' }
+				env: { GIT_NO_LAZY_FETCH: '1' }
 			}
 		);
 	}
@@ -496,7 +475,7 @@ export class TaskWorktrees {
 	 * @returns false, with the merge undone, when it conflicts or fails
 	 */
 	async merge(branch: string): Promise<boolean> {
-		if (await this.succeeds(['merge', '--no-edit', branch])) {
+		if (await this.succeeds(['merge', '--no-edit', gitRef(branch)])) {
 			return true;
 		}
 		await this.succeeds(['merge', '--abort']);
@@ -517,7 +496,7 @@ export class TaskWorktrees {
 		let n = 1;
 		while (await this.branchExists(`${branch}-conflict-${n}`)) n++;
 		const kept = `${branch}-conflict-${n}`;
-		await this.git(['branch', '-m', branch, kept]);
+		await this.git(['branch', '-m', gitRef(branch), gitRef(kept)]);
 		return kept;
 	}
 
@@ -531,7 +510,7 @@ export class TaskWorktrees {
 	}
 
 	async deleteBranch(branch: string): Promise<void> {
-		await this.succeeds(['branch', '-d', branch]);
+		await this.succeeds(['branch', '-d', gitRef(branch)]);
 	}
 
 	/** Commits and uncommitted changes in a task's worktree */
@@ -563,7 +542,7 @@ export class TaskWorktrees {
 		deleteBranch: boolean
 	): Promise<boolean> {
 		if (!(await this.removeWorktree(worktree))) return false;
-		if (deleteBranch) await this.succeeds(['branch', '-d', branch]);
+		if (deleteBranch) await this.succeeds(['branch', '-d', gitRef(branch)]);
 		return true;
 	}
 }

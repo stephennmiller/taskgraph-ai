@@ -5,10 +5,7 @@
  * stored, and a rebase or squash that keeps the message keeps the link.
  */
 
-import { execFile } from 'node:child_process';
-import { promisify } from 'node:util';
-
-const run = promisify(execFile);
+import { runGit } from '../../../common/utils/git-utils.js';
 
 export interface TaskCommit {
 	sha: string;
@@ -48,14 +45,8 @@ export async function findTaskCommits(
 	// createdAt comes from the user's file: an unparsable one bounds nothing
 	const since = Date.parse(options.since ?? '');
 	try {
-		const { stdout } = await run(
-			'git',
+		const { stdout } = await runGit(
 			[
-				// No program named by repository config, no bare repository found by walking up
-				'-c',
-				'safe.bareRepository=explicit',
-				'-c',
-				'core.fsmonitor=false',
 				'log',
 				'--fixed-strings',
 				// Several --grep match any of them
@@ -67,7 +58,7 @@ export async function findTaskCommits(
 				`--max-count=${MAX_COMMITS}`,
 				'--format=%h%x09%s'
 			],
-			{ cwd: projectRoot, encoding: 'utf8', timeout: 5000 }
+			{ cwd: projectRoot, timeoutMs: 5000 }
 		);
 		return stdout
 			.split('\n')
