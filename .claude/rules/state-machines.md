@@ -82,7 +82,8 @@ Invariants:
 from its subtasks. Every writer that changes a parent's subtasks runs it:
 subtask `set-status` (`setSubtaskStatusIn`), add-subtask, move (each parent
 of a dotted source or destination), remove-subtask, remove-task of a
-subtask, and expand. Each passes the parent's done gate (acceptance
+subtask, expand, and an AI rewrite that drops subtasks (update-task,
+`update --from`). Each passes the parent's done gate (acceptance
 criteria and Definition of Done).
 
 | Subtasks after the change      | Parent becomes                           |

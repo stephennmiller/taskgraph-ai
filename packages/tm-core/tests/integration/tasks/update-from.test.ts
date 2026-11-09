@@ -332,6 +332,29 @@ describe('tasks.updateFrom', () => {
 		expect(one.metadata?.dependencySources).toBeUndefined();
 	});
 
+	it('sets an in-progress parent done when the rewrite drops its last open subtask (#1065)', async () => {
+		const sub = (id: number, status: string) => ({
+			id,
+			title: `S${id}`,
+			status,
+			dependencies: []
+		});
+		write([
+			stored('1'),
+			stored('2'),
+			stored('3', {
+				status: 'in-progress',
+				subtasks: [sub(1, 'done'), sub(2, 'pending')]
+			})
+		]);
+		answer(fromAi(2), fromAi(3, { subtasks: [sub(1, 'done')] }));
+
+		const result = await update();
+
+		expect(savedTasks()[2].status).toBe('done');
+		expect(result.updatedTasks[1].status).toBe('done');
+	});
+
 	it('updates every unfinished task from 0, as legacy did', async () => {
 		answer(fromAi(1), fromAi(2), fromAi(3, { status: 'in-progress' }));
 
