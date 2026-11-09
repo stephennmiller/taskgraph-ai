@@ -2,14 +2,15 @@
  * @fileoverview The git calls TaskGraph makes before anyone approved the
  * project (show, list, the loop approval check, the repository summary) in
  * a repository whose config names a program for every key that can start
- * one. None may run (#1100).
+ * one. None may run (#1100). A sandboxed loop start asks for no approval,
+ * so it must not run `git status`, which starts a filter (#1129).
  */
 
-import { execFileSync } from 'node:child_process';
+import { execFileSync, spawn } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
 	getCurrentBranch,
 	getHeadCommit,
@@ -22,7 +23,16 @@ import {
 	isLoopTrusted,
 	trustLoop
 } from '../../../src/modules/loop/loop-trust.js';
+import { TaskWorktrees } from '../../../src/modules/loop/parallel/task-worktrees.js';
+import { fakeClaude } from '../../../src/modules/loop/services/fake-claude.js';
 import { findTaskCommits } from '../../../src/modules/tasks/utils/task-commits.js';
+import { createTmCore } from '../../../src/tm-core.js';
+
+// Only the Claude (here: docker) process is faked; git runs for real
+vi.mock('node:child_process', async (importOriginal) => ({
+	...(await importOriginal<typeof import('node:child_process')>()),
+	spawn: vi.fn()
+}));
 
 /** Hooks git could run on a read, were one of these calls to write the index or a ref */
 const HOOKS = ['post-index-change', 'reference-transaction', 'post-checkout'];
@@ -79,8 +89,10 @@ describe('git calls before approval, in a repository with a hostile config', () 
 			.toString()
 			.trim();
 		git('update-ref', 'HEAD', commit);
-		// Changed on disk, so a call that compared files would run the filter
-		fs.writeFileSync(path.join(repo, 'README.md'), '# Readme\n\nMore\n');
+		// Changed on disk at the same size, so a call that compared files
+		// (`git status`) has to read it through the filter
+		fs.writeFileSync(path.join(repo, 'README.md'), '# Edited\n');
+		fs.utimesSync(path.join(repo, 'README.md'), 1e9, 1e9);
 		// Last, so that building the repository runs none of them
 		for (const [key, value] of [
 			['log.showSignature', 'true'],
@@ -103,7 +115,47 @@ describe('git calls before approval, in a repository with a hostile config', () 
 		fs.rmSync(marker, { force: true });
 	});
 
-	afterEach(() => fs.rmSync(base, { recursive: true, force: true }));
+	afterEach(() => {
+		vi.unstubAllEnvs();
+		fs.rmSync(base, { recursive: true, force: true });
+	});
+
+	const ran = () =>
+		fs.existsSync(marker) ? fs.readFileSync(marker, 'utf8') : '';
+
+	/** One `loop --sandbox` iteration on in-progress task 1; returns the prompt Claude would get */
+	const sandboxedLoopPrompt = async (approve: boolean) => {
+		const home = path.join(base, 'home');
+		vi.stubEnv('HOME', home);
+		vi.stubEnv('USERPROFILE', home);
+		fs.writeFileSync(
+			path.join(repo, '.taskgraph', 'tasks', 'tasks.json'),
+			JSON.stringify({
+				master: {
+					tasks: [
+						{
+							id: 1,
+							title: 'Task 1',
+							description: '',
+							status: 'in-progress',
+							priority: 'medium',
+							dependencies: [],
+							subtasks: []
+						}
+					]
+				}
+			})
+		);
+		if (approve) trustLoop(repo, home);
+		vi.mocked(spawn).mockImplementation(() => fakeClaude() as never);
+		const tmCore = await createTmCore({ projectPath: repo });
+		try {
+			await tmCore.loop.run({ sandbox: true, iterations: 1, taskId: '1' });
+		} finally {
+			await tmCore.close();
+		}
+		return vi.mocked(spawn).mock.calls[0][1].join('\n');
+	};
 
 	// The fixture is only worth something if plain git does start the program
 	it.skipIf(process.platform === 'win32')(
@@ -114,6 +166,34 @@ describe('git calls before approval, in a repository with a hostile config', () 
 			expect(fs.readFileSync(marker, 'utf8')).toContain('--verify');
 		}
 	);
+
+	it.skipIf(process.platform === 'win32')(
+		'plain git status starts the configured filter',
+		() => {
+			// The marker script doesn't speak the process protocol, which fails git
+			git('config', '--unset', 'filter.x.process');
+
+			git('status', '--porcelain');
+
+			expect(ran()).not.toBe('');
+		}
+	);
+
+	it('a sandboxed loop start nobody approved starts none of them', async () => {
+		const prompt = await sandboxedLoopPrompt(false);
+
+		expect(prompt).toContain('Work on task 1 only');
+		expect(prompt).not.toContain('was interrupted');
+		expect(ran()).toBe('');
+	});
+
+	it('a sandboxed loop start in an approved project names the uncommitted files', async () => {
+		git('config', '--unset', 'filter.x.process');
+
+		const prompt = await sandboxedLoopPrompt(true);
+
+		expect(prompt).toMatch(/Task 1 was interrupted\. .*README\.md/);
+	});
 
 	it('starts none of them', async () => {
 		const home = path.join(base, 'home');
@@ -128,12 +208,15 @@ describe('git calls before approval, in a repository with a hostile config', () 
 		getRepoSummary(repo);
 		isLoopTrusted(repo, home);
 		trustLoop(repo, home);
+		// What `loop --parallel --container` checks before it asks
+		const worktrees = new TaskWorktrees(repo);
+		await worktrees.head();
+		await worktrees.identity();
+		await worktrees.objectFormat();
 
 		expect(commits).toEqual([
 			expect.objectContaining({ subject: 'work [task 1]' })
 		]);
-		expect(fs.existsSync(marker) ? fs.readFileSync(marker, 'utf8') : '').toBe(
-			''
-		);
+		expect(ran()).toBe('');
 	});
 });
