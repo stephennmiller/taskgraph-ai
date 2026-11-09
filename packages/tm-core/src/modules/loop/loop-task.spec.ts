@@ -57,23 +57,27 @@ describe('assertTaskPreset', () => {
 describe('defaultIterations', () => {
 	it('is 1 for a pinned task, whatever the preset', () => {
 		expect(
-			defaultIterations({ preset: 'default', taskId: '3', pendingTaskCount: 9 })
+			defaultIterations({
+				preset: 'default',
+				taskId: '3',
+				pickableTaskCount: 9
+			})
 		).toBe(1);
 		expect(defaultIterations({ preset: 'tdd', taskId: '3.2' })).toBe(1);
 	});
 
-	it('is the pending count for a preset that works on tasks', () => {
-		expect(defaultIterations({ preset: 'tdd', pendingTaskCount: 7 })).toBe(7);
-		expect(defaultIterations({ preset: 'default', pendingTaskCount: 7 })).toBe(
+	it('is the pending and in-progress count for a preset that works on tasks', () => {
+		expect(defaultIterations({ preset: 'tdd', pickableTaskCount: 7 })).toBe(7);
+		expect(defaultIterations({ preset: 'default', pickableTaskCount: 7 })).toBe(
 			7
 		);
 	});
 
 	it('is 10 otherwise', () => {
-		expect(defaultIterations({ preset: 'linting', pendingTaskCount: 7 })).toBe(
+		expect(defaultIterations({ preset: 'linting', pickableTaskCount: 7 })).toBe(
 			10
 		);
-		expect(defaultIterations({ preset: 'default', pendingTaskCount: 0 })).toBe(
+		expect(defaultIterations({ preset: 'default', pickableTaskCount: 0 })).toBe(
 			10
 		);
 	});

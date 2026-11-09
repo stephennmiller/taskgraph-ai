@@ -167,10 +167,10 @@ export class LoopCommand extends Command {
 						})
 					: undefined;
 
-			// Pending count (tasks + subtasks) caps a run of a preset that works on tasks
-			const pendingTaskCount =
+			// Pending and in-progress count (tasks + subtasks) caps a run of a preset that works on tasks
+			const pickableTaskCount =
 				this.tmCore.loop.isTaskPreset(prompt) && !pinned
-					? await this.tmCore.tasks.getCount('pending', options.tag)
+					? await this.tmCore.tasks.getPickableCount(options.tag)
 					: undefined;
 
 			// Delegate iteration resolution logic to tm-core
@@ -180,7 +180,7 @@ export class LoopCommand extends Command {
 					: undefined,
 				preset: prompt,
 				taskId: pinned?.id,
-				pendingTaskCount
+				pickableTaskCount
 			});
 
 			this.validateIterations(String(iterations));
