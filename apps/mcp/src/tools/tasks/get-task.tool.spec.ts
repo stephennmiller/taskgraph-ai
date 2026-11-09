@@ -91,6 +91,18 @@ describe('get_task', () => {
 		expect(result.notFound).toEqual(['99']);
 	});
 
+	// #1070: get_task filtered subtasks itself, unlike show and get_tasks
+	it('leaves the subtask status filter to tm-core', async () => {
+		await register().execute(
+			{ id: '2', status: 'done,pending', projectRoot, tag: 'feat' },
+			ctx
+		);
+
+		expect(tasks.get).toHaveBeenCalledWith('2', 'feat', {
+			subtaskStatus: 'done,pending'
+		});
+	});
+
 	it('leaves notFound out when every ID is found', async () => {
 		const result = reply(
 			await register().execute({ id: '1,2', projectRoot }, ctx)

@@ -85,8 +85,11 @@ export interface TaskDetailOptions {
 	 * written so routes and field names reach the reader exactly
 	 */
 	prdSection?: { source: string; text: string };
-	/** Only list subtasks with this status (`show --status`) */
-	statusFilter?: string;
+	/**
+	 * The task's subtasks were filtered by status (`show --status`, done in
+	 * `tasks.get`): the statuses kept and how many subtasks there are in all
+	 */
+	subtaskFilter?: { statuses: string[]; total: number };
 	/** Unfinished dependencies stand in the way, so don't suggest starting it */
 	blocked?: boolean;
 	/** Terminal width */
@@ -335,24 +338,21 @@ function subtaskRows(
 	});
 }
 
-/** The subtasks section, filtered by status when asked */
+/** The subtasks section, saying which statuses it was filtered to */
 function subtaskSection(
 	parentId: string,
 	subtasks: Subtask[],
-	statusFilter: string | undefined,
+	filter: TaskDetailOptions['subtaskFilter'],
 	width: number
 ): string[] {
-	if (statusFilter) {
-		const matching = subtasks.filter((sub) => sub.status === statusFilter);
-		if (matching.length === 0) {
-			return [theme.muted(`No ${statusFilter} subtasks`)];
+	if (filter) {
+		const statuses = filter.statuses.join(' or ');
+		if (subtasks.length === 0) {
+			return [theme.muted(`No ${statuses} subtasks`)];
 		}
 		return [
-			heading(
-				'Subtasks',
-				`${matching.length} of ${subtasks.length} ${statusFilter}`
-			),
-			...subtaskRows(parentId, matching, width)
+			heading('Subtasks', `${subtasks.length} of ${filter.total} ${statuses}`),
+			...subtaskRows(parentId, subtasks, width)
 		];
 	}
 	const done = subtasks.filter((sub) => sub.status === 'done').length;
@@ -464,9 +464,11 @@ export function formatTaskDetail(
 	}
 
 	const subtasks = isSubtask(task) ? [] : (task.subtasks ?? []);
-	if (subtasks.length > 0) {
+	// Before any status filter, so a filter that matches none still says so
+	const subtaskTotal = options.subtaskFilter?.total ?? subtasks.length;
+	if (subtaskTotal > 0) {
 		sections.push(
-			subtaskSection(String(task.id), subtasks, options.statusFilter, width)
+			subtaskSection(String(task.id), subtasks, options.subtaskFilter, width)
 		);
 	}
 
@@ -477,12 +479,7 @@ export function formatTaskDetail(
 		options.fence ?? true
 	);
 	const next = formatNextStep(
-		getSuggestedActions(
-			id,
-			task.status,
-			subtasks.length > 0,
-			options.blocked
-		)[0],
+		getSuggestedActions(id, task.status, subtaskTotal > 0, options.blocked)[0],
 		width
 	);
 	return next.length > 0 ? `${shown}\n\n${next.join('\n')}` : shown;
