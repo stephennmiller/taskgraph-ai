@@ -162,12 +162,16 @@ const UNSET_TAG_ENV =
  * variable wins over state.json on every load, so the switch would be
  * reported and never happen (#1098)
  */
-function assertTagNotSetByEnv(projectRoot: string, tagName: string): void {
+function assertTagNotSetByEnv(
+	projectRoot: string,
+	tagName: string,
+	change = `changed to "${tagName}"`
+): void {
 	const fromEnv = readProjectEnv(projectRoot).TASKGRAPH_TAG;
 	if (!fromEnv || fromEnv === tagName) return;
 	throw errorWithHint(
 		ERROR_CODES.VALIDATION_ERROR,
-		`TASKGRAPH_TAG sets the current tag to "${fromEnv}", so it can't be changed to "${tagName}"`,
+		`TASKGRAPH_TAG sets the current tag to "${fromEnv}", so it can't be ${change}`,
 		`${UNSET_TAG_ENV}, then run this again`
 	);
 }
@@ -185,13 +189,15 @@ export function missingActiveTagHint(projectRoot: string): string {
 /**
  * Check that `tagName` can be made current, before a tag change that must be
  * followed by recordCurrentTag: the change can't be undone once made (#807)
+ * @param change - What the caller does to the current tag, for the refusal
  * @throws {TaskGraphError} as recordCurrentTag does
  */
 export async function assertStateWritable(
 	projectRoot: string,
-	tagName: string
+	tagName: string,
+	change: 'removed' | 'renamed'
 ): Promise<void> {
-	assertTagNotSetByEnv(projectRoot, tagName);
+	assertTagNotSetByEnv(projectRoot, tagName, change);
 	await saveStateFile(projectRoot, () => {});
 }
 

@@ -95,13 +95,20 @@ export class TagOperations {
 			);
 			this.assertNoRetiredIds(tagName, tasks);
 			tasksCopied = tasks.length;
+			const retired = archiveTag(
+				readArchiveSync(this.pathResolver.getArchivePath()),
+				tagName
+			).metadata.highestId;
 			const now = new Date().toISOString();
 			setOwnKey(data, tagName, {
 				tasks,
 				metadata: {
 					created: now,
 					updated: now,
-					description: options?.description
+					description: options?.description,
+					// A removed tag's IDs stay taken under its name: move --to-tag
+					// numbers above this mark, as add-task does from the archive (#1095)
+					...(retired > 0 && { highestId: retired })
 				}
 			});
 			return data;

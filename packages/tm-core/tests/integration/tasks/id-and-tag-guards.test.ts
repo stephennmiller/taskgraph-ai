@@ -56,6 +56,17 @@ describe('ID and tag guards', () => {
 		expect(await new FileStorage(projectDir).getAllTags()).toEqual(['master']);
 	});
 
+	it("numbers a move into a removed tag's recreated name above its IDs (#1095)", async () => {
+		await setup();
+		await tmCore.tasks.copyTag('master', 'feat');
+		await tmCore.tasks.deleteTag('feat');
+		await tmCore.tasks.createTag('feat');
+
+		await tmCore.tasks.moveToTag(['1'], 'master', 'feat');
+
+		expect(await ids('feat')).toEqual(['4']);
+	});
+
 	it.each(['0', '4.0', '99999999999999999999'])(
 		'refuses to move a task to ID %s (#1096)',
 		async (to) => {
@@ -95,8 +106,13 @@ describe('ID and tag guards', () => {
 		});
 		// Removing it would leave every command on a tag that's gone
 		await expect(tmCore.tasks.deleteTag('pinned')).rejects.toThrow(
-			'TASKGRAPH_TAG'
+			`TASKGRAPH_TAG sets the current tag to "pinned", so it can't be removed`
 		);
+		await expect(tmCore.tasks.renameTag('pinned', 'p2')).rejects.toThrow(
+			"so it can't be renamed"
+		);
+		// A tag the variable doesn't name is still free to go
+		await tmCore.tasks.deleteTag('other');
 		await expect(tmCore.tasks.useTag('pinned')).resolves.toMatchObject({
 			currentTag: 'pinned'
 		});

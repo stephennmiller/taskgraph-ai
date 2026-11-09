@@ -188,6 +188,9 @@ its task IDs is at or below the tombstone's `highestId`, except a rename
 back (the tombstone's `renamedTo`): `assertNoRetiredIds` in
 `tag-operations.ts`, which `FileStorage.mutateTags` runs for any tag a write
 creates (#1095).
+`tags add` on that name copies the tombstone's `highestId` into the new
+tag's metadata, so a `move --to-tag` into the recreated tag takes IDs above
+it.
 A tag copy strips `metadata.github` and the claim keys from every task
 and subtask, so two tags never link the same issue (#1063).
 The merge driver merges the mark as a max and renumbers an incoming new
