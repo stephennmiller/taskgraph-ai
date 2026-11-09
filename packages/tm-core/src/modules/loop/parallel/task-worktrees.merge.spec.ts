@@ -76,4 +76,32 @@ describe('TaskWorktrees.merge', () => {
 		).toBeUndefined();
 		expect(fs.existsSync(path.join(worktree, 'a.txt'))).toBe(true);
 	});
+
+	// A --container task's folder is a clone, not a worktree (#1068)
+	describe('a branch with no worktree', () => {
+		const withBranch = () => {
+			git('branch', 'taskgraph/task-1');
+			return path.join(root, '.taskgraph', 'worktrees', 'task-1');
+		};
+
+		it('sets the branch aside', async () => {
+			const clone = withBranch();
+
+			expect(
+				await new TaskWorktrees(root).setAside(clone, 'taskgraph/task-1')
+			).toBe('taskgraph/task-1-conflict-1');
+			expect(git('branch', '--list', 'taskgraph/*').trim()).toBe(
+				'taskgraph/task-1-conflict-1'
+			);
+		});
+
+		it('deletes the merged branch', async () => {
+			const clone = withBranch();
+
+			expect(
+				await new TaskWorktrees(root).remove(clone, 'taskgraph/task-1', true)
+			).toBe(true);
+			expect(git('branch', '--list', 'taskgraph/*').trim()).toBe('');
+		});
+	});
 });
