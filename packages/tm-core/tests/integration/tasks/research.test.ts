@@ -225,6 +225,21 @@ describe('tasks.research', () => {
 		expect(isLoopTrusted(projectDir)).toBe(true);
 	});
 
+	it('refuses to save a file through a symlinked .taskgraph/docs', async () => {
+		const outside = fs.mkdtempSync(path.join(os.tmpdir(), 'tm-research-out-'));
+		fs.symlinkSync(outside, path.join(projectDir, '.taskgraph', 'docs'), 'dir');
+
+		await expect(
+			tmCore.tasks.saveResearch(
+				[{ question: 'hello', answer: 'a', type: 'initial', timestamp: '' }],
+				{ file: true }
+			)
+		).rejects.toThrow('is a symlink');
+
+		expect(fs.readdirSync(outside)).toEqual([]);
+		fs.rmSync(outside, { recursive: true, force: true });
+	});
+
 	it('keeps the answer and reports a save that fails after the AI call', async () => {
 		generateText.mockImplementation(async () => {
 			const data = readFile();

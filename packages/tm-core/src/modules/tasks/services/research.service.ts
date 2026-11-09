@@ -35,6 +35,10 @@ import { getPromptManager } from '../../ai/prompts/prompt-manager.js';
 import { findTaskOrSubtask, gatherTaskContext } from '../../ai/task-context.js';
 import type { ConfigManager } from '../../config/managers/config-manager.js';
 import { untrustLoop } from '../../loop/loop-trust.js';
+import {
+	refuseSymlinkedFolders,
+	refuseSymlinkSync
+} from '../../storage/adapters/file-storage/file-operations.js';
 import type { TaskService } from './task-service.js';
 
 /** How many tasks matching the question go into the context */
@@ -506,6 +510,11 @@ export class ResearchService {
 	): Promise<ResearchSaved> {
 		if ('file' in target) {
 			const file = researchFilePath(this.projectRoot, history[0]?.question);
+			// A committed symlink at .taskgraph, docs, research or the file would
+			// send the write outside the project
+			refuseSymlinkedFolders(path.dirname(file));
+			refuseSymlinkedFolders(file);
+			refuseSymlinkSync(file);
 			writeFile(file, conversationForFile(history));
 			return { kind: 'file', path: path.relative(this.projectRoot, file) };
 		}

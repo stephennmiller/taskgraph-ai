@@ -45,21 +45,22 @@ export function assertTaskPreset(prompt: string): void {
 
 /**
  * How many iterations a run gets when the user didn't pass `-n`: one for a
- * pinned task (it is one task's work), otherwise the pending count for a
- * preset that works on tasks (`default`, `tdd`), otherwise 10.
+ * pinned task (it is one task's work), otherwise the pending and in-progress
+ * count (`tasks.getPickableCount`) for a preset that works on tasks
+ * (`default`, `tdd`), otherwise 10.
  */
 export function defaultIterations(options: {
 	preset: string;
 	taskId?: string;
-	pendingTaskCount?: number;
+	pickableTaskCount?: number;
 }): number {
 	if (options.taskId !== undefined) return 1;
 	if (
 		isTaskPreset(options.preset) &&
-		options.pendingTaskCount !== undefined &&
-		options.pendingTaskCount > 0
+		options.pickableTaskCount !== undefined &&
+		options.pickableTaskCount > 0
 	) {
-		return options.pendingTaskCount;
+		return options.pickableTaskCount;
 	}
 	return 10;
 }

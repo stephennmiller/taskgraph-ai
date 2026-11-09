@@ -64,7 +64,7 @@ describe('tasks removal commands', () => {
 	});
 
 	it('removes tasks with their task files, and what pointed at them', async () => {
-		const taskFile = path.join(path.dirname(tasksPath), 'task_002.txt');
+		const taskFile = path.join(path.dirname(tasksPath), 'task_002.md');
 		fs.writeFileSync(taskFile, 'Task 2');
 
 		const result = await tmCore.tasks.removeTasks('2');
@@ -78,6 +78,19 @@ describe('tasks removal commands', () => {
 		const tasks = read().master.tasks;
 		expect(tasks.map((t: { id: unknown }) => String(t.id))).toEqual(['1', '3']);
 		expect(tasks[1].dependencies).toEqual([]);
+	});
+
+	it("deletes the tag's own task file, not master's", async () => {
+		const dir = path.dirname(tasksPath);
+		const masterFile = path.join(dir, 'task_001.md');
+		const otherFile = path.join(dir, 'task_001_other.md');
+		fs.writeFileSync(masterFile, 'Task 1');
+		fs.writeFileSync(otherFile, 'Task 1 in other');
+
+		await tmCore.tasks.removeTasks('1', { tag: 'other' });
+
+		expect(fs.existsSync(otherFile)).toBe(false);
+		expect(fs.existsSync(masterFile)).toBe(true);
 	});
 
 	it('writes nothing when an ID is unknown', async () => {
