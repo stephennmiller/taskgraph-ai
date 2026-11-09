@@ -55,6 +55,15 @@ stay), then [`loop`](/capabilities/loop) with the default preset. Each step
 prints what it always prints. The first step that fails stops the rest, and
 `go` exits with its code.
 
+When you run `go` again on a project with work done or under way, it prints
+one line saying what it is resuming before `loop` starts:
+
+```
+Resuming: 3 done, task 4 in progress, 5 pending
+```
+
+A first run, with every task still pending, prints no such line.
+
 ## Check the Setup
 
 ```bash
