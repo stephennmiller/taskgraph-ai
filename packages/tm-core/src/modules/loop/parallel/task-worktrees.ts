@@ -96,7 +96,10 @@ export class TaskWorktrees {
 	}
 
 	private async git(args: string[], cwd = this.projectRoot): Promise<string> {
-		return (await runGit(args, { cwd })).stdout;
+		// No time limit: `worktree add`, `merge` and `checkout` run the user's
+		// hooks (an npm install, a test suite), and killing one leaves a
+		// half-made worktree or a merge in progress
+		return (await runGit(args, { cwd, timeoutMs: 0 })).stdout;
 	}
 
 	private async succeeds(args: string[]): Promise<boolean> {

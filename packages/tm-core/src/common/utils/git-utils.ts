@@ -13,7 +13,7 @@ const GIT_TIMEOUT_MS = 5 * 60_000;
 
 interface GitOptions {
 	cwd: string;
-	/** Default 5 minutes */
+	/** Default 5 minutes; 0 for no limit */
 	timeoutMs?: number;
 	/** Added to the environment git runs with */
 	env?: NodeJS.ProcessEnv;
