@@ -115,7 +115,11 @@ describe('LoopDomain.runParallel trust', () => {
 				getProjectRoot: () => project,
 				getConfig: () => ({})
 			} as unknown as ConfigManager,
-			{ updateStatus: async () => {} } as unknown as TasksDomain
+			{
+				updateStatus: async () => {},
+				// --merge first looks for tasks left in review: none here
+				list: async () => ({ tasks: [] })
+			} as unknown as TasksDomain
 		);
 
 		const result = await domain.runParallel({
