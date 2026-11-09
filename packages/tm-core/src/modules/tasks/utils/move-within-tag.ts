@@ -17,7 +17,6 @@ import {
 	retargetDependents
 } from '../../dependencies/task-to-subtask.js';
 import { isValidTaskIdFormat, normalizeTaskId } from '../validation/task-id.js';
-import { type ParentDoneGuard, settleParentsIn } from './parent-status.js';
 import { promotedSubtaskDescription } from './promoted-subtask.js';
 import {
 	type DependencyId,
@@ -35,7 +34,8 @@ import {
  * Move tasks or subtasks to new IDs within one tag: `from` and `to` are one
  * ID each ("5", "5.2") or as many comma-separated. A task can't land on a
  * taken or archived ID; what depended on a moved item follows it. Parents
- * that gain or lose a subtask then take their status from their subtasks.
+ * that gain or lose a subtask then take their status from their subtasks
+ * (FileStorage settles them).
  * @param archivedIds - The tag's archived task IDs, which stay reserved
  */
 export function moveTasksIn(
@@ -43,8 +43,7 @@ export function moveTasksIn(
 	from: string,
 	to: string,
 	tag: string,
-	archivedIds: ReadonlySet<string>,
-	guardDone?: ParentDoneGuard
+	archivedIds: ReadonlySet<string>
 ): WithinTagMoveResult {
 	// "1.03" is subtask 1.3, as everywhere else
 	const ids = (list: string) => list.split(',').map(normalizeTaskId);
@@ -78,10 +77,6 @@ export function moveTasksIn(
 			moveOne(tasks as Item[], sourceId, destinationId, tag, archivedIds)
 		);
 	});
-	const parents = [...sourceIds, ...destinationIds]
-		.filter((id) => id.includes('.'))
-		.map((id) => id.split('.')[0]);
-	settleParentsIn(tasks, parents, guardDone);
 	return result;
 }
 

@@ -42,6 +42,11 @@ import type {
 	TaskClaim
 } from '../../../tasks/utils/claim.js';
 import { claimNextInTasks } from '../../../tasks/utils/claim-next.js';
+import {
+	parentDoneGate,
+	settleChangedParents,
+	subtaskShapes
+} from '../../../tasks/utils/parent-status.js';
 import { FileOperations } from './file-operations.js';
 import { FormatHandler } from './format-handler.js';
 import { PathResolver } from './path-resolver.js';
@@ -79,8 +84,14 @@ export class FileStorage implements IStorage {
 	private pathResolver: PathResolver;
 	private complexityManager: ComplexityReportManager;
 	private tagOps: TagOperations;
+	private definitionOfDone: () => string[];
 
-	constructor(projectPath: string) {
+	/**
+	 * @param definitionOfDone - The project's Definition of Done, read on each
+	 *   write: a parent that finished subtasks would make done must pass it
+	 */
+	constructor(projectPath: string, definitionOfDone: () => string[] = () => []) {
+		this.definitionOfDone = definitionOfDone;
 		this.formatHandler = new FormatHandler();
 		this.fileOps = new FileOperations();
 		this.pathResolver = new PathResolver(projectPath);
@@ -236,6 +247,9 @@ export class FileStorage implements IStorage {
 	 * never overwritten. Return `tasks: null` to leave the file untouched.
 	 * A throw from `mutate` aborts the write. checkWritableTag says which
 	 * tags it may write; a missing or empty file starts with this one.
+	 * Each parent whose subtasks changed is settled before the save
+	 * (settleChangedParents), unless `settle` is false: set-status settles
+	 * after each ID itself and may set a parent's status on purpose.
 	 */
 	private async mutateTasks<R>(
 		tag: string | undefined,
@@ -243,7 +257,7 @@ export class FileStorage implements IStorage {
 			tasks: Task[],
 			metadata: TaskMetadata | null
 		) => MutateOutcome<R> | Promise<MutateOutcome<R>>,
-		{ requireTag = false } = {}
+		{ requireTag = false, settle = true } = {}
 	): Promise<R> {
 		const filePath = this.pathResolver.getTasksPath();
 		const resolvedTag = tag || 'master';
@@ -270,6 +284,7 @@ export class FileStorage implements IStorage {
 					existingData,
 					resolvedTag
 				);
+				const before = settle ? subtaskShapes(current) : null;
 				const outcome = await mutate(
 					current,
 					this.formatHandler.extractMetadata(existingData, resolvedTag)
@@ -278,6 +293,9 @@ export class FileStorage implements IStorage {
 				afterWrite = outcome.afterWrite;
 				if (outcome.tasks === null) {
 					return fileData;
+				}
+				if (before) {
+					settleChangedParents(before, outcome.tasks, this.guardDone());
 				}
 				return applyTagUpdate(
 					this.formatHandler,
@@ -293,6 +311,10 @@ export class FileStorage implements IStorage {
 		return result;
 	}
 
+	private guardDone() {
+		return parentDoneGate(this.definitionOfDone());
+	}
+
 	/** See IStorage.mutateTags */
 	async mutateTags<R>(mutate: MutateTags<R>): Promise<R> {
 		let result!: R;
@@ -300,7 +322,12 @@ export class FileStorage implements IStorage {
 		await this.fileOps.modifyJson(
 			this.pathResolver.getTasksPath(),
 			async (data) => {
-				const outcome = await mutateTagsIn(this.formatHandler, data, mutate);
+				const outcome = await mutateTagsIn(
+					this.formatHandler,
+					data,
+					mutate,
+					this.guardDone()
+				);
 				result = outcome.result;
 				return outcome.data;
 			}
@@ -378,8 +405,10 @@ export class FileStorage implements IStorage {
 		tag?: string,
 		options: UpdateStatusOptions = {}
 	): Promise<UpdateStatusResult> {
-		return this.mutateTasks(tag, (tasks) =>
-			setTaskStatusIn(tasks, taskId, newStatus, options)
+		return this.mutateTasks(
+			tag,
+			(tasks) => setTaskStatusIn(tasks, taskId, newStatus, options),
+			{ settle: false }
 		);
 	}
 
@@ -390,8 +419,10 @@ export class FileStorage implements IStorage {
 		tag?: string,
 		options: UpdateStatusOptions = {}
 	): Promise<UpdateStatusResult[]> {
-		return this.mutateTasks(tag, (tasks) =>
-			setTaskStatusesIn(tasks, taskIds, newStatus, options)
+		return this.mutateTasks(
+			tag,
+			(tasks) => setTaskStatusesIn(tasks, taskIds, newStatus, options),
+			{ settle: false }
 		);
 	}
 

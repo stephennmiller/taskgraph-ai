@@ -13,6 +13,11 @@ import type { FormatHandler } from './format-handler.js';
 import { getOwnKey, setOwnKey } from '../../../../common/utils/own-key.js';
 import { withSchemaVersion } from './schema-version.js';
 import { highestTaskId } from '../../../tasks/utils/archive.js';
+import {
+	type ParentDoneGuard,
+	settleChangedParents,
+	subtaskShapes
+} from '../../../tasks/utils/parent-status.js';
 
 export function buildTagMetadata(tasks: Task[], tag: string): TaskMetadata {
 	return {
@@ -143,12 +148,14 @@ function normalizeTaskIds(tasks: Task[]): Task[] {
 /**
  * Run a MutateTags change on the parsed file contents: it gets every tag's
  * tasks (a file without tags has only master) and the tags it names are
- * written back
+ * written back, each parent whose subtasks changed settled first
+ * (settleChangedParents)
  */
 export async function mutateTagsIn<R>(
 	formatHandler: FormatHandler,
 	data: any,
-	mutate: MutateTags<R>
+	mutate: MutateTags<R>,
+	guardDone?: ParentDoneGuard
 ): Promise<{ data: any; result: R }> {
 	const names =
 		formatHandler.detectFormat(data) === 'legacy'
@@ -160,8 +167,13 @@ export async function mutateTagsIn<R>(
 	const metadata = new Map<string, Record<string, unknown>>(
 		names.map((tag) => [tag, { ...formatHandler.extractMetadata(data, tag) }])
 	);
+	const before = new Map(
+		names.map((tag) => [tag, subtaskShapes(tags.get(tag) ?? [])])
+	);
 	const { changed, result } = await mutate(tags, metadata);
 	for (const tag of new Set(changed)) {
+		const shapes = before.get(tag);
+		if (shapes) settleChangedParents(shapes, tags.get(tag) ?? [], guardDone);
 		// A missing or empty file starts tagged, as the legacy writers create it
 		if (!data || Object.keys(data).length === 0) {
 			data = {};

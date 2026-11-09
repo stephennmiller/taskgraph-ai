@@ -206,6 +206,12 @@ describe('tasks.scope', () => {
 				const saved = readTask();
 				expect({ ...saved, id: Number(saved.id) }).toEqual({
 					...legacySaved,
+					// Unlike the legacy command, a parent whose subtasks changed takes
+					// their status: 3.5 is in progress (state-machines.md section 2)
+					...(s.subtasks && {
+						status: 'in-progress',
+						updatedAt: expect.any(String)
+					}),
 					dependencies: legacySaved.dependencies.map(String),
 					subtasks: legacySaved.subtasks.map((s: { id: number }) => ({
 						...s,
