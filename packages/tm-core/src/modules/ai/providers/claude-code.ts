@@ -15,7 +15,9 @@
 import { execSync } from 'node:child_process';
 import fs from 'node:fs';
 import { createRequire } from 'node:module';
+import os from 'node:os';
 import path from 'node:path';
+import { foldersToTop } from '../../../common/utils/project-root-finder.js';
 import { findOnPath } from '../../git/merge-driver/merge-driver-files.js';
 import {
 	BaseAIProvider,
@@ -84,11 +86,29 @@ function isWithin(root: string, candidate: string): boolean {
 }
 
 /**
+ * The highest folder from the project up to its git top level whose content
+ * comes with the repository: `repo` for a project at `repo/app` (#1127). A
+ * repository at or above the home folder is the user's own (dotfiles), as
+ * in the loop approval, so it stops below that. The project itself outside
+ * a repository.
+ */
+function repositoryRoot(root: string): string {
+	const home = os.homedir();
+	return (
+		(foldersToTop(root) ?? [])
+			.map((dir) => path.resolve(root, dir))
+			.filter((dir) => !isWithin(dir, home))
+			.at(-1) ?? root
+	);
+}
+
+/**
  * Whether `pathToClaudeCodeExecutable` from config may be run. It comes from
  * the project's own .taskgraph/config.json, so a repo you didn't write could
  * otherwise name any program. Allowed: an absolute path to a file named
  * `claude` (`claude.exe`; not npm's `claude.cmd` shim) that is outside the
- * project, both as written and after resolving symlinks.
+ * project and the git repository it is in, both as written and after
+ * resolving symlinks.
  * @param candidate - Configured executable path
  * @param projectRoot - Project root, when known
  */
@@ -114,7 +134,10 @@ export function isTrustedClaudeExecutable(
 	} catch {
 		// Use the root as given
 	}
-	return !isWithin(root, path.resolve(candidate)) && !isWithin(realRoot, real);
+	return (
+		!isWithin(repositoryRoot(root), path.resolve(candidate)) &&
+		!isWithin(repositoryRoot(realRoot), real)
+	);
 }
 
 /**
@@ -135,7 +158,7 @@ function withTrustedExecutable(
 	}
 	log(
 		'warn',
-		`Ignoring pathToClaudeCodeExecutable "${executable}": it must be an absolute path to a file named claude (claude.exe on Windows, not claude.cmd) outside the project`
+		`Ignoring pathToClaudeCodeExecutable "${executable}": it must be an absolute path to a file named claude (claude.exe on Windows, not claude.cmd) outside the project and its git repository`
 	);
 	const { pathToClaudeCodeExecutable: _dropped, ...rest } = settings;
 	return rest;
@@ -166,7 +189,8 @@ export function bundledClaudeBinary(): string | undefined {
 
 /**
  * The `claude` on PATH, for when the SDK has no binary of its own. The SDK
- * doesn't look on PATH itself. Only a trusted one (outside the project).
+ * doesn't look on PATH itself. Only a trusted one (outside the project and
+ * its git repository).
  * @param bundled - Whether the SDK's own binary is installed
  */
 export function claudeFromPath(

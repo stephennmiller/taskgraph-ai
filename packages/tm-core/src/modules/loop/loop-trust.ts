@@ -19,7 +19,10 @@ import {
 	TASKGRAPH_LOCAL_CONFIG_FILE,
 	TASKGRAPH_TASKS_FILE
 } from '../../common/constants/paths.js';
-import { isWithin } from '../../common/utils/project-root-finder.js';
+import {
+	foldersToTop,
+	isWithin
+} from '../../common/utils/project-root-finder.js';
 import { mergeMachineConfig } from '../config/services/machine-config.js';
 import { readPrdSection } from '../prd/prd-coverage.js';
 import { PRD_SOURCE_KEY } from '../prd/prd-sections.js';
@@ -143,23 +146,6 @@ const LOCAL_FILES = ['CLAUDE.local.md', '.claude/settings.local.json'];
 
 /** Every tag's complexity report, under each name versions have used */
 const REPORTS_DIR = path.dirname(COMPLEXITY_REPORT_FILE);
-
-/**
- * The project and each folder above it up to the repository's top level
- * (the nearest with a `.git`, where git looks), as paths from the project:
- * '', '..', '../..'. Undefined outside a repository.
- */
-function foldersToTop(root: string): string[] | undefined {
-	const folders: string[] = [];
-	for (let dir = root, rel = ''; ; rel = rel ? `${rel}/..` : '..') {
-		folders.push(rel);
-		if (fs.lstatSync(path.join(dir, '.git'), { throwIfNoEntry: false }))
-			return folders;
-		const parent = path.dirname(dir);
-		if (parent === dir) return undefined;
-		dir = parent;
-	}
-}
 
 /**
  * Whether git tracks a file (a path from the project), whatever its case,
