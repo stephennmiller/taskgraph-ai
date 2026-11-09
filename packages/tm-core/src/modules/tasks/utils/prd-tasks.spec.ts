@@ -193,6 +193,20 @@ describe('prepareGeneratedTasks', () => {
 		});
 	});
 
+	it('stores pending whatever status the model returned (#1102)', () => {
+		const tasks = prepare([
+			raw(1, { status: 'todo' }),
+			raw(2, { status: 'done' }),
+			raw(3, { status: 'Pending' })
+		]);
+
+		expect(tasks.map((t) => t.status)).toEqual([
+			'pending',
+			'pending',
+			'pending'
+		]);
+	});
+
 	it.each([
 		['not positive integers', [0, 1]],
 		['repeated', [1, 1]],

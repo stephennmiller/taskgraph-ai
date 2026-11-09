@@ -68,6 +68,8 @@ Guards and side effects:
   Definition of Done) and, in a loop, `loop.smokeCommand`. `force` skips
   both. GitHub pull always forces.
 - Moving to `pending`, `blocked` or `deferred` clears the claim (machine 3).
+- parse-prd stores every new task as `pending`, whatever status the model
+  returned (#1102).
 - `update-task` and `update-subtask` never change a status, except that
   a rewrite that adds or drops subtasks settles the parent (section 2). Only
   `set-status`, the loop, GitHub pull and the parallel runner do.
