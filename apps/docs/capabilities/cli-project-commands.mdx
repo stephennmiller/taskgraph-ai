@@ -135,7 +135,7 @@ taskgraph tags copy <source-tag> <target-tag>
 taskgraph tags remove <tag-name> --yes
 ```
 
-A copy (`tags copy` or `tags add --copy-from`) leaves out each task's GitHub link and claim, so pushing the copy creates its own issues. A removed or renamed tag's name keeps its highest task ID, so a new tag with that name numbers its tasks above it, and the tag's complexity report is deleted or renamed with it. A copy or rename onto a removed or renamed tag's name is refused when it would bring back one of that tag's IDs; renaming a tag back to its old name is allowed.
+A copy (`tags copy` or `tags add --copy-from`) leaves out each task's GitHub link and claim, so pushing the copy creates its own issues. A removed or renamed tag's name keeps its highest task ID, so a new tag with that name numbers its tasks above it, and the tag's complexity report is deleted or renamed with it. A copy, rename or `move --to-tag` onto a removed or renamed tag's name is refused when it would bring back one of that tag's IDs and a GitHub issue may still point at them; renaming a tag back to its old name is allowed. The name is free again, and the tasks keep their IDs, when TaskGraph has on record that no task of the removed tag ever had a GitHub issue link. It keeps that record (`metadata.githubLinked` in `tasks.json`, copied to the tag's entry in `archive.json` when the tag goes) for tags created with this version or later; a tag made by an older version, or removed by one, has no record and its name stays taken. When a name is taken, `taskgraph tags add <name>` followed by `taskgraph move --from <ids> --from-tag <tag> --to-tag <name>` puts tasks there under new IDs.
 
 ## Configure AI Models
 

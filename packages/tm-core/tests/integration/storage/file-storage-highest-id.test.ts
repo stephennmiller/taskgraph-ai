@@ -124,6 +124,13 @@ describe('FileStorage tag delete and rename keep used IDs (#1064)', () => {
 			['1', '2', '3', '4'].map((id) => titled(id)),
 			'other'
 		);
+		// A GitHub issue points at (other, 2): what keeps the name's IDs
+		// retired once the tag is gone (#1126)
+		await storage.modifyTask(
+			'2',
+			() => ({ metadata: { github: { issueNumber: 7 } } }),
+			'other'
+		);
 		fs.writeFileSync(reportOf('other'), '{"complexityAnalysis":[]}');
 	});
 

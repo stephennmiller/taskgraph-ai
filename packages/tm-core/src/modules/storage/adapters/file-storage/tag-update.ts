@@ -12,7 +12,11 @@ import type { Task, TaskMetadata } from '../../../../common/types/index.js';
 import type { FormatHandler } from './format-handler.js';
 import { getOwnKey, setOwnKey } from '../../../../common/utils/own-key.js';
 import { withSchemaVersion } from './schema-version.js';
-import { highestTaskId } from '../../../tasks/utils/archive.js';
+import {
+	hasGithubLink,
+	highestTaskId,
+	type removedTagMark
+} from '../../../tasks/utils/archive.js';
 import {
 	type ParentDoneGuard,
 	settleChangedParents,
@@ -41,13 +45,43 @@ function mergeTagMetadata(
 	return withSchemaVersion({ ...kept, ...metadata }, existing);
 }
 
+/** What a removed tag left under a tag's name in archive.json (removedTagMark) */
+export type RemovedTagLookup = (
+	tag: string
+) => ReturnType<typeof removedTagMark>;
+
+/**
+ * The tag's `metadata.githubLinked` after a write: true once a task has a
+ * GitHub issue link, and it stays true when that task is removed. False
+ * only for a tag known to have had none since it first held a task, under
+ * a name no removed tag left IDs on that issues may still point at.
+ * Undefined (nothing recorded) for a tag from before this was tracked.
+ * `tags remove` and `tags rename` copy a false into the tombstone, which
+ * frees the name (#1126).
+ */
+function githubLinkedAfter(
+	previous: any,
+	tag: string,
+	tasks: Task[],
+	removedTag?: RemovedTagLookup
+): boolean | undefined {
+	if (hasGithubLink(tasks) || hasGithubLink(previous?.tasks)) return true;
+	const recorded = previous?.metadata?.githubLinked;
+	if (typeof recorded === 'boolean') return recorded;
+	// A tag that never held a task never had a link
+	return highestTaskId(previous) === 0 && removedTag?.(tag).free
+		? false
+		: undefined;
+}
+
 /** Put `tasks` under `resolvedTag` in the parsed file contents */
 export function applyTagUpdate(
 	formatHandler: FormatHandler,
 	existingData: any,
 	resolvedTag: string,
 	tasks: Task[],
-	metadata: TaskMetadata
+	metadata: TaskMetadata,
+	removedTag?: RemovedTagLookup
 ): any {
 	const normalizedTasks = normalizeTaskIds(tasks);
 	const legacy = formatHandler.detectFormat(existingData) === 'legacy';
@@ -57,12 +91,19 @@ export function applyTagUpdate(
 			? existingData
 			: undefined;
 	// The high-water mark: a removed task's ID stays used (#1040)
+	const githubLinked = githubLinkedAfter(
+		previous,
+		resolvedTag,
+		normalizedTasks,
+		removedTag
+	);
 	const withHighestId = {
 		...metadata,
 		highestId: Math.max(
 			highestTaskId(previous),
 			highestTaskId({ tasks: normalizedTasks })
-		)
+		),
+		...(githubLinked !== undefined && { githubLinked })
 	};
 
 	if (legacy) {
@@ -155,7 +196,8 @@ export async function mutateTagsIn<R>(
 	formatHandler: FormatHandler,
 	data: any,
 	mutate: MutateTags<R>,
-	guardDone?: ParentDoneGuard
+	guardDone?: ParentDoneGuard,
+	removedTag?: RemovedTagLookup
 ): Promise<{ data: any; result: R }> {
 	const names =
 		formatHandler.detectFormat(data) === 'legacy'
@@ -180,10 +222,17 @@ export async function mutateTagsIn<R>(
 			setOwnKey(data, tag, { tasks: [], metadata: {} });
 		}
 		const tasks = tags.get(tag) ?? [];
-		data = applyTagUpdate(formatHandler, data, tag, tasks, {
-			...metadata.get(tag),
-			...buildTagMetadata(tasks, tag)
-		} as TaskMetadata);
+		data = applyTagUpdate(
+			formatHandler,
+			data,
+			tag,
+			tasks,
+			{
+				...metadata.get(tag),
+				...buildTagMetadata(tasks, tag)
+			} as TaskMetadata,
+			removedTag
+		);
 	}
 	return { data, result };
 }

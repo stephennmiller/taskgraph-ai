@@ -511,6 +511,33 @@ describe('mergeTasksJson', () => {
 		expect(tasksOf(result.merged)).toHaveLength(2);
 	});
 
+	it.each([
+		[false, true, true],
+		[true, false, true],
+		[false, false, false],
+		// One side has nothing recorded: its tag may have had a link
+		[false, undefined, undefined]
+	])(
+		'merges githubLinked %s and %s on a tag both sides added to %s, without a conflict (#1126)',
+		(inOurs, inTheirs, expected) => {
+			const side = (githubLinked: boolean | undefined, title: string) => ({
+				b: {
+					tasks: [task(1, { title })],
+					metadata: { ...(githubLinked !== undefined && { githubLinked }) }
+				}
+			});
+
+			const result = mergeTasksJson(
+				{},
+				side(inOurs, 'Ours'),
+				side(inTheirs, 'Ours')
+			);
+
+			expect(result.conflicts).toEqual([]);
+			expect((result.merged as Json).b.metadata.githubLinked).toBe(expected);
+		}
+	);
+
 	it('keeps keys such as __proto__ as data', () => {
 		const base = JSON.parse('{"master":{"tasks":[]}}');
 		const ours = JSON.parse('{"master":{"tasks":[],"__proto__":{"x":1}}}');

@@ -42,6 +42,13 @@ export interface ArchiveTagData {
 		lastModified?: string;
 		/** On a renamed tag's tombstone: the name it was renamed to */
 		renamedTo?: string;
+		/**
+		 * On a removed or renamed tag's tombstone: false when no task of the
+		 * tag ever had a GitHub issue link, so the name's IDs can be used again
+		 * (#1126). Absent on tombstones written before this was recorded and
+		 * for a tag that had, or may have had, a link.
+		 */
+		githubLinked?: boolean;
 	};
 }
 
@@ -142,6 +149,35 @@ export function archiveTag(archive: unknown, tag: string): ArchiveTagData {
 				...tasks.map((t) => numericId(t.id))
 			)
 		}
+	};
+}
+
+/** Whether a task in the list, or one of its subtasks, has a GitHub issue link */
+export function hasGithubLink(tasks: unknown): boolean {
+	return (
+		Array.isArray(tasks) &&
+		tasks.some(
+			(task) => Boolean(task?.metadata?.github) || hasGithubLink(task?.subtasks)
+		)
+	);
+}
+
+/**
+ * What a removed or renamed tag left under its name (its tombstone): the
+ * highest ID it used, and whether the name is free again, which it is when
+ * nothing was used or the tombstone records that no task of the tag ever
+ * had a GitHub issue link. A tombstone without that record is not free.
+ */
+export function removedTagMark(
+	archive: unknown,
+	tag: string
+): { highestId: number; free: boolean } {
+	const { tasks, metadata } = archiveTag(archive, tag);
+	return {
+		highestId: metadata.highestId,
+		free:
+			metadata.highestId === 0 ||
+			(tasks.length === 0 && metadata.githubLinked === false)
 	};
 }
 
@@ -447,19 +483,21 @@ function readTagSync(tasksPath: string, tag: string): unknown {
  * dropArchiveTag) that notes the new name in `renamedTo`, so the tag can
  * be renamed back.
  * @param highestId - The highest ID the tag held in tasks.json (highestTaskId)
+ * @param neverLinked - See dropArchiveTag
  * @returns null when there is nothing to record
  */
 export function renameArchiveTag(
 	archive: ArchiveData,
 	oldTag: string,
 	newTag: string,
-	highestId = 0
+	highestId = 0,
+	neverLinked = false
 ): ArchiveData | null {
 	const moved =
 		ownSection(archive, oldTag) === undefined
 			? archive
 			: { ...archive, [newTag]: sectionFor(archive, oldTag, newTag) };
-	const dropped = dropArchiveTag(moved, oldTag, highestId);
+	const dropped = dropArchiveTag(moved, oldTag, highestId, neverLinked);
 	if (!dropped || !Object.hasOwn(dropped, oldTag)) return dropped;
 	const tombstone = dropped[oldTag];
 	return {
@@ -483,10 +521,12 @@ function sectionFor(
 	const section = structuredClone(
 		ownSection(archive, fromTag)
 	) as ArchiveTagData;
+	// A tombstone's record is about the tag removed under that name only
+	const { githubLinked: _record, ...metadata } = section.metadata ?? {};
 	return {
 		...section,
 		metadata: {
-			...section.metadata,
+			...metadata,
 			highestId: Math.max(
 				archiveTag(archive, fromTag).metadata.highestId,
 				archiveTag(archive, toTag).metadata.highestId
@@ -516,21 +556,33 @@ export function copyArchiveTag(
  * tombstone `{ tasks: [], metadata: { highestId } }` stays under the name,
  * so a tag created later with that name never reuses one of its IDs (an ID
  * names one task for its whole life, and GitHub link recovery relies on it).
+ * The tombstone also records `githubLinked: false` when no task of the tag
+ * ever had a GitHub issue link: then no issue points at its IDs, and tasks
+ * copied or moved under the name may keep theirs (#1126).
  * @param highestId - The highest ID the tag held in tasks.json (highestTaskId)
+ * @param neverLinked - The tag's tasks.json metadata proves no task in
+ *   tasks.json ever had a link (`githubLinked: false`, none linked now)
  * @returns null when there is nothing to record
  */
 export function dropArchiveTag(
 	archive: ArchiveData,
 	tag: string,
-	highestId = 0
+	highestId = 0,
+	neverLinked = false
 ): ArchiveData | null {
-	const kept = Math.max(highestId, archiveTag(archive, tag).metadata.highestId);
+	const section = archiveTag(archive, tag);
+	const kept = Math.max(highestId, section.metadata.highestId);
 	if (kept > 0) {
 		return {
 			...archive,
 			[tag]: {
 				tasks: [],
-				metadata: { highestId: kept, lastModified: new Date().toISOString() }
+				metadata: {
+					highestId: kept,
+					lastModified: new Date().toISOString(),
+					...(neverLinked &&
+						!hasGithubLink(section.tasks) && { githubLinked: false })
+				}
 			}
 		};
 	}

@@ -284,11 +284,17 @@ function mergeField(
 	id: string | undefined,
 	ctx: Context
 ): unknown {
+	const field = path.split('.').pop() ?? '';
+	// A tag's GitHub link record (#1126): linked on either side is linked,
+	// and "never linked" holds only when both sides say so
+	if (id === undefined && field === 'githubLinked') {
+		if (ours === true || theirs === true) return true;
+		return ours === false && theirs === false ? false : undefined;
+	}
+
 	if (same(ours, theirs)) return ours;
 	if (same(base, ours)) return theirs;
 	if (same(base, theirs)) return ours;
-
-	const field = path.split('.').pop() ?? '';
 
 	if (typeof ours === 'string' && typeof theirs === 'string') {
 		const later = Date.parse(theirs) > Date.parse(ours);
