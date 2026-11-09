@@ -85,7 +85,7 @@ Replace `<version>` with the one `taskgraph --version` prints. A pinned version 
 
 ## Staying up to date
 
-Running `taskgraph` in a terminal checks npm for a newer version, at most once an hour, and tells you when one is out. When npm can't be reached within 3 seconds, the next check waits 10 minutes. The check does not install the update. Install it yourself:
+Running `taskgraph` in a terminal checks npm for a newer version, at most once an hour, and tells you on stderr when one is out, so redirected or piped output never holds the notice. When npm can't be reached within 3 seconds, the next check waits 10 minutes. The check does not install the update. Install it yourself:
 
 ```bash
 taskgraph upgrade
