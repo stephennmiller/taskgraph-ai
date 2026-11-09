@@ -145,19 +145,21 @@ Once `parse-prd` has recorded where tasks came from, `fix-dependencies --check` 
 # Move a task or subtask to a new position
 taskgraph move --from=<id> --to=<id>
 
-# Move task to become a subtask
-taskgraph move --from=5 --to=7
+# Move task to become a subtask: name a free subtask ID under the new parent
+taskgraph move --from=5 --to=7.4
+# or let TaskGraph pick the subtask ID
+taskgraph add-subtask --parent=7 --task-id=5
 
-# Move subtask to become a standalone task
-taskgraph move --from=5.2 --to=7
+# Move subtask to become a standalone task (9 is a free task ID)
+taskgraph move --from=5.2 --to=9
 
-# Move subtask to a different parent
-taskgraph move --from=5.2 --to=7.3
+# Move subtask to a different parent (7.4 is a free subtask ID)
+taskgraph move --from=5.2 --to=7.4
 
 # Reorder subtasks within the same parent
 taskgraph move --from=5.2 --to=5.4
 
-# Move a task to a new ID position (creates placeholder if it doesn't exist)
+# Move a task to a new ID (25 must be free; the task is renumbered)
 taskgraph move --from=5 --to=25
 
 # Move multiple tasks at once (same number of IDs; if one pair fails, nothing moves)

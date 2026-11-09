@@ -52,7 +52,7 @@ A command not in this table, such as `tags use` or `tags add`, has no JSON outpu
 
 In `list` JSON, each task's `blocks` lists the IDs of the tasks that depend on it, whatever their status. `--status` filters the rows, not `blocks`.
 
-`set-status` prints its JSON on one line, including when it fails. Other commands print an error as text on stderr and exit with a non-zero code, leaving stdout empty.
+When `set-status` fails it prints its JSON error on one line. Other commands print an error as text on stderr and exit with a non-zero code, leaving stdout empty, except `show` with an ID that doesn't exist: it prints `"task": null, "found": false` and exits 1.
 
 In a JSON run, stdout holds only the JSON: banners, the update check and other notices are skipped, and warnings (such as a missing config file) go to stderr.
 
@@ -90,11 +90,12 @@ For a given `schemaVersion`:
 
 Removing or renaming a key, or changing its type, raises `schemaVersion`. A new key does not.
 
-The current version is `2`.
+The current version is `3`.
 
 | Version | Change |
 |---------|--------|
-| `2` | `show` gives task IDs, task `dependencies` and subtask IDs as strings, as `list` and `next` do, and its subtasks gain `parentId`. A subtask's `dependencies` keep their stored type: a bare number names a sibling subtask, a string names a task or a dotted subtask. |
+| `3` | A subtask's `dependencies` are full string IDs: `2.1` for a sibling subtask, `3` for a task. |
+| `2` | `show` gives task IDs, task `dependencies` and subtask IDs as strings, as `list` and `next` do, and its subtasks gain `parentId`. A subtask's `dependencies` kept their stored type until version 3: a bare number named a sibling subtask, a string named a task or a dotted subtask. |
 | `1` | First versioned output. |
 
 ## Not the same as the tasks file version
