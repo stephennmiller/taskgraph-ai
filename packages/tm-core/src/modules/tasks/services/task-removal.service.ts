@@ -11,6 +11,7 @@ import type { Task } from '../../../common/types/index.js';
 import type { ConfigManager } from '../../config/managers/config-manager.js';
 import { readArchivedIdsSync } from '../utils/archive.js';
 import { parentDoneGate } from '../utils/parent-status.js';
+import { TAG_NAME_PATTERN } from '../utils/tag-names.js';
 import {
 	type ClearSubtasksResult,
 	clearSubtasksIn,
@@ -21,6 +22,7 @@ import {
 	splitIds,
 	type TaskRemovalPreview
 } from '../utils/task-removal.js';
+import { taskFileName } from './task-file-generator.service.js';
 import type { TaskService } from './task-service.js';
 
 export interface RemoveTasksResult
@@ -73,11 +75,13 @@ export class TaskRemovalService {
 		const { removedTaskNumbers, ...outcome } = result;
 		const errors: string[] = [];
 		const tasksPath = this.tasksPath();
-		// After tasks.json is saved, so a failure here loses no task
-		for (const number of removedTaskNumbers) {
+		// After tasks.json is saved, so a failure here loses no task. generate
+		// refuses an invalid tag name, so no file exists for one
+		const numbers = TAG_NAME_PATTERN.test(tag) ? removedTaskNumbers : [];
+		for (const number of numbers) {
 			const file = path.join(
 				path.dirname(tasksPath),
-				`task_${String(number).padStart(3, '0')}.txt`
+				taskFileName(number, tag)
 			);
 			if (!fs.existsSync(file)) continue;
 			try {
