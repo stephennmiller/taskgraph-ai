@@ -86,7 +86,7 @@ from its subtasks. The write funnel runs it, so no writer has to:
 `FileStorage.mutateTasks` and `mutateTagsIn` compare each task's subtask
 IDs and statuses before and after the change (`settleChangedParents`) and
 settle every task that was there before and whose list changed, with the
-parent's done gate (acceptance criteria and Definition of Done). Only a
+parent's done gate. Only a
 status change on the same subtasks (same IDs and titles) counts as the
 subtask's own; expand --force reuses IDs for new subtasks. A task the
 write added (add-task, parse-prd, a move to a new ID or tag, restore)
@@ -140,9 +140,8 @@ Converting between task and subtask (move, `add-subtask --task-id`,
 `acceptanceCriteria` and metadata, except `subtasks` and `parentId`.
 
 `set-status <parent> done` with open subtasks is allowed on purpose: it is
-an explicit user action. The next writer to add a subtask, reopen a
-complete one or set one to `pending` or `in-progress` moves it back;
-closing, holding or removing the leftover ones doesn't.
+an explicit user action. The `done` exception above says what reopens
+it.
 
 The git merge driver writes tasks.json outside the funnel, so it settles
 too (`git/merge-driver/merge-settle.ts`, #1093): a task whose merged
@@ -251,9 +250,8 @@ Invariants:
   `modifyTagged`, which re-read under the lock. AI results merge into what
   is on disk at write time.
 - A write is all or nothing: temp file, then rename.
-- `mutateTasks` and `mutateTagsIn` refuse a write that adds an unknown
-  status or priority, an ID that isn't 1 or more, or a duplicate ID
-  (`assertNoNewTaskProblems`, #1119). A value already in the file may stay.
+- The first two refuse a write adding an unknown status or priority
+  or a bad ID (`assertNoNewTaskProblems`, #1119).
 - Lock order is always tasks.json, then archive.json.
 
 A 4-process stress run (20 mixed writes each) lost no update.
@@ -298,6 +296,9 @@ Invariants:
 - An interrupted task is picked up again by `interruptedTask`.
 - The progress file only appends. tasks.json is the source of truth.
 
+`stopProcessGroup` stops every Claude Code the loop starts: SIGTERM to
+its process group, SIGKILL after 5 seconds or once it exited.
+
 ## 8. Parallel task
 
 `loop/parallel/parallel-runner.ts`, `outcome.ts`.
@@ -334,11 +335,15 @@ Invariant: settle releases the claim on abort, failure, or no work.
 | settled    | conflict, cannot set aside    | run ends                |
 | wave end   | nothing merged, abort, budget | run ends                |
 
+Before wave 1 (#1124), a `review` task whose branch is at a tip
+recorded as finished (machine 11) is merged like a settled one; other
+`review` tasks are only listed (`leftInReviewIds`).
+
 Invariants (#1039):
 
 - An approved run checks trust before each wave, before it claims
   anything, and stops with `TRUST_LOST` (exit 1) once the approval is
-  withdrawn, like the serial loop.
+  withdrawn.
 - After an abort it does no new work: the abort is checked before each
   merge and before each resolver session, an aborted resolver is killed,
   and the run reports aborted (exit 130). A merge that already succeeded
@@ -356,7 +361,8 @@ atomic rename.
 
 `loop/parallel/task-worktrees.ts`. A task's worktree goes from absent to
 created or reused, then kept, removed, merged or renamed aside. The branch
-tip is recorded under `.git/taskgraph/branches/<branch>`.
+tip is recorded under `.git/taskgraph/branches/<branch>` (`finished`:
+Claude Code exited 0).
 `assertBranchReusable` refuses a branch whose tip is neither the base nor
 the recorded tip, except when the run took over its own claimant's stale
 claim (`TaskClaim.resumedFrom`): then a tip that descends from the recorded

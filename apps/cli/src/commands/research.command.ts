@@ -10,7 +10,8 @@ import {
 	type ResearchInput,
 	type ResearchResult,
 	createTmCore,
-	isTaskOrSubtaskId
+	isTaskOrSubtaskId,
+	exitOnStopSignals
 } from '@tm/core';
 import chalk from 'chalk';
 import { Command, Option } from 'commander';
@@ -92,10 +93,8 @@ export class ResearchCommand extends Command {
 			)
 			.option('--save-file', 'Save the answer to .taskgraph/docs/research/')
 			.option('--tag <tag>', 'Specify tag context for task operations')
-			.action(
-				async (prompt: string | undefined, options: ResearchCommandOptions) => {
-					await this.executeCommand(prompt, options);
-				}
+			.action((prompt: string | undefined, options: ResearchCommandOptions) =>
+				exitOnStopSignals(() => this.executeCommand(prompt, options))
 			);
 	}
 

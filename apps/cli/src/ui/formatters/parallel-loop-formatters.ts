@@ -181,6 +181,13 @@ export function formatParallelSummary(
 ): string {
 	const { tasks } = result;
 	const { projectRoot } = options;
+	// --merge found them in review with no branch a run left: not its to merge
+	const left = result.leftInReviewIds ?? [];
+	const leftInReview = left.length
+		? theme.muted(
+				`Left in review, with no branch from a run to merge: ${left.map(plain).join(', ')}. Merge the work yourself, then ${theme.brand(`taskgraph set-status --id=${plain(left[0])} --status=done`)}`
+			)
+		: null;
 
 	if (tasks.length === 0) {
 		if (result.aborted) return theme.muted('Cancelled before any task started');
@@ -189,6 +196,7 @@ export function formatParallelSummary(
 			: 'No tasks are ready to run';
 		return [
 			skipped,
+			...(leftInReview ? [leftInReview] : []),
 			theme.muted(
 				`Run ${theme.brand('taskgraph graph')} to see what the rest wait on`
 			)
@@ -270,6 +278,7 @@ export function formatParallelSummary(
 		...(held ? [held] : []),
 		...(notDone ? [notDone] : []),
 		...(unmerged ? [unmerged] : []),
+		...(leftInReview ? [leftInReview] : []),
 		...(next ? [next] : []),
 		...formatSetAside(result.setAside, 80, !!next)
 	].join('\n');

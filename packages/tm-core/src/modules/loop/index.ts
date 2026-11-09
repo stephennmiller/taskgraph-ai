@@ -21,6 +21,9 @@ export type {
 export { LoopError } from './loop-task.js';
 export type { LoopTask } from './loop-task.js';
 
+// Stop signals, and exiting on one so an AI command leaves no Claude running
+export { STOP_SIGNALS, exitOnStopSignals } from './process-group.js';
+
 // --max-turns and --max-budget-usd
 export { parseLoopCaps } from './services/iteration-limits.js';
 

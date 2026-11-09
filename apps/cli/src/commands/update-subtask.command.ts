@@ -5,7 +5,7 @@
  * tasks.json lock without dropping changes made while the AI was writing.
  */
 
-import { createTmCore } from '@tm/core';
+import { createTmCore, exitOnStopSignals } from '@tm/core';
 import chalk from 'chalk';
 import { Command } from 'commander';
 import type { Ora } from 'ora';
@@ -71,10 +71,12 @@ export class UpdateSubtaskCommand extends Command {
 					id: string | undefined,
 					options: UpdateSubtaskCommandOptions
 				) => {
-					await this.executeCommand({
-						...options,
-						id: pickId(id, options.id, 'update-subtask')
-					});
+					await exitOnStopSignals(() =>
+						this.executeCommand({
+							...options,
+							id: pickId(id, options.id, 'update-subtask')
+						})
+					);
 				}
 			);
 	}

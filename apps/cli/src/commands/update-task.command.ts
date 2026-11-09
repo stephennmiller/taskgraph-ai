@@ -7,7 +7,7 @@
  * tasks.json lock without dropping changes made while the AI was writing.
  */
 
-import { type UpdateHooks, createTmCore } from '@tm/core';
+import { type UpdateHooks, createTmCore, exitOnStopSignals } from '@tm/core';
 import chalk from 'chalk';
 import { Command } from 'commander';
 import type { Ora } from 'ora';
@@ -92,18 +92,21 @@ async function runUpdate(
 		const tmCore = await createTmCore({ projectPath: projectRoot });
 		const tag = options.tag || tmCore.config.getActiveTag();
 		displayCommandHeader({ tag, projectRoot });
-		await work(
-			tmCore,
-			tag,
-			{
-				onWarning: (message) =>
-					print(`${chalk.yellow('⚠')} ${terminalSafe(message)}`),
-				onDebug: (message) => print(theme.muted(terminalSafe(message))),
-				startSpinner: (text) => {
-					spinner = createSpinner(text).start();
-				}
-			},
-			stopSpinner
+		// A stopped update leaves no Claude running (#1121)
+		await exitOnStopSignals(() =>
+			work(
+				tmCore,
+				tag,
+				{
+					onWarning: (message) =>
+						print(`${chalk.yellow('⚠')} ${terminalSafe(message)}`),
+					onDebug: (message) => print(theme.muted(terminalSafe(message))),
+					startSpinner: (text) => {
+						spinner = createSpinner(text).start();
+					}
+				},
+				stopSpinner
+			)
 		);
 	} catch (error: any) {
 		stopSpinner();

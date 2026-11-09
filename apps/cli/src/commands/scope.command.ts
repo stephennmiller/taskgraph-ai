@@ -6,7 +6,7 @@
  * every ID before any AI call and saves each task under the tasks.json lock.
  */
 
-import { createTmCore } from '@tm/core';
+import { createTmCore, exitOnStopSignals } from '@tm/core';
 import chalk from 'chalk';
 import { Argument, Command } from 'commander';
 import type { Ora } from 'ora';
@@ -153,9 +153,11 @@ Examples:
 					options.id,
 					this.fixedDirection === undefined
 				);
-				await this.executeCommand(
-					{ ...options, id: ids },
-					this.fixedDirection ?? (direction as Direction | undefined)
+				await exitOnStopSignals(() =>
+					this.executeCommand(
+						{ ...options, id: ids },
+						this.fixedDirection ?? (direction as Direction | undefined)
+					)
 				);
 			});
 	}
