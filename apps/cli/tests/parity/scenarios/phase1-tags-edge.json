@@ -10,14 +10,19 @@
 			"input": { "projectRoot": "<project>" }
 		},
 		["tags", "add", "first"],
-		["tags", "add", "second", "--copy-from", "nope"],
+		["tags", "add", "second"],
+		{
+			"args": ["tags", "add", "third", "--copy-from", "nope"],
+			"expectExit": 1
+		},
 		{
 			"mcp": "add_tag",
 			"input": {
 				"projectRoot": "<project>",
 				"name": "third",
 				"copyFromTag": "nope"
-			}
+			},
+			"expectError": true
 		},
 		{
 			"args": ["tags", "add", "Main"],

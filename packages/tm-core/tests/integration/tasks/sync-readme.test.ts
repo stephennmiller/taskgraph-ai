@@ -42,6 +42,21 @@ describe('tasks.syncReadme', () => {
 		expect(fs.readFileSync(readmePath(), 'utf8')).toBe('# Mine\n');
 	});
 
+	it('refuses an unknown status and leaves README.md alone', async () => {
+		await seedTasks(
+			new FileStorage(projectDir),
+			[createTask({ id: 1, title: 'Set up the database' })],
+			'master'
+		);
+		fs.writeFileSync(readmePath(), '# Mine\n');
+		tmCore = await createTmCore({ projectPath: projectDir });
+
+		await expect(tmCore.tasks.syncReadme({ status: 'bogus' })).rejects.toThrow(
+			'bogus'
+		);
+		expect(fs.readFileSync(readmePath(), 'utf8')).toBe('# Mine\n');
+	});
+
 	it('writes the tasks into a new README.md', async () => {
 		await seedTasks(
 			new FileStorage(projectDir),

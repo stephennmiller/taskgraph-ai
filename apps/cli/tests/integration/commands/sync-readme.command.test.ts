@@ -50,4 +50,14 @@ describe('taskgraph sync-readme', () => {
 		const readme = fs.readFileSync(path.join(dir, 'README.md'), 'utf8');
 		expect(readme).toContain('Write the parser');
 	});
+
+	test('refuses an unknown --status, like list, and writes nothing', () => {
+		expect(() => run('sync-readme', '--status', 'bogus')).toThrow(/bogus/);
+
+		expect(fs.existsSync(path.join(dir, 'README.md'))).toBe(false);
+	});
+
+	test('says the default tag is the current one', () => {
+		expect(run('sync-readme', '--help')).toContain('default: the current tag');
+	});
 });

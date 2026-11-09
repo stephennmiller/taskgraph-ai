@@ -85,13 +85,15 @@ describe('TagService.createTag', () => {
 		expect(file.copy.metadata.description).toBe('Mine');
 	});
 
-	it('creates an empty tag when the source tag is missing', async () => {
-		const result = await service().createTag('empty', {
-			copyFromTag: 'nope'
-		});
+	it('refuses a missing source tag, like copyTag, and creates nothing', async () => {
+		await expect(
+			service().createTag('empty', { copyFromTag: 'nope' })
+		).rejects.toThrow('Source tag "nope" does not exist');
+		await expect(service().copyTag('nope', 'empty')).rejects.toThrow(
+			'Source tag "nope" does not exist'
+		);
 
-		expect(result.tasksCopied).toBe(0);
-		expect(readTasks().empty.tasks).toEqual([]);
+		expect(readTasks().empty).toBeUndefined();
 	});
 
 	it('creates tasks.json with an empty master when there is none', async () => {
