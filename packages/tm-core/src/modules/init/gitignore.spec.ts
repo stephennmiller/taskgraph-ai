@@ -188,7 +188,7 @@ tasks/ `;
 				manageGitignoreFile('.gitignore', templateContent, true, mockLog);
 
 				expect(writeFileSyncSpy).toHaveBeenCalledWith(
-					'.gitignore',
+					path.resolve('.gitignore'),
 					`# Logs
 logs
 *.log
@@ -196,7 +196,8 @@ logs
 # Task files
 # tasks.json
 # tasks/ 
-`
+`,
+					expect.anything()
 				);
 				expect(mockLog).toHaveBeenCalledWith(
 					'success',
@@ -210,7 +211,7 @@ logs
 				manageGitignoreFile('.gitignore', templateContent, false, mockLog);
 
 				expect(writeFileSyncSpy).toHaveBeenCalledWith(
-					'.gitignore',
+					path.resolve('.gitignore'),
 					`# Logs
 logs
 *.log
@@ -218,7 +219,8 @@ logs
 # Task files
 tasks.json
 tasks/ 
-`
+`,
+					expect.anything()
 				);
 				expect(mockLog).toHaveBeenCalledWith(
 					'success',
@@ -270,20 +272,24 @@ old-file.txt
 				manageGitignoreFile('.gitignore', templateContent, false, mockLog);
 
 				expect(writeFileSyncSpy).toHaveBeenCalledWith(
-					'.gitignore',
-					expect.stringContaining('# Old content')
+					path.resolve('.gitignore'),
+					expect.stringContaining('# Old content'),
+					expect.anything()
 				);
 				expect(writeFileSyncSpy).toHaveBeenCalledWith(
-					'.gitignore',
-					expect.stringContaining('# Logs')
+					path.resolve('.gitignore'),
+					expect.stringContaining('# Logs'),
+					expect.anything()
 				);
 				expect(writeFileSyncSpy).toHaveBeenCalledWith(
-					'.gitignore',
-					expect.stringContaining('# Dependencies')
+					path.resolve('.gitignore'),
+					expect.stringContaining('# Dependencies'),
+					expect.anything()
 				);
 				expect(writeFileSyncSpy).toHaveBeenCalledWith(
-					'.gitignore',
-					expect.stringContaining('# Task files')
+					path.resolve('.gitignore'),
+					expect.stringContaining('# Task files'),
+					expect.anything()
 				);
 			});
 

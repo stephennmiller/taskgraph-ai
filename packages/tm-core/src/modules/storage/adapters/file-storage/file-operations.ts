@@ -15,6 +15,9 @@ import {
 	ERROR_CODES,
 	TaskGraphError
 } from '../../../../common/errors/taskgraph-error.js';
+import { isWithin } from '../../../../common/utils/project-root-finder.js';
+import { writeAtomically } from '../../../../common/utils/write-atomically.js';
+import { resolvesWithin } from '../../../migration/import-paths.js';
 import type { FileStorageData } from './format-handler.js';
 
 /**
@@ -124,6 +127,75 @@ export function refuseSymlinkedFolders(filePath: string): void {
 	refuseSymlinkSync(dir);
 	const parent = path.dirname(dir);
 	if (path.basename(parent) === TASKGRAPH_DIR) refuseSymlinkSync(parent);
+}
+
+interface ProjectFileOptions {
+	/**
+	 * Write a temp file beside it, then rename over it. The rename replaces
+	 * a symlinked file instead of following it, so the file isn't refused.
+	 */
+	atomic?: boolean;
+	/** 'wx': fail with EEXIST when the file exists */
+	flag?: 'wx';
+	/**
+	 * Allow the file to be a link that stays inside `root`, as init allows
+	 * CLAUDE.md -> AGENTS.md; a link out of `root` is still refused
+	 */
+	linkInProject?: boolean;
+}
+
+/**
+ * Refuse every symlinked folder between `root` and the file. A path outside
+ * `root` (one the user named) has no folders checked.
+ * @returns The absolute path
+ * @throws {TaskGraphError} FILE_WRITE_ERROR
+ */
+function refuseLinkedFolders(root: string, file: string): string {
+	const top = path.resolve(root);
+	const full = path.resolve(top, file);
+	if (!isWithin(top, full)) return full;
+	let dir = top;
+	for (const part of path.relative(top, path.dirname(full)).split(path.sep)) {
+		if (!part) continue;
+		dir = path.join(dir, part);
+		refuseSymlinkSync(dir);
+	}
+	return full;
+}
+
+/**
+ * Write a file in the project, creating its folders. Every write into the
+ * project goes through here or appendProjectFile, so none can follow a
+ * committed symlink out of it (GHSA-62pv, #616, #782, #1072);
+ * src/project-writes.spec.ts fails on a write that doesn't.
+ * @param file - Absolute, or relative to `root`
+ * @throws {TaskGraphError} FILE_WRITE_ERROR when a link is refused
+ */
+export function writeProjectFile(
+	root: string,
+	file: string,
+	content: string | Buffer,
+	{ atomic, flag, linkInProject }: ProjectFileOptions = {}
+): void {
+	const full = refuseLinkedFolders(root, file);
+	if (!atomic && !(linkInProject && resolvesWithin(root, full))) {
+		refuseSymlinkSync(full);
+	}
+	fsSync.mkdirSync(path.dirname(full), { recursive: true });
+	if (atomic) writeAtomically(full, content);
+	else fsSync.writeFileSync(full, content, { flag });
+}
+
+/** Append to a file in the project, refusing links as writeProjectFile does */
+export async function appendProjectFile(
+	root: string,
+	file: string,
+	content: string
+): Promise<void> {
+	const full = refuseLinkedFolders(root, file);
+	refuseSymlinkSync(full);
+	await fs.mkdir(path.dirname(full), { recursive: true });
+	await fs.appendFile(full, content, 'utf-8');
 }
 
 /**

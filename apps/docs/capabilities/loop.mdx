@@ -114,6 +114,8 @@ Each loop iteration:
 
 The agent appends its own notes to the progress file as the prompt tells it to.
 
+TaskGraph won't write the progress file through a symlink: if the file, or a folder between the project root and it, is a link, the run stops before the first iteration.
+
 The loop stops when:
 - An agent ends its reply with `<loop-complete>REASON</loop-complete>` - all work done
 - An agent ends its reply with `<loop-blocked>REASON</loop-blocked>` - cannot proceed

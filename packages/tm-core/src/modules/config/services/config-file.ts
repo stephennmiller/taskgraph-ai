@@ -19,7 +19,8 @@ import {
 } from '../../../common/constants/paths.js';
 import {
 	refuseSymlinkSync,
-	refuseSymlinkedFolders
+	refuseSymlinkedFolders,
+	writeProjectFile
 } from '../../storage/adapters/file-storage/file-operations.js';
 import { mergeMachineConfig, splitMachineConfig } from './machine-config.js';
 import { omitShellOnlyConfig } from './project-env.js';
@@ -212,6 +213,7 @@ export function readConfigJson(
 export function writeSplitConfig(rootPath: string, config: JsonObject): void {
 	const configPath = path.join(rootPath, TASKGRAPH_CONFIG_FILE);
 	const localPath = path.join(rootPath, TASKGRAPH_LOCAL_CONFIG_FILE);
+	// Checked up front too, so a refused file leaves the other one unwritten
 	refuseSymlinkedFolders(configPath);
 	refuseSymlinkSync(configPath);
 	refuseSymlinkSync(localPath);
@@ -227,7 +229,8 @@ export function writeSplitConfig(rootPath: string, config: JsonObject): void {
 		// Leave a broken config.local.json for the user to fix rather than
 		// overwrite the settings in it; save everything to config.json as
 		// before config.local.json existed.
-		fs.writeFileSync(
+		writeProjectFile(
+			rootPath,
 			configPath,
 			JSON.stringify(
 				toSavedConfig(config, currentShared, DEFAULT_PROJECT_CONFIG),
@@ -247,9 +250,14 @@ export function writeSplitConfig(rootPath: string, config: JsonObject): void {
 	// Local file first: if the shared write then fails, a moved setting is
 	// in both files rather than in neither
 	if (currentLocal || Object.keys(local).length > 0) {
-		fs.writeFileSync(localPath, `${JSON.stringify(local, null, 2)}\n`);
+		writeProjectFile(
+			rootPath,
+			localPath,
+			`${JSON.stringify(local, null, 2)}\n`
+		);
 	}
-	fs.writeFileSync(
+	writeProjectFile(
+		rootPath,
 		configPath,
 		JSON.stringify(
 			toSavedConfig(shared, currentShared, DEFAULT_PROJECT_CONFIG),

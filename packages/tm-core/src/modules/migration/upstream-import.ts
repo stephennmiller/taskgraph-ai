@@ -10,6 +10,7 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
+import { writeProjectFile } from '../storage/adapters/file-storage/file-operations.js';
 import { stampTasksFileSchemaVersion } from '../storage/adapters/file-storage/schema-version.js';
 import { resolvesWithin } from './import-paths.js';
 
@@ -365,10 +366,8 @@ export function importUpstreamConfig(
 	return { config, keptModels, droppedModels, droppedSettings };
 }
 
-const writeJson = (file: string, data: unknown) => {
-	fs.mkdirSync(path.dirname(file), { recursive: true });
-	fs.writeFileSync(file, `${JSON.stringify(data, null, 2)}\n`);
-};
+const writeJson = (root: string, file: string, data: unknown) =>
+	writeProjectFile(root, file, `${JSON.stringify(data, null, 2)}\n`);
 
 /**
  * Import `.taskmaster/` into `.taskgraph/` under `projectRoot`. Runs
@@ -393,6 +392,7 @@ export function importUpstreamProject(
 	}));
 	if (tags.length > 0)
 		writeJson(
+			projectRoot,
 			path.join(target, TASKS_FILE),
 			stampTasksFileSchemaVersion(tagged)
 		);
@@ -421,7 +421,7 @@ export function importUpstreamProject(
 			isObject(targetConfig) ? targetConfig : {}
 		);
 	if (fs.existsSync(path.join(source, CONFIG_FILE)) || targetConfig) {
-		writeJson(configPath, config);
+		writeJson(projectRoot, configPath, config);
 	}
 
 	// State: keep the selected tag and branch mapping when the tag came over
@@ -444,7 +444,7 @@ export function importUpstreamProject(
 		if (isObject(sourceState.branchTagMapping)) {
 			state.branchTagMapping = sourceState.branchTagMapping;
 		}
-		writeJson(statePath, state);
+		writeJson(projectRoot, statePath, state);
 	}
 
 	return {

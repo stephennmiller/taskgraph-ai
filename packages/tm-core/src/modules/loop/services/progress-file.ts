@@ -4,12 +4,13 @@
  * appends when it ends
  */
 
-import { appendFile, mkdir } from 'node:fs/promises';
-import path from 'node:path';
+import { appendProjectFile } from '../../storage/adapters/file-storage/file-operations.js';
 import type { LoopConfig, LoopIteration, LoopResult } from '../types.js';
 
-export async function initProgressFile(config: LoopConfig): Promise<void> {
-	await mkdir(path.dirname(config.progressFile), { recursive: true });
+export async function initProgressFile(
+	projectRoot: string,
+	config: LoopConfig
+): Promise<void> {
 	const lines = [
 		'# TaskGraph Loop Progress',
 		`# Started: ${new Date().toISOString()}`,
@@ -21,10 +22,10 @@ export async function initProgressFile(config: LoopConfig): Promise<void> {
 		''
 	];
 	// Append to existing progress file instead of overwriting
-	await appendFile(
+	await appendProjectFile(
+		projectRoot,
 		config.progressFile,
-		'\n' + lines.join('\n') + '\n',
-		'utf-8'
+		'\n' + lines.join('\n') + '\n'
 	);
 }
 
@@ -49,6 +50,7 @@ function spend(
 
 /** `# Iteration 2: success · resumed · complexity 2 · sonnet, low effort · $0.42 · 12 turns · 83s` */
 export async function appendIterationLine(
+	projectRoot: string,
 	file: string,
 	iteration: LoopIteration
 ): Promise<void> {
@@ -71,14 +73,15 @@ export async function appendIterationLine(
 			? [`${Math.round(iteration.duration / 1000)}s`]
 			: [])
 	];
-	await appendFile(
+	await appendProjectFile(
+		projectRoot,
 		file,
-		`# Iteration ${iteration.iteration}: ${facts.join(' · ')}\n`,
-		'utf-8'
+		`# Iteration ${iteration.iteration}: ${facts.join(' · ')}\n`
 	);
 }
 
 export async function appendFinalSummary(
+	projectRoot: string,
 	file: string,
 	result: LoopResult
 ): Promise<void> {
@@ -88,7 +91,8 @@ export async function appendFinalSummary(
 		false,
 		result.costPartial
 	);
-	await appendFile(
+	await appendProjectFile(
+		projectRoot,
 		file,
 		`
 ---
@@ -96,7 +100,6 @@ export async function appendFinalSummary(
 - Total iterations: ${result.totalIterations}
 - Tasks completed: ${result.tasksCompleted}
 - Final status: ${result.finalStatus}
-${cost.length ? `- Spent: ${cost.join(' · ')}\n` : ''}${result.totalDurationMs !== undefined ? `- Time: ${Math.round(result.totalDurationMs / 60000)} min\n` : ''}${(result.setAside ?? []).map((t) => `- Set aside task ${t.id} (${t.reason}): run taskgraph show ${t.id}, then taskgraph set-status --id=${t.id} --status=pending\n`).join('')}`,
-		'utf-8'
+${cost.length ? `- Spent: ${cost.join(' · ')}\n` : ''}${result.totalDurationMs !== undefined ? `- Time: ${Math.round(result.totalDurationMs / 60000)} min\n` : ''}${(result.setAside ?? []).map((t) => `- Set aside task ${t.id} (${t.reason}): run taskgraph show ${t.id}, then taskgraph set-status --id=${t.id} --status=pending\n`).join('')}`
 	);
 }
