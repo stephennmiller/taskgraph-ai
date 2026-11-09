@@ -5,7 +5,8 @@
 import { TASK_STATUSES } from '../../../common/constants/index.js';
 import {
 	ERROR_CODES,
-	TaskGraphError
+	TaskGraphError,
+	errorWithHint
 } from '../../../common/errors/taskgraph-error.js';
 import type {
 	Subtask,
@@ -60,9 +61,9 @@ export class TaskEntity implements Task {
 		// (`remove-subtask --convert` copied an empty one). It takes its title,
 		// so one such task doesn't stop the whole tag from loading
 		this.description = promotedSubtaskDescription(data);
-		this.status = data.status;
-		// Hand-edited or older files can leave priority out; read it as medium
-		// instead of failing every reader of the tag
+		// Hand-edited or older files can leave status or priority out; read them
+		// as pending and medium instead of failing every reader of the tag
+		this.status = data.status ?? 'pending';
 		this.priority = data.priority ?? 'medium';
 		this.dependencies = ids.dependencies;
 		this.details = data.details;
@@ -107,18 +108,18 @@ export class TaskEntity implements Task {
 			);
 		}
 
-		if (!this.isValidStatus(data.status)) {
-			throw new TaskGraphError(
-				`Invalid task status: ${data.status}`,
-				ERROR_CODES.VALIDATION_ERROR
+		// The wording doctor uses for the same value; it has the fix
+		const unknown = (field: 'status' | 'priority') =>
+			errorWithHint(
+				ERROR_CODES.VALIDATION_ERROR,
+				`Task ${data.id} has ${field} ${JSON.stringify(data[field])}`,
+				'Run `taskgraph doctor` to see how to fix it'
 			);
+		if (data.status != null && !this.isValidStatus(data.status)) {
+			throw unknown('status');
 		}
-
 		if (data.priority != null && !this.isValidPriority(data.priority)) {
-			throw new TaskGraphError(
-				`Invalid task priority: ${data.priority}`,
-				ERROR_CODES.VALIDATION_ERROR
-			);
+			throw unknown('priority');
 		}
 	}
 
