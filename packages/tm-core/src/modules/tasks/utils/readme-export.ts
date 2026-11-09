@@ -12,7 +12,7 @@ import {
 } from '../../../common/errors/taskgraph-error.js';
 import type { Task } from '../../../common/types/index.js';
 import { resolvePathInsideRoot } from '../../../common/utils/path-inside-root.js';
-import { writeAtomically } from '../../../common/utils/write-atomically.js';
+import { writeProjectFile } from '../../storage/adapters/file-storage/file-operations.js';
 
 export interface ReadmeExportOptions {
 	/** Include each task's subtasks as rows */
@@ -188,10 +188,8 @@ export function writeReadmeExport(
 ): string {
 	const readmePath = path.join(projectRoot, 'README.md');
 	// A symlinked README keeps its link, but only to a file inside the project
-	const target = resolvePathInsideRoot(
-		fs.realpathSync(projectRoot),
-		readmePath
-	);
+	const realRoot = fs.realpathSync(projectRoot);
+	const target = resolvePathInsideRoot(realRoot, readmePath);
 	if (target === null) {
 		throw errorWithHint(
 			ERROR_CODES.INVALID_INPUT,
@@ -210,9 +208,11 @@ export function writeReadmeExport(
 		timestamp: `${new Date().toISOString().replace('T', ' ').substring(0, 19)} UTC`,
 		projectRoot
 	});
-	writeAtomically(
+	writeProjectFile(
+		realRoot,
 		target,
-		mergeReadmeSection(readme, section, options.projectName)
+		mergeReadmeSection(readme, section, options.projectName),
+		{ atomic: true }
 	);
 	return readmePath;
 }

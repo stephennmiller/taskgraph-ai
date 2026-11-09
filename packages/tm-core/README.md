@@ -30,7 +30,6 @@ await tmCore.close(); // releases file locks
 | --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `tmCore.tasks`  | Read and change tasks: `list`, `get`, `getNext`, `claimNext`, `update`, `updateStatus`, `addNote`, checklists, archive, tags, dependency trees and blockers |
 | `tmCore.config` | Project config: `getConfig`, `getModelConfig`, `getActiveTag`, `setActiveTag`, `updateConfig`                                                               |
-| `tmCore.git`    | Repository state, branches, staging and commits (`createCommit`, `generateCommitMessage`)                                                                   |
 | `tmCore.github` | Sync with GitHub Issues: `status`, `planPush`/`push`, `planPull`/`pull`, `unlink`                                                                           |
 | `tmCore.loop`   | Run Claude Code over tasks one at a time (`run`) or in parallel worktrees (`runParallel`)                                                                   |
 | `tmCore.logger` | The logger. Pass `loggerConfig` to `createTmCore` to route it; the MCP server sends it to the MCP log                                                       |

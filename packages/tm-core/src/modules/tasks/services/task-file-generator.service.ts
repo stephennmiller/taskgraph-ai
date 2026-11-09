@@ -10,7 +10,10 @@ import type { IStorage } from '../../../common/interfaces/storage.interface.js';
 import type { ConfigManager } from '../../config/managers/config-manager.js';
 import { resolveSubtaskDependency } from '../../dependencies/subtask-dependency.js';
 import { isSafeTaskId } from '../../../common/utils/safe-task-id.js';
-import { refuseSymlink } from '../../storage/adapters/file-storage/file-operations.js';
+import {
+	refuseSymlink,
+	writeProjectFile
+} from '../../storage/adapters/file-storage/file-operations.js';
 import { assertTagName } from '../utils/tag-names.js';
 
 /**
@@ -38,6 +41,18 @@ export interface GenerateTaskFilesResult {
 	error?: string;
 	/** Individual file write errors (task ID -> error message) */
 	fileErrors?: Record<string, string>;
+}
+
+/**
+ * The file `generate` writes for a task, which `remove-task` deletes:
+ * task_001.md in master, task_001_<tag>.md in other tags
+ */
+export function taskFileName(taskId: string | number, tag: string): string {
+	assertTagName(tag);
+	const paddedId = String(taskId).padStart(3, '0');
+	return tag === 'master'
+		? `task_${paddedId}.md`
+		: `task_${paddedId}_${tag}.md`;
 }
 
 /**
@@ -103,10 +118,14 @@ export class TaskFileGeneratorService {
 						);
 					}
 					const content = this.formatTaskContent(task, tasks);
-					const fileName = this.getTaskFileName(task.id, tag);
+					const fileName = taskFileName(task.id, tag);
 					const filePath = path.join(outputDir, fileName);
-					await refuseSymlink(filePath);
-					await fs.writeFile(filePath, content, 'utf-8');
+					// A folder the user named may be a link; the default one may not
+					writeProjectFile(
+						options.outputDir ? outputDir : this.projectPath,
+						path.resolve(filePath),
+						content
+					);
 					return task.id;
 				})
 			);
@@ -139,18 +158,6 @@ export class TaskFileGeneratorService {
 				error: error.message
 			};
 		}
-	}
-
-	/**
-	 * Get the filename for a task file
-	 * Master tag: task_001.md
-	 * Other tags: task_001_tagname.md
-	 */
-	private getTaskFileName(taskId: string | number, tag: string): string {
-		const paddedId = String(taskId).padStart(3, '0');
-		return tag === 'master'
-			? `task_${paddedId}.md`
-			: `task_${paddedId}_${tag}.md`;
 	}
 
 	/**

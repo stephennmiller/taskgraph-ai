@@ -284,6 +284,24 @@ describe('repo summary', () => {
 			}
 		);
 
+		it.skipIf(process.platform === 'win32')(
+			'does not create the target of a dangling cache .gitignore link',
+			() => {
+				const missing = path.join(os.tmpdir(), `tm-missing-${process.pid}`);
+				fs.mkdirSync(path.join(root, '.taskgraph', 'cache'), {
+					recursive: true
+				});
+				fs.symlinkSync(
+					missing,
+					path.join(root, '.taskgraph', 'cache', '.gitignore')
+				);
+
+				expect(getRepoSummary(root)).toContain('src/one.ts');
+
+				expect(fs.existsSync(missing)).toBe(false);
+			}
+		);
+
 		it('builds without caching outside git', () => {
 			// A fresh folder, not root minus .git: git's background maintenance can
 			// keep a deleted .git partly in place (#713)

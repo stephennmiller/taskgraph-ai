@@ -80,7 +80,9 @@ export class TaskReader {
 
 		// Warns about storage settings left from older configs
 		this.configManager.getStorageConfig();
-		this.storage = new FileStorage(this.configManager.getProjectRoot());
+		this.storage = new FileStorage(this.configManager.getProjectRoot(), () =>
+			this.configManager.getDefinitionOfDone()
+		);
 
 		// Initialize storage
 		await this.storage.initialize();

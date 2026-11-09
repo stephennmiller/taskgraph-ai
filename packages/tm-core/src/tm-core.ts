@@ -6,7 +6,6 @@
 import path from 'node:path';
 import { ConfigDomain } from './modules/config/config-domain.js';
 import { ConfigManager } from './modules/config/managers/config-manager.js';
-import { GitDomain } from './modules/git/git-domain.js';
 import { GitHubDomain } from './modules/github/github-domain.js';
 import { LoopDomain } from './modules/loop/loop-domain.js';
 import { TasksDomain } from './modules/tasks/tasks-domain.js';
@@ -40,7 +39,6 @@ export interface TmCoreOptions {
  *
  * // Access any domain
  * const { tasks } = await tmcore.tasks.list();
- * await tmcore.git.createCommit('feat: add feature');
  * const modelConfig = tmcore.config.getModelConfig();
  * ```
  *
@@ -72,7 +70,6 @@ export class TmCore {
 
 	// Private writable properties
 	private _tasks!: TasksDomain;
-	private _git!: GitDomain;
 	private _config!: ConfigDomain;
 	private _loop!: LoopDomain;
 	private _github!: GitHubDomain;
@@ -80,9 +77,6 @@ export class TmCore {
 	// Public readonly getters
 	get tasks(): TasksDomain {
 		return this._tasks;
-	}
-	get git(): GitDomain {
-		return this._git;
 	}
 	get config(): ConfigDomain {
 		return this._config;
@@ -152,7 +146,6 @@ export class TmCore {
 
 			// Initialize domain facades
 			this._tasks = new TasksDomain(this._configManager);
-			this._git = new GitDomain(this._projectPath);
 			this._config = new ConfigDomain(this._configManager);
 			this._loop = new LoopDomain(this._configManager, this._tasks);
 

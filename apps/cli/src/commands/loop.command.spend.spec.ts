@@ -64,7 +64,7 @@ describe('LoopCommand cost and caps', () => {
 				isTaskPreset: () => false,
 				resolveTask: async (id: string) => ({ id, title: 'Users table' })
 			},
-			tasks: { getCount: async () => 0 },
+			tasks: { getPickableCount: async () => 0 },
 			config: { getActiveTag: () => 'master' }
 		} as never);
 	});

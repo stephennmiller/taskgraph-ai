@@ -24,7 +24,9 @@ const GetTaskSchema = z.object({
 	status: z
 		.string()
 		.optional()
-		.describe("Filter subtasks by status (e.g., 'pending', 'done')"),
+		.describe(
+			"Only return subtasks with these statuses (e.g., 'pending' or 'pending,done')"
+		),
 	projectRoot: z
 		.string()
 		.describe(
@@ -60,7 +62,9 @@ export function registerGetTaskTool(server: FastMCP) {
 					const taskIds = parseTaskIds(id);
 					const results = await Promise.all(
 						taskIds.map(async (taskId) => ({
-							...(await tmCore.tasks.get(taskId, tag)),
+							...(await tmCore.tasks.get(taskId, tag, {
+								subtaskStatus: status
+							})),
 							prdSection: await tmCore.tasks.getPrdSection(taskId, tag)
 						}))
 					);
@@ -73,19 +77,7 @@ export function registerGetTaskTool(server: FastMCP) {
 						const task = prdSection
 							? { ...result.task, prdSection }
 							: result.task;
-
-						// If status filter is provided, filter subtasks (create copy to avoid mutation)
-						if (status && task.subtasks) {
-							const statusFilters = status
-								.split(',')
-								.map((s) => s.trim().toLowerCase());
-							const filteredSubtasks = task.subtasks.filter((st) =>
-								statusFilters.includes(String(st.status).toLowerCase())
-							);
-							tasks.push({ ...task, subtasks: filteredSubtasks });
-						} else {
-							tasks.push(task);
-						}
+						tasks.push(task);
 					}
 
 					if (tasks.length === 0) {

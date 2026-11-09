@@ -2,18 +2,14 @@
  * @fileoverview Git operations for `loop --parallel`: the clean-tree check,
  * one worktree and branch per task, and removing the ones nobody used.
  *
- * Every call runs `git` with an argv array through execFile, never a shell,
- * and the branch names and paths it gets come from parallel-plan.ts, which
- * only builds them from checked task IDs.
+ * Every call goes through runGit, and the branch names and paths it gets
+ * come from parallel-plan.ts, which only builds them from checked task IDs.
  */
 
-import { execFile } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
-import { promisify } from 'node:util';
+import { gitRef, runGit } from '../../../common/utils/git-utils.js';
 import { ParallelLoopError } from './parallel-plan.js';
-
-const run = promisify(execFile);
 
 /** What a task's worktree holds once its Claude Code process is done */
 export interface WorktreeWork {
@@ -100,20 +96,10 @@ export class TaskWorktrees {
 	}
 
 	private async git(args: string[], cwd = this.projectRoot): Promise<string> {
-		// No program named by repository config, no bare repository found by walking up
-		const hardened = [
-			'-c',
-			'safe.bareRepository=explicit',
-			'-c',
-			'core.fsmonitor=false',
-			...args
-		];
-		const { stdout } = await run('git', hardened, {
-			cwd,
-			encoding: 'utf8',
-			maxBuffer: 16 * 1024 * 1024
-		});
-		return stdout;
+		// No time limit: `worktree add`, `merge` and `checkout` run the user's
+		// hooks (an npm install, a test suite), and killing one leaves a
+		// half-made worktree or a merge in progress
+		return (await runGit(args, { cwd, timeoutMs: 0 })).stdout;
 	}
 
 	private async succeeds(args: string[]): Promise<boolean> {
@@ -296,7 +282,7 @@ export class TaskWorktrees {
 		}
 		fs.mkdirSync(path.dirname(worktree), { recursive: true });
 		if (await this.branchExists(branch)) {
-			await this.git(['worktree', 'add', '--quiet', worktree, branch]);
+			await this.git(['worktree', 'add', '--quiet', worktree, gitRef(branch)]);
 			return { createdBranch: false };
 		}
 		await this.git([
@@ -304,9 +290,9 @@ export class TaskWorktrees {
 			'add',
 			'--quiet',
 			'-b',
-			branch,
+			gitRef(branch),
 			worktree,
-			base
+			gitRef(base)
 		]);
 		return { createdBranch: true };
 	}
@@ -375,9 +361,18 @@ export class TaskWorktrees {
 	 * here is used only when it's at `base` or where an earlier run left it
 	 * (recordBranch); any other commits on it (`gh pr checkout`, a pull, a
 	 * `--container` run, a commit of your own) weren't approved.
+	 *
+	 * `resumeIn` is the task worktree when this run took over its own dead
+	 * run's claim: that run's worker committed there after the last record
+	 * (a crash skipped settle), so a tip that still has the recorded one as
+	 * an ancestor, checked out in that worktree, is its work.
 	 * @throws ParallelLoopError naming the branch and how to set it aside
 	 */
-	async assertBranchReusable(branch: string, base: string): Promise<void> {
+	async assertBranchReusable(
+		branch: string,
+		base: string,
+		resumeIn?: string
+	): Promise<void> {
 		const tip = await this.tip(branch);
 		if (tip === undefined || tip === base) return;
 		const recorded = await fs.promises
@@ -387,6 +382,15 @@ export class TaskWorktrees {
 				() => ''
 			);
 		if (recorded === tip) return;
+		if (
+			recorded &&
+			resumeIn &&
+			(await this.worktreeBranches()).get(canonical(resumeIn)) ===
+				`refs/heads/${branch}` &&
+			(await this.succeeds(['merge-base', '--is-ancestor', recorded, tip]))
+		) {
+			return;
+		}
 		throw new ParallelLoopError(
 			`${branch} already exists with commits the loop didn't record (made outside a run, or by a --container run), so its files weren't approved. Review it with \`git diff ${base} ${branch}\`, then rename it (\`git branch -m ${branch} <new-name>\`) or delete it (\`git branch -D ${branch}\`, after \`git worktree remove\` if a worktree has it), and run again`
 		);
@@ -433,11 +437,8 @@ export class TaskWorktrees {
 	 * refused rather than replacing the branch.
 	 */
 	async fetchFromClone(clone: string, branch: string): Promise<void> {
-		await run(
-			'git',
+		await runGit(
 			[
-				'-c',
-				'core.fsmonitor=false',
 				'-c',
 				'core.hooksPath=/dev/null',
 				'-c',
@@ -455,10 +456,9 @@ export class TaskWorktrees {
 			],
 			{
 				cwd: this.projectRoot,
-				encoding: 'utf8',
-				timeout: 10 * 60_000,
+				timeoutMs: 10 * 60_000,
 				// upload-pack sets this itself; said again so nothing undoes it
-				env: { ...process.env, GIT_NO_LAZY_FETCH: '1' }
+				env: { GIT_NO_LAZY_FETCH: '1' }
 			}
 		);
 	}
@@ -478,7 +478,7 @@ export class TaskWorktrees {
 	 * @returns false, with the merge undone, when it conflicts or fails
 	 */
 	async merge(branch: string): Promise<boolean> {
-		if (await this.succeeds(['merge', '--no-edit', branch])) {
+		if (await this.succeeds(['merge', '--no-edit', gitRef(branch)])) {
 			return true;
 		}
 		await this.succeeds(['merge', '--abort']);
@@ -495,16 +495,25 @@ export class TaskWorktrees {
 		worktree: string,
 		branch: string
 	): Promise<string | undefined> {
-		if (!(await this.succeeds(['worktree', 'remove', worktree]))) return;
+		if (!(await this.removeWorktree(worktree))) return;
 		let n = 1;
 		while (await this.branchExists(`${branch}-conflict-${n}`)) n++;
 		const kept = `${branch}-conflict-${n}`;
-		await this.git(['branch', '-m', branch, kept]);
+		await this.git(['branch', '-m', gitRef(branch), gitRef(kept)]);
 		return kept;
 	}
 
+	/**
+	 * `git worktree remove`, never forced. A path git has no worktree for
+	 * (a `--container` task's clone) counts as already removed (#1068).
+	 */
+	private async removeWorktree(worktree: string): Promise<boolean> {
+		if (!(await this.worktreeBranches()).has(canonical(worktree))) return true;
+		return this.succeeds(['worktree', 'remove', worktree]);
+	}
+
 	async deleteBranch(branch: string): Promise<void> {
-		await this.succeeds(['branch', '-d', branch]);
+		await this.succeeds(['branch', '-d', gitRef(branch)]);
 	}
 
 	/** Commits and uncommitted changes in a task's worktree */
@@ -535,8 +544,8 @@ export class TaskWorktrees {
 		branch: string,
 		deleteBranch: boolean
 	): Promise<boolean> {
-		if (!(await this.succeeds(['worktree', 'remove', worktree]))) return false;
-		if (deleteBranch) await this.succeeds(['branch', '-d', branch]);
+		if (!(await this.removeWorktree(worktree))) return false;
+		if (deleteBranch) await this.succeeds(['branch', '-d', gitRef(branch)]);
 		return true;
 	}
 }

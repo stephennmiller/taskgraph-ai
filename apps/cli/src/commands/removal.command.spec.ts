@@ -134,7 +134,7 @@ describe('remove-task', () => {
 			removedTasks: [{}],
 			messages: [],
 			danglingDependents: 0,
-			errors: ['Failed to delete task file task_002.txt: EACCES'],
+			errors: ['Failed to delete task file task_002.md: EACCES'],
 			tag: 'master',
 			tasksPath: ''
 		});

@@ -990,6 +990,175 @@
         "priority": "medium",
         "subtasks": [],
         "createdAt": "2026-11-08T03:09:37.486Z"
+      },
+      {
+        "id": "77",
+        "title": "Copying a tag copies its GitHub links, so a push from the copy takes over the original's issues (#1063)",
+        "description": "GitHub issue #1063, found by the 2026-11-09 codebase review.",
+        "details": "",
+        "testStrategy": "",
+        "status": "done",
+        "dependencies": [],
+        "priority": "medium",
+        "subtasks": [],
+        "createdAt": "2026-11-09T21:04:22.888Z",
+        "updatedAt": "2026-11-09T21:04:32.723Z"
+      },
+      {
+        "id": "78",
+        "title": "Deleting or renaming a tag lets a recreated tag reuse its task IDs, and push then reopens the old issues (#1064)",
+        "description": "GitHub issue #1064, found by the 2026-11-09 codebase review.",
+        "details": "",
+        "testStrategy": "",
+        "status": "done",
+        "dependencies": [],
+        "priority": "medium",
+        "subtasks": [],
+        "createdAt": "2026-11-09T21:04:23.392Z",
+        "updatedAt": "2026-11-09T21:04:32.723Z"
+      },
+      {
+        "id": "79",
+        "title": "update-task that drops subtasks leaves the parent's status stale (#1065)",
+        "description": "GitHub issue #1065, found by the 2026-11-09 codebase review.",
+        "details": "",
+        "testStrategy": "",
+        "status": "done",
+        "dependencies": [],
+        "priority": "medium",
+        "subtasks": [],
+        "createdAt": "2026-11-09T21:04:23.896Z",
+        "updatedAt": "2026-11-09T21:04:32.723Z"
+      },
+      {
+        "id": "80",
+        "title": "Rerunning go on a PRD with no headings adds every task again (#1066)",
+        "description": "GitHub issue #1066, found by the 2026-11-09 codebase review.",
+        "details": "",
+        "testStrategy": "",
+        "status": "done",
+        "dependencies": [],
+        "priority": "medium",
+        "subtasks": [],
+        "createdAt": "2026-11-09T21:04:24.443Z",
+        "updatedAt": "2026-11-09T21:04:32.723Z"
+      },
+      {
+        "id": "81",
+        "title": "A resumed loop stops one task short and exits 0 (#1067)",
+        "description": "GitHub issue #1067, found by the 2026-11-09 codebase review.",
+        "details": "",
+        "testStrategy": "",
+        "status": "done",
+        "dependencies": [],
+        "priority": "medium",
+        "subtasks": [],
+        "createdAt": "2026-11-09T21:04:24.932Z",
+        "updatedAt": "2026-11-09T21:04:32.723Z"
+      },
+      {
+        "id": "82",
+        "title": "loop --parallel --merge --container stops on a conflict instead of setting the branch aside (#1068)",
+        "description": "GitHub issue #1068, found by the 2026-11-09 codebase review.",
+        "details": "",
+        "testStrategy": "",
+        "status": "done",
+        "dependencies": [],
+        "priority": "medium",
+        "subtasks": [],
+        "createdAt": "2026-11-09T21:04:25.449Z",
+        "updatedAt": "2026-11-09T21:04:32.723Z"
+      },
+      {
+        "id": "83",
+        "title": "show with several IDs prints a box table with color codes when piped (#1069)",
+        "description": "GitHub issue #1069, found by the 2026-11-09 codebase review.",
+        "details": "",
+        "testStrategy": "",
+        "status": "done",
+        "dependencies": [],
+        "priority": "medium",
+        "subtasks": [],
+        "createdAt": "2026-11-09T21:04:26.042Z",
+        "updatedAt": "2026-11-09T21:04:32.723Z"
+      },
+      {
+        "id": "84",
+        "title": "show --status filters subtasks differently in CLI, --json and MCP, and accepts any value (#1070)",
+        "description": "GitHub issue #1070, found by the 2026-11-09 codebase review.",
+        "details": "",
+        "testStrategy": "",
+        "status": "done",
+        "dependencies": [],
+        "priority": "medium",
+        "subtasks": [],
+        "createdAt": "2026-11-09T21:04:26.542Z",
+        "updatedAt": "2026-11-09T21:04:32.723Z"
+      },
+      {
+        "id": "85",
+        "title": "remove-task leaves the removed task's generated file behind (#1071)",
+        "description": "GitHub issue #1071, found by the 2026-11-09 codebase review.",
+        "details": "",
+        "testStrategy": "",
+        "status": "done",
+        "dependencies": [],
+        "priority": "medium",
+        "subtasks": [],
+        "createdAt": "2026-11-09T21:04:27.067Z",
+        "updatedAt": "2026-11-09T21:04:32.723Z"
+      },
+      {
+        "id": "86",
+        "title": "research --save-file writes through a symlinked .taskgraph/docs (#1072)",
+        "description": "GitHub issue #1072, found by the 2026-11-09 codebase review.",
+        "details": "",
+        "testStrategy": "",
+        "status": "done",
+        "dependencies": [],
+        "priority": "medium",
+        "subtasks": [],
+        "createdAt": "2026-11-09T21:04:27.608Z",
+        "updatedAt": "2026-11-09T21:04:32.724Z"
+      },
+      {
+        "id": "87",
+        "title": "llms-install.md tells agents to rename .taskmaster by hand instead of init --from-taskmaster (#1073)",
+        "description": "GitHub issue #1073, found by the 2026-11-09 codebase review.",
+        "details": "",
+        "testStrategy": "",
+        "status": "done",
+        "dependencies": [],
+        "priority": "medium",
+        "subtasks": [],
+        "createdAt": "2026-11-09T21:04:28.093Z",
+        "updatedAt": "2026-11-09T21:04:32.724Z"
+      },
+      {
+        "id": "88",
+        "title": "Plugin todo-list hook only matches TodoWrite, not the TaskCreate/TaskUpdate tools (#1074)",
+        "description": "GitHub issue #1074, found by the 2026-11-09 codebase review.",
+        "details": "",
+        "testStrategy": "",
+        "status": "done",
+        "dependencies": [],
+        "priority": "medium",
+        "subtasks": [],
+        "createdAt": "2026-11-09T21:04:28.593Z",
+        "updatedAt": "2026-11-09T21:04:32.724Z"
+      },
+      {
+        "id": "89",
+        "title": "Remove dead code knip can't see: tmCore.git stack, tm-profiles shell utils, unused git and archive helpers (#1075)",
+        "description": "GitHub issue #1075, found by the 2026-11-09 codebase review.",
+        "details": "",
+        "testStrategy": "",
+        "status": "done",
+        "dependencies": [],
+        "priority": "medium",
+        "subtasks": [],
+        "createdAt": "2026-11-09T21:04:29.100Z",
+        "updatedAt": "2026-11-09T21:11:15.373Z"
       }
     ],
     "metadata": {
@@ -998,12 +1167,13 @@
       "schemaVersion": 2,
       "updated": "2026-10-24T00:05:11.748Z",
       "version": "1.0.0",
-      "lastModified": "2026-11-08T03:09:37.486Z",
-      "taskCount": 76,
-      "completedCount": 73,
+      "lastModified": "2026-11-09T21:11:15.374Z",
+      "taskCount": 89,
+      "completedCount": 87,
       "tags": [
         "master"
-      ]
+      ],
+      "highestId": 89
     }
   }
 }

@@ -20,7 +20,6 @@ import path from 'node:path';
 import { isTaskComplete } from '../../../common/constants/index.js';
 import type { Task } from '../../../common/types/index.js';
 import { resolveSubtaskDependency } from '../../dependencies/subtask-dependency.js';
-import { FileOperations } from '../../storage/adapters/file-storage/file-operations.js';
 import { normalizeTaskStatuses } from './legacy-status.js';
 
 /** Days a finished task stays in tasks.json before `archive` moves it */
@@ -41,6 +40,8 @@ export interface ArchiveTagData {
 		/** Highest task ID ever archived in this tag; never goes down */
 		highestId: number;
 		lastModified?: string;
+		/** On a renamed tag's tombstone: the name it was renamed to */
+		renamedTo?: string;
 	};
 }
 
@@ -440,25 +441,65 @@ function readTagSync(tasksPath: string, tag: string): unknown {
 
 /**
  * The archive with a tag's section moved to a new tag name, for a tag
- * rename. A section already under the new name (left by a tag deleted
- * before deletes cleaned up the archive) is replaced.
- * @returns null when the old tag has nothing archived
+ * rename. A section already under the new name (a deleted tag's tombstone,
+ * or one left by a delete before deletes cleaned up the archive) is
+ * replaced, keeping its `highestId`. The old name keeps a tombstone (see
+ * dropArchiveTag) that notes the new name in `renamedTo`, so the tag can
+ * be renamed back.
+ * @param highestId - The highest ID the tag held in tasks.json (highestTaskId)
+ * @returns null when there is nothing to record
  */
 export function renameArchiveTag(
 	archive: ArchiveData,
 	oldTag: string,
-	newTag: string
+	newTag: string,
+	highestId = 0
 ): ArchiveData | null {
-	const section = ownSection(archive, oldTag);
-	if (section === undefined) return null;
-	const { [oldTag]: _old, ...rest } = archive;
-	return { ...rest, [newTag]: section as ArchiveTagData };
+	const moved =
+		ownSection(archive, oldTag) === undefined
+			? archive
+			: { ...archive, [newTag]: sectionFor(archive, oldTag, newTag) };
+	const dropped = dropArchiveTag(moved, oldTag, highestId);
+	if (!dropped || !Object.hasOwn(dropped, oldTag)) return dropped;
+	const tombstone = dropped[oldTag];
+	return {
+		...dropped,
+		[oldTag]: {
+			...tombstone,
+			metadata: { ...tombstone.metadata, renamedTo: newTag }
+		}
+	};
+}
+
+/**
+ * A copy of `fromTag`'s section for `toTag`, with `highestId` covering what
+ * both names reserve, so a tombstone under `toTag` is never lowered
+ */
+function sectionFor(
+	archive: ArchiveData,
+	fromTag: string,
+	toTag: string
+): ArchiveTagData {
+	const section = structuredClone(
+		ownSection(archive, fromTag)
+	) as ArchiveTagData;
+	return {
+		...section,
+		metadata: {
+			...section.metadata,
+			highestId: Math.max(
+				archiveTag(archive, fromTag).metadata.highestId,
+				archiveTag(archive, toTag).metadata.highestId
+			)
+		}
+	};
 }
 
 /**
  * The archive with a copy of a tag's section under a new tag name, for a tag
  * copy: the copied tasks keep their dependencies on archived tasks (which
- * still count as done), and the new tag never reuses an archived ID
+ * still count as done), and the new tag never reuses an archived ID or one
+ * a deleted tag of that name used
  * @returns null when the source tag has nothing archived
  */
 export function copyArchiveTag(
@@ -466,72 +507,34 @@ export function copyArchiveTag(
 	fromTag: string,
 	toTag: string
 ): ArchiveData | null {
-	const section = ownSection(archive, fromTag);
-	if (section === undefined) return null;
-	return { ...archive, [toTag]: structuredClone(section) as ArchiveTagData };
+	if (ownSection(archive, fromTag) === undefined) return null;
+	return { ...archive, [toTag]: sectionFor(archive, fromTag, toTag) };
 }
 
 /**
- * The archive without a tag's section, for a tag delete: its archived tasks
- * go with the tag
- * @returns null when the tag has nothing archived
+ * The archive with a tag's archived tasks dropped, for a tag delete. A
+ * tombstone `{ tasks: [], metadata: { highestId } }` stays under the name,
+ * so a tag created later with that name never reuses one of its IDs (an ID
+ * names one task for its whole life, and GitHub link recovery relies on it).
+ * @param highestId - The highest ID the tag held in tasks.json (highestTaskId)
+ * @returns null when there is nothing to record
  */
 export function dropArchiveTag(
 	archive: ArchiveData,
-	tag: string
+	tag: string,
+	highestId = 0
 ): ArchiveData | null {
+	const kept = Math.max(highestId, archiveTag(archive, tag).metadata.highestId);
+	if (kept > 0) {
+		return {
+			...archive,
+			[tag]: {
+				tasks: [],
+				metadata: { highestId: kept, lastModified: new Date().toISOString() }
+			}
+		};
+	}
 	if (ownSection(archive, tag) === undefined) return null;
 	const { [tag]: _dropped, ...rest } = archive;
 	return rest;
-}
-
-/**
- * Apply a tag change to archive.json under its lock (the same lock tm-core's
- * archive and restore take), with an atomic write, so a concurrent archive
- * run's tasks are never lost. Does nothing when there is no archive or the
- * tag has nothing archived.
- */
-async function updateArchiveFile(
-	tasksPath: string,
-	change: (archive: ArchiveData) => ArchiveData | null
-): Promise<void> {
-	const archivePath = archivePathFor(tasksPath);
-	const fileOps = new FileOperations();
-	if (!(await fileOps.exists(archivePath))) return;
-	await fileOps.modifyJson(
-		archivePath,
-		(current: ArchiveData) => change(current ?? {}) ?? current
-	);
-}
-
-/** Move a renamed tag's archived tasks to its new name (see renameArchiveTag) */
-export function renameArchivedTag(
-	tasksPath: string,
-	oldTag: string,
-	newTag: string
-): Promise<void> {
-	return updateArchiveFile(tasksPath, (archive) =>
-		renameArchiveTag(archive, oldTag, newTag)
-	);
-}
-
-/** Remove a deleted tag's archived tasks (see dropArchiveTag) */
-export function deleteArchivedTag(
-	tasksPath: string,
-	tag: string
-): Promise<void> {
-	return updateArchiveFile(tasksPath, (archive) =>
-		dropArchiveTag(archive, tag)
-	);
-}
-
-/** Copy a tag's archived tasks to a copy of the tag (see copyArchiveTag) */
-export function copyArchivedTag(
-	tasksPath: string,
-	fromTag: string,
-	toTag: string
-): Promise<void> {
-	return updateArchiveFile(tasksPath, (archive) =>
-		copyArchiveTag(archive, fromTag, toTag)
-	);
 }

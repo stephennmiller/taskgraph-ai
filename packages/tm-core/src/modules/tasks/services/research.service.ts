@@ -35,6 +35,7 @@ import { getPromptManager } from '../../ai/prompts/prompt-manager.js';
 import { findTaskOrSubtask, gatherTaskContext } from '../../ai/task-context.js';
 import type { ConfigManager } from '../../config/managers/config-manager.js';
 import { untrustLoop } from '../../loop/loop-trust.js';
+import { writeProjectFile } from '../../storage/adapters/file-storage/file-operations.js';
 import type { TaskService } from './task-service.js';
 
 /** How many tasks matching the question go into the context */
@@ -235,11 +236,6 @@ function researchFilePath(projectRoot: string, question: string): string {
 		'research',
 		`${date}_${slug}.md`
 	);
-}
-
-function writeFile(file: string, content: string): void {
-	fs.mkdirSync(path.dirname(file), { recursive: true });
-	fs.writeFileSync(file, content, 'utf8');
 }
 
 export class ResearchService {
@@ -480,7 +476,11 @@ export class ResearchService {
 		}
 		if (saveAs) {
 			try {
-				writeFile(saveAs, `# Research: ${query}\n\n${answer}\n`);
+				writeProjectFile(
+					projectRoot,
+					saveAs,
+					`# Research: ${query}\n\n${answer}\n`
+				);
 				result.savedAs = saveAs;
 			} catch (error) {
 				result.saveFailures.push({
@@ -506,7 +506,7 @@ export class ResearchService {
 	): Promise<ResearchSaved> {
 		if ('file' in target) {
 			const file = researchFilePath(this.projectRoot, history[0]?.question);
-			writeFile(file, conversationForFile(history));
+			writeProjectFile(this.projectRoot, file, conversationForFile(history));
 			return { kind: 'file', path: path.relative(this.projectRoot, file) };
 		}
 		const id = target.taskId.trim();

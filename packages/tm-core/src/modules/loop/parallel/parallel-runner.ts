@@ -227,7 +227,12 @@ export class ParallelLoopRunner {
 						...taskArgs
 					];
 					let cwd: string;
-					await git.assertBranchReusable(entry.task.branch, base);
+					await git.assertBranchReusable(
+						entry.task.branch,
+						base,
+						// Our own dead run's claim: its worker's commits are resumable
+						claim.resumedFrom === claimant ? entry.task.worktree : undefined
+					);
 					if (workers) {
 						const prepared = await workers.prepare(
 							entry.task,

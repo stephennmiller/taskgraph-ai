@@ -84,6 +84,27 @@ export function hashPrdSection(text: string): string {
 	return createHash('sha256').update(normalized).digest('hex').slice(0, 16);
 }
 
+/**
+ * The sections whose hashes a parse records: the PRD's own, or for a PRD with
+ * no headings one section holding all of it, so an unchanged rerun of
+ * `--append` is still known (#1066)
+ */
+export function trackedPrdSections(
+	sections: PrdSection[],
+	markdown: string
+): PrdSection[] {
+	if (sections.length > 0) return sections;
+	return [
+		{
+			slug: 'whole-prd',
+			title: 'Whole PRD',
+			level: 1,
+			line: 1,
+			text: markdown
+		}
+	];
+}
+
 /** Every section's hash, by slug: what the tag records after a parse */
 export function buildPrdSnapshot(sections: PrdSection[]): PrdSnapshot {
 	return Object.fromEntries(

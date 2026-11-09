@@ -20,7 +20,6 @@ import type { TasksDomain } from './modules/tasks/tasks-domain.js';
  *
  * // Access domains
  * const { tasks } = await tmcore.tasks.list();
- * await tmcore.git.createCommit('feat: add feature');
  * const modelConfig = tmcore.config.getModelConfig();
  * ```
  */
@@ -113,9 +112,6 @@ export type {
 export type TaskWithSubtaskResult = Awaited<ReturnType<TasksDomain['get']>>;
 export type { ArchiveResult } from './modules/tasks/tasks-edit-commands.js';
 
-// Git types
-export type { CommitMessageOptions } from './modules/git/services/commit-message-generator.js';
-
 // Reports types
 export type {
 	ComplexityReport,
@@ -191,8 +187,6 @@ export type {
 // ========== Advanced API (for CLI/Extension/MCP) ==========
 
 // Git - Advanced
-export { GitAdapter } from './modules/git/adapters/git-adapter.js';
-export { CommitMessageGenerator } from './modules/git/services/commit-message-generator.js';
 export * from './modules/git/merge-driver/index.js';
 
 // Tasks - Advanced
@@ -280,9 +274,6 @@ export {
 	liveOrArchived,
 	withStoredDependencies,
 	nextTaskId,
-	renameArchivedTag,
-	deleteArchivedTag,
-	copyArchivedTag,
 	type ArchivedIds
 } from './modules/tasks/utils/index.js';
 

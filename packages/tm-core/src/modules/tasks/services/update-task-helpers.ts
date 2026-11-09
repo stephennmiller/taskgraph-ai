@@ -269,7 +269,8 @@ export function rewriteSubtasks(
  * a rewrite removed (#804, #827), then each dependency a rewrite added that
  * would close a loop (#824, #832), checked against `current`, not the tasks
  * read before the AI call. `warn` is told about each removal and drop (#863),
- * links included (#869)
+ * links included (#869). FileStorage then settles a task that lost
+ * subtasks from the ones left (#1065)
  */
 export function settleRewrites(
 	current: Task[],
@@ -278,9 +279,10 @@ export function settleRewrites(
 ): void {
 	const removed = rewrites.flatMap(({ stored, saved }) => {
 		const kept = new Set((saved.subtasks ?? []).map((st) => String(st.id)));
-		return (stored.subtasks ?? [])
-			.filter((st) => !kept.has(String(st.id)))
-			.map((st) => fullSubtaskId(saved.id, st.id));
+		const lost = (stored.subtasks ?? []).filter(
+			(st) => !kept.has(String(st.id))
+		);
+		return lost.map((st) => fullSubtaskId(saved.id, st.id));
 	});
 	if (removed.length > 0) {
 		const gone = new Set(removed);

@@ -28,7 +28,7 @@
  * tags so text from the repo reads as data, not as part of the prompt.
  */
 
-import { execFileSync } from 'node:child_process';
+import { runGitSync } from '../../common/utils/git-utils.js';
 import fs from 'node:fs';
 import path from 'node:path';
 import {
@@ -36,8 +36,7 @@ import {
 	TASKGRAPH_DIR
 } from '../../common/constants/paths.js';
 import { neutralizeTag } from '../../common/utils/prompt-tag.js';
-import { writeAtomically } from '../../common/utils/write-atomically.js';
-import { refuseSymlinkedFolders } from '../storage/adapters/file-storage/file-operations.js';
+import { writeProjectFile } from '../storage/adapters/file-storage/file-operations.js';
 
 /**
  * Bump when the summary's content changes, so old caches are rebuilt.
@@ -125,11 +124,9 @@ interface CachedSummary {
 /** The HEAD commit of the repo `root` is in, or null outside git */
 function gitHead(root: string): string | null {
 	try {
-		const head = execFileSync('git', ['rev-parse', '--verify', 'HEAD'], {
+		const head = runGitSync(['rev-parse', '--verify', 'HEAD'], {
 			cwd: root,
-			encoding: 'utf8',
-			stdio: ['ignore', 'pipe', 'ignore'],
-			timeout: 5000
+			timeoutMs: 5000
 		}).trim();
 		return /^[0-9a-f]{40,64}$/.test(head) ? head : null;
 	} catch {
@@ -174,13 +171,7 @@ const isSkipped = (relative: string) =>
 /** Files tracked by git under `root`, relative to it with `/` separators */
 function gitFiles(root: string): string[] | null {
 	try {
-		const out = execFileSync('git', ['ls-files', '-z'], {
-			cwd: root,
-			encoding: 'utf8',
-			stdio: ['ignore', 'pipe', 'ignore'],
-			timeout: 10000,
-			maxBuffer: 64 * 1024 * 1024
-		});
+		const out = runGitSync(['ls-files', '-z'], { cwd: root, timeoutMs: 10000 });
 		return out.split('\0').filter(Boolean);
 	} catch {
 		return null;
@@ -418,12 +409,12 @@ function writeCache(root: string, cached: CachedSummary): void {
 	const dir = path.join(root, TASKGRAPH_CACHE_DIR);
 	const file = path.join(dir, CACHE_FILE);
 	try {
-		refuseSymlinkedFolders(file);
-		fs.mkdirSync(dir, { recursive: true });
 		// Keep the cache out of git without editing the project's .gitignore
 		const ignore = path.join(dir, '.gitignore');
-		if (!fs.existsSync(ignore)) fs.writeFileSync(ignore, '*\n');
-		writeAtomically(file, JSON.stringify(cached, null, 2));
+		if (!fs.existsSync(ignore)) writeProjectFile(root, ignore, '*\n');
+		writeProjectFile(root, file, JSON.stringify(cached, null, 2), {
+			atomic: true
+		});
 	} catch {
 		// The summary still works uncached
 	}

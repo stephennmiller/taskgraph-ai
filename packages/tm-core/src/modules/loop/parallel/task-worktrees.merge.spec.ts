@@ -6,8 +6,16 @@ import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { runGit } from '../../../common/utils/git-utils.js';
 import { TaskWorktrees } from './task-worktrees.js';
+
+// The real runGit, watched for the options each call passes
+vi.mock('../../../common/utils/git-utils.js', async (importOriginal) => {
+	const actual =
+		await importOriginal<typeof import('../../../common/utils/git-utils.js')>();
+	return { ...actual, runGit: vi.fn(actual.runGit) };
+});
 
 describe('TaskWorktrees.merge', () => {
 	let root: string;
@@ -39,6 +47,24 @@ describe('TaskWorktrees.merge', () => {
 
 		expect(await new TaskWorktrees(root).merge('taskgraph/task-1')).toBe(true);
 		expect(fs.readFileSync(path.join(root, 'b.txt'), 'utf8')).toBe('new\n');
+	});
+
+	it('never times out a worktree add or merge, which run user hooks', async () => {
+		git('checkout', '-qb', 'taskgraph/task-1');
+		commit('b.txt', 'new\n');
+		git('checkout', '-q', 'main');
+		const tg = new TaskWorktrees(root);
+		vi.mocked(runGit).mockClear();
+
+		await tg.add(path.join(root, 'wt'), 'taskgraph/task-2', 'main');
+		await tg.merge('taskgraph/task-1');
+
+		const timeouts = vi
+			.mocked(runGit)
+			.mock.calls.map(([args, options]) => [args[0], options.timeoutMs]);
+		expect(timeouts).toContainEqual(['worktree', 0]);
+		expect(timeouts).toContainEqual(['merge', 0]);
+		expect(timeouts.every(([, timeout]) => timeout === 0)).toBe(true);
 	});
 
 	it('undoes a conflicting merge and says it failed', async () => {
@@ -75,5 +101,33 @@ describe('TaskWorktrees.merge', () => {
 			await new TaskWorktrees(root).setAside(worktree, 'taskgraph/task-1')
 		).toBeUndefined();
 		expect(fs.existsSync(path.join(worktree, 'a.txt'))).toBe(true);
+	});
+
+	// A --container task's folder is a clone, not a worktree (#1068)
+	describe('a branch with no worktree', () => {
+		const withBranch = () => {
+			git('branch', 'taskgraph/task-1');
+			return path.join(root, '.taskgraph', 'worktrees', 'task-1');
+		};
+
+		it('sets the branch aside', async () => {
+			const clone = withBranch();
+
+			expect(
+				await new TaskWorktrees(root).setAside(clone, 'taskgraph/task-1')
+			).toBe('taskgraph/task-1-conflict-1');
+			expect(git('branch', '--list', 'taskgraph/*').trim()).toBe(
+				'taskgraph/task-1-conflict-1'
+			);
+		});
+
+		it('deletes the merged branch', async () => {
+			const clone = withBranch();
+
+			expect(
+				await new TaskWorktrees(root).remove(clone, 'taskgraph/task-1', true)
+			).toBe(true);
+			expect(git('branch', '--list', 'taskgraph/*').trim()).toBe('');
+		});
 	});
 });

@@ -98,3 +98,88 @@ describe('FileStorage high-water mark', () => {
 		expect(plan.steps[0].action).toBe('create');
 	});
 });
+
+describe('FileStorage tag delete and rename keep used IDs (#1064)', () => {
+	let tempDir: string;
+	let storage: FileStorage;
+	const reportOf = (tag: string) =>
+		path.join(
+			tempDir,
+			'.taskgraph',
+			'reports',
+			`task-complexity-report_${tag}.json`
+		);
+	const titled = (id: string) => createTask({ id, title: `T${id}` });
+
+	beforeEach(async () => {
+		tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'tg-tag-ids-'));
+		fs.mkdirSync(path.join(tempDir, '.taskgraph', 'tasks'), {
+			recursive: true
+		});
+		fs.mkdirSync(path.dirname(reportOf('other')), { recursive: true });
+		storage = new FileStorage(tempDir);
+		await storage.appendTasks([titled('1')], 'master');
+		await storage.createTag('other');
+		await storage.appendTasks(
+			['1', '2', '3', '4'].map((id) => titled(id)),
+			'other'
+		);
+		fs.writeFileSync(reportOf('other'), '{"complexityAnalysis":[]}');
+	});
+
+	afterEach(() => {
+		fs.rmSync(tempDir, { recursive: true, force: true });
+	});
+
+	it('numbers a recreated tag above the deleted one, and drops its complexity report', async () => {
+		await storage.deleteTag('other');
+		await storage.createTag('other');
+		const [added] = await storage.appendTasks([titled('1')], 'other');
+
+		expect(added.id).toBe('5');
+		expect(fs.existsSync(reportOf('other'))).toBe(false);
+	});
+
+	it('numbers a tag created under a renamed tag’s old name above it, and moves the report', async () => {
+		await storage.renameTag('other', 'renamed');
+		await storage.createTag('other');
+		const [added] = await storage.appendTasks([titled('1')], 'other');
+		const [inRenamed] = await storage.appendTasks([titled('1')], 'renamed');
+
+		expect(added.id).toBe('5');
+		expect(inRenamed.id).toBe('5');
+		expect(fs.existsSync(reportOf('other'))).toBe(false);
+		expect(fs.existsSync(reportOf('renamed'))).toBe(true);
+	});
+
+	it('refuses a copy or rename onto a removed tag’s name that would reuse its IDs', async () => {
+		await storage.deleteTag('other');
+
+		await expect(storage.copyTag('master', 'other')).rejects.toThrow(
+			/used IDs up to 4/
+		);
+		await expect(
+			storage.createTag('other', { copyFrom: 'master' })
+		).rejects.toThrow(/used IDs up to 4/);
+		await expect(storage.renameTag('master', 'other')).rejects.toThrow(
+			/used IDs up to 4/
+		);
+		expect(await storage.getAllTags()).toEqual(['master']);
+	});
+
+	it('lets a renamed tag be renamed back, but not another tag onto its old name', async () => {
+		await storage.renameTag('other', 'renamed');
+		await expect(storage.renameTag('master', 'other')).rejects.toThrow(
+			/used IDs up to 4/
+		);
+
+		await storage.renameTag('renamed', 'other');
+
+		expect((await storage.loadTasks('other')).map((t) => t.id)).toEqual([
+			'1',
+			'2',
+			'3',
+			'4'
+		]);
+	});
+});

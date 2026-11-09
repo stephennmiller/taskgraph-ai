@@ -55,6 +55,15 @@ stay), then [`loop`](/capabilities/loop) with the default preset. Each step
 prints what it always prints. The first step that fails stops the rest, and
 `go` exits with its code.
 
+When you run `go` again on a project with work done or under way, it prints
+one line saying what it is resuming before `loop` starts:
+
+```
+Resuming: 3 done, task 4 in progress, 5 pending
+```
+
+A first run, with every task still pending, prints no such line.
+
 ## Check the Setup
 
 ```bash
@@ -125,6 +134,8 @@ taskgraph tags copy <source-tag> <target-tag>
 taskgraph tags remove <tag-name> --yes
 ```
 
+A copy (`tags copy` or `tags add --copy-from`) leaves out each task's GitHub link and claim, so pushing the copy creates its own issues. A removed or renamed tag's name keeps its highest task ID, so a new tag with that name numbers its tasks above it, and the tag's complexity report is deleted or renamed with it. A copy or rename onto a removed or renamed tag's name is refused when it would bring back one of that tag's IDs; renaming a tag back to its old name is allowed.
+
 ## Configure AI Models
 
 ```bash
@@ -161,7 +172,7 @@ To manage your dotfiles yourself, print the script instead: `taskgraph completio
 ## Loop (Autonomous Batch Execution)
 
 ```bash
-# Work through the backlog, one iteration per pending task
+# Work through the backlog, one iteration per pending or in-progress task
 taskgraph loop
 
 # Stop after 10 iterations

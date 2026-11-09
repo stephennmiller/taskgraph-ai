@@ -4,19 +4,18 @@ import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { createSubtask, createTask } from '../../../testing/task-fixtures.js';
 import {
+	type ArchiveData,
 	addToArchive,
 	archivePathFor,
 	archiveTag,
 	archivedTaskIds,
 	copyArchiveTag,
-	deleteArchivedTag,
 	dropArchiveTag,
 	isArchivedReference,
 	lastChangedAt,
 	nextTaskId,
 	readArchivedIdsSync,
 	renameArchiveTag,
-	renameArchivedTag,
 	satisfyArchivedDependencies,
 	selectArchivable,
 	takeFromArchive
@@ -331,20 +330,50 @@ describe('tag rename and delete', () => {
 		)
 	});
 
-	it("moves a renamed tag's section and leaves the others", () => {
+	it("moves a renamed tag's section and leaves a tombstone under the old name", () => {
 		const renamed = renameArchiveTag(archive(), 'feature', 'launch');
 
-		expect(Object.keys(renamed ?? {}).sort()).toEqual(['launch', 'master']);
-		expect(renamed?.launch.metadata.highestId).toBe(4);
-	});
-
-	it("drops a deleted tag's section", () => {
-		expect(Object.keys(dropArchiveTag(archive(), 'feature') ?? {})).toEqual([
+		expect(Object.keys(renamed ?? {}).sort()).toEqual([
+			'feature',
+			'launch',
 			'master'
 		]);
+		expect(renamed?.launch.metadata.highestId).toBe(4);
+		expect(renamed?.feature).toMatchObject({
+			tasks: [],
+			metadata: { highestId: 4 }
+		});
 	});
 
-	it('returns null when the tag has nothing archived', () => {
+	it("drops a deleted tag's tasks and keeps its highest ID", () => {
+		const dropped = dropArchiveTag(archive(), 'feature', 9);
+
+		expect(dropped?.feature).toMatchObject({
+			tasks: [],
+			metadata: { highestId: 9 }
+		});
+		expect(dropped?.master).toEqual(archive().master);
+	});
+
+	it('records a tombstone for a tag that had nothing archived but used IDs', () => {
+		expect(dropArchiveTag({}, 'other', 3)?.other.metadata.highestId).toBe(3);
+		expect(
+			renameArchiveTag({}, 'other', 'x', 3)?.other.metadata.highestId
+		).toBe(3);
+	});
+
+	it("never lowers a tombstone's highest ID when a rename or copy lands on its name", () => {
+		const tombstoned = dropArchiveTag(archive(), 'old', 10) as ArchiveData;
+
+		expect(
+			renameArchiveTag(tombstoned, 'feature', 'old')?.old.metadata.highestId
+		).toBe(10);
+		expect(
+			copyArchiveTag(tombstoned, 'feature', 'old')?.old.metadata.highestId
+		).toBe(10);
+	});
+
+	it('returns null when the tag has nothing archived and used no IDs', () => {
 		expect(renameArchiveTag(archive(), 'other', 'x')).toBeNull();
 		expect(dropArchiveTag(archive(), 'other')).toBeNull();
 	});
@@ -386,31 +415,6 @@ describe('tag rename and delete', () => {
 		expect(archiveTag(stored, '__proto__').metadata.highestId).toBe(7);
 		expect(Object.getPrototypeOf(stored)).toBe(Object.prototype);
 		expect(({} as Record<string, unknown>).tasks).toBeUndefined();
-	});
-
-	it('updates archive.json on disk under its lock, and creates none when there is no archive', async () => {
-		const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'tg-archive-tag-'));
-		try {
-			const tasksPath = path.join(dir, 'tasks.json');
-			await renameArchivedTag(tasksPath, 'feature', 'launch');
-			expect(fs.existsSync(archivePathFor(tasksPath))).toBe(false);
-
-			fs.writeFileSync(archivePathFor(tasksPath), JSON.stringify(archive()));
-			await renameArchivedTag(tasksPath, 'feature', 'launch');
-			expect(readArchivedIdsSync(tasksPath, 'launch').ids).toEqual(
-				new Set(['4'])
-			);
-			expect(readArchivedIdsSync(tasksPath, 'feature').highestId).toBe(0);
-
-			await deleteArchivedTag(tasksPath, 'launch');
-			expect(readArchivedIdsSync(tasksPath, 'launch').highestId).toBe(0);
-			expect(readArchivedIdsSync(tasksPath, 'master').ids).toEqual(
-				new Set(['2'])
-			);
-			expect(fs.readdirSync(dir).sort()).toEqual(['archive.json']);
-		} finally {
-			fs.rmSync(dir, { recursive: true, force: true });
-		}
 	});
 });
 

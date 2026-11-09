@@ -27,7 +27,6 @@ import {
 	normalizeTaskId
 } from '../validation/task-id.js';
 import { liveOrArchived, nextTaskId } from './archive.js';
-import { type ParentDoneGuard, settleParentsIn } from './parent-status.js';
 import { promotedSubtaskDescription } from './promoted-subtask.js';
 
 type StoredSubtask = Subtask & Record<string, unknown>;
@@ -134,8 +133,7 @@ export function removeTasksIn(
 	tasks: Task[],
 	ids: string[],
 	tag: string,
-	archivedIds: ReadonlySet<string>,
-	guardDone?: ParentDoneGuard
+	archivedIds: ReadonlySet<string>
 ): RemoveTasksOutcome {
 	if (ids.length === 0) {
 		throw errorWithHint(ERROR_CODES.INVALID_INPUT, 'Task ID is required');
@@ -155,7 +153,6 @@ export function removeTasksIn(
 		danglingDependents: 0
 	};
 	const removedIds = new Set<string>();
-	const parents: string[] = [];
 	for (const id of ids) {
 		// Gone already: listed twice, or a subtask of a task removed before it
 		const item = findItem(tasks, id);
@@ -163,7 +160,6 @@ export function removeTasksIn(
 		if (item.subtask) {
 			const subtasks = item.task.subtasks as StoredSubtask[];
 			subtasks.splice(subtasks.indexOf(item.subtask), 1);
-			parents.push(String(item.task.id));
 			outcome.removedTasks.push({
 				...item.subtask,
 				parentTaskId: parseInt(id, 10)
@@ -185,7 +181,6 @@ export function removeTasksIn(
 		outcome.messages.push(`Successfully removed task ${id} from tag '${tag}'`);
 	}
 	dropReferences(tasks, removedIds);
-	settleParentsIn(tasks, parents, guardDone);
 
 	// Dependencies that were already dangling stay; callers point to
 	// fix-dependencies. A failed check must not fail the removal.
@@ -209,7 +204,6 @@ interface RemoveSubtaskOptions {
 	/** The archive's highest ID for the tag; a new task's ID goes above it */
 	highestArchivedId: number;
 	archivedIds: ReadonlySet<string>;
-	guardDone?: ParentDoneGuard;
 }
 
 /**
@@ -230,7 +224,7 @@ export function removeSubtasksIn(
 function removeSubtaskIn(
 	tasks: Task[],
 	id: string,
-	{ convert, highestArchivedId, archivedIds, guardDone }: RemoveSubtaskOptions
+	{ convert, highestArchivedId, archivedIds }: RemoveSubtaskOptions
 ): Task | null {
 	// Exactly "<task>.<subtask>": parseInt read "1.1x" as 1.1 (#539)
 	if (!/^\d+\.\d+$/.test(id)) {
@@ -264,7 +258,6 @@ function removeSubtaskIn(
 	const [removed] = subtasks.splice(index, 1);
 	// Saved without the key, as the legacy command did
 	if (subtasks.length === 0) delete (parent as Partial<Task>).subtasks;
-	settleParentsIn(tasks, [parentId], guardDone);
 	const fullId = `${parentId}.${subtaskNumber}`;
 
 	if (!convert) {

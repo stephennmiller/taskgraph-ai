@@ -22,10 +22,7 @@ import {
 	hasPerMachineSettings,
 	mergeMachineConfig
 } from '../config/services/machine-config.js';
-import {
-	refuseSymlinkSync,
-	refuseSymlinkedFolders
-} from '../storage/adapters/file-storage/file-operations.js';
+import { writeProjectFile } from '../storage/adapters/file-storage/file-operations.js';
 import { stampTasksFileSchemaVersion } from '../storage/adapters/file-storage/schema-version.js';
 import { readAsset } from './assets.js';
 import type { InitReport } from './claude-code.js';
@@ -49,10 +46,13 @@ export function createInitialStateFile(
 		migrationNoticeShown: true
 	};
 	try {
-		// wx: a dangling symlink there fails instead of creating its target
-		fs.writeFileSync(stateFilePath, JSON.stringify(initialState, null, 2), {
-			flag: 'wx'
-		});
+		// wx: an existing file is kept
+		writeProjectFile(
+			targetDir,
+			stateFilePath,
+			JSON.stringify(initialState, null, 2),
+			{ flag: 'wx' }
+		);
 	} catch (error) {
 		report('error', `Failed to create state file: ${errorText(error)}`);
 	}
@@ -80,20 +80,25 @@ export function createInitialTasksFile(
 		}
 	});
 	try {
-		fs.writeFileSync(tasksPath, `${JSON.stringify(emptyTasks, null, 2)}\n`, {
-			flag: 'wx'
-		});
+		writeProjectFile(
+			targetDir,
+			tasksPath,
+			`${JSON.stringify(emptyTasks, null, 2)}\n`,
+			{ flag: 'wx' }
+		);
 	} catch (error) {
 		report('error', `Failed to create tasks file: ${errorText(error)}`);
 	}
 }
 
-/** Copy `assets/<templateName>` to `targetPath`, unless the file exists */
+/** Copy `assets/<templateName>` to `file` in the project, unless it exists */
 export function copyTemplateFile(
 	templateName: string,
-	targetPath: string,
+	projectRoot: string,
+	file: string,
 	report: InitReport
 ): void {
+	const targetPath = path.join(projectRoot, file);
 	let content: string;
 	try {
 		content = readAsset(templateName);
@@ -111,7 +116,7 @@ export function copyTemplateFile(
 		return;
 	}
 	try {
-		fs.writeFileSync(targetPath, content, { flag: 'wx' });
+		writeProjectFile(projectRoot, targetPath, content, { flag: 'wx' });
 	} catch (error) {
 		report(
 			'error',
@@ -125,12 +130,11 @@ export function copyTemplateFile(
  * @returns false when config.json can't be read or written
  */
 export function updateConfigMaxTokens(
-	configPath: string,
+	projectRoot: string,
 	report: InitReport
 ): boolean {
+	const configPath = path.join(projectRoot, TASKGRAPH_CONFIG_FILE);
 	try {
-		refuseSymlinkedFolders(configPath);
-		refuseSymlinkSync(configPath);
 		const config = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
 		for (const role of ['main', 'research', 'fallback']) {
 			const model = config.models?.[role];
@@ -140,7 +144,7 @@ export function updateConfigMaxTokens(
 			);
 			if (modelData?.max_tokens) model.maxTokens = modelData.max_tokens;
 		}
-		fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
+		writeProjectFile(projectRoot, configPath, JSON.stringify(config, null, 2));
 		return true;
 	} catch (error) {
 		report('error', `Error updating config maxTokens: ${errorText(error)}`);
@@ -150,12 +154,11 @@ export function updateConfigMaxTokens(
 
 /** config.json's storage: local files, solo mode */
 export function updateStorageConfig(
-	configPath: string,
+	projectRoot: string,
 	report: InitReport
 ): void {
+	const configPath = path.join(projectRoot, TASKGRAPH_CONFIG_FILE);
 	try {
-		refuseSymlinkedFolders(configPath);
-		refuseSymlinkSync(configPath);
 		if (!fs.existsSync(configPath)) {
 			report(
 				'warn',
@@ -168,7 +171,7 @@ export function updateStorageConfig(
 		config.storage.type = 'file';
 		// 'solo' selects the standalone slash commands and rules
 		config.storage.operatingMode = 'solo';
-		fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
+		writeProjectFile(projectRoot, configPath, JSON.stringify(config, null, 2));
 	} catch (error) {
 		report(
 			'error',

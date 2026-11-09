@@ -52,7 +52,6 @@ import { getPrdSource } from '../../prd/prd-sections.js';
 import { setGeneratedCriteria } from '../utils/acceptance-criteria.js';
 import { TAG_NAME_PATTERN } from '../utils/tag-names.js';
 import { normalizeTaskId } from '../validation/task-id.js';
-import { parentDoneGate, withParentStatus } from '../utils/parent-status.js';
 import { appendPromptContext, refuseAppendWithForce } from './expand-append.js';
 import { explicitCount } from './expand-count.js';
 import { degenerateReply } from './expand-reply-check.js';
@@ -406,13 +405,8 @@ export class ExpandTaskService {
 			}
 			renumberSubtasks(taskId, target.subtasks, addedSubtasks);
 			target.subtasks.push(...addedSubtasks);
-			// A done task that gains open subtasks is in progress again (#1042)
-			const saved = withParentStatus(
-				target,
-				parentDoneGate(this.configManager.getDefinitionOfDone())
-			);
-			current[current.indexOf(target)] = saved;
-			return { tasks: current, result: saved };
+			// FileStorage settles it: a done task gains open subtasks (#1042)
+			return { tasks: current, result: target };
 		}, tag);
 		return result;
 	}

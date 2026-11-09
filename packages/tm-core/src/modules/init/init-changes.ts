@@ -3,7 +3,7 @@
  * write, turned into the rows of init's summary
  */
 
-import { execFileSync } from 'node:child_process';
+import { runGitSync } from '../../common/utils/git-utils.js';
 import fs from 'node:fs';
 import path from 'node:path';
 import {
@@ -141,9 +141,8 @@ export function describeInitChanges(
  */
 export function isTrackedInGit(targetDir: string, file: string): boolean {
 	try {
-		execFileSync('git', ['ls-files', '--error-unmatch', '--', file], {
-			cwd: targetDir,
-			stdio: 'ignore'
+		runGitSync(['ls-files', '--error-unmatch', '--', file], {
+			cwd: targetDir
 		});
 		return true;
 	} catch {

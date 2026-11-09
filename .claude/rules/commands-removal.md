@@ -22,7 +22,8 @@ The rest of the CLI command rules are in [commands.md](commands.md).
   agents, so print an error whose hint is `--yes` and exit 1.
 - **tm-core cleans up.** It drops every dependency and link that pointed at
   what was removed (`modules/dependencies/removed-references.ts`), settles
-  the parent's status, and deletes the removed tasks' `task_NNN.txt` files
+  the parent's status, and deletes the removed tasks' generated files
+  (`taskFileName`: `task_NNN.md`, or `task_NNN_<tag>.md` outside master)
   after `tasks.json` is saved. The command prints nothing of this itself.
 - **One result line.** `formatTasksRemoved` says what was removed and, when
   tasks still depend on missing ones, points to `taskgraph fix-dependencies`.

@@ -128,7 +128,7 @@ With the MCP server, the user can say the same things in plain language, such as
 - Run `claude` once and make sure the user is signed in
 - Run `taskgraph models` and confirm the roles are set to `opus`, `sonnet` or `haiku`
 
-**If a project came from Task Master or a release before 0.47:** rename `.taskmaster/` to `.taskgraph/` by hand and rename any `TASK_MASTER_*` or `TASKMASTER_*` environment variables to `TASKGRAPH_*`. `taskgraph migrate` and `.taskmasterconfig` no longer exist. See the upgrade guide in `apps/docs/upgrading.mdx`.
+**If a project came from Task Master or a release before 0.47:** run `taskgraph init --from-taskmaster --yes` in the project to import `.taskmaster/` into `.taskgraph/` (don't rename the folder by hand: the import drops settings TaskGraph doesn't support), and rename any `TASK_MASTER_*` or `TASKMASTER_*` environment variables to `TASKGRAPH_*`. `taskgraph migrate` and `.taskmasterconfig` no longer exist. See `apps/docs/migrating-from-taskmaster.mdx` and the upgrade guide in `apps/docs/upgrading.mdx`.
 
 ## Next Steps
 

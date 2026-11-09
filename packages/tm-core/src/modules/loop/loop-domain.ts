@@ -289,6 +289,7 @@ export class LoopDomain {
 				resolve: async (task, budgetUsd) => {
 					if (options.container) return { ok: false, costUsd: 0 };
 					const commit = await git.head();
+					const started = Date.now();
 					const resolved = await resolveConflict({
 						projectRoot: this.projectRoot,
 						worktree: task.worktree,
@@ -299,6 +300,23 @@ export class LoopDomain {
 						model: options.model,
 						signal: options.signal
 					});
+					// The resolve is work on this task: its spend goes on it, not as a loop iteration
+					await tasks
+						.addSpend(
+							task.id,
+							{
+								usd: resolved.costUsd,
+								durationMs: Date.now() - started,
+								iterations: 0
+							},
+							options.tag
+						)
+						.catch((error) =>
+							this.logger.warn(
+								`Couldn't add task ${task.id}'s conflict resolve spend to it:`,
+								error
+							)
+						);
 					const { uncommitted } = await git.work(
 						task.worktree,
 						task.branch,
@@ -413,14 +431,14 @@ export class LoopDomain {
 	 * Resolve the number of iterations to use:
 	 * - the user's `-n`, when given
 	 * - 1 for a pinned task (`--id`)
-	 * - the pending count (tasks + subtasks) for the default preset
+	 * - the pending and in-progress count (tasks + subtasks) for a task preset
 	 * - otherwise 10
 	 */
 	resolveIterations(options: {
 		userIterations?: number;
 		preset: string;
 		taskId?: string;
-		pendingTaskCount?: number;
+		pickableTaskCount?: number;
 	}): number {
 		if (options.userIterations !== undefined) {
 			return options.userIterations;

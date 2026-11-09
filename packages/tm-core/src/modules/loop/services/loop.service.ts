@@ -142,7 +142,7 @@ export class LoopService {
 		// Only a run that works on tasks can be stuck on one
 		const watchesTasks = !!config.taskId || isTaskPreset(config.prompt);
 
-		await initProgressFile(config);
+		await initProgressFile(this.projectRoot, config);
 		let statuses = await this.readStatuses(config);
 		let head = await this.readHead();
 		this.approved = !config.sandbox && isLoopTrusted(this.projectRoot);
@@ -253,7 +253,11 @@ export class LoopService {
 			}
 
 			config.callbacks?.onIterationEnd?.(iteration);
-			await appendIterationLine(config.progressFile, iteration);
+			await appendIterationLine(
+				this.projectRoot,
+				config.progressFile,
+				iteration
+			);
 
 			// Check for early exit conditions
 			if (iteration.status === 'complete') {
@@ -440,7 +444,7 @@ export class LoopService {
 		);
 		const setAside = this.stuck?.tasks;
 		if (setAside) result.setAside = setAside;
-		await appendFinalSummary(config.progressFile, result);
+		await appendFinalSummary(this.projectRoot, config.progressFile, result);
 		return result;
 	}
 

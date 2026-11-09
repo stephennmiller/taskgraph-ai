@@ -56,6 +56,8 @@ export function claimNextInTasks(
 	if (!next) return null;
 
 	const claim = { claimedBy, claimedAt };
+	const previous = started(next) ? next.metadata?.claimedBy : undefined;
+	const resumed = typeof previous === 'string' ? { resumedFrom: previous } : {};
 	const holder =
 		options.pid === undefined
 			? {}
@@ -74,7 +76,10 @@ export function claimNextInTasks(
 			String(task.id) === id ? start(task) : task
 		);
 		const task = updated.find((t) => String(t.id) === id) as Task;
-		return { tasks: updated, claim: { task: asLoaded(task), ...claim } };
+		return {
+			tasks: updated,
+			claim: { task: asLoaded(task), ...claim, ...resumed }
+		};
 	}
 
 	const [parentId, subId] = id.split('.');
@@ -90,6 +95,6 @@ export function claimNextInTasks(
 	});
 	return {
 		tasks: updated,
-		claim: { task: asLoaded(start(next)), ...claim }
+		claim: { task: asLoaded(start(next)), ...claim, ...resumed }
 	};
 }
