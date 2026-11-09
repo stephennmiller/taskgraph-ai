@@ -22,8 +22,8 @@ describe('formatGoResume', () => {
 	});
 
 	it('strips control codes from a task ID', () => {
-		expect(
-			formatGoResume({ done: 1 }, [{ id: '4\u001b[2J' }])
-		).not.toContain('\u001b');
+		expect(formatGoResume({ done: 1 }, [{ id: '4\u001b[2J' }])).not.toContain(
+			'\u001b'
+		);
 	});
 });
