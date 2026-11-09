@@ -14,6 +14,10 @@ export interface TraceEntry {
 	prompt: string;
 	/** The initialize control request the SDK sent, if any */
 	initialize: any;
+	/** The fake's own process */
+	pid: number;
+	/** The process that started the fake: the CLI command calling the model */
+	ppid: number;
 }
 
 export function installFakeClaude(options: {

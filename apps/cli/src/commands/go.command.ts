@@ -5,9 +5,10 @@
  * a later one are the same call), then `loop`. Each step is this CLI run
  * again, so it prints what it always prints, and the first step that fails
  * stops the rest. On a rerun it says what loop resumes before loop starts.
+ * A signal that stops `go` goes on to the running step (#1103).
  */
 
-import { spawnSync } from 'node:child_process';
+import { spawn } from 'node:child_process';
 import fs from 'node:fs';
 import {
 	SKIP_AUTO_UPDATE_ENV,
@@ -18,6 +19,7 @@ import {
 import { Command } from 'commander';
 import { formatGoResume } from '../ui/formatters/go-formatters.js';
 import { printError } from '../utils/error-handler.js';
+import { STOP_SIGNALS } from './loop.command.js';
 
 interface GoCommandOptions {
 	trust?: boolean;
@@ -39,6 +41,41 @@ function goSteps(
 			...(options.sandbox ? ['--sandbox'] : [])
 		]
 	];
+}
+
+/** How a step ended. `stopped`: a stop signal came in while it ran */
+interface StepResult {
+	code: number | null;
+	signal: NodeJS.Signals | null;
+	stopped: boolean;
+}
+
+/**
+ * Run one step and pass it every stop signal this process gets: a `kill` of
+ * `go` alone would otherwise leave `loop` and Claude Code running (#1103).
+ * On Ctrl-C the step gets the signal twice (the terminal sends it to the
+ * whole group), which stops it just the same.
+ */
+export function runStep(command: string, args: string[]): Promise<StepResult> {
+	return new Promise((resolve) => {
+		// The parent already checked for an update; the steps don't again
+		const child = spawn(command, args, {
+			stdio: 'inherit',
+			env: { ...process.env, [SKIP_AUTO_UPDATE_ENV]: '1' }
+		});
+		let stopped = false;
+		const forward = (signal: NodeJS.Signals) => {
+			stopped = true;
+			child.kill(signal);
+		};
+		const done = (code: number | null, signal: NodeJS.Signals | null) => {
+			for (const sig of STOP_SIGNALS) process.off(sig, forward);
+			resolve({ code, signal, stopped });
+		};
+		for (const sig of STOP_SIGNALS) process.on(sig, forward);
+		child.once('error', () => done(1, null));
+		child.once('close', done);
+	});
 }
 
 export class GoCommand extends Command {
@@ -88,13 +125,12 @@ export class GoCommand extends Command {
 				// Only a heads-up: a file loop can't read fails loop's own way
 				await this.printResume(projectRoot).catch(() => {});
 			}
-			// The parent already checked for an update; the steps don't again
-			const step = spawnSync(process.execPath, [process.argv[1], ...args], {
-				stdio: 'inherit',
-				env: { ...process.env, [SKIP_AUTO_UPDATE_ENV]: '1' }
-			});
-			if (step.status !== 0) {
-				process.exitCode = step.status ?? 1;
+			const step = await runStep(process.execPath, [process.argv[1], ...args]);
+			// A step a signal ended: end the same way, so whoever started `go`
+			// sees the signal and not an exit code
+			if (step.signal) process.kill(process.pid, step.signal);
+			if (step.code !== 0 || step.stopped) {
+				process.exitCode = step.code || 1;
 				return;
 			}
 		}
