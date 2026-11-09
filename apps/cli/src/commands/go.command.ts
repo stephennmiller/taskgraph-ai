@@ -4,17 +4,19 @@
  * `parse-prd --append` (no tasks yet appends to nothing, so a first run and
  * a later one are the same call), then `loop`. Each step is this CLI run
  * again, so it prints what it always prints, and the first step that fails
- * stops the rest.
+ * stops the rest. On a rerun it says what loop resumes before loop starts.
  */
 
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import {
 	SKIP_AUTO_UPDATE_ENV,
+	createTmCore,
 	isTaskGraphProject,
 	resolveProjectRoot
 } from '@tm/core';
 import { Command } from 'commander';
+import { formatGoResume } from '../ui/formatters/go-formatters.js';
 import { printError } from '../utils/error-handler.js';
 
 interface GoCommandOptions {
@@ -50,12 +52,27 @@ export class GoCommand extends Command {
 				'Let loop run Claude Code with permission prompts off, without asking'
 			)
 			.option('--sandbox', 'Run loop in Docker sandbox mode')
-			.action((prd: string, options: GoCommandOptions) => {
-				this.run(prd, options);
-			});
+			.action((prd: string, options: GoCommandOptions) =>
+				this.run(prd, options)
+			);
 	}
 
-	private run(prd: string, options: GoCommandOptions): void {
+	/** `Resuming: 3 done, task 4 in progress, 5 pending`, or nothing on a first run */
+	private async printResume(projectRoot: string): Promise<void> {
+		const tmCore = await createTmCore({ projectPath: projectRoot });
+		try {
+			const [stats, prime] = await Promise.all([
+				tmCore.tasks.getStats(),
+				tmCore.tasks.getPrimeContext()
+			]);
+			const line = formatGoResume(stats.byStatus, prime.inProgress);
+			if (line) console.log(line);
+		} finally {
+			await tmCore.close();
+		}
+	}
+
+	private async run(prd: string, options: GoCommandOptions): Promise<void> {
 		if (!fs.existsSync(prd)) {
 			printError(
 				`${prd} not found`,
@@ -64,8 +81,13 @@ export class GoCommand extends Command {
 			process.exitCode = 1;
 			return;
 		}
-		const isProject = isTaskGraphProject(resolveProjectRoot());
+		const projectRoot = resolveProjectRoot();
+		const isProject = isTaskGraphProject(projectRoot);
 		for (const args of goSteps(prd, isProject, options)) {
+			if (isProject && args[0] === 'loop') {
+				// Only a heads-up: a file loop can't read fails loop's own way
+				await this.printResume(projectRoot).catch(() => {});
+			}
 			// The parent already checked for an update; the steps don't again
 			const step = spawnSync(process.execPath, [process.argv[1], ...args], {
 				stdio: 'inherit',

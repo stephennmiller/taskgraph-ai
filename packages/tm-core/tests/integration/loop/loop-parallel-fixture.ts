@@ -11,7 +11,9 @@ const path = require('node:path');
 const { execFileSync } = require('node:child_process');
 const plan = JSON.parse(fs.readFileSync(process.env.FAKE_CLAUDE_PLAN, 'utf8'));
 const name = path.basename(process.cwd());
-console.log(JSON.stringify(process.argv.slice(2)));
+const resolving = /conflicts with commit (\\w+)/.exec(process.argv.join(' '))?.[1];
+// A resolve's stdout is its one --output-format json result
+if (!resolving) console.log(JSON.stringify(process.argv.slice(2)));
 const mode = plan[name] || 'nothing';
 const taskgraph = (...args) =>
 	execFileSync(
@@ -40,20 +42,21 @@ if (mode === 'commit' || mode === 'commit-fail') {
 // resolve it, commit the merge but leave the fix it made uncommitted (#1026)
 if (mode === 'merge-conflict-uncommitted') {
 	const id = name.slice('task-'.length);
-	const commit = /conflicts with commit (\\w+)/.exec(process.argv.join(' '))?.[1];
-	if (commit) {
+	if (resolving) {
 		try {
-			execFileSync('git', ['merge', '--no-edit', commit], { stdio: 'ignore' });
+			execFileSync('git', ['merge', '--no-edit', resolving], { stdio: 'ignore' });
 		} catch {}
 		fs.writeFileSync('shared.txt', 'both\\n');
 		execFileSync('git', ['commit', '-q', '-am', 'merge']);
 		fs.writeFileSync('shared.txt', 'both, fixed\\n');
+		console.log(JSON.stringify({ type: 'result', total_cost_usd: 0.5 }));
 		process.exit(0);
 	}
 	fs.writeFileSync('shared.txt', id + '\\n');
 	execFileSync('git', ['add', 'shared.txt']);
 	execFileSync('git', ['commit', '-q', '-m', 'work on ' + name]);
 	taskgraph('set-status', '--id=' + id, '--status=review');
+	console.log(JSON.stringify({ type: 'result', subtype: 'success', result: 'done', total_cost_usd: 0.25, num_turns: 3 }));
 	process.exit(0);
 }
 // --merge: a file of its own, committed, left uncommitted, or none at all
