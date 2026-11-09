@@ -22,6 +22,7 @@ import {
 	standardTools,
 	toolRegistry
 } from '../../apps/mcp/src/tools/tool-registry.js';
+import { JSON_OUTPUT_SCHEMA_VERSION } from '../../packages/tm-core/src/common/utils/json-output.js';
 import { PRIME_RULES } from '../../packages/tm-core/src/modules/tasks/utils/prime-context.js';
 import { setupCLI } from '../../apps/cli/src/program.js';
 
@@ -259,6 +260,31 @@ describe('other places that state the tool tier counts', () => {
 		expect(Number(text.match(/`standard` \((\d+)\)/)?.[1])).toBe(
 			standardTools.length
 		);
+	});
+});
+
+describe('docs that state the JSON output schemaVersion', () => {
+	const read = (file: string) =>
+		fs.readFileSync(path.join(rootDir, file), 'utf8');
+
+	it('json-output.mdx gives the current version and a row for it (#1111)', () => {
+		const page = read('apps/docs/capabilities/json-output.mdx');
+		const rows = [...page.matchAll(/^\| `(\d+)` \|/gm)].map((m) =>
+			Number(m[1])
+		);
+
+		expect(Number(page.match(/The current version is `(\d+)`/)?.[1])).toBe(
+			JSON_OUTPUT_SCHEMA_VERSION
+		);
+		expect(rows[0]).toBe(JSON_OUTPUT_SCHEMA_VERSION);
+	});
+
+	it('.taskgraph/CLAUDE.md and assets/AGENTS.md give the current version', () => {
+		for (const file of DOCS) {
+			expect(
+				Number(read(file).match(/`schemaVersion` \(now (\d+)\)/)?.[1])
+			).toBe(JSON_OUTPUT_SCHEMA_VERSION);
+		}
 	});
 });
 

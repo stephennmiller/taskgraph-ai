@@ -21,15 +21,17 @@ Cross-tag task movement enables you to:
 Move tasks within the same tag context:
 
 ```bash
-# Move a single task
-taskgraph move --from=5 --to=7
+# Move a single task to a free ID
+taskgraph move --from=5 --to=9
 
-# Move a subtask
-taskgraph move --from=5.2 --to=7.3
+# Move a subtask to a free subtask ID under another task
+taskgraph move --from=5.2 --to=7.4
 
-# Move multiple tasks
+# Move multiple tasks to free IDs
 taskgraph move --from=5,6,7 --to=10,11,12
 ```
+
+The destination must be free: a move onto a task that exists, or onto a subtask that exists under another parent, is refused.
 
 ### Cross-Tag Moves
 

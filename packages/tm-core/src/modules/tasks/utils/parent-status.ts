@@ -32,7 +32,8 @@ export const parentDoneGate =
  * - Some in progress or done: in progress.
  * - All pending: pending, only when `subtaskStatusChanged` (a subtask set
  *   back). add-subtask or expand on a claimed parent keeps its claim.
- * - Otherwise a done parent with open subtasks reopens in progress.
+ * - Otherwise a done parent with open subtasks reopens in progress. Callers
+ *   skip the call unless the change reopens it (reopensDoneParent, #1107).
  * Unless a subtask's own status changed, a parent the user put in review,
  * blocked, deferred or cancelled keeps that status.
  */
@@ -69,11 +70,29 @@ export function withParentStatus<T extends Task>(
 	);
 }
 
+/**
+ * Whether a subtask going from status `was` (undefined: it is new) to `now`
+ * moves a parent marked done back: it is open now and was added, was closed,
+ * or was set to pending or in-progress. Closing or removing a leftover open
+ * subtask doesn't, nor does holding one (blocked, deferred, review): the
+ * parent would stay in progress once the rest were cancelled (#1107).
+ */
+export function reopensDoneParent(
+	was: TaskStatus | undefined,
+	now: TaskStatus
+): boolean {
+	if (isTaskComplete(now)) return false;
+	if (was === undefined || isTaskComplete(was)) return true;
+	return was !== now && TASK_STATUS_MEANINGS[now]?.pickable === true;
+}
+
 /** A task's subtask IDs, statuses and titles, to see what a write changed */
 interface SubtaskShape {
 	ids: string;
 	statuses: string;
 	titles: string;
+	/** Status by `<id> <title>`: expand --force reuses IDs for new subtasks */
+	byKey: Map<string, TaskStatus>;
 }
 
 /** Each task's SubtaskShape by ID, taken before a write changes `tasks` */
@@ -88,7 +107,10 @@ export function subtaskShapes(tasks: Task[]): Map<string, SubtaskShape> {
 					// Missing reads as pending, as withParentStatus reads it: a rewrite
 					// that writes the default isn't a subtask's status change
 					statuses: JSON.stringify(subs.map((s) => s.status || 'pending')),
-					titles: JSON.stringify(subs.map((s) => s.title))
+					titles: JSON.stringify(subs.map((s) => s.title)),
+					byKey: new Map(
+						subs.map((s) => [`${s.id} ${s.title}`, s.status || 'pending'])
+					)
 				}
 			];
 		})
@@ -98,8 +120,9 @@ export function subtaskShapes(tasks: Task[]): Map<string, SubtaskShape> {
 /**
  * The write funnel's step: each task in `tasks` that `before` had and whose
  * subtasks were added, removed or changed status takes the status they give
- * it (withParentStatus). Only a status change on the same subtasks counts as
- * `subtaskStatusChanged`: expand --force reuses IDs for new subtasks. A new
+ * it (withParentStatus), except that a done parent moves back only for a
+ * subtask that reopens it (reopensDoneParent). Only a status change on the
+ * same subtasks counts as `subtaskStatusChanged`: expand --force reuses IDs for new subtasks. A new
  * task (add-task, a move, a restore) keeps its status. Settled in place, so
  * a writer's result that holds the parent sees its new status.
  */
@@ -112,9 +135,16 @@ export function settleChangedParents(
 	for (const task of tasks) {
 		const was = before.get(String(task.id));
 		const now = after.get(String(task.id)) as SubtaskShape;
-		if (!was || (was.ids === now.ids && was.statuses === now.statuses)) {
-			continue;
-		}
+		if (!was) continue;
+		// A done parent goes by what reopens it, so new subtasks under the IDs
+		// and statuses of the ones they replace still count
+		const unchanged =
+			task.status === 'done'
+				? ![...now.byKey].some(([key, status]) =>
+						reopensDoneParent(was.byKey.get(key), status)
+					)
+				: was.ids === now.ids && was.statuses === now.statuses;
+		if (unchanged) continue;
 		const statusOnly = was.ids === now.ids && was.titles === now.titles;
 		const settled = withParentStatus(task, guardDone, statusOnly);
 		if (settled === task) continue;

@@ -103,7 +103,7 @@ on purpose.
 | all cancelled                  | unchanged                                |
 | any in-progress or done        | in-progress                              |
 | all pending                    | pending (claim cleared), set-status only |
-| other mixes, parent done       | in-progress                              |
+| other mixes, parent done       | in-progress, if the change reopens it    |
 | other mixes                    | unchanged                                |
 
 Exceptions:
@@ -111,12 +111,20 @@ Exceptions:
 - A parent in `review` stays in review when its last subtask finishes.
 - Only a subtask's own status change moves a parent in `review`,
   `blocked`, `deferred` or `cancelled`; the other writers leave it.
+- A `done` parent moves back only when the change added a subtask,
+  reopened a complete one, or set one to `pending` or `in-progress`
+  (`reopensDoneParent`, used by both callers). Cancelling, finishing or
+  removing the subtasks it was marked done over leaves it done, and so
+  does setting one of them to `blocked`, `deferred` or `review`: the parent
+  would stay in progress once the rest were cancelled (#1107). The funnel
+  tells subtasks apart by ID and title.
 - clear-subtasks and moving a whole task (in a tag or between tags) leave
   the parent's status as it is.
 
 Invariants the rest of the code relies on:
 
-- I1: a `done` parent has only complete subtasks. Dependents treat a done
+- I1: a `done` parent has only complete subtasks, unless the user marked
+  it done over open ones (below). Dependents treat a done
   parent as satisfied, and `next` offers subtasks only of in-progress
   parents, so an open subtask under a done parent is never offered.
 - I2: an `in-progress` parent has at least one open subtask. Claims and the
@@ -130,7 +138,9 @@ Converting between task and subtask (move, `add-subtask --task-id`,
 `acceptanceCriteria` and metadata, except `subtasks` and `parentId`.
 
 `set-status <parent> done` with open subtasks is allowed on purpose: it is
-an explicit user action. The next writer to touch its subtasks reopens it.
+an explicit user action. The next writer to add a subtask, reopen a
+complete one or set one to `pending` or `in-progress` moves it back;
+closing, holding or removing the leftover ones doesn't.
 
 ## 3. Claim
 

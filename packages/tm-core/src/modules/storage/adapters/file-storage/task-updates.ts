@@ -21,7 +21,10 @@ import type {
 } from '../../../../common/types/index.js';
 import { archiveTag, nextTaskId } from '../../../tasks/utils/archive.js';
 import { releaseClaimIfGivenUp } from '../../../tasks/utils/claim.js';
-import { withParentStatus } from '../../../tasks/utils/parent-status.js';
+import {
+	reopensDoneParent,
+	withParentStatus
+} from '../../../tasks/utils/parent-status.js';
 
 type Outcome<R> = { tasks: Task[] | null; result: R };
 
@@ -212,16 +215,19 @@ function setSubtaskStatusIn(
 		newStatus
 	);
 
-	// The parent follows its subtasks; one set back can make it pending again
+	// The parent follows its subtasks; one set back can make it pending again.
+	// Closing or holding a leftover subtask of a parent marked done never
+	// reopens it (#1107)
+	const settled =
+		parentTask.status === 'done' && !reopensDoneParent(oldStatus, newStatus)
+			? parentTask
+			: withParentStatus(
+					parentTask,
+					(parent) => options.guardDone?.(parent, String(parent.id), true),
+					true
+				);
 	const updated = [...tasks];
-	updated[parentTaskIndex] = {
-		...withParentStatus(
-			parentTask,
-			(parent) => options.guardDone?.(parent, String(parent.id), true),
-			true
-		),
-		updatedAt: now
-	};
+	updated[parentTaskIndex] = { ...settled, updatedAt: now };
 
 	return { tasks: updated, result };
 }
