@@ -4,6 +4,14 @@
  * commented out (tasks committed) or not (tasks ignored)
  */
 import fs from 'node:fs';
+import path from 'node:path';
+import { writeProjectFile } from '../storage/adapters/file-storage/file-operations.js';
+
+/** .gitignore sits in the project root; init allows it to link within the project */
+const writeGitignore = (targetPath: string, text: string) =>
+	writeProjectFile(path.dirname(targetPath), targetPath, text, {
+		linkInProject: true
+	});
 
 /** Where the merge reports what it did: init's debug log and warnings */
 export type GitignoreLog = (
@@ -214,7 +222,7 @@ function createNewGitignoreFile(
 	log: GitignoreLog | null
 ): void {
 	try {
-		fs.writeFileSync(targetPath, templateLines.join('\n') + '\n');
+		writeGitignore(targetPath, templateLines.join('\n') + '\n');
 		if (typeof log === 'function') {
 			log('success', `Created ${targetPath} with full template`);
 		}
@@ -270,7 +278,7 @@ function mergeWithExistingFile(
 		finalLines.push(...buildTaskFilesSection(storeTasksInGit));
 
 		// Write result
-		fs.writeFileSync(targetPath, finalLines.join('\n') + '\n');
+		writeGitignore(targetPath, finalLines.join('\n') + '\n');
 
 		if (typeof log === 'function') {
 			const hasNewContent =

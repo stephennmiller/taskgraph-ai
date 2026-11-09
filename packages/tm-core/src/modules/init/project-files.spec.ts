@@ -25,7 +25,7 @@ describe('copyTemplateFile', () => {
 	});
 
 	it('says a missing template was not found', () => {
-		copyTemplateFile('no-such-template', path.join(dir, 'out'), report);
+		copyTemplateFile('no-such-template', dir, 'out', report);
 
 		expect(problems).toEqual([
 			'error: Source file not found: no-such-template'
@@ -34,7 +34,7 @@ describe('copyTemplateFile', () => {
 
 	it('gives the real reason when a template exists but cannot be read', () => {
 		// The assets folder itself: there, but reading it fails with EISDIR
-		copyTemplateFile('.', path.join(dir, 'out'), report);
+		copyTemplateFile('.', dir, 'out', report);
 
 		expect(problems).toEqual([
 			expect.stringMatching(/^error: Couldn't read the \. template: EISDIR/)
@@ -43,14 +43,14 @@ describe('copyTemplateFile', () => {
 	});
 
 	it('reports a file it cannot write instead of throwing', () => {
-		// A link to a missing folder: not there, and writing through it fails
+		// A link to a missing folder: not there, and writing through it is refused
 		const target = path.join(dir, '.env.example');
 		fs.symlinkSync(path.join(dir, 'missing', 'x'), target);
 
-		copyTemplateFile('env.example', target, report);
+		copyTemplateFile('env.example', dir, '.env.example', report);
 
 		expect(problems).toEqual([
-			expect.stringMatching(/^error: Couldn't write \.env\.example: EEXIST/)
+			expect.stringMatching(/^error: Couldn't write \.env\.example: .*symlink/)
 		]);
 	});
 
@@ -61,10 +61,10 @@ describe('copyTemplateFile', () => {
 			const link = path.join(dir, 'config.json');
 			fs.symlinkSync(target, link);
 
-			copyTemplateFile('config.json', link, report);
+			copyTemplateFile('config.json', dir, 'config.json', report);
 
 			expect(fs.existsSync(target)).toBe(false);
-			expect(problems).toEqual([expect.stringMatching(/EEXIST/)]);
+			expect(problems).toEqual([expect.stringMatching(/symlink/)]);
 		}
 	);
 });
@@ -87,7 +87,7 @@ describe.each([
 			fs.symlinkSync(target, configPath);
 			const problems: string[] = [];
 			try {
-				update(configPath, (_level, message) => problems.push(message));
+				update(root, (_level, message) => problems.push(message));
 
 				expect(fs.readFileSync(target, 'utf8')).toBe(text);
 				expect(problems).toEqual([expect.stringMatching(/symlink/)]);

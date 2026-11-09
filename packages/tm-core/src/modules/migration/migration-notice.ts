@@ -9,7 +9,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { TASKGRAPH_STATE_FILE } from '../../common/constants/paths.js';
 import { resolveProjectRoot } from '../../common/utils/project-root-finder.js';
-import { refuseSymlinkSync } from '../storage/adapters/file-storage/file-operations.js';
+import { writeProjectFile } from '../storage/adapters/file-storage/file-operations.js';
 
 /**
  * Whether the migration notice is due, marking it shown when it is.
@@ -23,13 +23,12 @@ import { refuseSymlinkSync } from '../storage/adapters/file-storage/file-operati
  * be written; false when nothing is due or state.json can't be read
  */
 export function takeMigrationNotice(projectRoot?: string): boolean {
+	let root = '';
 	let statePath = TASKGRAPH_STATE_FILE;
 	let state: Record<string, unknown> | null;
 	try {
-		statePath = path.join(
-			resolveProjectRoot(projectRoot),
-			TASKGRAPH_STATE_FILE
-		);
+		root = resolveProjectRoot(projectRoot);
+		statePath = path.join(root, TASKGRAPH_STATE_FILE);
 		state = JSON.parse(fs.readFileSync(statePath, 'utf8'));
 	} catch (error) {
 		// No state.json is the usual case; a broken one must not fail the command that just ran
@@ -42,8 +41,7 @@ export function takeMigrationNotice(projectRoot?: string): boolean {
 	try {
 		state.migrationNoticePending = false;
 		state.migrationNoticeShown = true;
-		refuseSymlinkSync(statePath);
-		fs.writeFileSync(statePath, JSON.stringify(state, null, 2));
+		writeProjectFile(root, statePath, JSON.stringify(state, null, 2));
 	} catch (error) {
 		// Still show it, as before #254; it shows again until the write succeeds
 		debugWarn(

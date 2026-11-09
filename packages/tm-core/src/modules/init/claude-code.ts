@@ -14,7 +14,8 @@ import {
 	MCP_SERVER_KEY,
 	launchesTaskGraphPackage
 } from '../setup/mcp-server.js';
-import { getAssetsDir } from './assets.js';
+import { writeProjectFile } from '../storage/adapters/file-storage/file-operations.js';
+import { readAsset } from './assets.js';
 
 /** Where init reports a step that failed without stopping it */
 export type InitReport = (level: 'warn' | 'error', message: string) => void;
@@ -34,6 +35,10 @@ const IMPORT_LINE = '@./.taskgraph/CLAUDE.md';
 const IMPORT_SECTION = `\n## TaskGraph Instructions\n**Import TaskGraph's development workflow commands and guidelines, treat as if import is in the main CLAUDE.md file.**\n${IMPORT_LINE}`;
 
 const errorText = (error: unknown) => (error as Error).message;
+
+/** CLAUDE.md and .mcp.json may link to another project file, as init allows */
+const writeRootFile = (projectRoot: string, file: string, content: string) =>
+	writeProjectFile(projectRoot, file, content, { linkInProject: true });
 
 /** Set up Claude Code in `projectRoot`; `mcp` also writes `.mcp.json` */
 export function setUpClaudeCode(
@@ -60,22 +65,23 @@ export function setUpClaudeCode(
 
 	const userClaudeFile = path.join(projectRoot, 'CLAUDE.md');
 	try {
-		const sourceFile = path.join(getAssetsDir(), 'AGENTS.md');
-		fs.mkdirSync(path.join(projectRoot, '.taskgraph'), { recursive: true });
-		fs.copyFileSync(
-			sourceFile,
-			path.join(projectRoot, '.taskgraph', 'CLAUDE.md')
+		writeProjectFile(
+			projectRoot,
+			path.join('.taskgraph', 'CLAUDE.md'),
+			readAsset('AGENTS.md')
 		);
 		if (fs.existsSync(userClaudeFile)) {
 			const content = fs.readFileSync(userClaudeFile, 'utf8');
 			if (!content.includes(IMPORT_LINE)) {
-				fs.writeFileSync(
+				writeRootFile(
+					projectRoot,
 					userClaudeFile,
 					`${content.trim()}\n${IMPORT_SECTION}\n`
 				);
 			}
 		} else {
-			fs.writeFileSync(
+			writeRootFile(
+				projectRoot,
 				userClaudeFile,
 				`# Claude Code Instructions\n${IMPORT_SECTION}\n`
 			);
@@ -98,7 +104,8 @@ export function setUpClaudeCode(
 	if (fs.existsSync(mcpPath)) {
 		try {
 			const config = JSON.parse(fs.readFileSync(mcpPath, 'utf8'));
-			fs.writeFileSync(
+			writeRootFile(
+				projectRoot,
 				mcpPath,
 				`${JSON.stringify(transformToClaudeFormat(config), null, '\t')}\n`
 			);
@@ -172,7 +179,8 @@ function setUpMcpConfig(projectRoot: string, report: InitReport): void {
 		env: { TASKGRAPH_TOOLS: 'core' }
 	};
 	const fresh = () =>
-		fs.writeFileSync(
+		writeRootFile(
+			projectRoot,
 			mcpPath,
 			`${formatJSONWithTabs({ mcpServers: { [MCP_SERVER_KEY]: server } })}\n`
 		);
@@ -193,12 +201,12 @@ function setUpMcpConfig(projectRoot: string, report: InitReport): void {
 		if (existing.length === 0 && !config.mcpServers[MCP_SERVER_KEY]) {
 			config.mcpServers[MCP_SERVER_KEY] = server;
 		}
-		fs.writeFileSync(mcpPath, `${formatJSONWithTabs(config)}\n`);
+		writeRootFile(projectRoot, mcpPath, `${formatJSONWithTabs(config)}\n`);
 	} catch (error) {
 		// Recovered: the old file is kept beside the new one. If this throws,
 		// setUpClaudeCode reports the failure.
 		const backupName = `.mcp.json.backup-${Date.now()}`;
-		fs.copyFileSync(mcpPath, path.join(projectRoot, backupName));
+		writeProjectFile(projectRoot, backupName, fs.readFileSync(mcpPath));
 		fresh();
 		report(
 			'warn',

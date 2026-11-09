@@ -258,15 +258,10 @@ export function initializeProject(
 	createInitialStateFile(targetDir, report);
 	createInitialTasksFile(targetDir, report);
 
-	copyTemplateFile(
-		'env.example',
-		path.join(targetDir, ENV_EXAMPLE_FILE),
-		report
-	);
-	const configPath = path.join(targetDir, TASKGRAPH_CONFIG_FILE);
-	copyTemplateFile('config.json', configPath, report);
-	updateConfigMaxTokens(configPath, report);
-	updateStorageConfig(configPath, report);
+	copyTemplateFile('env.example', targetDir, ENV_EXAMPLE_FILE, report);
+	copyTemplateFile('config.json', targetDir, TASKGRAPH_CONFIG_FILE, report);
+	updateConfigMaxTokens(targetDir, report);
+	updateStorageConfig(targetDir, report);
 	// Per-machine settings an earlier release kept in the shared config.json
 	// go to the gitignored config.local.json
 	const movedMachineSettings = moveMachineSettings(targetDir, report);
@@ -283,14 +278,11 @@ export function initializeProject(
 		report('error', `Failed to create .gitignore: ${(error as Error).message}`);
 	}
 
-	copyTemplateFile(
-		'example_prd.txt',
-		path.join(targetDir, EXAMPLE_PRD_FILE),
-		report
-	);
+	copyTemplateFile('example_prd.txt', targetDir, EXAMPLE_PRD_FILE, report);
 	copyTemplateFile(
 		'example_prd_rpg.txt',
-		path.join(targetDir, TASKGRAPH_TEMPLATES_DIR, 'example_prd_rpg.txt'),
+		targetDir,
+		path.join(TASKGRAPH_TEMPLATES_DIR, 'example_prd_rpg.txt'),
 		report
 	);
 

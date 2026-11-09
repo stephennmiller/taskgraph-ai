@@ -310,6 +310,23 @@ describe('installMergeDriver', () => {
 		);
 	});
 
+	it.skipIf(process.platform === 'win32')(
+		'refuses a .gitattributes linked out of the project',
+		() => {
+			git(repo, 'init', '--initial-branch=main');
+			const elsewhere = fs.mkdtempSync(path.join(os.tmpdir(), 'tm-elsewhere-'));
+			const target = path.join(elsewhere, '.profile');
+			fs.writeFileSync(target, 'keep\n');
+			fs.symlinkSync(target, path.join(repo, '.gitattributes'));
+			try {
+				expect(() => installMergeDriver(repo, 'x')).toThrow(/symlink/);
+				expect(fs.readFileSync(target, 'utf8')).toBe('keep\n');
+			} finally {
+				fs.rmSync(elsewhere, { recursive: true, force: true });
+			}
+		}
+	);
+
 	it('refuses outside a Git repository and writes nothing', () => {
 		expect(() => installMergeDriver(repo, 'x')).toThrow(NotAGitRepositoryError);
 		expect(fs.existsSync(path.join(repo, '.gitattributes'))).toBe(false);

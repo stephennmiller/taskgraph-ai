@@ -36,8 +36,7 @@ import {
 	TASKGRAPH_DIR
 } from '../../common/constants/paths.js';
 import { neutralizeTag } from '../../common/utils/prompt-tag.js';
-import { writeAtomically } from '../../common/utils/write-atomically.js';
-import { refuseSymlinkedFolders } from '../storage/adapters/file-storage/file-operations.js';
+import { writeProjectFile } from '../storage/adapters/file-storage/file-operations.js';
 
 /**
  * Bump when the summary's content changes, so old caches are rebuilt.
@@ -418,12 +417,12 @@ function writeCache(root: string, cached: CachedSummary): void {
 	const dir = path.join(root, TASKGRAPH_CACHE_DIR);
 	const file = path.join(dir, CACHE_FILE);
 	try {
-		refuseSymlinkedFolders(file);
-		fs.mkdirSync(dir, { recursive: true });
 		// Keep the cache out of git without editing the project's .gitignore
 		const ignore = path.join(dir, '.gitignore');
-		if (!fs.existsSync(ignore)) fs.writeFileSync(ignore, '*\n');
-		writeAtomically(file, JSON.stringify(cached, null, 2));
+		if (!fs.existsSync(ignore)) writeProjectFile(root, ignore, '*\n');
+		writeProjectFile(root, file, JSON.stringify(cached, null, 2), {
+			atomic: true
+		});
 	} catch {
 		// The summary still works uncached
 	}
