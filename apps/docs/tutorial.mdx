@@ -202,7 +202,7 @@ taskgraph move --from=5.2 --to=7.4
 
 You can reorganize tasks in various ways:
 
-- Moving a standalone task to become a subtask: `--from=5 --to=7.4` (a free subtask ID under task 7), or `taskgraph add-subtask --parent=7 --task-id=5`
+- Moving a standalone task to become a subtask: `--from=6 --to=7.4` (a free subtask ID under task 7), or `taskgraph add-subtask --parent=7 --task-id=6`. A task that has subtasks of its own is refused
 - Moving a subtask to become a standalone task: `--from=5.2 --to=9` (a free task ID)
 - Moving a subtask to a different parent: `--from=5.2 --to=7.4` (a free subtask ID)
 - Reordering subtasks within the same parent: `--from=5.2 --to=5.4`
