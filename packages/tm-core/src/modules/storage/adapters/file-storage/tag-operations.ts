@@ -2,6 +2,7 @@
  * @fileoverview Tag create/delete/rename/stats operations on the single tasks.json file
  */
 
+import fs from 'node:fs/promises';
 import path from 'node:path';
 import { isTaskComplete } from '../../../../common/constants/index.js';
 import {
@@ -11,10 +12,15 @@ import {
 import type { IStorage } from '../../../../common/interfaces/storage.interface.js';
 import {
 	type ArchiveData,
+	archiveTag,
 	copyArchiveTag,
 	dropArchiveTag,
+	highestTaskId,
+	readArchiveSync,
 	renameArchiveTag
 } from '../../../tasks/utils/archive.js';
+import { CLAIM_KEYS, withoutClaim } from '../../../tasks/utils/claim.js';
+import { complexityReportPath } from '../../../reports/managers/complexity-report-manager.js';
 import type { FileOperations } from './file-operations.js';
 import type { FormatHandler } from './format-handler.js';
 import { getOwnKey, setOwnKey } from '../../../../common/utils/own-key.js';
@@ -24,9 +30,24 @@ import { filterReadyTasks } from '../../../tasks/utils/task-filters.js';
 import { stampTasksFileSchemaVersion } from './schema-version.js';
 
 /**
- * Tag-level operations extracted from FileStorage. Reads go back through the
- * storage instance so load behavior (complexity enrichment, schema checks) is shared.
+ * A deep copy of a tag's tasks for another tag, without each task's and
+ * subtask's GitHub link and claim: those belong to the original, and a push
+ * from the copy would otherwise take over the original's issues
  */
+function copyTasks(source: unknown): any[] {
+	const tasks = Array.isArray(source) ? JSON.parse(JSON.stringify(source)) : [];
+	for (const item of [
+		...tasks,
+		...tasks.flatMap((t: any) => t?.subtasks ?? [])
+	]) {
+		if (!item || typeof item !== 'object') continue;
+		const metadata = withoutClaim(item.metadata, ['github', ...CLAIM_KEYS]);
+		if (metadata) item.metadata = metadata;
+		else delete item.metadata;
+	}
+	return tasks;
+}
+
 function tagNotFound(tag: string): TaskGraphError {
 	return new TaskGraphError(
 		`Tag "${tag}" does not exist`,
@@ -34,6 +55,10 @@ function tagNotFound(tag: string): TaskGraphError {
 	);
 }
 
+/**
+ * Tag-level operations extracted from FileStorage. Reads go back through the
+ * storage instance so load behavior (complexity enrichment, schema checks) is shared.
+ */
 export class TagOperations {
 	constructor(
 		private readonly pathResolver: PathResolver,
@@ -65,12 +90,10 @@ export class TagOperations {
 					ERROR_CODES.VALIDATION_ERROR
 				);
 			}
-			const sourceTasks = options?.copyFrom
-				? getOwnKey(data, options.copyFrom)?.tasks
-				: undefined;
-			const tasks = Array.isArray(sourceTasks)
-				? JSON.parse(JSON.stringify(sourceTasks))
-				: [];
+			const tasks = copyTasks(
+				options?.copyFrom ? getOwnKey(data, options.copyFrom)?.tasks : undefined
+			);
+			this.assertNoRetiredIds(tagName, tasks);
 			tasksCopied = tasks.length;
 			const now = new Date().toISOString();
 			setOwnKey(data, tagName, {
@@ -117,9 +140,8 @@ export class TagOperations {
 					ERROR_CODES.VALIDATION_ERROR
 				);
 			}
-			const tasks = JSON.parse(
-				JSON.stringify(Array.isArray(source.tasks) ? source.tasks : [])
-			);
+			const tasks = copyTasks(source.tasks);
+			this.assertNoRetiredIds(targetTag, tasks);
 			tasksCopied = tasks.length;
 			const now = new Date().toISOString();
 			setOwnKey(data, targetTag, {
@@ -164,24 +186,34 @@ export class TagOperations {
 	}
 
 	/**
-	 * Delete a tag and its archived tasks
+	 * Delete a tag, its archived tasks and its complexity report. The archive
+	 * keeps the tag's highest ID, so a tag recreated with the name never
+	 * reuses one (see dropArchiveTag)
 	 * Uses modifyJson for atomic read-modify-write to prevent lost updates
 	 */
 	async deleteTag(tag: string): Promise<void> {
+		let highestId = 0;
 		await this.modifyTagged(this.pathResolver.getTasksPath(), (data) => {
 			if (!Object.hasOwn(data, tag)) throw tagNotFound(tag);
+			highestId = highestTaskId(getOwnKey(data, tag));
 			delete data[tag];
 			return data;
 		});
-		await this.updateArchive((archive) => dropArchiveTag(archive, tag));
+		await this.updateArchive((archive) =>
+			dropArchiveTag(archive, tag, highestId)
+		);
+		const report = this.reportPath(tag);
+		if (report) await fs.rm(report, { force: true });
 	}
 
 	/**
 	 * Rename a tag, noting the old name in its metadata, and move its
-	 * archived tasks with it
+	 * archived tasks and complexity report with it. The old name keeps the
+	 * tag's highest ID, as on a delete
 	 * Uses modifyJson for atomic read-modify-write to prevent lost updates
 	 */
 	async renameTag(oldTag: string, newTag: string): Promise<void> {
+		let highestId = 0;
 		await this.modifyTagged(this.pathResolver.getTasksPath(), (data) => {
 			if (!Object.hasOwn(data, oldTag)) throw tagNotFound(oldTag);
 			// Checked under the lock: a tag created since the caller's check would be overwritten
@@ -191,6 +223,8 @@ export class TagOperations {
 					ERROR_CODES.VALIDATION_ERROR
 				);
 			}
+			highestId = highestTaskId(getOwnKey(data, oldTag));
+			this.assertNoRetiredIds(newTag, getOwnKey(data, oldTag).tasks, oldTag);
 			const tagData = { ...getOwnKey(data, oldTag) };
 			if (tagData.metadata) {
 				tagData.metadata = {
@@ -203,8 +237,53 @@ export class TagOperations {
 			return data;
 		});
 		await this.updateArchive((archive) =>
-			renameArchiveTag(archive, oldTag, newTag)
+			renameArchiveTag(archive, oldTag, newTag, highestId)
 		);
+		const from = this.reportPath(oldTag);
+		const to = this.reportPath(newTag);
+		if (from && to) {
+			await fs.rename(from, to).catch((error) => {
+				if (error?.code !== 'ENOENT') throw error;
+			});
+		}
+	}
+
+	/**
+	 * Refuse to put tasks under the name of a removed or renamed tag when one
+	 * of their IDs is one that tag used: GitHub link recovery finds an issue
+	 * by tag and ID, so the task would take over the old task's issue. A tag
+	 * renamed back to its old name (the tombstone's `renamedTo`) is its own.
+	 */
+	private assertNoRetiredIds(
+		tag: string,
+		tasks: unknown,
+		renamedFrom?: string
+	): void {
+		const { metadata } = archiveTag(
+			readArchiveSync(this.pathResolver.getArchivePath()),
+			tag
+		);
+		if (renamedFrom !== undefined && metadata.renamedTo === renamedFrom) {
+			return;
+		}
+		const ids = Array.isArray(tasks) ? tasks.map((t) => Number(t?.id)) : [];
+		if (!ids.some((id) => id <= metadata.highestId)) return;
+		throw new TaskGraphError(
+			`Tag "${tag}" was removed or renamed, and its tasks used IDs up to ${metadata.highestId}. Tasks put under that name would reuse them and take over their GitHub issues; use another name`,
+			ERROR_CODES.VALIDATION_ERROR
+		);
+	}
+
+	/** A tag's complexity report; undefined for a name that can't name a file */
+	private reportPath(tag: string): string | undefined {
+		try {
+			return complexityReportPath(
+				path.dirname(this.pathResolver.getBasePath()),
+				tag
+			);
+		} catch {
+			return undefined;
+		}
 	}
 
 	/**
@@ -222,13 +301,15 @@ export class TagOperations {
 
 	/**
 	 * Apply a tag change to archive.json under its lock. Leaves the file alone
-	 * when there is none or the tag has nothing archived.
+	 * when the change has nothing to record, and creates it only when there is.
 	 */
 	private async updateArchive(
 		change: (archive: ArchiveData) => ArchiveData | null
 	): Promise<void> {
 		const archivePath = this.pathResolver.getArchivePath();
-		if (!(await this.fileOps.exists(archivePath))) return;
+		if (!(await this.fileOps.exists(archivePath)) && change({}) === null) {
+			return;
+		}
 		await this.fileOps.modifyJson(
 			archivePath,
 			(current: ArchiveData) => change(current ?? {}) ?? current

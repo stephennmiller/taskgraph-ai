@@ -231,6 +231,45 @@ describe('GitHub pull', () => {
 		expect(plan.steps.find((s) => s.taskId === '1')?.action).not.toBe('create');
 	});
 
+	it.each([
+		['tags copy', (core: TmCore) => core.tasks.copyTag('master', 'sprint2')],
+		[
+			'tags add --copy-from',
+			(core: TmCore) =>
+				core.tasks.createTag('sprint2', { copyFromTag: 'master' })
+		]
+	])(
+		"leaves the source tag's issues alone after %s and a push from the copy (#1063)",
+		async (_name, copy) => {
+			await setup();
+			await tmCore.tasks.modifyTask(
+				'1',
+				(current) => ({
+					metadata: { ...current.metadata, claimedBy: 'me', claimPid: 1 }
+				}),
+				'master'
+			);
+			await copy(tmCore);
+			await tmCore.tasks.updateStatus('1', 'done', 'sprint2');
+
+			const pushed = await domain.push({
+				repo: REPO,
+				tag: 'sprint2',
+				delayMs: 0
+			});
+			const pulled = await domain.pull({ repo: REPO, tag: 'master' });
+
+			expect(pushed).toMatchObject({ created: 3, updated: 0 });
+			expect(issue(1).state).toBe('open');
+			expect(pulled).toMatchObject({ applied: 0 });
+			expect((await readTask('1')).status).toBe('pending');
+			const copied = (await readTask('1', 'sprint2')).metadata;
+			expect((copied?.github as GitHubLink).issueNumber).toBeGreaterThan(3);
+			expect(copied).not.toHaveProperty('claimedBy');
+			expect(copied).not.toHaveProperty('claimPid');
+		}
+	);
+
 	it('rejects tag together with allTags', async () => {
 		await setup();
 
