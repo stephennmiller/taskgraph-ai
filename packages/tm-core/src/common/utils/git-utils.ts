@@ -22,7 +22,8 @@ interface GitOptions {
 /**
  * The argv and options every git call runs with: an argument array, never a
  * shell; no pager or credential prompt; no program named by the repository's
- * `core.fsmonitor`; no bare repository found by walking up; and on Windows
+ * `core.fsmonitor`, or by its `gpg.program` for a signed commit `git log`
+ * prints (#1100); no bare repository found by walking up; and on Windows
  * no git.exe from the project folder for a hook or shell git starts (GHSA-3fgc;
  * the CLI and MCP entry points set the same for the lookup of git itself)
  */
@@ -32,6 +33,8 @@ function gitCall(args: string[], options: GitOptions) {
 			'--no-pager',
 			'-c',
 			'core.fsmonitor=false',
+			'-c',
+			'log.showSignature=false',
 			'-c',
 			'safe.bareRepository=explicit',
 			...args
