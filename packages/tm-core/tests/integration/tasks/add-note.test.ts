@@ -111,6 +111,16 @@ describe('tasks.addNote', () => {
 		expect(details.match(/<info added on /g)).toHaveLength(2);
 	});
 
+	it('with skipRepeat, skips a note identical to the last one only (#1074)', async () => {
+		await tmCore.tasks.addNote('2', 'Done:\n- a', { skipRepeat: true });
+		await tmCore.tasks.addNote('2', 'Done:\n- a\n', { skipRepeat: true });
+		await tmCore.tasks.addNote('2', 'Other');
+		await tmCore.tasks.addNote('2', 'Done:\n- a', { skipRepeat: true });
+
+		const details = (await readTasks())[1].details;
+		expect(details.match(/<info added on /g)).toHaveLength(3);
+	});
+
 	it('refuses an unknown task or subtask and leaves the file alone', async () => {
 		const before = fs.readFileSync(tasksPath, 'utf-8');
 
