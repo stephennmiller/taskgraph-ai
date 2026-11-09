@@ -2,7 +2,13 @@ import fsSync from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { appendProjectFile, writeProjectFile } from './file-operations.js';
+import {
+	appendProjectFile,
+	makeProjectDir,
+	removeProjectFile,
+	renameProjectFile,
+	writeProjectFile
+} from './file-operations.js';
 
 describe.skipIf(process.platform === 'win32')('writeProjectFile', () => {
 	let root: string;
@@ -108,3 +114,60 @@ describe.skipIf(process.platform === 'win32')('writeProjectFile', () => {
 		expect(fsSync.readFileSync(target, 'utf8')).toBe('keep');
 	});
 });
+
+describe.skipIf(process.platform === 'win32')(
+	'makeProjectDir, removeProjectFile and renameProjectFile (#1123)',
+	() => {
+		let root: string;
+		let elsewhere: string;
+
+		beforeEach(() => {
+			root = fsSync.mkdtempSync(path.join(os.tmpdir(), 'tm-project-'));
+			elsewhere = fsSync.mkdtempSync(path.join(os.tmpdir(), 'tm-elsewhere-'));
+			fsSync.writeFileSync(path.join(elsewhere, 'x'), 'keep');
+		});
+
+		afterEach(() => {
+			fsSync.rmSync(root, { recursive: true, force: true });
+			fsSync.rmSync(elsewhere, { recursive: true, force: true });
+		});
+
+		it('make a folder, rename a file and delete it', () => {
+			makeProjectDir(root, 'a/b');
+			fsSync.writeFileSync(path.join(root, 'a/b/x'), 'mine');
+
+			renameProjectFile(root, 'a/b/x', path.join(root, 'a/y'));
+			removeProjectFile(root, 'a/b/x');
+
+			expect(fsSync.readdirSync(path.join(root, 'a'))).toEqual(['b', 'y']);
+			removeProjectFile(root, 'a/y');
+			expect(fsSync.readdirSync(path.join(root, 'a'))).toEqual(['b']);
+		});
+
+		it('refuse a symlinked folder and leave what it points to alone', () => {
+			fsSync.symlinkSync(elsewhere, path.join(root, 'a'));
+			fsSync.writeFileSync(path.join(root, 'mine'), 'mine');
+
+			expect(() => makeProjectDir(root, 'a/b')).toThrow(/symlink/);
+			expect(() => makeProjectDir(root, 'a')).toThrow(/symlink/);
+			expect(() => removeProjectFile(root, 'a/x')).toThrow(/symlink/);
+			expect(() => renameProjectFile(root, 'a/x', 'x')).toThrow(/symlink/);
+			expect(() => renameProjectFile(root, 'mine', 'a/mine')).toThrow(
+				/symlink/
+			);
+			expect(fsSync.readdirSync(elsewhere)).toEqual(['x']);
+			expect(fsSync.readdirSync(root).sort()).toEqual(['a', 'mine']);
+		});
+
+		it('delete a symlinked file itself, not the file it points to', () => {
+			fsSync.symlinkSync(path.join(elsewhere, 'x'), path.join(root, 'link'));
+
+			removeProjectFile(root, 'link');
+
+			expect(fsSync.readdirSync(root)).toEqual([]);
+			expect(fsSync.readFileSync(path.join(elsewhere, 'x'), 'utf8')).toBe(
+				'keep'
+			);
+		});
+	}
+);

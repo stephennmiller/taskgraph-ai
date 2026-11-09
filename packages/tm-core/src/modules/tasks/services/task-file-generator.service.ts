@@ -11,7 +11,8 @@ import type { ConfigManager } from '../../config/managers/config-manager.js';
 import { resolveSubtaskDependency } from '../../dependencies/subtask-dependency.js';
 import { isSafeTaskId } from '../../../common/utils/safe-task-id.js';
 import {
-	refuseSymlinkedFolders,
+	makeProjectDir,
+	removeProjectFile,
 	writeProjectFile
 } from '../../storage/adapters/file-storage/file-operations.js';
 import { assertTagName } from '../utils/tag-names.js';
@@ -77,17 +78,15 @@ export class TaskFileGeneratorService {
 		const tag = options.tag || this.configManager.getActiveTag();
 		const outputDir =
 			options.outputDir || path.join(this.projectPath, '.taskgraph', 'tasks');
+		// A folder the user named may be a link; the default one may not
+		const root = options.outputDir ? outputDir : this.projectPath;
 
 		try {
 			// The tag goes into each file name
 			assertTagName(tag);
 			// Writes and orphan cleanup must not follow a symlinked default
 			// folder, or a symlinked .taskgraph above it
-			if (!options.outputDir)
-				refuseSymlinkedFolders(path.join(outputDir, 'task.md'));
-
-			// Ensure output directory exists
-			await fs.mkdir(outputDir, { recursive: true });
+			makeProjectDir(root, path.resolve(outputDir));
 
 			// Load tasks from storage
 			const tasks = await this.storage.loadTasks(tag);
@@ -103,6 +102,7 @@ export class TaskFileGeneratorService {
 
 			// Clean up orphaned task files
 			const orphanedCount = await this.cleanupOrphanedFiles(
+				root,
 				outputDir,
 				tasks,
 				tag
@@ -122,12 +122,7 @@ export class TaskFileGeneratorService {
 					const content = this.formatTaskContent(task, tasks);
 					const fileName = taskFileName(task.id, tag);
 					const filePath = path.join(outputDir, fileName);
-					// A folder the user named may be a link; the default one may not
-					writeProjectFile(
-						options.outputDir ? outputDir : this.projectPath,
-						path.resolve(filePath),
-						content
-					);
+					writeProjectFile(root, path.resolve(filePath), content);
 					return task.id;
 				})
 			);
@@ -174,6 +169,7 @@ export class TaskFileGeneratorService {
 	 * @returns Number of files removed
 	 */
 	private async cleanupOrphanedFiles(
+		root: string,
 		outputDir: string,
 		tasks: Task[],
 		tag: string
@@ -220,13 +216,9 @@ export class TaskFileGeneratorService {
 				}
 			}
 
-			// Remove files in parallel
-			await Promise.all(
-				filesToRemove.map(async (file) => {
-					const filePath = path.join(outputDir, file);
-					await fs.unlink(filePath);
-				})
-			);
+			for (const file of filesToRemove) {
+				removeProjectFile(root, path.resolve(outputDir, file));
+			}
 			removedCount = filesToRemove.length;
 		} catch (error) {
 			// Ignore errors during cleanup - non-critical operation

@@ -165,7 +165,7 @@ function refuseLinkedFolders(root: string, file: string): string {
 
 /**
  * Write a file in the project, creating its folders. Every write into the
- * project goes through here or appendProjectFile, so none can follow a
+ * project goes through here or one of the functions below it, so none can follow a
  * committed symlink out of it (GHSA-62pv, #616, #782, #1072);
  * src/project-writes.spec.ts fails on a write that doesn't.
  * @param file - Absolute, or relative to `root`
@@ -196,6 +196,38 @@ export async function appendProjectFile(
 	refuseSymlinkSync(full);
 	await fs.mkdir(path.dirname(full), { recursive: true });
 	await fs.appendFile(full, content, 'utf-8');
+}
+
+/**
+ * Create a folder in the project, and the folders above it, refusing a
+ * linked one on the way as writeProjectFile does
+ */
+export function makeProjectDir(root: string, dir: string): void {
+	const full = path.dirname(refuseLinkedFolders(root, path.join(dir, 'file')));
+	fsSync.mkdirSync(full, { recursive: true });
+}
+
+/**
+ * Delete a file in the project if it exists. A linked folder on the way is
+ * refused; a linked file is removed itself, never the file it points to
+ */
+export function removeProjectFile(root: string, file: string): void {
+	fsSync.rmSync(refuseLinkedFolders(root, file), { force: true });
+}
+
+/**
+ * Rename a file in the project, refusing a linked folder on either path
+ * @throws The rename's own error, such as ENOENT when `from` is missing
+ */
+export function renameProjectFile(
+	root: string,
+	from: string,
+	to: string
+): void {
+	fsSync.renameSync(
+		refuseLinkedFolders(root, from),
+		refuseLinkedFolders(root, to)
+	);
 }
 
 /**
