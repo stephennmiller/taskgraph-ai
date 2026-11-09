@@ -24,7 +24,12 @@ import { getLogger } from '../../../common/logger/index.js';
 import type { TaskStatus } from '../../../common/types/index.js';
 import { PROJECT_ROOT_ENV } from '../../../common/utils/project-root-finder.js';
 import { childAutoUpdateEnv } from '../child-env.js';
-import { OWN_PROCESS_GROUP, killProcessGroup } from '../process-group.js';
+import {
+	KILL_GRACE_MS,
+	killProcessGroup,
+	spawnInOwnGroup,
+	stopProcessGroup
+} from '../process-group.js';
 import type { TasksDomain } from '../../tasks/tasks-domain.js';
 import { resolveClaimant } from '../../tasks/utils/claim.js';
 import { ContainerWorkers, preflightContainer } from './container-workers.js';
@@ -136,7 +141,7 @@ export class ParallelLoopRunner {
 
 		const running: Running[] = [];
 		let aborted = signal?.aborted ?? false;
-		const killTimers: NodeJS.Timeout[] = [];
+		const graceMs = options.killGraceMs ?? KILL_GRACE_MS;
 		// If this process exits before the run is over (a second Ctrl-C, a
 		// crash), Claude Code mustn't go on alone with permission prompts off:
 		// its process group is in no terminal's way, so kill it here
@@ -159,7 +164,7 @@ export class ParallelLoopRunner {
 			workers?.stop(runningContainers());
 			for (const r of running) {
 				if (r.task.state !== 'running' || !r.child) continue;
-				killTimers.push(this.terminate(r.child, options.killGraceMs ?? 5000));
+				stopProcessGroup(r.child, graceMs);
 			}
 		};
 		signal?.addEventListener('abort', stopAll, { once: true });
@@ -264,7 +269,7 @@ export class ParallelLoopRunner {
 						spawner,
 						cwd,
 						isAborted: () => aborted,
-						killGraceMs: options.killGraceMs ?? 5000,
+						killGraceMs: graceMs,
 						workers
 					});
 					// A worker (its own process group) outlives a SIGKILLed run:
@@ -310,7 +315,6 @@ export class ParallelLoopRunner {
 		} finally {
 			signal?.removeEventListener('abort', stopAll);
 			process.off('exit', killOnExit);
-			for (const timer of killTimers) clearTimeout(timer);
 		}
 
 		await this.settle(running, git, workers, base, tag, claimant, aborted);
@@ -361,7 +365,7 @@ export class ParallelLoopRunner {
 		const log = openLog(task.logFile);
 		const logStart = fs.fstatSync(log).size;
 		const timeout = loopIterationTimeoutMs();
-		const timers: NodeJS.Timeout[] = [];
+		let timer: NodeJS.Timeout | undefined;
 		return new Promise<void>((resolve) => {
 			let settled = false;
 			const done = (
@@ -371,7 +375,7 @@ export class ParallelLoopRunner {
 			) => {
 				if (settled) return;
 				settled = true;
-				for (const timer of timers) clearTimeout(timer);
+				clearTimeout(timer);
 				task.exitCode = exitCode;
 				readSpend(task, logStart);
 				this.finish(entry, state, error);
@@ -379,30 +383,32 @@ export class ParallelLoopRunner {
 			};
 			try {
 				// argv array, no shell: the prompt is one argument whatever it holds
-				const child = ctx.spawner(ctx.command, ctx.args, {
-					cwd: ctx.cwd,
-					// Else `taskgraph` in the worktree finds its copy of tasks.json
-					// (from HEAD): statuses would land on the branch, uncommitted
-					// tasks would be missing. An env value, never a shell. The
-					// marker and TASKGRAPH_SKIP_AUTO_UPDATE stop updates.
-					env: childAutoUpdateEnv('parallel', {
-						...process.env,
-						[PROJECT_ROOT_ENV]: path.resolve(this.projectRoot)
-					}),
-					stdio: ['ignore', log, log],
-					// Own process group, so an abort can stop Claude's children too
-					detached: OWN_PROCESS_GROUP
-				});
+				// Own process group, so an abort can stop Claude's children too
+				const child = spawnInOwnGroup(
+					ctx.command,
+					ctx.args,
+					{
+						cwd: ctx.cwd,
+						// Else `taskgraph` in the worktree finds its copy of tasks.json
+						// (from HEAD): statuses would land on the branch, uncommitted
+						// tasks would be missing. An env value, never a shell. The
+						// marker and TASKGRAPH_SKIP_AUTO_UPDATE stop updates.
+						env: childAutoUpdateEnv('parallel', {
+							...process.env,
+							[PROJECT_ROOT_ENV]: path.resolve(this.projectRoot)
+						}),
+						stdio: ['ignore', log, log]
+					},
+					ctx.spawner
+				);
 				entry.child = child;
 				// A hung worker would hold up the whole run: stop it like an abort does
-				timers.push(
-					setTimeout(() => {
-						entry.timedOut = true;
-						// Killing the docker client leaves its container running
-						if (entry.container) ctx.workers?.stop([entry.container]);
-						timers.push(this.terminate(child, ctx.killGraceMs));
-					}, timeout)
-				);
+				timer = setTimeout(() => {
+					entry.timedOut = true;
+					// Killing the docker client leaves its container running
+					if (entry.container) ctx.workers?.stop([entry.container]);
+					stopProcessGroup(child, ctx.killGraceMs);
+				}, timeout);
 				child.once('error', (error: NodeJS.ErrnoException) =>
 					done('failed', describeSpawnError(error, ctx.command, ctx.cwd))
 				);
@@ -440,14 +446,6 @@ export class ParallelLoopRunner {
 		entry.task.state = state;
 		entry.task.durationMs = Date.now() - entry.task.startedAt;
 		if (error) entry.task.error = error;
-	}
-
-	/** SIGTERM now, SIGKILL after the grace period; returns the SIGKILL timer */
-	private terminate(child: ChildProcess, graceMs: number): NodeJS.Timeout {
-		killProcessGroup(child, 'SIGTERM');
-		const timer = setTimeout(() => killProcessGroup(child, 'SIGKILL'), graceMs);
-		timer.unref();
-		return timer;
 	}
 
 	/**
@@ -513,7 +511,7 @@ export class ParallelLoopRunner {
 			}
 			// A container's commits weren't made here: note only that its branch is gone
 			if (hasWorktree && !(workers && (await git.branchExists(task.branch)))) {
-				await this.recordBranch(git, task.branch);
+				await this.recordBranch(git, task.branch, task.state === 'done');
 			}
 			if (releaseClaim || !hasWork) {
 				await this.release(task.id, tag, claimant);
@@ -543,10 +541,11 @@ export class ParallelLoopRunner {
 	/** TaskWorktrees.recordBranch; a failure only costs the next run that shortcut */
 	private async recordBranch(
 		git: TaskWorktrees,
-		branch: string
+		branch: string,
+		finished = false
 	): Promise<void> {
 		try {
-			await git.recordBranch(branch);
+			await git.recordBranch(branch, finished);
 		} catch (error) {
 			this.logger.warn(`Couldn't record where ${branch} was left:`, error);
 		}

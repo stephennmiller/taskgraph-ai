@@ -4,6 +4,8 @@ sidebarTitle: "Planning Commands"
 description: "Turn a PRD into tasks, add and break down tasks, size them, and research"
 ---
 
+The commands that call the model (`parse-prd`, `add-task --prompt`, `expand`, `scope`, `analyze-complexity`, `research`, and `update`, `update-task` and `update-subtask`) stop their Claude Code when you stop them: Ctrl-C, `kill` or closing the terminal leaves no Claude Code running. They exit 130 after Ctrl-C and 143 after `kill`.
+
 ## Parse PRD
 
 ```bash

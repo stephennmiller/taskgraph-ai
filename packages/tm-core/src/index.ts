@@ -135,7 +135,9 @@ export {
 	LoopDomain,
 	LoopError,
 	PRESET_NAMES,
+	STOP_SIGNALS,
 	TASK_PRESETS,
+	exitOnStopSignals,
 	parseLoopCaps,
 	parseLoopModel
 } from './modules/loop/index.js';
