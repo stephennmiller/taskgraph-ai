@@ -177,4 +177,109 @@ describe('loop --parallel --merge', () => {
 		expect(spend('1')).toMatchObject({ usd: 0.25, iterations: 1 });
 		expect(spend('2')).toMatchObject({ usd: 0.75, iterations: 1 });
 	}, 120_000);
+
+	describe('tasks an interrupted run left in review (#1124)', () => {
+		/** Stop a --merge run once both workers are done, before anything merges */
+		const interruptBeforeMerging = async () => {
+			fs.writeFileSync(
+				planFile,
+				JSON.stringify({ 'task-1': 'merge-commit', 'task-2': 'merge-commit' })
+			);
+			const controller = new AbortController();
+			let ended = 0;
+			const result = await tmCore.loop.runParallel({
+				parallel: 2,
+				merge: true,
+				trusted: true,
+				claimant: 'test',
+				command: path.join(binDir, 'claude'),
+				signal: controller.signal,
+				callbacks: {
+					onTaskEnd: () => {
+						if (++ended === 2) controller.abort();
+					}
+				}
+			});
+			expect(result.aborted).toBe(true);
+			expect([status('1'), status('2')]).toEqual(['review', 'review']);
+			expect(fs.existsSync(path.join(root, 'work-1.txt'))).toBe(false);
+		};
+
+		it('merges them on the next --merge run and marks them done, without a second worker', async () => {
+			await interruptBeforeMerging();
+			const started: string[] = [];
+			// A worker started for task 1 or 2 again would fail it
+			fs.writeFileSync(
+				planFile,
+				JSON.stringify({
+					'task-1': 'fail',
+					'task-2': 'fail',
+					'task-3': 'merge-commit',
+					'task-4': 'merge-commit'
+				})
+			);
+
+			const result = await tmCore.loop.runParallel({
+				parallel: 2,
+				merge: true,
+				trusted: true,
+				claimant: 'test',
+				command: path.join(binDir, 'claude'),
+				callbacks: { onTaskStart: (t) => started.push(t.id) }
+			});
+
+			expect(started.sort()).toEqual(['3', '4']);
+			for (const id of ['1', '2', '3', '4']) {
+				expect(status(id)).toBe('done');
+				expect(fs.existsSync(path.join(root, `work-${id}.txt`))).toBe(true);
+			}
+			expect(result.tasks.map((t) => [t.id, t.outcome]).sort()).toEqual([
+				['1', 'merged'],
+				['2', 'merged'],
+				['3', 'merged'],
+				['4', 'merged']
+			]);
+			expect(result.leftInReviewIds).toBeUndefined();
+			expect(git(root, 'branch', '--list', 'taskgraph/*')).toBe('');
+		}, 120_000);
+
+		it('leaves them alone without --merge', async () => {
+			await interruptBeforeMerging();
+			fs.writeFileSync(planFile, '{}');
+
+			const result = await tmCore.loop.runParallel({
+				parallel: 2,
+				trusted: true,
+				claimant: 'test',
+				command: path.join(binDir, 'claude')
+			});
+
+			expect(result.tasks).toEqual([]);
+			expect([status('1'), status('2')]).toEqual(['review', 'review']);
+			expect(fs.existsSync(path.join(root, 'work-1.txt'))).toBe(false);
+			expect(git(root, 'branch', '--list', 'taskgraph/*')).toContain(
+				'taskgraph/task-1'
+			);
+		}, 120_000);
+
+		it('leaves a review task alone, and names it, when it has no branch or its branch moved since the run', async () => {
+			await interruptBeforeMerging();
+			// Task 1's branch gets a commit no run made; task 2's is deleted
+			const worktree = path.join(root, '.taskgraph/worktrees/task-1');
+			fs.writeFileSync(path.join(worktree, 'mine.txt'), 'mine\n');
+			git(worktree, 'add', 'mine.txt');
+			git(worktree, 'commit', '-q', '-m', 'my own commit');
+			git(root, 'worktree', 'remove', '.taskgraph/worktrees/task-2');
+			git(root, 'branch', '-D', 'taskgraph/task-2');
+
+			const result = await run({});
+
+			expect(result.leftInReviewIds).toEqual(['1', '2']);
+			expect(result.tasks).toEqual([]);
+			expect([status('1'), status('2')]).toEqual(['review', 'review']);
+			expect([status('3'), status('4')]).toEqual(['pending', 'pending']);
+			expect(fs.existsSync(path.join(root, 'work-1.txt'))).toBe(false);
+			expect(fs.existsSync(path.join(worktree, 'mine.txt'))).toBe(true);
+		}, 120_000);
+	});
 });

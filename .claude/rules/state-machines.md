@@ -295,9 +295,8 @@ Invariants:
 - An interrupted task is picked up again by `interruptedTask`.
 - The progress file only appends. tasks.json is the source of truth.
 
-Every Claude Code the loop starts (iteration, parallel worker, conflict
-resolver) is stopped by `stopProcessGroup` (`loop/process-group.ts`, #1121):
-SIGTERM to its process group, SIGKILL after 5 seconds.
+`stopProcessGroup` stops every Claude Code the loop starts: SIGTERM to
+its process group, SIGKILL 5 seconds later.
 
 ## 8. Parallel task
 
@@ -334,6 +333,10 @@ Invariant: settle releases the claim on abort, failure, or no work.
 | settled    | conflict, set aside           | set-aside, task pending |
 | settled    | conflict, cannot set aside    | run ends                |
 | wave end   | nothing merged, abort, budget | run ends                |
+
+Before wave 1 (#1124), a `review` task whose task branch is at its
+recorded tip is merged like a settled one; other `review` tasks are
+only listed (`leftInReviewIds`).
 
 Invariants (#1039):
 

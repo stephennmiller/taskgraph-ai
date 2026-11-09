@@ -14,6 +14,9 @@
  * and reported. Stops too when a wave merges nothing, the run is aborted
  * (before the next merge or resolve), the budget is spent, or the run's
  * approval was withdrawn (#1039).
+ * Before the first wave, tasks an interrupted run left in review with their
+ * branch go through the same merge step, without a second Claude Code
+ * session (#1124).
  */
 
 import { getLogger } from '../../../common/logger/index.js';
@@ -59,6 +62,11 @@ export interface WaveMergeDeps {
 	block: (id: string, note: string) => Promise<void>;
 	/** Before each wave: false when the run's approval was withdrawn (keepLoopTrust) */
 	keepTrust: () => boolean;
+	/**
+	 * Tasks already in review: the ones whose branch is where a run left it,
+	 * as settled tasks to merge, and the IDs of the rest (tasksLeftInReview)
+	 */
+	leftInReview: () => Promise<{ tasks: ParallelTask[]; leftIds: string[] }>;
 }
 
 /** Less than this left and no wave starts, as in the sequential loop (#971) */
@@ -96,52 +104,13 @@ export async function runMergingWaves(
 		return ok && (await deps.merge(task.branch));
 	};
 
-	while (!options.signal?.aborted) {
-		const left =
-			options.maxBudgetUsd === undefined
-				? undefined
-				: options.maxBudgetUsd - spent;
-		if (
-			left !== undefined &&
-			total.waves &&
-			left < Math.min(MIN_WAVE_BUDGET_USD, options.maxBudgetUsd ?? 0)
-		) {
-			break;
-		}
-		// parse-prd or github import added tasks nobody approved, as in the serial loop
-		if (!deps.keepTrust()) {
-			total.errorMessage = TRUST_LOST;
-			break;
-		}
-		const wave = await deps.runWave({ ...options, maxBudgetUsd: left });
-		if (!total.waves) total.readyCount = wave.readyCount;
-		total.waves = (total.waves ?? 0) + 1;
-		// A retry replaces the task's earlier attempt, so a fixed failure doesn't fail the run;
-		// a set-aside one stays, as it names the branch its work was kept on
-		const ran = new Set(wave.tasks.map((t) => t.id));
-		total.tasks = [
-			...total.tasks.filter((t) => t.outcome === 'set-aside' || !ran.has(t.id)),
-			...wave.tasks
-		];
-		total.skippedIds = wave.skippedIds;
-		total.heldBackIds = wave.heldBackIds;
-		total.aborted = wave.aborted;
-		if (wave.costPartial) total.costPartial = true;
-		// Killed or crashed before reporting a cost: charge the share it was capped at (#855)
-		const unknown =
-			left === undefined
-				? 0
-				: (wave.tasks.filter((t) => t.costUnknown).length * left) /
-					options.parallel;
-		if (wave.totalCostUsd !== undefined || unknown) {
-			spent += (wave.totalCostUsd ?? 0) + unknown;
-			total.totalCostUsd = spent;
-		}
-		if (wave.aborted) break;
-
-		// Tasks merged or done this wave: none means the next wave would find the same
+	/**
+	 * Merge each finished task's branch and mark the task done
+	 * @returns How many were merged or done: none means the next wave would find the same
+	 */
+	const mergeFinished = async (tasks: ParallelTask[]): Promise<number> => {
 		let merged = 0;
-		for (const task of wave.tasks) {
+		for (const task of tasks) {
 			if (options.signal?.aborted) break;
 			// Merging would drop uncommitted work, or work Claude Code didn't finish cleanly
 			if (
@@ -193,6 +162,61 @@ export async function runMergingWaves(
 			await deps.remove(task.worktree, task.branch);
 			await deps.markDone(task.id).catch(() => notDone.push(task.id));
 		}
+		return merged;
+	};
+
+	while (!options.signal?.aborted) {
+		const left =
+			options.maxBudgetUsd === undefined
+				? undefined
+				: options.maxBudgetUsd - spent;
+		if (
+			left !== undefined &&
+			total.waves &&
+			left < Math.min(MIN_WAVE_BUDGET_USD, options.maxBudgetUsd ?? 0)
+		) {
+			break;
+		}
+		// parse-prd or github import added tasks nobody approved, as in the serial loop
+		if (!deps.keepTrust()) {
+			total.errorMessage = TRUST_LOST;
+			break;
+		}
+		// An interrupted run's finished tasks first, so what depends on them is ready in wave 1 (#1124)
+		if (!total.waves) {
+			const inReview = await deps.leftInReview();
+			if (inReview.leftIds.length) total.leftInReviewIds = inReview.leftIds;
+			total.tasks = inReview.tasks;
+			await mergeFinished(inReview.tasks);
+			if (options.signal?.aborted || total.conflictBranch) break;
+		}
+		const wave = await deps.runWave({ ...options, maxBudgetUsd: left });
+		if (!total.waves) total.readyCount = wave.readyCount;
+		total.waves = (total.waves ?? 0) + 1;
+		// A retry replaces the task's earlier attempt, so a fixed failure doesn't fail the run;
+		// a set-aside one stays, as it names the branch its work was kept on
+		const ran = new Set(wave.tasks.map((t) => t.id));
+		total.tasks = [
+			...total.tasks.filter((t) => t.outcome === 'set-aside' || !ran.has(t.id)),
+			...wave.tasks
+		];
+		total.skippedIds = wave.skippedIds;
+		total.heldBackIds = wave.heldBackIds;
+		total.aborted = wave.aborted;
+		if (wave.costPartial) total.costPartial = true;
+		// Killed or crashed before reporting a cost: charge the share it was capped at (#855)
+		const unknown =
+			left === undefined
+				? 0
+				: (wave.tasks.filter((t) => t.costUnknown).length * left) /
+					options.parallel;
+		if (wave.totalCostUsd !== undefined || unknown) {
+			spent += (wave.totalCostUsd ?? 0) + unknown;
+			total.totalCostUsd = spent;
+		}
+		if (wave.aborted) break;
+
+		const merged = await mergeFinished(wave.tasks);
 		if (options.signal?.aborted) break;
 		await blockStuck(wave.tasks, attempts, setAside, deps.block);
 		if (total.conflictBranch || merged === 0) break;

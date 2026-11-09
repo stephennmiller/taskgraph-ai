@@ -390,12 +390,7 @@ export class TaskWorktrees {
 	): Promise<void> {
 		const tip = await this.tip(branch);
 		if (tip === undefined || tip === base) return;
-		const recorded = await fs.promises
-			.readFile(await this.recordFile(branch), 'utf8')
-			.then(
-				(s) => s.trim(),
-				() => ''
-			);
+		const recorded = await this.recordedTip(branch);
 		if (recorded === tip) return;
 		if (
 			recorded &&
@@ -409,6 +404,20 @@ export class TaskWorktrees {
 		throw new ParallelLoopError(
 			`${branch} already exists with commits the loop didn't record (made outside a run, or by a --container run), so its files weren't approved. Review it with \`git diff ${base} ${branch}\`, then rename it (\`git branch -m ${branch} <new-name>\`) or delete it (\`git branch -D ${branch}\`, after \`git worktree remove\` if a worktree has it), and run again`
 		);
+	}
+
+	/** The tip recordBranch noted for `branch`, or '' when there's none */
+	private async recordedTip(branch: string): Promise<string> {
+		return fs.promises.readFile(await this.recordFile(branch), 'utf8').then(
+			(s) => s.trim(),
+			() => ''
+		);
+	}
+
+	/** `branch` exists and is at the commit a run left it at (recordBranch) */
+	async isWhereRunLeft(branch: string): Promise<boolean> {
+		const tip = await this.tip(branch);
+		return tip !== undefined && tip === (await this.recordedTip(branch));
 	}
 
 	async branchExists(branch: string): Promise<boolean> {
