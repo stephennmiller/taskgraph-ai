@@ -5,6 +5,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Task } from '../../../common/types/index.js';
 import { FileStorage } from '../../storage/adapters/file-storage/index.js';
 import { TagService } from './tag.service.js';
+import {
+	removeGeneratedTaskFiles,
+	renameGeneratedTaskFiles
+} from './task-file-generator.service.js';
 
 let projectRoot: string;
 let tasksPath: string;
@@ -475,4 +479,69 @@ describe('TagService.listTags', () => {
 		expect(result.tags.map((t) => t.name)).toEqual(['master']);
 		expect(fs.existsSync(tasksPath)).toBe(false);
 	});
+});
+
+describe('TagService and generated task files (#1125)', () => {
+	const tasksDir = () => path.dirname(tasksPath);
+	const touch = (...names: string[]) => {
+		for (const name of names) {
+			fs.writeFileSync(path.join(tasksDir(), name), name);
+		}
+	};
+	const taskFiles = () =>
+		fs
+			.readdirSync(tasksDir())
+			.filter((name) => name.endsWith('.md'))
+			.sort();
+	// Named like nothing the generator writes for tag feature
+	const others = [
+		'notes.md',
+		'task_001.md',
+		'task_001_feature-x.md',
+		'task_abc_feature.md'
+	];
+
+	it("deleteTag deletes the tag's files and no other file", async () => {
+		touch('task_001_feature.md', 'task_002_feature.md', ...others);
+
+		await service().deleteTag('feature');
+
+		expect(taskFiles()).toEqual(others);
+	});
+
+	it("renameTag renames the tag's files and no other file", async () => {
+		touch('task_001_feature.md', 'task_002_feature.md', ...others);
+
+		await service().renameTag('feature', 'renamed');
+
+		expect(taskFiles()).toEqual(
+			['task_001_renamed.md', 'task_002_renamed.md', ...others].sort()
+		);
+		expect(
+			fs.readFileSync(path.join(tasksDir(), 'task_001_renamed.md'), 'utf8')
+		).toBe('task_001_feature.md');
+	});
+
+	it('keeps the files when the tag is kept', async () => {
+		touch('task_001_feature.md');
+
+		await service().deleteTag('feature', { confirm: async () => false });
+
+		expect(taskFiles()).toEqual(['task_001_feature.md']);
+	});
+
+	it.each([['.taskgraph'], [path.join('.taskgraph', 'tasks')]])(
+		'touches nothing through a symlinked %s',
+		(linked) => {
+			touch('task_001_feature.md');
+			const real = path.join(projectRoot, 'elsewhere');
+			fs.renameSync(path.join(projectRoot, linked), real);
+			fs.symlinkSync(real, path.join(projectRoot, linked));
+
+			expect(removeGeneratedTaskFiles(projectRoot, 'feature')).toBe(0);
+			renameGeneratedTaskFiles(projectRoot, 'feature', 'renamed');
+
+			expect(taskFiles()).toEqual(['task_001_feature.md']);
+		}
+	);
 });

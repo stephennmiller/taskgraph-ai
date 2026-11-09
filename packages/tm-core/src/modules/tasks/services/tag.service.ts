@@ -13,6 +13,10 @@ import {
 } from '../../../common/errors/taskgraph-error.js';
 import { assertStateWritable, recordCurrentTag } from '../utils/branch-tag.js';
 import { assertTagName, isReservedNewTagName } from '../utils/tag-names.js';
+import {
+	removeGeneratedTaskFiles,
+	renameGeneratedTaskFiles
+} from './task-file-generator.service.js';
 
 /**
  * Options for creating a new tag
@@ -246,6 +250,7 @@ export class TagService {
 			await assertStateWritable(this.context.projectRoot, 'master', 'removed');
 		}
 		await this.storage.deleteTag(name);
+		removeGeneratedTaskFiles(this.context.projectRoot, name);
 		if (wasCurrentTag) {
 			await recordCurrentTag(this.context.projectRoot, 'master');
 		}
@@ -291,6 +296,7 @@ export class TagService {
 			await assertStateWritable(this.context.projectRoot, newName, 'renamed');
 		}
 		await this.storage.renameTag(oldName, newName);
+		renameGeneratedTaskFiles(this.context.projectRoot, oldName, newName);
 		if (wasCurrentTag) {
 			await recordCurrentTag(this.context.projectRoot, newName);
 		}

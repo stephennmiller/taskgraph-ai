@@ -25,6 +25,7 @@ import {
 	moveTasksToTag,
 	moveTasksWithinTag
 } from './services/task-restructure.js';
+import { removeGeneratedTaskFiles } from './services/task-file-generator.service.js';
 import type {
 	CrossTagMoveOptions,
 	CrossTagMoveResult,
@@ -77,6 +78,14 @@ export class TaskEditCommands {
 			{ olderThanDays, dryRun: options.dryRun },
 			tag
 		);
+		if (!options.dryRun) {
+			// Their generated files would otherwise outlive them
+			removeGeneratedTaskFiles(
+				this.configManager.getProjectRoot(),
+				tag,
+				tasks.map((task) => task.id)
+			);
+		}
 		return { tasks, tag, olderThanDays, dryRun: options.dryRun === true };
 	}
 

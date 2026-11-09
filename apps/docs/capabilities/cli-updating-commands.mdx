@@ -103,6 +103,8 @@ Marking a parent task done leaves its subtasks as they are; mark each subtask do
 taskgraph generate
 ```
 
+Files are named `task_001.md` in `master` and `task_001_<tag>.md` in other tags. TaskGraph keeps them in step: `generate` deletes the files of tasks that are gone (also when the tag has no tasks left), `remove-task` and `archive` delete the files of the tasks they take out, `tags remove` deletes the tag's files and `tags rename` renames them. Only files with those names in `.taskgraph/tasks` are touched; any other file there is left alone.
+
 ## Managing Task Dependencies
 
 ```bash

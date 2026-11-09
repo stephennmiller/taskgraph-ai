@@ -3,7 +3,7 @@
  * Generates individual markdown task files from tasks.json
  */
 
-import fs from 'node:fs/promises';
+import fs from 'node:fs';
 import path from 'node:path';
 import type { Task, Subtask, TaskStatus } from '../../../common/types/index.js';
 import type { IStorage } from '../../../common/interfaces/storage.interface.js';
@@ -14,7 +14,7 @@ import {
 	refuseSymlinkedFolders,
 	writeProjectFile
 } from '../../storage/adapters/file-storage/file-operations.js';
-import { assertTagName } from '../utils/tag-names.js';
+import { TAG_NAME_PATTERN, assertTagName } from '../utils/tag-names.js';
 
 /**
  * Options for generating task files
@@ -56,6 +56,108 @@ export function taskFileName(taskId: string | number, tag: string): string {
 }
 
 /**
+ * The files in `dir` named as `generate` names a tag's task files, with the
+ * task number each holds. Any other file there is someone else's.
+ */
+function taskFilesIn(
+	dir: string,
+	tag: string
+): Array<{ file: string; id: string }> {
+	// A valid tag name has no regex characters
+	const pattern =
+		tag === 'master'
+			? /^task_(\d+)\.md$/
+			: new RegExp(`^task_(\\d+)_${tag}\\.md$`);
+	return fs.readdirSync(dir).flatMap((file) => {
+		const match = file.match(pattern);
+		return match ? [{ file, id: String(Number.parseInt(match[1], 10)) }] : [];
+	});
+}
+
+/** Delete a tag's generated files in `dir` whose task number `remove` accepts */
+function removeTaskFilesIn(
+	dir: string,
+	tag: string,
+	remove: (id: string) => boolean
+): number {
+	let removed = 0;
+	for (const { file, id } of taskFilesIn(dir, tag)) {
+		if (!remove(id)) continue;
+		try {
+			// unlink removes a link itself, never what it points at
+			fs.unlinkSync(path.join(dir, file));
+			removed++;
+		} catch {
+			// The file is a copy of tasks.json; one left behind loses nothing
+		}
+	}
+	return removed;
+}
+
+/**
+ * The folder `generate` writes to by default, or undefined when the tag
+ * can't name a file (generate refuses it, so it has none) or the folder is
+ * missing or reached through a symlink
+ */
+function defaultTaskFilesDir(
+	projectRoot: string,
+	...tags: string[]
+): string | undefined {
+	if (!tags.every((tag) => TAG_NAME_PATTERN.test(tag))) return undefined;
+	const dir = path.join(projectRoot, '.taskgraph', 'tasks');
+	try {
+		refuseSymlinkedFolders(path.join(dir, 'task.md'));
+		return fs.statSync(dir).isDirectory() ? dir : undefined;
+	} catch {
+		return undefined;
+	}
+}
+
+/**
+ * Delete the files `generate` wrote for a tag in the default folder: all of
+ * them (the tag was removed), or those of `taskIds` (archived tasks). Runs
+ * after tasks.json is saved and never throws.
+ * @returns How many files were deleted
+ */
+export function removeGeneratedTaskFiles(
+	projectRoot: string,
+	tag: string,
+	taskIds?: Iterable<string | number>
+): number {
+	const dir = defaultTaskFilesDir(projectRoot, tag);
+	if (!dir) return 0;
+	const ids = taskIds && new Set([...taskIds].map(String));
+	try {
+		return removeTaskFilesIn(dir, tag, (id) => !ids || ids.has(id));
+	} catch {
+		return 0;
+	}
+}
+
+/**
+ * Rename a renamed tag's generated files in the default folder to the new
+ * tag's names. Never throws.
+ */
+export function renameGeneratedTaskFiles(
+	projectRoot: string,
+	oldTag: string,
+	newTag: string
+): void {
+	const dir = defaultTaskFilesDir(projectRoot, oldTag, newTag);
+	if (!dir) return;
+	try {
+		for (const { file, id } of taskFilesIn(dir, oldTag)) {
+			fs.renameSync(
+				path.join(dir, file),
+				path.join(dir, taskFileName(id, newTag))
+			);
+		}
+	} catch {
+		// As above: a file left under the old name loses nothing
+	}
+}
+
+/**
  * Service for generating individual task markdown files from tasks.json
  */
 export class TaskFileGeneratorService {
@@ -87,26 +189,23 @@ export class TaskFileGeneratorService {
 				refuseSymlinkedFolders(path.join(outputDir, 'task.md'));
 
 			// Ensure output directory exists
-			await fs.mkdir(outputDir, { recursive: true });
+			await fs.promises.mkdir(outputDir, { recursive: true });
 
 			// Load tasks from storage
 			const tasks = await this.storage.loadTasks(tag);
 
-			if (tasks.length === 0) {
-				return {
-					success: true,
-					count: 0,
-					directory: outputDir,
-					orphanedFilesRemoved: 0
-				};
+			// Clean up orphaned task files, also when the tag has no tasks left
+			const validTaskIds = new Set(tasks.map((task) => String(task.id)));
+			let orphanedCount = 0;
+			try {
+				orphanedCount = removeTaskFilesIn(
+					outputDir,
+					tag,
+					(id) => !validTaskIds.has(id)
+				);
+			} catch {
+				// Cleanup is best effort
 			}
-
-			// Clean up orphaned task files
-			const orphanedCount = await this.cleanupOrphanedFiles(
-				outputDir,
-				tasks,
-				tag
-			);
 
 			// Generate task files in parallel with individual error handling
 			// This allows partial success - some files can be written even if others fail
@@ -160,79 +259,6 @@ export class TaskFileGeneratorService {
 				error: error.message
 			};
 		}
-	}
-
-	/**
-	 * Escape special regex characters in a string
-	 */
-	private escapeRegExp(str: string): string {
-		return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-	}
-
-	/**
-	 * Clean up orphaned task files (files for tasks that no longer exist)
-	 * @returns Number of files removed
-	 */
-	private async cleanupOrphanedFiles(
-		outputDir: string,
-		tasks: Task[],
-		tag: string
-	): Promise<number> {
-		let removedCount = 0;
-
-		try {
-			const files = await fs.readdir(outputDir);
-			const validTaskIds = tasks.map((task) => String(task.id));
-
-			// Tag-aware file patterns
-			const masterFilePattern = /^task_(\d+)\.md$/;
-			const taggedFilePattern = new RegExp(
-				`^task_(\\d+)_${this.escapeRegExp(tag)}\\.md$`
-			);
-
-			// Collect files to remove
-			const filesToRemove: string[] = [];
-
-			for (const file of files) {
-				let match = null;
-				let fileTaskId: string | null = null;
-
-				// Check if file belongs to current tag
-				if (tag === 'master') {
-					match = file.match(masterFilePattern);
-					if (match) {
-						fileTaskId = match[1];
-					}
-				} else {
-					match = file.match(taggedFilePattern);
-					if (match) {
-						fileTaskId = match[1];
-					}
-				}
-
-				// If this is a task file for the current tag and the task no longer exists
-				if (fileTaskId !== null) {
-					// Convert to integer for comparison (removes leading zeros)
-					const normalizedId = String(parseInt(fileTaskId, 10));
-					if (!validTaskIds.includes(normalizedId)) {
-						filesToRemove.push(file);
-					}
-				}
-			}
-
-			// Remove files in parallel
-			await Promise.all(
-				filesToRemove.map(async (file) => {
-					const filePath = path.join(outputDir, file);
-					await fs.unlink(filePath);
-				})
-			);
-			removedCount = filesToRemove.length;
-		} catch (error) {
-			// Ignore errors during cleanup - non-critical operation
-		}
-
-		return removedCount;
 	}
 
 	/**
