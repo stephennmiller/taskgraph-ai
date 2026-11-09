@@ -11,7 +11,6 @@ import {
 	archivedTaskIds,
 	copyArchiveTag,
 	dropArchiveTag,
-	removedTagMark,
 	isArchivedReference,
 	lastChangedAt,
 	nextTaskId,
@@ -372,48 +371,6 @@ describe('tag rename and delete', () => {
 		expect(
 			copyArchiveTag(tombstoned, 'feature', 'old')?.old.metadata.highestId
 		).toBe(10);
-	});
-
-	it('frees a removed name only on a tombstone that records no GitHub link (#1126)', () => {
-		const linked = {
-			...createTask({ id: 9, title: 'L', status: 'done' }),
-			metadata: { github: { issueNumber: 7 } }
-		};
-		const free = dropArchiveTag(archive(), 'feature', 9, true) as ArchiveData;
-
-		expect(removedTagMark(free, 'feature')).toEqual({
-			highestId: 9,
-			free: true
-		});
-		expect(removedTagMark({}, 'never-used').free).toBe(true);
-		// Nothing recorded (a tombstone from before #1126), a linked archived
-		// task or subtask, and a section that still holds tasks
-		expect(
-			removedTagMark(dropArchiveTag(archive(), 'feature', 9), 'feature').free
-		).toBe(false);
-		for (const task of [
-			linked,
-			createTask({ id: 9, title: 'P', subtasks: [linked as never] })
-		]) {
-			const withLink = addToArchive(archive(), 'feature', [task], NOW);
-			expect(
-				removedTagMark(dropArchiveTag(withLink, 'feature', 9, true), 'feature')
-					.free
-			).toBe(false);
-		}
-		expect(
-			removedTagMark(
-				{ x: { ...archive().feature, metadata: { githubLinked: false } } },
-				'x'
-			).free
-		).toBe(false);
-		// A copy or rename onto another name doesn't carry the record
-		expect(
-			copyArchiveTag(free, 'feature', 'copy')?.copy.metadata
-		).not.toHaveProperty('githubLinked');
-		expect(
-			renameArchiveTag(free, 'feature', 'new', 9, true)?.feature.metadata
-		).toMatchObject({ githubLinked: false, renamedTo: 'new' });
 	});
 
 	it('returns null when the tag has nothing archived and used no IDs', () => {

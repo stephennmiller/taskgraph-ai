@@ -16,10 +16,8 @@ import {
 	archiveTag,
 	copyArchiveTag,
 	dropArchiveTag,
-	hasGithubLink,
 	highestTaskId,
 	readArchiveSync,
-	removedTagMark,
 	renameArchiveTag
 } from '../../../tasks/utils/archive.js';
 import { CLAIM_KEYS, withoutClaim } from '../../../tasks/utils/claim.js';
@@ -49,16 +47,6 @@ function copyTasks(source: unknown): any[] {
 		else delete item.metadata;
 	}
 	return tasks;
-}
-
-/**
- * Whether a tag of tasks.json is known never to have had a GitHub issue
- * link on a task (see githubLinkedAfter in tag-update.ts)
- */
-function neverLinked(section: any): boolean {
-	return (
-		section?.metadata?.githubLinked === false && !hasGithubLink(section.tasks)
-	);
 }
 
 function tagNotFound(tag: string): TaskGraphError {
@@ -108,6 +96,10 @@ export class TagOperations {
 			);
 			this.assertNoRetiredIds(tagName, tasks);
 			tasksCopied = tasks.length;
+			const retired = archiveTag(
+				readArchiveSync(this.pathResolver.getArchivePath()),
+				tagName
+			).metadata.highestId;
 			const now = new Date().toISOString();
 			setOwnKey(data, tagName, {
 				tasks,
@@ -115,7 +107,9 @@ export class TagOperations {
 					created: now,
 					updated: now,
 					description: options?.description,
-					...this.inheritedMetadata(tagName)
+					// A removed tag's IDs stay taken under its name: move --to-tag
+					// numbers above this mark, as add-task does from the archive (#1095)
+					...(retired > 0 && { highestId: retired })
 				}
 			});
 			return data;
@@ -164,8 +158,7 @@ export class TagOperations {
 					created: now,
 					updated: now,
 					description: options?.description,
-					copiedFrom: { tag: sourceTag, date: now },
-					...this.inheritedMetadata(targetTag)
+					copiedFrom: { tag: sourceTag, date: now }
 				}
 			});
 			return data;
@@ -208,16 +201,14 @@ export class TagOperations {
 	 */
 	async deleteTag(tag: string): Promise<void> {
 		let highestId = 0;
-		let unlinked = false;
 		await this.modifyTagged(this.pathResolver.getTasksPath(), (data) => {
 			if (!Object.hasOwn(data, tag)) throw tagNotFound(tag);
 			highestId = highestTaskId(getOwnKey(data, tag));
-			unlinked = neverLinked(getOwnKey(data, tag));
 			delete data[tag];
 			return data;
 		});
 		await this.updateArchive((archive) =>
-			dropArchiveTag(archive, tag, highestId, unlinked)
+			dropArchiveTag(archive, tag, highestId)
 		);
 		const report = this.reportPath(tag);
 		if (report) await fs.rm(report, { force: true });
@@ -231,7 +222,6 @@ export class TagOperations {
 	 */
 	async renameTag(oldTag: string, newTag: string): Promise<void> {
 		let highestId = 0;
-		let unlinked = false;
 		await this.modifyTagged(this.pathResolver.getTasksPath(), (data) => {
 			if (!Object.hasOwn(data, oldTag)) throw tagNotFound(oldTag);
 			// Checked under the lock: a tag created since the caller's check would be overwritten
@@ -243,7 +233,6 @@ export class TagOperations {
 			}
 			highestId = highestTaskId(getOwnKey(data, oldTag));
 			this.assertNoRetiredIds(newTag, getOwnKey(data, oldTag).tasks, oldTag);
-			unlinked = neverLinked(getOwnKey(data, oldTag));
 			const tagData = { ...getOwnKey(data, oldTag) };
 			if (tagData.metadata) {
 				tagData.metadata = {
@@ -251,17 +240,12 @@ export class TagOperations {
 					renamed: { from: oldTag, date: new Date().toISOString() }
 				};
 			}
-			// Issues may still point at the new name's old IDs, so removing
-			// this tag later must not free that name
-			if (!this.removedTagMark(newTag).free) {
-				tagData.metadata = { ...tagData.metadata, githubLinked: true };
-			}
 			setOwnKey(data, newTag, tagData);
 			delete data[oldTag];
 			return data;
 		});
 		await this.updateArchive((archive) =>
-			renameArchiveTag(archive, oldTag, newTag, highestId, unlinked)
+			renameArchiveTag(archive, oldTag, newTag, highestId)
 		);
 		const from = this.reportPath(oldTag);
 		const to = this.reportPath(newTag);
@@ -272,42 +256,20 @@ export class TagOperations {
 		}
 	}
 
-	/** What a removed or renamed tag left under this name in archive.json */
-	removedTagMark = (tag: string) =>
-		removedTagMark(readArchiveSync(this.pathResolver.getArchivePath()), tag);
-
-	/**
-	 * What a tag created by `tags add` or `tags copy` starts with from a
-	 * removed tag of its name. Its IDs stay taken: move --to-tag numbers
-	 * above `highestId`, as add-task does from the archive (#1095). When the
-	 * name is free, the new tag starts with no GitHub link on record.
-	 */
-	private inheritedMetadata(tag: string): {
-		highestId?: number;
-		githubLinked?: false;
-	} {
-		const { highestId, free } = this.removedTagMark(tag);
-		return {
-			...(highestId > 0 && { highestId }),
-			...(free && { githubLinked: false as const })
-		};
-	}
-
 	/**
 	 * Refuse to put tasks under the name of a removed or renamed tag when one
 	 * of their IDs is one that tag used: GitHub link recovery finds an issue
 	 * by tag and ID, so the task would take over the old task's issue. A tag
-	 * renamed back to its old name (the tombstone's `renamedTo`) is its own,
-	 * and a name whose tombstone records that the tag never had a GitHub
-	 * link is free (#1126).
+	 * renamed back to its old name (the tombstone's `renamedTo`) is its own.
 	 */
 	assertNoRetiredIds(tag: string, tasks: unknown, renamedFrom?: string): void {
-		const archive = readArchiveSync(this.pathResolver.getArchivePath());
-		const { metadata } = archiveTag(archive, tag);
+		const { metadata } = archiveTag(
+			readArchiveSync(this.pathResolver.getArchivePath()),
+			tag
+		);
 		if (renamedFrom !== undefined && metadata.renamedTo === renamedFrom) {
 			return;
 		}
-		if (removedTagMark(archive, tag).free) return;
 		const ids = Array.isArray(tasks) ? tasks.map((t) => Number(t?.id)) : [];
 		if (!ids.some((id) => id <= metadata.highestId)) return;
 		throw errorWithHint(

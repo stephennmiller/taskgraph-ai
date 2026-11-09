@@ -305,8 +305,7 @@ export class FileStorage implements IStorage {
 					existingData,
 					resolvedTag,
 					outcome.tasks,
-					buildTagMetadata(outcome.tasks, resolvedTag),
-					this.tagOps.removedTagMark
+					buildTagMetadata(outcome.tasks, resolvedTag)
 				);
 			},
 			{ afterWrite: () => afterWrite?.() ?? Promise.resolve() }
@@ -340,8 +339,7 @@ export class FileStorage implements IStorage {
 						}
 						return change;
 					},
-					this.guardDone(),
-					this.tagOps.removedTagMark
+					this.guardDone()
 				);
 				result = outcome.result;
 				return outcome.data;

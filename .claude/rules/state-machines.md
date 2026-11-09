@@ -206,12 +206,12 @@ and the archive's `highestId`. That covers add-task, parse-prd (including
 `--force`), `remove-task --convert`, GitHub import and moves between tags.
 `tags remove` and `tags rename` leave a tombstone
 `{ tasks: [], metadata: { highestId } }` under the old name in
-archive.json; `tags add` or `tags copy` on that name starts above it
-(#1064). A copy, rename or `move --to-tag` that would bring an ID at or
-below it is refused, except a rename back (`renamedTo`):
-`assertNoRetiredIds`, which `mutateTags` runs for any tag a write creates
-(#1095). A tombstone with `githubLinked: false` frees the name (#1126;
-`githubLinkedAfter` in `tag-update.ts`).
+archive.json, so a tag recreated with that name numbers above it (#1064).
+A copy, rename or `move --to-tag` bringing an ID at or below it is
+refused, except a rename back (`renamedTo`): `assertNoRetiredIds`, which
+`mutateTags` runs for any tag a write creates (#1095). `tags add` on that
+name copies its `highestId` into the new tag, so `move --to-tag` numbers
+above it.
 A tag copy strips `metadata.github` and the claim keys from every task
 and subtask, so two tags never link the same issue (#1063).
 The merge driver merges the mark as a max and renumbers an incoming new
