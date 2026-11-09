@@ -113,4 +113,89 @@ describe('doctor command', () => {
 			report.checks.find((check: { name: string }) => check.name === 'plugin')
 		).toEqual({ name: 'plugin', status: 'fail', problem: 'not-installed' });
 	});
+
+	describe('in a project with broken data files', () => {
+		const tasksFile = () => path.join(dir, '.taskgraph', 'tasks', 'tasks.json');
+		const task = (id: string, fields: object = {}) => ({
+			id,
+			title: `Task ${id}`,
+			description: '',
+			status: 'pending',
+			priority: 'medium',
+			dependencies: [],
+			subtasks: [],
+			...fields
+		});
+		const check = (stdout: string, name: string) =>
+			JSON.parse(stdout).checks.find((c: { name: string }) => c.name === name);
+
+		beforeEach(() => {
+			fakeClaude([]);
+			fs.mkdirSync(path.dirname(tasksFile()), { recursive: true });
+			fs.writeFileSync(path.join(dir, '.taskgraph', 'config.json'), '{}');
+			fs.writeFileSync(
+				tasksFile(),
+				JSON.stringify({
+					master: {
+						tasks: [
+							task('1', {
+								status: 'done',
+								subtasks: [{ id: '1', title: 'Open', status: 'pending' }]
+							}),
+							task('2', { dependencies: ['99'] })
+						],
+						metadata: {}
+					}
+				})
+			);
+		});
+
+		it('fails on a conflict-marked config.json and names the file and line', () => {
+			fs.writeFileSync(
+				path.join(dir, '.taskgraph', 'config.json'),
+				'{\n<<<<<<< HEAD\n  "a": 1\n=======\n  "a": 2\n>>>>>>> theirs\n}\n'
+			);
+
+			const result = run();
+
+			expect(result.status).toBe(1);
+			expect(result.stdout).toContain("✗ Data files      1 can't be read");
+			expect(result.stdout).toContain(
+				'.taskgraph/config.json has a git conflict marker on line 2'
+			);
+		});
+
+		it('reports task problems in text and, the same ones, in --json', () => {
+			const text = run();
+			const json = run('--json');
+
+			expect(text.status).toBe(1);
+			expect(text.stdout).toContain(
+				'✗ Tasks           2 problems in .taskgraph/tasks/tasks.json'
+			);
+			expect(json.status).toBe(1);
+			const findings = check(json.stdout, 'tasks').findings;
+			expect(findings.map((f: { kind: string }) => f.kind)).toEqual([
+				'dependency',
+				'parent-status'
+			]);
+			for (const finding of findings) {
+				expect(text.stdout).toContain(finding.message);
+			}
+			expect(JSON.parse(json.stdout).schemaVersion).toBeGreaterThan(0);
+		});
+
+		it('repairs them with --fix, lists the changes, and then passes that check', () => {
+			const fixed = run('--fix');
+
+			expect(fixed.stdout).toContain(
+				'✓ Repaired 2 problems in .taskgraph/tasks/tasks.json'
+			);
+			expect(fixed.stdout).toContain('Task 1 is now in-progress (was done)');
+			expect(fixed.stdout).toContain('✓ Tasks           2 in 1 tag');
+			expect(check(run('--json').stdout, 'tasks').status).toBe('pass');
+			const saved = JSON.parse(fs.readFileSync(tasksFile(), 'utf8'));
+			expect(saved.master.tasks[1].dependencies).toEqual([]);
+		});
+	});
 });

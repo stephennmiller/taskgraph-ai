@@ -13,6 +13,8 @@ step and the fix under each one that failed:
 taskgraph doctor
 ```
 
+**A command says a file isn't valid JSON, or tasks look wrong after a merge or a hand edit.** `taskgraph doctor` also parses the project's data files and checks every tag's tasks, and names the file, line or task. `taskgraph doctor --fix` repairs what has one safe answer. See [Check the setup](/capabilities/cli-project-commands#data-files-and-tasks).
+
 **AI commands fail.** Run Claude Code once and make sure you're signed in:
 
 ```bash

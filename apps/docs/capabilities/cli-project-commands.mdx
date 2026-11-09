@@ -68,21 +68,28 @@ A first run, with every task still pending, prints no such line.
 ## Check the Setup
 
 ```bash
-# Check Node, Claude Code and its sign-in, the project, the plugin and
-# the MCP server
+# Check Node, Claude Code and its sign-in, the project, its data files and
+# tasks, the plugin and the MCP server
 taskgraph doctor
+
+# Also repair the task problems that have one safe answer
+taskgraph doctor --fix
 
 # The same checks as JSON
 taskgraph doctor --json
 ```
 
-Each check gets one line: `✓` when it passed, `✗` with the fix under it when it failed, and `–` for the MCP server when it isn't set up, since it's optional. Checks that need Claude Code are left out when it isn't installed. `doctor` exits 1 when a check failed, and it works outside a project.
+Each check gets one line: `✓` when it passed, `✗` with the fix under it when it failed, and `–` for the MCP server when it isn't set up, since it's optional. Checks that need Claude Code are left out when it isn't installed, and the project's own checks outside a project.
+
+`doctor` exits 0 when no check failed and 1 when one did. With `--fix` the exit code is for what is left after the repair. It works outside a project.
 
 ```
 ✓ Node            22.22.0
 ✓ Claude Code     2.1.309
 ✓ Claude sign-in  signed in
 ✓ Project         .
+✓ Data files      3 files read
+✓ Tasks           42 in 2 tags
 ✗ Plugin          not installed
   In Claude Code, run /plugin marketplace add stephennmiller/taskgraph-ai
   then /plugin install taskgraph@taskgraph
@@ -90,6 +97,52 @@ Each check gets one line: `✓` when it passed, `✗` with the fix under it when
 ```
 
 The plugin check also fails when this CLI is older than the installed plugin needs. The MCP check looks in the project's `.mcp.json` and in Claude Code's own config (`claude mcp add`), without starting the server.
+
+### Data files and tasks
+
+In a project, `doctor` parses `.taskgraph/config.json`, `config.local.json`, `state.json`, `tasks/tasks.json` and `tasks/archive.json`. A missing file is fine. One that isn't valid JSON fails the check, with the file and, when it can be told, the line. A git conflict marker is always found:
+
+```
+✗ Data files      1 can't be read
+  .taskgraph/config.json has a git conflict marker on line 3
+    Resolve the conflict in the file, then run taskgraph doctor again
+```
+
+It then checks every tag of `tasks.json`, without changing it, for:
+
+- a status or priority that isn't a known one, on a task or subtask
+- an ID that isn't a whole number from 1, and two tasks in a tag (or two subtasks of a task) with the same ID
+- what [`fix-dependencies --check`](/capabilities/cli-updating-commands#managing-task-dependencies) reports: a dependency or link to a task that doesn't exist, a task that depends on itself, a dependency loop
+- a parent whose status disagrees with its subtasks, such as a `done` task with a pending subtask, or a pending one whose subtasks are all done
+
+```
+✗ Tasks           3 problems in .taskgraph/tasks/tasks.json
+  Task 3 has status "finished"
+    Edit .taskgraph/tasks/tasks.json. Use one of: pending, in-progress, done,
+    deferred, cancelled, blocked, review
+  Task 6 depends on non-existent task 99
+  Task 5 is done, but its subtasks make it in-progress
+  Run taskgraph doctor --fix to repair 2 of them
+```
+
+`doctor --fix` repairs the problems with one safe answer, in every tag, and lists each change:
+
+- dependencies, as `fix-dependencies` does: it drops the ones on missing tasks, on the task itself and repeats, and breaks loops made only of subtasks
+- a parent's status, set to the one its subtasks give it, by the rule every command follows (a parent becomes `done` only if its acceptance criteria and the Definition of Done allow it)
+
+```
+✓ Repaired 2 problems in .taskgraph/tasks/tasks.json
+  Task 6 no longer depends on 99, which doesn't exist
+  Task 5 is now in-progress (was done)
+```
+
+Everything else needs a decision, so it stays reported with its fix: an unknown status or priority, a bad or duplicate ID, a loop between tasks. `--fix` writes nothing while one of the five files can't be read, and never rewrites a file it couldn't parse. If you marked a parent `done` over open subtasks on purpose, `doctor` still reports it: cancel the leftover subtasks, or let `--fix` reopen the parent.
+
+Commands can no longer save such a value: a write that would add an unknown status or priority, or a bad or duplicate ID, is refused with the task and the field. A value already in the file may stay until you fix it.
+
+### JSON
+
+The JSON has `ok`, `cliVersion` and `checks`, each with `name` (`node`, `claude`, `signed-in`, `project`, `data-files`, `tasks`, `plugin`, `mcp`), `status` (`pass`, `fail`, `skip`) and, when they apply, `detail`, `problem` and `required`. A failed `data-files` or `tasks` check has `findings`: each with `kind` (`unreadable-file`, `unknown-status`, `unknown-priority`, `bad-id`, `duplicate-id`, `dependency`, `parent-status`, `unchecked`), `file`, `message`, `fixable` (whether `--fix` repairs it) and, when they apply, `line`, `tag`, `taskId` and `fix`. With `--fix`, the `tasks` check has `repaired` (each with `tag`, `taskId` and `message`) when it changed something, or `repairError` when it couldn't.
 
 ## Install the latest version
 
@@ -100,8 +153,6 @@ taskgraph upgrade
 This installs the newest `taskgraph-ai` from npm. Other commands only tell you when a newer version is out. See [Staying up to date](/getting-started/quick-start/installation#staying-up-to-date).
 
 `upgrade` installs nothing, and exits 1, when `loop` or `loop --parallel` started the process.
-
-The JSON has `ok`, `cliVersion` and `checks`, each with `name` (`node`, `claude`, `signed-in`, `project`, `plugin`, `mcp`), `status` (`pass`, `fail`, `skip`) and, when they apply, `detail`, `problem` and `required`.
 
 ## Tag Management
 

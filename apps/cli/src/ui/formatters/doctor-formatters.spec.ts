@@ -179,4 +179,149 @@ describe('formatDoctorReport', () => {
 		expect(output).not.toContain('\x1b');
 		expect(output).not.toContain('\x07');
 	});
+
+	describe('data files and tasks', () => {
+		const TASKS = '.taskgraph/tasks/tasks.json';
+
+		it('shows how many files were read and how many tasks were checked', () => {
+			expect(
+				format([
+					{ name: 'data-files', status: 'pass', detail: '3' },
+					{ name: 'tasks', status: 'pass', detail: '12 in 2 tags' }
+				])
+			).toBe(
+				['✓ Data files  3 files read', '✓ Tasks       12 in 2 tags'].join('\n')
+			);
+		});
+
+		it('names the file that does not parse, with the fix under it', () => {
+			const output = format([
+				{
+					name: 'data-files',
+					status: 'fail',
+					problem: 'invalid',
+					findings: [
+						{
+							kind: 'unreadable-file',
+							file: '.taskgraph/config.json',
+							line: 3,
+							message:
+								'.taskgraph/config.json has a git conflict marker on line 3',
+							fixable: false,
+							fix: 'Resolve the conflict in the file, then run `taskgraph doctor` again'
+						}
+					]
+				}
+			]);
+
+			expect(output).toBe(
+				[
+					"✗ Data files  1 can't be read",
+					'  .taskgraph/config.json has a git conflict marker on line 3',
+					'    Resolve the conflict in the file, then run taskgraph doctor again'
+				].join('\n')
+			);
+		});
+
+		const findings = [
+			{
+				kind: 'unknown-status' as const,
+				file: TASKS,
+				tag: 'master',
+				taskId: '3',
+				message: 'Task 3 has status "finished"',
+				fixable: false,
+				fix: `Edit ${TASKS}. Use one of: pending, in-progress, review, blocked, deferred, done, cancelled`
+			},
+			{
+				kind: 'parent-status' as const,
+				file: TASKS,
+				tag: 'feature',
+				taskId: '5',
+				message: 'Task 5 is done, but its subtasks make it in-progress',
+				fixable: true
+			}
+		];
+
+		it('lists each problem once, the fix for what --fix cannot repair, and the tag', () => {
+			const output = format([
+				{ name: 'tasks', status: 'fail', problem: 'invalid', findings }
+			]);
+
+			expect(output).toBe(
+				[
+					`✗ Tasks  2 problems in ${TASKS}`,
+					'  Task 3 has status "finished"',
+					`    Edit ${TASKS}. Use one of: pending, in-progress, review,`,
+					'    blocked, deferred, done, cancelled',
+					'  Task 5 is done, but its subtasks make it in-progress · tag feature',
+					'  Run taskgraph doctor --fix to repair 1 of them'
+				].join('\n')
+			);
+			for (const line of output.split('\n')) {
+				expect(line.length).toBeLessThanOrEqual(80);
+			}
+		});
+
+		it('leads with what --fix repaired', () => {
+			const output = format([
+				{
+					name: 'tasks',
+					status: 'pass',
+					detail: '4 in 1 tag',
+					repaired: [
+						{
+							tag: 'master',
+							taskId: '5',
+							message: 'Task 5 is now in-progress (was done)'
+						}
+					]
+				}
+			]);
+
+			expect(output).toBe(
+				[
+					`✓ Repaired 1 problem in ${TASKS}`,
+					'  Task 5 is now in-progress (was done)',
+					'✓ Tasks  4 in 1 tag'
+				].join('\n')
+			);
+		});
+
+		it('says why --fix repaired nothing', () => {
+			const output = format([
+				{
+					name: 'tasks',
+					status: 'fail',
+					problem: 'invalid',
+					findings: [findings[1]],
+					repairError: '.taskgraph/config.json has to be fixed first'
+				}
+			]);
+
+			expect(output).toContain(
+				'  Nothing was repaired: .taskgraph/config.json has to be fixed first'
+			);
+			expect(output).not.toContain('doctor --fix');
+		});
+
+		it('strips escape codes from a finding, and caps a long list', () => {
+			const many = Array.from({ length: 25 }, (_, i) => ({
+				...findings[1],
+				message: `Task ${i} is \u001b[31mdone`
+			}));
+
+			const output = format([
+				{ name: 'tasks', status: 'fail', problem: 'invalid', findings: many }
+			]);
+
+			expect(output).not.toContain('\u001b');
+			expect(output).toContain('✗ Tasks  25 problems');
+			expect(output).not.toContain('Task 20 is');
+			expect(output).toContain(
+				'  and 5 more; taskgraph doctor --json lists them all'
+			);
+			expect(output).toContain('Run taskgraph doctor --fix to repair them');
+		});
+	});
 });

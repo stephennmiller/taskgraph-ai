@@ -64,7 +64,7 @@ export function findStoredTaskProblems(tasks: unknown): StoredTaskProblem[] {
 				taskId,
 				field: 'status',
 				value: status,
-				message: `${noun} ${taskId} has status ${shown(status)}, which isn't one of ${TASK_STATUSES.join(', ')}`
+				message: `${noun} ${taskId} has status ${shown(status)}`
 			});
 		}
 		if (priority != null && !TASK_PRIORITIES.includes(priority as never)) {
@@ -73,7 +73,7 @@ export function findStoredTaskProblems(tasks: unknown): StoredTaskProblem[] {
 				taskId,
 				field: 'priority',
 				value: priority,
-				message: `${noun} ${taskId} has priority ${shown(priority)}, which isn't one of ${TASK_PRIORITIES.join(', ')}`
+				message: `${noun} ${taskId} has priority ${shown(priority)}`
 			});
 		}
 	};
@@ -109,7 +109,7 @@ export function findStoredTaskProblems(tasks: unknown): StoredTaskProblem[] {
 				taskId,
 				field: 'id',
 				value: text,
-				message: `${noun} ${taskId} has an ID that can't be used: an ID is a whole number from 1, at most 15 digits`
+				message: `${noun} ${taskId} has an ID that can't be used`
 			});
 		}
 		const count = (seen.get(text) ?? 0) + 1;
@@ -158,6 +158,15 @@ export function findStoredTaskProblems(tasks: unknown): StoredTaskProblem[] {
 	return problems;
 }
 
+/** What a value has to be, per kind of problem */
+export const STORED_TASK_FIXES: Record<StoredTaskProblemKind, string> = {
+	'unknown-status': `Use one of: ${TASK_STATUSES.join(', ')}`,
+	'unknown-priority': `Use one of: ${TASK_PRIORITIES.join(', ')}`,
+	'bad-id': 'An ID is a whole number from 1, at most 15 digits',
+	'duplicate-id':
+		'Each task in a tag, and each subtask of a task, needs its own ID'
+};
+
 const key = (problem: StoredTaskProblem) =>
 	`${problem.kind}|${problem.taskId}|${shown(problem.value)}`;
 
@@ -183,8 +192,6 @@ export function assertNoNewTaskProblems(
 	throw errorWithHint(
 		ERROR_CODES.VALIDATION_ERROR,
 		`Can't save tag '${tag}': ${added.message}`,
-		added.field === 'id'
-			? 'Run `taskgraph doctor` to check the tasks file'
-			: `Use one of the ${added.field === 'status' ? 'statuses' : 'priorities'} it lists`
+		STORED_TASK_FIXES[added.kind]
 	);
 }

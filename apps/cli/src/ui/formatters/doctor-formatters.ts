@@ -15,6 +15,24 @@
  * row reads `2.1.309, bundled with taskgraph`, and signing in starts with
  * installing Claude Code, since there's no `claude` to run `auth login` with.
  *
+ * A data file that doesn't parse, or a task that breaks a rule, is listed
+ * under its row with the fix when `doctor --fix` can't make it:
+ *
+ *   ✗ Data files      1 can't be read
+ *     .taskgraph/config.json has a git conflict marker on line 3
+ *       Resolve the conflict in the file, then run taskgraph doctor again
+ *   ✗ Tasks           2 problems in .taskgraph/tasks/tasks.json
+ *     Task 3 has status "finished"
+ *       Edit .taskgraph/tasks/tasks.json. Use one of: pending, in-progress,
+ *       done, deferred, cancelled, blocked, review
+ *     Task 5 is done, but its subtasks make it in-progress
+ *     Run taskgraph doctor --fix to repair 1 of them
+ *
+ * `doctor --fix` leads with what it changed:
+ *
+ *   ✓ Repaired 1 problem in .taskgraph/tasks/tasks.json
+ *     Task 5 is now in-progress (was done)
+ *
  * Checks skipped because an earlier one failed (sign-in and plugin without
  * Claude Code, MCP outside a project) get no line: the failure above already
  * says what to fix first.
@@ -24,11 +42,13 @@ import path from 'node:path';
 import {
 	type DoctorCheck,
 	type DoctorCheckName,
+	type DoctorFinding,
 	type DoctorReport,
 	minimumVersion,
 	sanitizeForTerminal
 } from '@tm/core';
 import chalk from 'chalk';
+import { terminalWidth, wrapLine } from '../layout/helpers.js';
 import { theme, withCode } from '../theme.js';
 import { PLUGIN_MARKETPLACE, PLUGIN_NAME } from './init-summary-formatters.js';
 
@@ -37,6 +57,8 @@ const LABELS: Record<DoctorCheckName, string> = {
 	claude: 'Claude Code',
 	'signed-in': 'Claude sign-in',
 	project: 'Project',
+	'data-files': 'Data files',
+	tasks: 'Tasks',
 	plugin: 'Plugin',
 	mcp: 'MCP server'
 };
@@ -51,6 +73,57 @@ interface Row {
 	value: string;
 	/** Lines under a failed check that say how to fix it */
 	fix?: string[];
+	/** Lines under a failed check, already styled: each finding and its fix */
+	lines?: string[];
+}
+
+/** Findings listed under a row; `--json` has them all */
+const MAX_FINDINGS = 20;
+
+const plural = (count: number, noun: string) =>
+	`${count} ${noun}${count === 1 ? '' : 's'}`;
+
+/** ` · tag feature` for a tag other than master */
+const tagNote = (tag: string | undefined) =>
+	tag === undefined || tag === 'master'
+		? ''
+		: theme.muted(` · tag ${clean(tag)}`);
+
+/** `text` wrapped to the terminal (80 columns at most) under `indent` */
+function wrapped(text: string, indent: string): string[] {
+	return wrapLine(
+		`${indent}${clean(text)}`,
+		Math.min(terminalWidth(), 80),
+		indent
+	);
+}
+
+/** Each finding, and under it the fix when `doctor --fix` can't make it */
+function findingLines(findings: DoctorFinding[]): string[] {
+	const lines = findings
+		.slice(0, MAX_FINDINGS)
+		.flatMap((finding) => [
+			...wrapped(finding.message, '  ').map(
+				(line, i, all) =>
+					line + (i === all.length - 1 ? tagNote(finding.tag) : '')
+			),
+			...(finding.fix
+				? wrapped(finding.fix, '    ').map((line) =>
+						theme.muted(withCode(line))
+					)
+				: [])
+		]);
+	const more = findings.length - MAX_FINDINGS;
+	if (more > 0) {
+		lines.push(
+			theme.muted(
+				withCode(
+					`  and ${more} more; \`taskgraph doctor --json\` lists them all`
+				)
+			)
+		);
+	}
+	return lines;
 }
 
 const clean = (text: string | undefined) => sanitizeForTerminal(text ?? '');
@@ -74,11 +147,13 @@ function row(
 		const value =
 			check.name === 'signed-in'
 				? 'signed in'
-				: check.name === 'project'
-					? shownPath(detail, options.cwd)
-					: check.bundled
-						? `${detail || 'installed'}, bundled with taskgraph`
-						: detail || 'installed';
+				: check.name === 'data-files'
+					? `${plural(Number(detail), 'file')} read`
+					: check.name === 'project'
+						? shownPath(detail, options.cwd)
+						: check.bundled
+							? `${detail || 'installed'}, bundled with taskgraph`
+							: detail || 'installed';
 		return { mark: pass, value };
 	}
 
@@ -129,6 +204,35 @@ function row(
 						: `none in ${shownPath(detail, options.cwd)}`,
 				fix: ['Run `taskgraph init` to set one up, or cd into your project']
 			};
+		case 'data-files':
+			return {
+				mark: fail,
+				value: `${check.findings?.length ?? 0} can't be read`,
+				lines: findingLines(check.findings ?? [])
+			};
+		case 'tasks': {
+			const findings = check.findings ?? [];
+			const fixable = findings.filter((finding) => finding.fixable).length;
+			const lines = findingLines(findings);
+			if (check.repairError !== undefined) {
+				lines.push(
+					...wrapped(`Nothing was repaired: ${check.repairError}`, '  ')
+				);
+			} else if (fixable > 0) {
+				lines.push(
+					theme.muted(
+						withCode(
+							`  Run \`taskgraph doctor --fix\` to repair ${fixable === findings.length ? (fixable === 1 ? 'it' : 'them') : `${fixable} of them`}`
+						)
+					)
+				);
+			}
+			return {
+				mark: fail,
+				value: `${plural(findings.length, 'problem')} in ${clean(findings[0]?.file)}`,
+				lines
+			};
+		}
 		case 'plugin':
 			if (check.problem === 'disabled') {
 				return {
@@ -158,8 +262,8 @@ function row(
 }
 
 /**
- * Format `taskgraph doctor`'s report: a ✓, ✗ or – line per check, with the
- * fix muted under each ✗.
+ * Format `taskgraph doctor`'s report: what `--fix` repaired, then a ✓, ✗ or
+ * – line per check, with the fix muted under each ✗.
  */
 export function formatDoctorReport(
 	report: DoctorReport,
@@ -176,11 +280,25 @@ export function formatDoctorReport(
 	const width = Math.max(...rows.map((entry) => entry.label.length));
 
 	const lines: string[] = [];
+	const repaired = report.checks.flatMap((check) => check.repaired ?? []);
+	if (repaired.length > 0) {
+		lines.push(
+			`${chalk.green('✓')} Repaired ${plural(repaired.length, 'problem')} in .taskgraph/tasks/tasks.json`
+		);
+		for (const repair of repaired) {
+			lines.push(
+				...wrapped(repair.message, '  ').map(
+					(line) => line + tagNote(repair.tag)
+				)
+			);
+		}
+	}
 	for (const { label, row: shown } of rows) {
 		lines.push(`${shown.mark} ${label.padEnd(width)}  ${shown.value}`);
 		for (const fix of shown.fix ?? []) {
 			lines.push(`  ${theme.muted(withCode(fix))}`);
 		}
+		lines.push(...(shown.lines ?? []));
 	}
 	return lines.join('\n');
 }

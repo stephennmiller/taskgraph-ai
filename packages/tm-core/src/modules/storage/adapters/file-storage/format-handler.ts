@@ -81,19 +81,28 @@ export class FormatHandler {
 	 * status reads as 'done', so the next save writes 'done' back.
 	 */
 	extractTasks(data: any, tag: string): Task[] {
-		if (!data) {
-			return [];
-		}
-
-		const format = this.detectFormat(data);
-		const tasks =
-			format === 'legacy'
-				? this.extractTasksFromLegacy(data, tag)
-				: this.extractTasksFromStandard(data);
-
+		const tasks = this.storedTasks(data, tag);
 		if (!Array.isArray(tasks)) return tasks;
 		assertStoredIds(tasks);
 		return normalizeTaskStatuses(tasks);
+	}
+
+	/**
+	 * extractTasks for `doctor`: an ID that isn't a number is left for it to
+	 * report, and anything but a list reads as no tasks
+	 */
+	extractTasksUnchecked(data: any, tag: string): Task[] {
+		const tasks = this.storedTasks(data, tag);
+		return Array.isArray(tasks) ? normalizeTaskStatuses(tasks) : [];
+	}
+
+	private storedTasks(data: any, tag: string): Task[] {
+		if (!data) {
+			return [];
+		}
+		return this.detectFormat(data) === 'legacy'
+			? this.extractTasksFromLegacy(data, tag)
+			: this.extractTasksFromStandard(data);
 	}
 
 	/**

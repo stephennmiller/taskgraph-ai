@@ -24,6 +24,12 @@ import {
 	resolveProjectRoot
 } from '../../common/utils/project-root-finder.js';
 import { bundledClaudeBinary } from '../ai/providers/claude-code.js';
+import {
+	type DoctorFinding,
+	type DoctorRepair,
+	checkDataFiles,
+	repairTasks
+} from './doctor-data.js';
 import { launchesTaskGraphPackage } from './mcp-server.js';
 import { readPluginManifest } from './plugin-manifest.js';
 import { satisfiesMinimum } from './version-range.js';
@@ -33,6 +39,10 @@ export type DoctorCheckName =
 	| 'claude'
 	| 'signed-in'
 	| 'project'
+	/** config.json, config.local.json, state.json, tasks.json and archive.json parse */
+	| 'data-files'
+	/** Every tag's statuses, priorities, IDs, dependencies and parent statuses */
+	| 'tasks'
 	| 'plugin'
 	| 'mcp';
 
@@ -47,7 +57,9 @@ export type DoctorProblem =
 	| 'not-installed'
 	| 'disabled'
 	/** The optional MCP server isn't in the project's .mcp.json */
-	| 'not-set-up';
+	| 'not-set-up'
+	/** A data file doesn't parse, or the tasks break a rule: see `findings` */
+	| 'invalid';
 
 export interface DoctorCheck {
 	name: DoctorCheckName;
@@ -59,13 +71,19 @@ export interface DoctorCheck {
 	required?: string;
 	/** Claude Code: only the copy bundled with the Agent SDK was found, not one on PATH */
 	bundled?: boolean;
+	/** `data-files` and `tasks`: each thing wrong, left after any repair */
+	findings?: DoctorFinding[];
+	/** `tasks` with `fix`: what was changed in tasks.json */
+	repaired?: DoctorRepair[];
+	/** `tasks` with `fix`: why nothing was repaired */
+	repairError?: string;
 }
 
 export interface DoctorReport {
 	checks: DoctorCheck[];
 	/** The taskgraph CLI version the checks ran with */
 	cliVersion: string;
-	/** No check failed */
+	/** No check failed (with `fix`: none still fails after the repair) */
 	ok: boolean;
 }
 
@@ -86,6 +104,8 @@ export interface DoctorOptions {
 	claudeConfigFile?: string;
 	/** The Claude Code bundled with the Agent SDK, null for none; defaults to the installed one */
 	bundledClaude?: string | null;
+	/** Repair what has one safe answer in tasks.json (`doctor --fix`) */
+	fix?: boolean;
 }
 
 /** The plugin's id in `claude plugin list` starts with its name */
@@ -301,6 +321,51 @@ function checkMcp(root: string, configFile: string): DoctorCheck {
 	return { name: 'mcp', status: 'skip', problem: 'not-set-up' };
 }
 
+/**
+ * The `data-files` and `tasks` checks. With `fix`, findings marked fixable
+ * are repaired first, but only when every data file parses: a file doctor
+ * couldn't read is never rewritten, and the done gate comes from config.json.
+ */
+async function checkData(root: string, fix: boolean): Promise<DoctorCheck[]> {
+	let data = checkDataFiles(root);
+	let repaired: DoctorRepair[] | undefined;
+	let repairError: string | undefined;
+	if (fix && data.tasks?.findings.some((finding) => finding.fixable)) {
+		if (data.unreadable.length > 0) {
+			repairError = `${data.unreadable[0].file} has to be fixed first`;
+		} else {
+			try {
+				repaired = await repairTasks(root);
+				data = checkDataFiles(root);
+			} catch (error) {
+				repairError = (error as Error).message;
+			}
+		}
+	}
+	const files: DoctorCheck =
+		data.unreadable.length > 0
+			? {
+					name: 'data-files',
+					status: 'fail',
+					problem: 'invalid',
+					findings: data.unreadable
+				}
+			: { name: 'data-files', status: 'pass', detail: String(data.read) };
+	if (!data.tasks) return [files, { name: 'tasks', status: 'skip' }];
+	const { findings, taskCount, tagCount } = data.tasks;
+	return [
+		files,
+		{
+			name: 'tasks',
+			status: findings.length > 0 ? 'fail' : 'pass',
+			detail: `${taskCount} in ${tagCount} ${tagCount === 1 ? 'tag' : 'tags'}`,
+			...(findings.length > 0 && { problem: 'invalid' as const, findings }),
+			...(repaired && { repaired }),
+			...(repairError !== undefined && { repairError })
+		}
+	];
+}
+
 function readText(file: string): string | null {
 	try {
 		return fs.readFileSync(file, 'utf8');
@@ -310,8 +375,9 @@ function readText(file: string): string | null {
 }
 
 /**
- * Check Node, Claude Code and its sign-in, the project, the plugin and the
- * MCP server. Checks that need Claude Code are skipped when it's missing.
+ * Check Node, Claude Code and its sign-in, the project and its data files
+ * and tasks (doctor-data.ts), the plugin and the MCP server. Checks that
+ * need Claude Code are skipped when it's missing.
  */
 export async function runDoctor(
 	options: DoctorOptions = {}
@@ -352,6 +418,12 @@ export async function runDoctor(
 			? checkSignedIn(authStatus)
 			: { name: 'signed-in', status: 'skip' },
 		checkProject(root),
+		...(inProject
+			? await checkData(root, options.fix === true)
+			: ([
+					{ name: 'data-files', status: 'skip' },
+					{ name: 'tasks', status: 'skip' }
+				] satisfies DoctorCheck[])),
 		claudeFound
 			? checkPlugin(pluginList, cliVersion, root)
 			: { name: 'plugin', status: 'skip' },
