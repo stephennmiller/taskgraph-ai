@@ -47,7 +47,7 @@ import {
 import { STREAM_JSON_ARGS } from '../services/stream-events.js';
 import { claudeRan } from '../services/iteration-result.js';
 import { openLog, readSpend } from './task-log.js';
-import { settledOutcome } from './outcome.js';
+import { describeSpawnError, settledOutcome } from './outcome.js';
 import { TaskWorktrees } from './task-worktrees.js';
 import {
 	type LoopBand,
@@ -76,11 +76,6 @@ interface Running {
 	timedOut?: boolean;
 	exited: Promise<void>;
 }
-
-const describeSpawnError = (error: NodeJS.ErrnoException, command: string) =>
-	error.code === 'ENOENT'
-		? `${command} isn't installed or isn't on PATH`
-		: `Couldn't start ${command}: ${error.message}`;
 
 export class ParallelLoopRunner {
 	private readonly logger = getLogger('ParallelLoopRunner');
@@ -409,7 +404,7 @@ export class ParallelLoopRunner {
 					}, timeout)
 				);
 				child.once('error', (error: NodeJS.ErrnoException) =>
-					done('failed', describeSpawnError(error, ctx.command))
+					done('failed', describeSpawnError(error, ctx.command, ctx.cwd))
 				);
 				child.once('close', (code, sig) => {
 					if (ctx.isAborted()) return done('stopped', undefined, code);
@@ -425,7 +420,11 @@ export class ParallelLoopRunner {
 			} catch (error) {
 				done(
 					'failed',
-					describeSpawnError(error as NodeJS.ErrnoException, ctx.command)
+					describeSpawnError(
+						error as NodeJS.ErrnoException,
+						ctx.command,
+						ctx.cwd
+					)
 				);
 			} finally {
 				fs.closeSync(log);

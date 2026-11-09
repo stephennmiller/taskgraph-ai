@@ -155,7 +155,9 @@ export function prepareGeneratedTasks(
 			...task,
 			...(source ? { metadata: { ...task.metadata, ...source } } : {}),
 			...numbered[index],
-			status: task.status || 'pending',
+			// Never the model's value: an unknown status breaks list, next and loop,
+			// and a `done` would skip the work and its gate (#1102)
+			status: 'pending',
 			// show's commit lookup starts here, so a reused ID skips the old task's commits (#1015)
 			createdAt: now,
 			priority: task.priority || defaultPriority,

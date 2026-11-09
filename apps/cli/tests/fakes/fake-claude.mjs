@@ -12,7 +12,7 @@
  * `jsonSchema` of the initialize request) when there is one, or is plain
  * text. With FAKE_CLAUDE_DIR set it also
  *   - appends every call to <dir>/trace.jsonl as {n, args, schema, prompt,
- *     initialize}; calls are numbered by claiming <dir>/call-<n>, so parallel
+ *     initialize, pid, ppid}; calls are numbered by claiming <dir>/call-<n>, so parallel
  *     calls get different numbers
  *   - takes call n's reply from <dir>/replies.json when that file has one:
  *     an array of {object}, {text} or {error}; later calls are generated.
@@ -109,7 +109,9 @@ function reply(userMessage) {
 				args,
 				schema,
 				prompt: promptOf(userMessage),
-				initialize: initializeRequest
+				initialize: initializeRequest,
+				pid: process.pid,
+				ppid: process.ppid
 			})}\n`
 		);
 	}

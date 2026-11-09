@@ -506,8 +506,8 @@ export class LoopCommand extends Command {
 	}
 }
 
-/** Signals that stop a parallel run the way Ctrl-C does */
-const STOP_SIGNALS: NodeJS.Signals[] = ['SIGINT', 'SIGTERM', 'SIGHUP'];
+/** Signals that stop a parallel run, or `go`, the way Ctrl-C does */
+export const STOP_SIGNALS: NodeJS.Signals[] = ['SIGINT', 'SIGTERM', 'SIGHUP'];
 
 /** A block of lines redrawn in place on a terminal */
 class LiveLines {

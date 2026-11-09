@@ -53,7 +53,8 @@ taskgraph go docs/prd.md --sandbox
 `parse-prd <file> --append` (new sections become tasks; tasks you already have
 stay), then [`loop`](/capabilities/loop) with the default preset. Each step
 prints what it always prints. The first step that fails stops the rest, and
-`go` exits with its code.
+`go` exits with its code. Stopping `go` (Ctrl-C, `kill`, closing the terminal) stops
+the step that is running too.
 
 When you run `go` again on a project with work done or under way, it prints
 one line saying what it is resuming before `loop` starts:

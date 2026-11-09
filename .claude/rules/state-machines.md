@@ -68,6 +68,8 @@ Guards and side effects:
   Definition of Done) and, in a loop, `loop.smokeCommand`. `force` skips
   both. GitHub pull always forces.
 - Moving to `pending`, `blocked` or `deferred` clears the claim (machine 3).
+- parse-prd stores every new task as `pending`, whatever status the model
+  returned (#1102).
 - `update-task` and `update-subtask` never change a status, except that
   a rewrite that adds or drops subtasks settles the parent (section 2). Only
   `set-status`, the loop, GitHub pull and the parallel runner do.
@@ -356,6 +358,8 @@ tip is recorded under `.git/taskgraph/branches/<branch>`.
 the recorded tip, except when the run took over its own claimant's stale
 claim (`TaskClaim.resumedFrom`): then a tip that descends from the recorded
 one, checked out in the task's worktree, is the dead run's worker's work.
+A worktree git still lists but whose folder was deleted by hand is pruned
+and made again on its branch (#1104).
 
 ## 12. GitHub link
 
