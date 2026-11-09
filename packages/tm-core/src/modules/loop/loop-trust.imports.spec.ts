@@ -39,7 +39,19 @@ describe('files an instruction file imports with @path (#1101)', () => {
 		['.taskgraph/CLAUDE.md', '- guide @../docs/guide.md'],
 		['.claude/rules/style.md', '@../../docs/guide.md'],
 		['.claude/CLAUDE.md', '`@other.md` and @../docs/guide.md'],
-		['CLAUDE.md', '```\n@a.md\n```\n@docs/guide.md\n```\n@b.md']
+		['CLAUDE.md', '```\n@a.md\n```\n@docs/guide.md\n```\n@b.md'],
+		// Claude Code parses the Markdown first; each of these is an import to it
+		['CLAUDE.md', '@docs/guide.md#rules'],
+		['CLAUDE.md', '**@docs/guide.md**'],
+		['CLAUDE.md', '[@docs/guide.md](https://example.com)'],
+		['CLAUDE.md', '`code`@docs/guide.md'],
+		['CLAUDE.md', '```js `a`\n@docs/guide.md'],
+		['CLAUDE.md', '<div>\n```\n</div>\n\n@docs/guide.md'],
+		['CLAUDE.md', 'text `\n- @docs/guide.md `'],
+		// Not imports to Claude Code, but telling them apart takes its parser
+		['CLAUDE.md', '`@docs/guide.md`'],
+		['CLAUDE.md', 'Example:\n\n```md\n@docs/guide.md\n```\n'],
+		['CLAUDE.md', 'Ask me@docs/guide.md']
 	])('asks again when the file %s imports as %j changed', (file, text) => {
 		writeFile(file, text);
 
@@ -74,13 +86,27 @@ describe('files an instruction file imports with @path (#1101)', () => {
 		expect(isLoopTrusted(project, home)).toBe(false);
 	});
 
-	it.each([
-		['a code span', '`@docs/guide.md`'],
-		['a fenced block', 'Example:\n\n```md\n@docs/guide.md\n```\n'],
-		['an email address', 'Ask me@docs/guide.md'],
-		['a folder', '@docs']
-	])('keeps the approval for %s', (_, text) => {
-		writeFile('CLAUDE.md', text);
+	it('asks again when a file reached five hops down and again directly imports a file that changed', () => {
+		writeFile('CLAUDE.md', '@docs/1.md @docs/5.md');
+		for (const n of [1, 2, 3, 4]) writeFile(`docs/${n}.md`, `@${n + 1}.md`);
+		writeFile('docs/5.md', '@guide.md');
+
+		approveThenChange('docs/guide.md');
+
+		expect(isLoopTrusted(project, home)).toBe(false);
+	});
+
+	it('asks again when a rule read after 8 MB of other files imports a file that changed', () => {
+		writeFile('.claude/assets.bin', 'x'.repeat(8 * 1024 * 1024));
+		writeFile('.claude/rules/style.md', '@../../docs/guide.md');
+
+		approveThenChange('docs/guide.md');
+
+		expect(isLoopTrusted(project, home)).toBe(false);
+	});
+
+	it('keeps the approval when the import is a folder', () => {
+		writeFile('CLAUDE.md', '@docs');
 
 		approveThenChange('docs/guide.md');
 

@@ -199,18 +199,27 @@ const CLAUDE_DIR_MAX_BYTES = 8 * 1024 * 1024;
  */
 const IMPORT_MAX_HOPS = 5;
 
+/** Claude Code loads no instruction file or import larger than this */
+const IMPORT_MAX_BYTES = 4 * 1024 * 1024;
+
 /**
- * The paths a Claude Code instruction file imports with `@path`, where a
- * space is written `\ `. As Claude Code does, skips fenced code blocks and
- * code spans; where the two could differ this skips less.
+ * Every path a Claude Code instruction file could import with `@path`,
+ * where a space is written `\ `. Claude Code parses the Markdown first
+ * (no import in a code block or span, one after `**` or a link's `[`, a
+ * path that ends at markup or a `#fragment`). This doesn't parse, so it
+ * can't skip an import that parser takes: any `@` starts a path, and the
+ * path counts whole and cut before each punctuation mark in it.
  */
 function importPaths(text: string): string[] {
-	const prose = text
-		.replace(/^ {0,3}(`{3,}|~{3,})[\s\S]*?(?:^ {0,3}\1|(?![\s\S]))/gm, ' ')
-		.replace(/(?<!`)(`+)(?!`)(?:(?!\n\s*\n)[\s\S])*?(?<!`)\1(?!`)/g, ' ');
-	return [...prose.matchAll(/(?:^|\s)@((?:[^\s\\]|\\ )+)/g)].map((m) =>
-		m[1].replace(/\\ /g, ' ')
-	);
+	const paths = new Set<string>();
+	for (const [, raw] of text.matchAll(/@((?:[^\s\\]|\\ )+)/g)) {
+		const whole = raw.replace(/\\ /g, ' ');
+		paths.add(whole);
+		for (const mark of whole.matchAll(/[^\p{L}\p{N}/ ]/gu))
+			paths.add(whole.slice(0, mark.index));
+	}
+	paths.delete('');
+	return [...paths];
 }
 
 /**
@@ -225,9 +234,9 @@ function importPaths(text: string): string[] {
  * Past the entry cap the walk stops and a value that never repeats goes in,
  * so loop asks every time.
  * With them, each file inside the repository that a Markdown file among
- * them, or one of `instructions`, imports with `@path` (#1101): its content,
- * or that it is missing. A folder, a path in the home folder (`~`) and a
- * path or link that leaves the repository are not read.
+ * them, or one of `instructions`, imports with `@path` (#1101). A folder, a
+ * path in the home folder (`~`) and a path or link that leaves the
+ * repository are not read.
  * @param tracked - From `trackedFiles`
  * @param instructions - Files hashed elsewhere, read here only for imports
  */
@@ -241,29 +250,39 @@ function fileTree(
 	const out: Array<[string, string]> = [];
 	let seen = 0;
 	let bytes = 0;
-	const imported = new Set<string>();
+	/** The fewest hops each imported file was reached in */
+	const imported = new Map<string, number>();
 	/** @param hop - Imports between an instruction file and those in `text` */
 	const scan = (file: string, text: string, hop: number) => {
 		if (hop > IMPORT_MAX_HOPS) return;
 		for (const target of importPaths(text)) {
 			const full = path.resolve(path.dirname(file), target);
 			if (target.startsWith('~') || !isWithin(top, full)) continue;
-			if (imported.has(full) || ++seen > CLAUDE_DIR_MAX_ENTRIES) continue;
-			imported.add(full);
+			// Again when reached in fewer hops: its own imports then go further
+			if ((imported.get(full) ?? Infinity) <= hop) continue;
 			const rel = `@${path.relative(root, full)}`;
 			try {
 				const real = fs.realpathSync(full);
 				const stat = fs.statSync(real);
-				if (isWithin(top, real) && stat.isFile())
-					out.push([rel, content(real, stat, hop + 1)]);
+				if (!isWithin(top, real) || !stat.isFile()) continue;
+				imported.set(full, hop);
+				if (++seen > CLAUDE_DIR_MAX_ENTRIES) return;
+				out.push([rel, content(real, stat, hop + 1)]);
 			} catch (error) {
-				out.push([rel, `error:${(error as NodeJS.ErrnoException).code}`]);
+				// A missing file adds nothing until it appears
+				const code = (error as NodeJS.ErrnoException).code;
+				if (code !== 'ENOENT' && code !== 'ENOTDIR')
+					out.push([rel, `error:${code}`]);
 			}
 		}
 	};
 	/** @param hop - Set for a file whose imports count */
 	const content = (file: string, stat: fs.Stats, hop?: number) => {
-		if (bytes + stat.size > CLAUDE_DIR_MAX_BYTES)
+		// Past the budget a file Claude Code would load is still read, for its imports
+		if (
+			bytes + stat.size > CLAUDE_DIR_MAX_BYTES &&
+			!(hop && stat.size <= IMPORT_MAX_BYTES)
+		)
 			return `${stat.size}:${stat.mtimeMs}:${stat.ctimeMs}`;
 		bytes += stat.size;
 		const data = fs.readFileSync(file);
