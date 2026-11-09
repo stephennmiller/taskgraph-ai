@@ -20,7 +20,7 @@ const ALLOWED: Record<string, string> = {
 	'storage/adapters/file-storage/file-operations.ts':
 		'the writer itself, and the locked tasks.json writer, which refuses links itself',
 	'git/merge-driver/merge-driver-files.ts':
-		"writeAtomically on git's own temp file for the merge (%A), outside the project tree",
+		'writeAtomically on the temp file git just created for the merge (%A, .merge_file_* in the root); the rename replaces it, never follows it',
 	'init/shell-aliases.ts': "appends to the user's shell startup file in home",
 	'loop/loop-trust.ts': 'the trust list in ~/.taskgraph, outside the project',
 	'loop/parallel/task-worktrees.ts':

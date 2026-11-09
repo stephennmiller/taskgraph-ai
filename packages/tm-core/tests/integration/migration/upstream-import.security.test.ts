@@ -68,6 +68,18 @@ describe('importing an untrusted upstream folder', () => {
 		expect(fs.existsSync(at('.taskgraph'))).toBe(false);
 	});
 
+	it("refuses a .taskgraph/ folder that links into the project's .git", () => {
+		// A committed link would put the upstream's files among git's hooks
+		fs.mkdirSync(at('.git', 'hooks'), { recursive: true });
+		fs.mkdirSync(at('.taskgraph'));
+		fs.symlinkSync(path.join('..', '.git', 'hooks'), at('.taskgraph', 'docs'));
+
+		const error = importError();
+
+		expect(error?.code).toBe(UPSTREAM_IMPORT_ERRORS.UNSAFE_PATH);
+		expect(fs.readdirSync(at('.git', 'hooks'))).toEqual([]);
+	});
+
 	it('refuses a .taskgraph/ folder that links outside the project', () => {
 		fs.mkdirSync(at('.taskgraph'));
 		fs.symlinkSync(outside, at('.taskgraph', 'docs'));

@@ -71,6 +71,19 @@ describe.skipIf(process.platform === 'win32')('writeProjectFile', () => {
 		expect(fsSync.readFileSync(path.join(elsewhere, 'x'), 'utf8')).toBe('keep');
 	});
 
+	it("with linkInProject, refuses a link into the project's .git", () => {
+		fsSync.mkdirSync(path.join(root, '.git'));
+		fsSync.writeFileSync(path.join(root, '.git', 'config'), 'keep');
+		fsSync.symlinkSync('.git/config', path.join(root, 'CLAUDE.md'));
+
+		expect(() =>
+			writeProjectFile(root, 'CLAUDE.md', 'new', { linkInProject: true })
+		).toThrow(/symlink/);
+		expect(fsSync.readFileSync(path.join(root, '.git', 'config'), 'utf8')).toBe(
+			'keep'
+		);
+	});
+
 	it('checks only the file for a path outside the project', () => {
 		const linkedDir = path.join(root, 'linked');
 		fsSync.symlinkSync(elsewhere, linkedDir);
