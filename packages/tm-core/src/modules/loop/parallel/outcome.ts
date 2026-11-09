@@ -2,6 +2,7 @@
  * @fileoverview How each task of a `loop --parallel` run ended (#1033)
  */
 
+import fs from 'node:fs';
 import type { ParallelTaskState } from './types.js';
 
 /** How a task's run ended, decided in core once it settled */
@@ -55,3 +56,18 @@ export function settledOutcome(
 	if (!kept) return 'no-changes';
 	return state === 'stopped' ? 'stopped' : 'kept';
 }
+
+/**
+ * Why a task's process didn't start, in plain words. spawn reports a
+ * missing working folder as ENOENT too (#1104)
+ */
+export const describeSpawnError = (
+	error: NodeJS.ErrnoException,
+	command: string,
+	cwd: string
+) =>
+	error.code !== 'ENOENT'
+		? `Couldn't start ${command}: ${error.message}`
+		: fs.existsSync(cwd)
+			? `${command} isn't installed or isn't on PATH`
+			: `The working folder ${cwd} is missing`;

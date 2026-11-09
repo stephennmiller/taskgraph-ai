@@ -268,6 +268,39 @@ await tmCore.loop.runParallel({ parallel: 1, trusted: true, claimant: 'a', comma
 		}, 90_000);
 	});
 
+	it('makes the worktree again when its folder was deleted by hand (#1104)', async () => {
+		writePlan({ 'task-1': 'commit-fail' });
+		const [first] = (await tmCore.loop.runParallel(options('a'))).tasks;
+		expect(first).toMatchObject({ commits: 1, outcome: 'released' });
+		// Not `git worktree remove`: git still lists the worktree
+		fs.rmSync(first.worktree, { recursive: true, force: true });
+
+		const [again] = (await tmCore.loop.runParallel(options('a'))).tasks;
+
+		// Claude ran, in a worktree holding the branch's commit
+		expect(again).toMatchObject({ error: 'exit 1', commits: 1 });
+		expect(fs.existsSync(path.join(again.worktree, 'work.txt'))).toBe(true);
+	}, 60_000);
+
+	it('says the working folder is missing, not that claude is', async () => {
+		writePlan({ 'task-1': 'commit' });
+
+		const [result] = (
+			await tmCore.loop.runParallel({
+				...options('a'),
+				spawner: (command, args, spawnOptions) => {
+					fs.rmSync(String(spawnOptions.cwd), { recursive: true });
+					return spawn(command, args, spawnOptions);
+				}
+			})
+		).tasks;
+
+		expect(result.state).toBe('failed');
+		expect(result.error).toBe(
+			`The working folder ${result.worktree} is missing`
+		);
+	}, 60_000);
+
 	it('records where the branch is as soon as its worktree is made, before cleanup', async () => {
 		writePlan({ 'task-1': 'sleep' });
 		const controller = new AbortController();

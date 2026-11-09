@@ -257,7 +257,8 @@ export class TaskWorktrees {
 	/**
 	 * Make the task's worktree on its branch. Picks up where an earlier run
 	 * left off: an existing worktree on the same branch is reused, and an
-	 * existing branch is checked out rather than recreated.
+	 * existing branch is checked out rather than recreated, also when the
+	 * worktree's folder was deleted by hand.
 	 * @returns Whether this call created the branch
 	 * @throws ParallelLoopError when the path holds something else
 	 */
@@ -266,6 +267,9 @@ export class TaskWorktrees {
 		branch: string,
 		base: string
 	): Promise<{ createdBranch: boolean }> {
+		// Deleted by hand (`rm -rf`, not `git worktree remove`): git still lists
+		// it, so drop that record and make the worktree again (#1104)
+		if (!lstatOrNull(worktree)) await this.git(['worktree', 'prune']);
 		const existing = (await this.worktreeBranches()).get(canonical(worktree));
 		if (existing !== undefined) {
 			if (existing === `refs/heads/${branch}`) return { createdBranch: false };
