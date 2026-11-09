@@ -68,7 +68,8 @@ Guards and side effects:
   Definition of Done) and, in a loop, `loop.smokeCommand`. `force` skips
   both. GitHub pull always forces.
 - Moving to `pending`, `blocked` or `deferred` clears the claim (machine 3).
-- `update-task` and `update-subtask` never change a status. Only
+- `update-task` and `update-subtask` never change a status, except that
+  a rewrite that drops subtasks settles the parent (section 2). Only
   `set-status`, the loop, GitHub pull and the parallel runner do.
 
 Invariants:
@@ -82,7 +83,8 @@ Invariants:
 from its subtasks. Every writer that changes a parent's subtasks runs it:
 subtask `set-status` (`setSubtaskStatusIn`), add-subtask, move (each parent
 of a dotted source or destination), remove-subtask, remove-task of a
-subtask, and expand. Each passes the parent's done gate (acceptance
+subtask, expand, and an AI rewrite that drops subtasks (update-task,
+`update --from`). Each passes the parent's done gate (acceptance
 criteria and Definition of Done).
 
 | Subtasks after the change      | Parent becomes                           |

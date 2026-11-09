@@ -1,9 +1,9 @@
 /**
  * @fileoverview The status a parent task takes from its subtasks. Every
  * writer that changes a parent's subtasks (set-status on a subtask,
- * add-subtask, move, remove-subtask, expand) applies it, so a done parent
- * never hides open subtasks and finished subtasks never strand a parent
- * in progress (#1042).
+ * add-subtask, move, remove-subtask, expand, an update-task rewrite that
+ * drops subtasks) applies it, so a done parent never hides open subtasks
+ * and finished subtasks never strand a parent in progress (#1042, #1065).
  */
 
 import {
