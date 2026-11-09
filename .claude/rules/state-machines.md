@@ -310,7 +310,9 @@ atomic rename.
 created or reused, then kept, removed, merged or renamed aside. The branch
 tip is recorded under `.git/taskgraph/branches/<branch>`.
 `assertBranchReusable` refuses a branch whose tip is neither the base nor
-the recorded tip.
+the recorded tip, except when the run took over its own claimant's stale
+claim (`TaskClaim.resumedFrom`): then a tip that descends from the recorded
+one, checked out in the task's worktree, is the dead run's worker's work.
 
 ## 12. GitHub link
 

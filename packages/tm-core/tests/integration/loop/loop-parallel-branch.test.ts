@@ -6,7 +6,9 @@
  * @integration
  */
 
+import { spawn } from 'node:child_process';
 import fs from 'node:fs';
+import { createRequire } from 'node:module';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -42,7 +44,11 @@ describe('loop --parallel with an existing task branch', () => {
 					path.join(root, '.taskgraph', 'tasks', 'tasks.json'),
 					'utf8'
 				)
-			).master.tasks as Array<{ id: string; status: string }>
+			).master.tasks as Array<{
+				id: string;
+				status: string;
+				metadata?: Record<string, number>;
+			}>
 		).find((t) => t.id === id);
 	const writePlan = (plan: Record<string, string>) =>
 		fs.writeFileSync(planFile, JSON.stringify({ ...plan, pidDir }));
@@ -169,6 +175,98 @@ describe('loop --parallel with an existing task branch', () => {
 			'2'
 		);
 	}, 60_000);
+
+	describe('after its run was killed with -9 mid-task', () => {
+		const crashRun = async () => {
+			writePlan({ 'task-1': 'commit-sleep' });
+			const script = path.join(path.dirname(root), 'run.mts');
+			const core = path.resolve(__dirname, '../../../src/index.ts');
+			fs.writeFileSync(
+				script,
+				`import { createTmCore } from ${JSON.stringify(core)};
+const tmCore = await createTmCore({ projectPath: ${JSON.stringify(root)} });
+await tmCore.loop.runParallel({ parallel: 1, trusted: true, claimant: 'a', command: ${JSON.stringify(fakeClaude())} });`
+			);
+			const runner = spawn(
+				process.execPath,
+				[createRequire(import.meta.url).resolve('tsx/cli'), script],
+				{ stdio: 'ignore' }
+			);
+			// The worker committed and its pid is in the claim: kill the run, then it
+			await vi.waitFor(
+				() => {
+					expect(fs.existsSync(path.join(pidDir, 'task-1'))).toBe(true);
+					expect(taskById('1')).toMatchObject({
+						metadata: { claimWorkerPid: expect.any(Number) }
+					});
+				},
+				{ timeout: 30_000 }
+			);
+			// tsx runs the script in a child: the run is the claim's pid
+			const { claimPid, claimWorkerPid } = taskById('1')?.metadata ?? {};
+			process.kill(claimPid, 'SIGKILL');
+			// Gone with its parent, so the dead run isn't left a zombie
+			const exited = new Promise((resolve) => runner.once('exit', resolve));
+			runner.kill('SIGKILL');
+			await exited;
+			process.kill(claimWorkerPid, 'SIGKILL');
+			for (const pid of [claimPid, claimWorkerPid]) {
+				await vi.waitFor(() => expect(isAlive(pid)).toBe(false), {
+					timeout: 10_000
+				});
+			}
+			// settle never ran: the record is still the starting commit
+			expect(fs.readFileSync(record('taskgraph/task-1'), 'utf8')).toBe(
+				git(root, 'rev-parse', 'main')
+			);
+			writePlan({});
+		};
+
+		it('a rerun by the same claimant picks the branch up, the worker commit and all', async () => {
+			await crashRun();
+
+			const [result] = (
+				await tmCore.loop.runParallel({ ...options('a'), parallel: 1 })
+			).tasks;
+
+			expect(result).toMatchObject({
+				state: 'done',
+				commits: 1,
+				outcome: 'kept'
+			});
+			expect(fs.readFileSync(record('taskgraph/task-1'), 'utf8')).toBe(
+				git(root, 'rev-parse', 'taskgraph/task-1')
+			);
+		}, 90_000);
+
+		it('a rerun by another claimant still refuses the unrecorded commit', async () => {
+			await crashRun();
+
+			const [result] = (
+				await tmCore.loop.runParallel({ ...options('b'), parallel: 1 })
+			).tasks;
+
+			expect(result.state).toBe('failed');
+			expect(result.error).toContain('taskgraph/task-1 already exists');
+		}, 90_000);
+
+		it('a rerun by the same claimant refuses a branch moved off the record', async () => {
+			await crashRun();
+			// Unrelated history: none of it built on what the run recorded
+			git(root, 'checkout', '-q', '--orphan', 'other');
+			commitFile(root, 'src/app.ts');
+			git(root, 'checkout', '-q', 'main');
+			const worktree = path.join(root, '.taskgraph', 'worktrees', 'task-1');
+			git(worktree, 'reset', '-q', '--hard', 'other');
+
+			const [result] = (
+				await tmCore.loop.runParallel({ ...options('a'), parallel: 1 })
+			).tasks;
+
+			expect(result.state).toBe('failed');
+			expect(result.error).toContain('taskgraph/task-1 already exists');
+		}, 90_000);
+	});
 
 	it('records where the branch is as soon as its worktree is made, before cleanup', async () => {
 		writePlan({ 'task-1': 'sleep' });

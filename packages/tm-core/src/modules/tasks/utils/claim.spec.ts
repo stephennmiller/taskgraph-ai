@@ -227,6 +227,10 @@ describe('claimNextInTasks and the claiming process (#1044)', () => {
 		const result = claimNextInTasks(tasks, 'bob', 'now');
 
 		expect(result?.claim.task.id).toBe('2');
+		expect(result?.claim.resumedFrom).toBe('alice');
+		expect(claimNextInTasks([task('1')], 'bob')?.claim).not.toHaveProperty(
+			'resumedFrom'
+		);
 		// No pid this time, so none of the dead one's is kept
 		expect(result?.tasks[1].metadata).toEqual({
 			claimedBy: 'bob',
