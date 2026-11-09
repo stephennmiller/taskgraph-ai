@@ -27,6 +27,8 @@ const ALLOWED: Record<string, string> = {
 		"inside the git dir (info/exclude, branch records), where a checkout can't put a link",
 	'loop/parallel/container-workers.ts':
 		'a worker clone sanitizeClone checked for links (wx), and its state copy into a folder it just removed',
+	'tasks/utils/todo-note.ts':
+		"the plugin's private data folder (listDir), outside the project",
 	'migration/upstream-import.ts':
 		'copyNewFiles: COPYFILE_EXCL never writes through a link, and folders leading out are skipped'
 };
