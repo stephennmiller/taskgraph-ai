@@ -163,14 +163,15 @@ export class LoopDomain {
 				? (id, note, tag) => blockTask(tasks, id, note, tag)
 				: undefined,
 			recordSpend: tasks?.addSpend,
-			// `git status` starts a filter the repository's own config names, on
-			// the host: not for a sandboxed run nobody approved (#1129)
-			uncommittedFiles: async () =>
-				!config.sandbox || config.trusted || this.isTrusted()
-					? new TaskWorktrees(this.projectRoot).changedFiles(
+			// `git status` starts a filter the repository's git config names, on
+			// the host, and a sandboxed session can write that config: never
+			// for a sandboxed run, approved or not (#1129, #1133)
+			uncommittedFiles: fullConfig.sandbox
+				? undefined
+				: () =>
+						new TaskWorktrees(this.projectRoot).changedFiles(
 							fullConfig.progressFile
 						)
-					: []
 		});
 		return this.loopService.run(fullConfig);
 	}
