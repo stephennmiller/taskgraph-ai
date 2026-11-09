@@ -7,11 +7,12 @@ import type { ConfigManager } from '../config/managers/config-manager.js';
 import { TaskService } from './services/task-service.js';
 import { DependencyService } from './services/dependency.service.js';
 import { TaskRemovalService } from './services/task-removal.service.js';
-import { TagService } from './services/tag.service.js';
 import { TaskAiCommands } from './tasks-ai-commands.js';
 import { TaskEditCommands } from './tasks-edit-commands.js';
 import { TaskStatusCommands } from './tasks-status-commands.js';
 import { TaskDependencyViews } from './tasks-dependency-views.js';
+import { TaskDetailReads } from './tasks-detail-reads.js';
+import { TaskTagCommands } from './tasks-tag-commands.js';
 import {
 	TaskFileGeneratorService,
 	type GenerateTaskFilesOptions,
@@ -22,43 +23,21 @@ import type {
 	UpdateTaskInput,
 	UpdateTaskResult
 } from './services/update-task.service.js';
-import type {
-	CreateTagOptions,
-	DeleteTagOptions,
-	CopyTagOptions
-} from './services/tag.service.js';
 
 import fs from 'node:fs';
 import path from 'node:path';
 import { TASKGRAPH_TASKS_FILE } from '../../common/constants/paths.js';
 import type { Subtask, Task, TaskStatus } from '../../common/types/index.js';
 import { statusesWhere } from '../../common/constants/index.js';
-import { readPrdSection } from '../prd/prd-coverage.js';
-import { getPrdSource } from '../prd/prd-sections.js';
-import { subtaskInContext } from './utils/subtask-context.js';
-import { filterSubtasks, parseStatusFilter } from './utils/task-filters.js';
-import { normalizeTaskId } from './validation/task-id.js';
 import {
 	type ReadmeExportOptions,
 	writeReadmeExport
 } from './utils/readme-export.js';
 import {
-	createTagFromBranch,
-	type CreateBranchTag,
-	type CreateTagFromBranchResult
-} from './utils/branch-tag.js';
-import {
 	ERROR_CODES,
 	TaskGraphError
 } from '../../common/errors/taskgraph-error.js';
 import { parseNoteSince } from './utils/notes.js';
-import { type TaskCommit, findTaskCommits } from './utils/task-commits.js';
-import {
-	applyChecklistChanges,
-	buildChecklist,
-	type ChecklistChanges,
-	type TaskChecklist
-} from './utils/acceptance-criteria.js';
 import {
 	findUnnotedInProgress,
 	type PrimeTask
@@ -81,7 +60,8 @@ const PICKABLE_STATUSES = statusesWhere('pickable');
  */
 export class TasksDomain {
 	private taskService: TaskService;
-	private tagService!: TagService;
+	private tags!: TaskTagCommands;
+	private details: TaskDetailReads;
 	private dependencyService: DependencyService;
 	private removalService: TaskRemovalService;
 	private ai: TaskAiCommands;
@@ -108,16 +88,14 @@ export class TasksDomain {
 		this.edits = new TaskEditCommands(this.taskService, configManager);
 		this.statuses = new TaskStatusCommands(this.taskService, configManager);
 		this.views = new TaskDependencyViews(this.taskService, configManager);
+		this.details = new TaskDetailReads(this.taskService, configManager);
 	}
 
 	async initialize(): Promise<void> {
 		await this.taskService.initialize();
 
 		// TagService needs storage - get it from TaskService AFTER initialization
-		this.tagService = new TagService(this.taskService.getStorage(), {
-			projectRoot: this.projectRoot,
-			getActiveTag: () => this.taskService.getActiveTag()
-		});
+		this.tags = new TaskTagCommands(this.taskService, this.projectRoot);
 
 		// TaskFileGeneratorService needs storage and config for active tag
 		this.taskFileGenerator = new TaskFileGeneratorService(
@@ -172,60 +150,7 @@ export class TasksDomain {
 		};
 	}
 
-	/**
-	 * Get a single task by ID
-	 * Automatically handles all ID formats:
-	 * - Simple task IDs (e.g., "1")
-	 * - Subtask IDs with dot notation (e.g., "1.2"), returned with their
-	 *   parentId and the parent's priority when they have none
-	 *
-	 * @param options.subtaskStatus - Keep only the task's subtasks with these
-	 *   statuses (`done` or `done,pending`, as `list --status` takes them).
-	 *   Checked before anything is read: an unknown status throws a
-	 *   VALIDATION_ERROR. `subtaskFilter` then gives the statuses kept and the
-	 *   number of subtasks before filtering. A subtask ID ignores it.
-	 * @returns Discriminated union indicating task/subtask with proper typing
-	 */
-	async get(
-		taskId: string,
-		tag?: string,
-		options: { subtaskStatus?: string } = {}
-	): Promise<
-		| {
-				task: Task;
-				isSubtask: false;
-				subtaskFilter?: { statuses: TaskStatus[]; total: number };
-		  }
-		| { task: Subtask; isSubtask: true }
-		| { task: null; isSubtask: boolean }
-	> {
-		const statuses = parseStatusFilter(options.subtaskStatus);
-		// Parse ID - check for dot notation (subtask); "01.03" is 1.3
-		const parts = normalizeTaskId(taskId).split('.');
-		const parentId = parts[0];
-		const subtaskIdPart = parts[1];
-
-		// Fetch the task
-		const task = await this.taskService.getTask(parentId, tag);
-		if (!task) {
-			return { task: null, isSubtask: false };
-		}
-
-		// Handle subtask notation (1.2)
-		if (subtaskIdPart && task.subtasks) {
-			const subtask = task.subtasks.find(
-				(st) => String(st.id) === subtaskIdPart
-			);
-			if (subtask) {
-				return { task: subtaskInContext(task, subtask), isSubtask: true };
-			}
-			// Subtask ID provided but not found
-			return { task: null, isSubtask: true };
-		}
-
-		// It's a regular task
-		return { ...filterSubtasks(task, statuses), isSubtask: false };
-	}
+	get: TaskDetailReads['get'] = (...a) => this.details.get(...a);
 
 	/**
 	 * Get tasks by status
@@ -437,96 +362,18 @@ export class TasksDomain {
 	updateStatuses: TaskStatusCommands['updateStatuses'] = (...a) =>
 		this.statuses.updateStatuses(...a);
 
-	// ========== Acceptance Criteria ==========
+	// ===== Checklist, commits, PRD section (TaskDetailReads) =====
 
-	/**
-	 * A task's checklist: its acceptance criteria, numbered from 1, then the
-	 * project's Definition of Done (top-level tasks only)
-	 */
-	getChecklist(task: Task | Subtask, isSubtask = false): TaskChecklist {
-		return buildChecklist(
-			task,
-			this.configManager.getDefinitionOfDone(),
-			isSubtask
-		);
-	}
-
-	/**
-	 * The commits whose message names this task or its subtasks in the tag
-	 * (`[task <id>]`, `[task <tag>/<id>]` outside master) made since the task
-	 * was created, newest first; empty outside git (#954, #1015)
-	 */
-	async getCommits(taskId: string, tag?: string): Promise<TaskCommit[]> {
-		const resolvedTag = tag || this.configManager.getActiveTag();
-		const { task } = await this.get(taskId, resolvedTag);
-		return findTaskCommits(this.projectRoot, normalizeTaskId(taskId), {
-			tag: resolvedTag,
-			since: task?.createdAt
-		});
-	}
-
-	/**
-	 * The PRD section a task cites in `metadata.source`, read from the PRD
-	 * verbatim; a subtask without one uses its parent's. Undefined when
-	 * neither cites one, or the file or heading is gone.
-	 */
-	async getPrdSection(
-		taskId: string,
-		tag?: string
-	): Promise<{ source: string; text: string } | undefined> {
-		const ids = taskId.includes('.')
-			? [taskId, taskId.split('.')[0]]
-			: [taskId];
-		for (const id of ids) {
-			const { task } = await this.get(id, tag);
-			const source = task ? getPrdSource(task) : undefined;
-			if (!source) continue;
-			const text = readPrdSection(source, this.projectRoot);
-			return text ? { source, text } : undefined;
-		}
-		return undefined;
-	}
-
-	/**
-	 * A task or subtask's checklist as stored, by ID ("3" or "3.2"); undefined
-	 * when there is no such task. Use this rather than `getChecklist` for a
-	 * task from `list` or `getNext`, which leave the criteria fields out.
-	 */
-	async loadChecklist(
-		taskId: string,
-		tag?: string
-	): Promise<TaskChecklist | undefined> {
-		const { task, isSubtask } = await this.get(taskId, tag);
-		return task ? this.getChecklist(task, isSubtask) : undefined;
-	}
-
-	/**
-	 * Check and uncheck checklist items by number, in one write.
-	 * Throws INVALID_INPUT, changing nothing, for a number the task's
-	 * checklist doesn't have.
-	 *
-	 * @returns The checklist as saved
-	 */
-	async updateChecklist(
-		taskId: string,
-		changes: ChecklistChanges,
-		tag?: string
-	): Promise<TaskChecklist> {
-		const definitionOfDone = this.configManager.getDefinitionOfDone();
-		const saved = await this.taskService.modifyTask(
-			taskId,
-			(task, isSubtask) =>
-				applyChecklistChanges(
-					task,
-					taskId,
-					definitionOfDone,
-					changes,
-					isSubtask
-				),
-			tag
-		);
-		return buildChecklist(saved, definitionOfDone, taskId.includes('.'));
-	}
+	getChecklist: TaskDetailReads['getChecklist'] = (...a) =>
+		this.details.getChecklist(...a);
+	getCommits: TaskDetailReads['getCommits'] = (...a) =>
+		this.details.getCommits(...a);
+	getPrdSection: TaskDetailReads['getPrdSection'] = (...a) =>
+		this.details.getPrdSection(...a);
+	loadChecklist: TaskDetailReads['loadChecklist'] = (...a) =>
+		this.details.loadChecklist(...a);
+	updateChecklist: TaskDetailReads['updateChecklist'] = (...a) =>
+		this.details.updateChecklist(...a);
 
 	/**
 	 * Set active tag
@@ -535,74 +382,18 @@ export class TasksDomain {
 		return this.taskService.setActiveTag(tag);
 	}
 
-	// ========== Tag Management ==========
+	// ===== Tag management (TaskTagCommands) =====
 
-	/**
-	 * Create a new tag, empty or with a copy of another tag's tasks
-	 */
-	async createTag(name: string, options?: CreateTagOptions) {
-		return this.tagService.createTag(name, options);
-	}
-
-	/**
-	 * Create a tag named after the current git branch and map the branch to it
-	 * in state.json. createTag writes the tag; see createTagFromBranch in
-	 * utils/branch-tag.ts for the checks and errors.
-	 */
-	async createTagFromBranch<T>(
-		createTag: CreateBranchTag<T>
-	): Promise<CreateTagFromBranchResult<T>> {
-		return createTagFromBranch(this.projectRoot, createTag);
-	}
-
-	/**
-	 * Delete a tag and its tasks; master becomes current if it was.
-	 * Cannot delete master.
-	 */
-	async deleteTag(name: string, options?: DeleteTagOptions) {
-		return this.tagService.deleteTag(name, options);
-	}
-
-	/**
-	 * Make a tag the current one, and find its next task
-	 */
-	async useTag(name: string) {
-		const result = await this.tagService.useTag(name);
-		return { ...result, nextTask: await this.getNext(name) };
-	}
-
-	/**
-	 * Rename a tag, keeping it current if it was. Cannot rename master.
-	 */
-	async renameTag(oldName: string, newName: string) {
-		return this.tagService.renameTag(oldName, newName);
-	}
-
-	/**
-	 * Copy an existing tag to create a new tag with the same tasks
-	 */
-	async copyTag(source: string, target: string, options?: CopyTagOptions) {
-		return this.tagService.copyTag(source, target, options);
-	}
-
-	/**
-	 * Get all tags with detailed statistics including task counts
-	 * @param options.ready - Only tags with at least one task ready to start
-	 */
-	async getTagsWithStats(options: { ready?: boolean } = {}) {
-		const result = await this.tagService.getTagsWithStats();
-		if (!options.ready) return result;
-		const tags = result.tags.filter((tag) => tag.readyTasks > 0);
-		return { ...result, tags, totalTags: tags.length };
-	}
-
-	/**
-	 * The tags to list, current first, every field filled in (see TagService)
-	 * @param options.ready - Only tags with at least one task ready to start
-	 */
-	async listTags(options: { ready?: boolean } = {}) {
-		return this.tagService.listTags(options);
-	}
+	createTag: TaskTagCommands['createTag'] = (...a) => this.tags.createTag(...a);
+	createTagFromBranch: TaskTagCommands['createTagFromBranch'] = (...a) =>
+		this.tags.createTagFromBranch(...a);
+	deleteTag: TaskTagCommands['deleteTag'] = (...a) => this.tags.deleteTag(...a);
+	useTag: TaskTagCommands['useTag'] = (...a) => this.tags.useTag(...a);
+	renameTag: TaskTagCommands['renameTag'] = (...a) => this.tags.renameTag(...a);
+	copyTag: TaskTagCommands['copyTag'] = (...a) => this.tags.copyTag(...a);
+	getTagsWithStats: TaskTagCommands['getTagsWithStats'] = (...a) =>
+		this.tags.getTagsWithStats(...a);
+	listTags: TaskTagCommands['listTags'] = (...a) => this.tags.listTags(...a);
 
 	// ========== Watch ==========
 
