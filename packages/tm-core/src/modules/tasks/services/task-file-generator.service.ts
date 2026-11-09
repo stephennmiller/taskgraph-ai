@@ -47,7 +47,7 @@ export interface GenerateTaskFilesResult {
  * The file `generate` writes for a task, which `remove-task` deletes:
  * task_001.md in master, task_001_<tag>.md in other tags
  */
-export function taskFileName(taskId: string | number, tag: string): string {
+function taskFileName(taskId: string | number, tag: string): string {
 	assertTagName(tag);
 	const paddedId = String(taskId).padStart(3, '0');
 	return tag === 'master'
@@ -74,24 +74,34 @@ function taskFilesIn(
 	});
 }
 
+/** What a cleanup deleted, and what it couldn't, as full paths and messages */
+export interface RemovedTaskFiles {
+	removed: string[];
+	errors: string[];
+}
+
 /** Delete a tag's generated files in `dir` whose task number `remove` accepts */
 function removeTaskFilesIn(
 	dir: string,
 	tag: string,
 	remove: (id: string) => boolean
-): number {
-	let removed = 0;
+): RemovedTaskFiles {
+	const result: RemovedTaskFiles = { removed: [], errors: [] };
 	for (const { file, id } of taskFilesIn(dir, tag)) {
 		if (!remove(id)) continue;
+		const target = path.join(dir, file);
 		try {
 			// unlink removes a link itself, never what it points at
-			fs.unlinkSync(path.join(dir, file));
-			removed++;
-		} catch {
+			fs.unlinkSync(target);
+			result.removed.push(target);
+		} catch (error) {
 			// The file is a copy of tasks.json; one left behind loses nothing
+			result.errors.push(
+				`Failed to delete task file ${target}: ${(error as Error).message}`
+			);
 		}
 	}
-	return removed;
+	return result;
 }
 
 /**
@@ -115,28 +125,29 @@ function defaultTaskFilesDir(
 
 /**
  * Delete the files `generate` wrote for a tag in the default folder: all of
- * them (the tag was removed), or those of `taskIds` (archived tasks). Runs
- * after tasks.json is saved and never throws.
- * @returns How many files were deleted
+ * them (the tag was removed), or those of `taskIds` (removed or archived
+ * tasks). Runs after tasks.json is saved and never throws.
  */
 export function removeGeneratedTaskFiles(
 	projectRoot: string,
 	tag: string,
 	taskIds?: Iterable<string | number>
-): number {
+): RemovedTaskFiles {
 	const dir = defaultTaskFilesDir(projectRoot, tag);
-	if (!dir) return 0;
+	if (!dir) return { removed: [], errors: [] };
 	const ids = taskIds && new Set([...taskIds].map(String));
 	try {
 		return removeTaskFilesIn(dir, tag, (id) => !ids || ids.has(id));
 	} catch {
-		return 0;
+		return { removed: [], errors: [] };
 	}
 }
 
 /**
  * Rename a renamed tag's generated files in the default folder to the new
- * tag's names. Never throws.
+ * tag's names. A file already under a new name is never replaced: it may be
+ * someone's own, so the old one, a copy of tasks.json, is deleted instead.
+ * Never throws.
  */
 export function renameGeneratedTaskFiles(
 	projectRoot: string,
@@ -146,14 +157,23 @@ export function renameGeneratedTaskFiles(
 	const dir = defaultTaskFilesDir(projectRoot, oldTag, newTag);
 	if (!dir) return;
 	try {
+		// Without case: macOS and Windows folders hold one file per spelling
+		const names = fs.readdirSync(dir).map((name) => name.toLowerCase());
 		for (const { file, id } of taskFilesIn(dir, oldTag)) {
-			fs.renameSync(
-				path.join(dir, file),
-				path.join(dir, taskFileName(id, newTag))
-			);
+			const renamed = taskFileName(id, newTag);
+			const taken =
+				renamed.toLowerCase() !== file.toLowerCase() &&
+				names.includes(renamed.toLowerCase());
+			try {
+				if (taken) fs.unlinkSync(path.join(dir, file));
+				else fs.renameSync(path.join(dir, file), path.join(dir, renamed));
+				names.push(renamed.toLowerCase());
+			} catch {
+				// A file left under the old name loses nothing; go on to the rest
+			}
 		}
 	} catch {
-		// As above: a file left under the old name loses nothing
+		// As above
 	}
 }
 
@@ -202,7 +222,7 @@ export class TaskFileGeneratorService {
 					outputDir,
 					tag,
 					(id) => !validTaskIds.has(id)
-				);
+				).removed.length;
 			} catch {
 				// Cleanup is best effort
 			}

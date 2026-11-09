@@ -522,6 +522,24 @@ describe('TagService and generated task files (#1125)', () => {
 		).toBe('task_001_feature.md');
 	});
 
+	it('renameTag never replaces a file already under a new name', async () => {
+		touch('task_001_feature.md', 'task_002_feature.md', 'task_003_feature.md');
+		fs.writeFileSync(path.join(tasksDir(), 'task_001_renamed.md'), 'my notes');
+		fs.mkdirSync(path.join(tasksDir(), 'task_002_Renamed.md'));
+
+		await service().renameTag('feature', 'renamed');
+
+		// The old copies go; the rest are still renamed
+		expect(taskFiles()).toEqual([
+			'task_001_renamed.md',
+			'task_002_Renamed.md',
+			'task_003_renamed.md'
+		]);
+		expect(
+			fs.readFileSync(path.join(tasksDir(), 'task_001_renamed.md'), 'utf8')
+		).toBe('my notes');
+	});
+
 	it('keeps the files when the tag is kept', async () => {
 		touch('task_001_feature.md');
 
@@ -538,7 +556,13 @@ describe('TagService and generated task files (#1125)', () => {
 			fs.renameSync(path.join(projectRoot, linked), real);
 			fs.symlinkSync(real, path.join(projectRoot, linked));
 
-			expect(removeGeneratedTaskFiles(projectRoot, 'feature')).toBe(0);
+			expect(removeGeneratedTaskFiles(projectRoot, 'feature').removed).toEqual(
+				[]
+			);
+			// As remove-task and archive call it
+			expect(
+				removeGeneratedTaskFiles(projectRoot, 'feature', [1]).removed
+			).toEqual([]);
 			renameGeneratedTaskFiles(projectRoot, 'feature', 'renamed');
 
 			expect(taskFiles()).toEqual(['task_001_feature.md']);

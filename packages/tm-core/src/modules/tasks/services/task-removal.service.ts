@@ -4,13 +4,11 @@
  * The rules are in utils/task-removal.ts; this applies them to storage.
  */
 
-import fs from 'node:fs';
 import path from 'node:path';
 import { TASKGRAPH_TASKS_FILE } from '../../../common/constants/paths.js';
 import type { Task } from '../../../common/types/index.js';
 import type { ConfigManager } from '../../config/managers/config-manager.js';
 import { readArchivedIdsSync } from '../utils/archive.js';
-import { TAG_NAME_PATTERN } from '../utils/tag-names.js';
 import {
 	type ClearSubtasksResult,
 	clearSubtasksIn,
@@ -21,7 +19,7 @@ import {
 	splitIds,
 	type TaskRemovalPreview
 } from '../utils/task-removal.js';
-import { taskFileName } from './task-file-generator.service.js';
+import { removeGeneratedTaskFiles } from './task-file-generator.service.js';
 import type { TaskService } from './task-service.js';
 
 export interface RemoveTasksResult
@@ -66,26 +64,16 @@ export class TaskRemovalService {
 			tag
 		);
 		const { removedTaskNumbers, ...outcome } = result;
-		const errors: string[] = [];
-		const tasksPath = this.tasksPath();
-		// After tasks.json is saved, so a failure here loses no task. generate
-		// refuses an invalid tag name, so no file exists for one
-		const numbers = TAG_NAME_PATTERN.test(tag) ? removedTaskNumbers : [];
-		for (const number of numbers) {
-			const file = path.join(
-				path.dirname(tasksPath),
-				taskFileName(number, tag)
-			);
-			if (!fs.existsSync(file)) continue;
-			try {
-				fs.unlinkSync(file);
-				outcome.messages.push(`Deleted task file: ${file}`);
-			} catch (error) {
-				errors.push(
-					`Failed to delete task file ${file}: ${(error as Error).message}`
-				);
-			}
+		// After tasks.json is saved, so a failure here loses no task
+		const { removed, errors } = removeGeneratedTaskFiles(
+			this.configManager.getProjectRoot(),
+			tag,
+			removedTaskNumbers
+		);
+		for (const file of removed) {
+			outcome.messages.push(`Deleted task file: ${file}`);
 		}
+		const tasksPath = this.tasksPath();
 		return { ...outcome, errors, tag, tasksPath };
 	}
 
