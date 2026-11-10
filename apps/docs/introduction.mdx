@@ -8,6 +8,38 @@ description: "TaskGraph turns a PRD into a dependency-aware task list for Claude
 Welcome to v1 of the TaskGraph Docs. Expect weekly updates as we expand and refine each section.
 </Tip>
 
+TaskGraph turns your PRD into a task graph stored in `.taskgraph/tasks/tasks.json` in your repo. Each Claude Code session reads and updates that file, so a new session picks up the next task and the notes from the last one.
+
+<Frame>
+  <img className="block dark:hidden" src="/images/how-it-works.svg" alt="parse-prd turns your PRD into a task graph stored in .taskgraph/tasks/tasks.json. Each Claude Code session reads and updates that file, so a new session picks up the next task and the notes from the last one." />
+  <img className="hidden dark:block" src="/images/how-it-works-dark.svg" alt="parse-prd turns your PRD into a task graph stored in .taskgraph/tasks/tasks.json. Each Claude Code session reads and updates that file, so a new session picks up the next task and the notes from the last one." />
+</Frame>
+
+## See it work
+
+<Tabs>
+  <Tab title="1. Set up">
+    <Frame caption="Run taskgraph init in your project">
+      <img src="/images/demo/01-setup.svg" alt="Running taskgraph init in a project" />
+    </Frame>
+  </Tab>
+  <Tab title="2. Plan">
+    <Frame caption="Turn your PRD into a plan">
+      <img src="/images/demo/02-prd-to-tasks.svg" alt="Claude Code running /taskgraph:parse-prd to turn a PRD into 8 dependent tasks" />
+    </Frame>
+  </Tab>
+  <Tab title="3. Resume">
+    <Frame caption="Pick up where you left off">
+      <img src="/images/demo/03-pick-up-where-you-left-off.svg" alt="A new Claude Code session running /taskgraph:next and resuming from the notes logged last time" />
+    </Frame>
+  </Tab>
+  <Tab title="4. Terminal">
+    <Frame caption="Or drive it from your terminal">
+      <img src="/images/demo/04-terminal.svg" alt="taskgraph list in a terminal: progress, what is ready, the next task and the task table" />
+    </Frame>
+  </Tab>
+</Tabs>
+
 We've organized the docs into three sections depending on your experience level and goals:
 
 ### Getting Started - Jump in to [Quick Start](/getting-started/quick-start/quick-start)
