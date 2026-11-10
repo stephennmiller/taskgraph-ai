@@ -1,8 +1,10 @@
 /**
  * @fileoverview `taskgraph doctor`: checks Node, Claude Code and its sign-in,
- * the project, the Claude Code plugin and the MCP server, and says how to fix
- * each one that failed. Thin layer over tm-core's runDoctor(). Exits 1 when a
- * check fails, so a script can gate on it. Works outside a project.
+ * the project, its data files and tasks, the Claude Code plugin and the MCP
+ * server, and says how to fix each one that failed. `--fix` repairs what has
+ * one safe answer in tasks.json. Thin layer over tm-core's runDoctor().
+ * Exits 1 when a check fails (with `--fix`: still fails after the repair),
+ * so a script can gate on it. Works outside a project.
  */
 
 import { runDoctor } from '@tm/core';
@@ -12,6 +14,7 @@ import { printJson } from '../utils/json-output.js';
 
 interface DoctorCommandOptions {
 	json?: boolean;
+	fix?: boolean;
 	project?: string;
 }
 
@@ -21,12 +24,16 @@ export class DoctorCommand extends Command {
 
 		this.description('Check that TaskGraph and Claude Code are set up')
 			.option('--json', 'Output JSON')
+			.option('--fix', 'Repair task problems that have one safe answer')
 			.option(
 				'-p, --project <path>',
 				'Project root directory (auto-detected if not provided)'
 			)
 			.action(async (options: DoctorCommandOptions) => {
-				const report = await runDoctor({ projectPath: options.project });
+				const report = await runDoctor({
+					projectPath: options.project,
+					fix: options.fix
+				});
 				if (options.json) {
 					printJson(report);
 				} else {
