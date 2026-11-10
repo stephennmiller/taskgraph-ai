@@ -103,16 +103,32 @@ export class TaskWorktrees {
 		this.projectRoot = canonical(projectRoot);
 	}
 
-	private async git(args: string[], cwd = this.projectRoot): Promise<string> {
+	private async git(
+		args: string[],
+		cwd = this.projectRoot,
+		env?: NodeJS.ProcessEnv
+	): Promise<string> {
 		// No time limit: `worktree add`, `merge` and `checkout` run the user's
 		// hooks (an npm install, a test suite), and killing one leaves a
 		// half-made worktree or a merge in progress
-		return (await runGit(args, { cwd, timeoutMs: 0 })).stdout;
+		return (await runGit(args, { cwd, timeoutMs: 0, env })).stdout;
 	}
 
-	private async succeeds(args: string[]): Promise<boolean> {
+	/**
+	 * For `worktree add` and `merge`: their hooks may fetch (submodules, an
+	 * npm install), and start the repository's programs with or without
+	 * runGit's transport guard, so the user's own setting stands
+	 */
+	private hookEnv(): NodeJS.ProcessEnv {
+		return { GIT_ALLOW_PROTOCOL: process.env.GIT_ALLOW_PROTOCOL };
+	}
+
+	private async succeeds(
+		args: string[],
+		env?: NodeJS.ProcessEnv
+	): Promise<boolean> {
 		try {
-			await this.git(args);
+			await this.git(args, this.projectRoot, env);
 			return true;
 		} catch {
 			return false;
@@ -300,18 +316,26 @@ export class TaskWorktrees {
 		}
 		fs.mkdirSync(path.dirname(worktree), { recursive: true });
 		if (await this.branchExists(branch)) {
-			await this.git(['worktree', 'add', '--quiet', worktree, gitRef(branch)]);
+			await this.git(
+				['worktree', 'add', '--quiet', worktree, gitRef(branch)],
+				this.projectRoot,
+				this.hookEnv()
+			);
 			return { createdBranch: false };
 		}
-		await this.git([
-			'worktree',
-			'add',
-			'--quiet',
-			'-b',
-			gitRef(branch),
-			worktree,
-			gitRef(base)
-		]);
+		await this.git(
+			[
+				'worktree',
+				'add',
+				'--quiet',
+				'-b',
+				gitRef(branch),
+				worktree,
+				gitRef(base)
+			],
+			this.projectRoot,
+			this.hookEnv()
+		);
 		return { createdBranch: true };
 	}
 
@@ -463,7 +487,8 @@ export class TaskWorktrees {
 				top,
 				`${sha}:refs/heads/${branch}`
 			],
-			clone
+			clone,
+			{ GIT_ALLOW_PROTOCOL: 'file' }
 		);
 		await this.git(['checkout', '--quiet', branch], clone);
 	}
@@ -480,8 +505,6 @@ export class TaskWorktrees {
 				'-c',
 				'core.hooksPath=/dev/null',
 				'-c',
-				'protocol.file.allow=always',
-				'-c',
 				'transfer.fsckObjects=true',
 				'fetch',
 				'--quiet',
@@ -495,8 +518,10 @@ export class TaskWorktrees {
 			{
 				cwd: this.projectRoot,
 				timeoutMs: 10 * 60_000,
-				// upload-pack sets this itself; said again so nothing undoes it
-				env: { GIT_NO_LAZY_FETCH: '1' }
+				// shortcut: with the file transport on, git before 2.45 (no
+				// GIT_NO_LAZY_FETCH) can still start a partial-clone remote's
+				// program in this fetch and cloneFor's; needs a git version gate
+				env: { GIT_ALLOW_PROTOCOL: 'file' }
 			}
 		);
 	}
@@ -516,7 +541,12 @@ export class TaskWorktrees {
 	 * @returns false, with the merge undone, when it conflicts or fails
 	 */
 	async merge(branch: string): Promise<boolean> {
-		if (await this.succeeds(['merge', '--no-edit', gitRef(branch)])) {
+		if (
+			await this.succeeds(
+				['merge', '--no-edit', gitRef(branch)],
+				this.hookEnv()
+			)
+		) {
 			return true;
 		}
 		await this.succeeds(['merge', '--abort']);

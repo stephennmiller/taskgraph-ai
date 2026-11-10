@@ -4,7 +4,9 @@
  * a repository whose config names a program for every key that can start
  * one. None may run (#1100). A sandboxed loop run must not run `git status`,
  * which starts a filter: it asks for no approval (#1129), and its session
- * can write the mounted `.git/config` after one was given (#1133).
+ * can write the mounted `.git/config` after one was given (#1133). A partial
+ * clone's remote names a program too, which git starts to fetch an object
+ * the repository doesn't have (#1138).
  */
 
 import { execFileSync, spawn } from 'node:child_process';
@@ -37,6 +39,9 @@ vi.mock('node:child_process', async (importOriginal) => ({
 
 /** Hooks git could run on a read, were one of these calls to write the index or a ref */
 const HOOKS = ['post-index-change', 'reference-transaction', 'post-checkout'];
+
+/** An object no repository here has */
+const MISSING = '1'.repeat(40);
 
 describe('git calls before approval, in a repository with a hostile config', () => {
 	let base: string;
@@ -111,7 +116,18 @@ describe('git calls before approval, in a repository with a hostile config', () 
 			['diff.x.textconv', program],
 			['filter.x.clean', program],
 			['filter.x.smudge', program],
-			['filter.x.process', program]
+			['filter.x.process', program],
+			// A partial clone fetches a missing object from its remote by
+			// starting the remote's uploadpack; the mailmap blob is one `git
+			// log` opens. A repository can allow the transport, so config
+			// that forbids it would be no guard
+			['extensions.partialClone', 'origin'],
+			['remote.origin.promisor', 'true'],
+			['remote.origin.url', repo],
+			['remote.origin.uploadpack', program],
+			['protocol.allow', 'always'],
+			['protocol.file.allow', 'always'],
+			['mailmap.blob', MISSING]
 		]) {
 			git('config', key, value);
 		}
@@ -191,6 +207,15 @@ describe('git calls before approval, in a repository with a hostile config', () 
 			git('log', '--format=%h');
 
 			expect(fs.readFileSync(marker, 'utf8')).toContain('--verify');
+		}
+	);
+
+	it.skipIf(process.platform === 'win32')(
+		'plain git log, signatures off, starts the partial-clone remote program',
+		() => {
+			git('-c', 'log.showSignature=false', 'log', '--format=%h');
+
+			expect(ran()).toContain(`run ${repo}`);
 		}
 	);
 
@@ -276,6 +301,8 @@ describe('git calls before approval, in a repository with a hostile config', () 
 		await worktrees.head();
 		await worktrees.identity();
 		await worktrees.objectFormat();
+		// Any call that opens an object the repository lacks
+		await runGit(['cat-file', '-e', MISSING], options).catch(() => {});
 
 		expect(commits).toEqual([
 			expect.objectContaining({ subject: 'work [task 1]' })

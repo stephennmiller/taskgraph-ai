@@ -67,6 +67,34 @@ describe('TaskWorktrees.merge', () => {
 		expect(timeouts.every(([, timeout]) => timeout === 0)).toBe(true);
 	});
 
+	it.skipIf(process.platform === 'win32')(
+		'lets a hook that worktree add or merge runs use a git transport',
+		async () => {
+			// A post-checkout hook that updates submodules, or an npm install
+			// with a git dependency, talks to a remote
+			for (const hook of ['post-checkout', 'post-merge']) {
+				fs.writeFileSync(
+					path.join(root, '.git', 'hooks', hook),
+					`#!/bin/sh\ngit ls-remote "${root}" HEAD >> "${root}/.git/${hook}.out" || exit 1\n`,
+					{ mode: 0o755 }
+				);
+			}
+			git('checkout', '-qb', 'taskgraph/task-1');
+			commit('b.txt', 'new\n');
+			git('checkout', '-q', 'main');
+			fs.rmSync(path.join(root, '.git', 'post-checkout.out'), { force: true });
+			const tg = new TaskWorktrees(root);
+
+			await tg.add(path.join(root, 'wt'), 'taskgraph/task-2', 'main');
+			await tg.merge('taskgraph/task-1');
+
+			const out = (hook: string) =>
+				fs.readFileSync(path.join(root, '.git', `${hook}.out`), 'utf8');
+			expect(out('post-checkout')).toContain('HEAD');
+			expect(out('post-merge')).toContain('HEAD');
+		}
+	);
+
 	it('undoes a conflicting merge and says it failed', async () => {
 		git('checkout', '-qb', 'taskgraph/task-1');
 		commit('a.txt', 'theirs\n');
