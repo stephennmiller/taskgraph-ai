@@ -196,6 +196,30 @@ describe('long messages', () => {
 	});
 });
 
+describe('spend facts', () => {
+	it('wrap between facts, never inside one', () => {
+		const line = stripVTControlCharacters(
+			formatLoopSummary(
+				{
+					iterations: [],
+					totalIterations: 4,
+					tasksCompleted: 4,
+					finalStatus: 'all_complete',
+					totalCostUsd: 1.35,
+					totalTurns: 22,
+					totalDurationMs: 104_000
+				},
+				new Set(),
+				80
+			)
+		);
+		expect(line).toBe(
+			'✓ All tasks complete · 4 tasks completed in 4 iterations · $1.35 · 22 turns\n  · 1m 44s'
+		);
+		expect(line).not.toContain('\u00a0');
+	});
+});
+
 describe('formatSandboxAuth', () => {
 	it('says what to do, then that it worked', () => {
 		expect(stripVTControlCharacters(formatSandboxAuth(false))).toBe(

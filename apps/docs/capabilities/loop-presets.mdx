@@ -27,7 +27,7 @@ taskgraph loop -n 10 --prompt default
 1. Runs `taskgraph next` to pick the task, then `taskgraph show <id>` for its criteria and PRD section
 2. Builds it in as few steps as it can, writing whole files with tests alongside
 3. Runs tests and type checks, then runs the app through its real entry point (the CLI, server or UI) on an input the task should handle. If the entry point can't reach the task's code yet and no task wires it in, it adds that task
-4. Commits and marks the task done in one command, checking off its criteria (`set-status <id> done --check <numbers>`)
+4. Commits and marks the task done in one command, checking off its criteria (`set-status <id> done --check=<numbers, comma-separated>`)
 5. Stops, so the next task starts in a fresh session
 
 **Completion criteria:** All pending tasks are complete.

@@ -46,9 +46,18 @@ import { terminalSafe } from './markdown-formatters.js';
 import { fit, formatSetAside, plural } from './parallel-loop-formatters.js';
 import { formatLoopSpend, modelSetting } from './usage-formatters.js';
 
+const NBSP = '\u00a0';
+
 /** A line that can carry an error's text, wrapped at spaces with a hanging indent */
 const wrap = (line: string, width: number) =>
-	wrapLine(line, width, '  ').join('\n');
+	wrapLine(line, width, '  ').join('\n').replaceAll(NBSP, ' ');
+
+/** The spend facts, each kept whole with its ` · ` so a wrap never splits `1m 44s` */
+const spendFacts = (spend: Parameters<typeof formatLoopSpend>[0]) =>
+	formatLoopSpend(spend).replace(
+		/ · ([^·\x1b]+)/g,
+		(_, fact: string) => ` ·${NBSP}${fact.replaceAll(' ', NBSP)}`
+	);
 
 export interface LoopIntro {
 	/** Preset name or custom prompt path */
@@ -137,7 +146,7 @@ export function formatLoopIterationEnd(
 	const color = status === 'error' ? chalk.red : theme.text;
 	return wrap(
 		`${ITERATION_MARK[status]} ${color(`Iteration ${iteration.iteration}${word}${why}`)}` +
-			formatLoopSpend({
+			spendFacts({
 				session: iteration.session,
 				model: iteration.model,
 				effort: iteration.effort,
@@ -200,7 +209,7 @@ export function formatLoopSummary(
 		STOP_REASON[result.finalStatus] +
 			why +
 			counts +
-			formatLoopSpend({
+			spendFacts({
 				costUsd: result.totalCostUsd,
 				costPartial: result.costPartial,
 				turns: result.totalTurns,

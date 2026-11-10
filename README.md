@@ -47,7 +47,7 @@ plan and progress stored in your repo.
 </p>
 
 <details>
-<summary><b>See the full workflow</b> (4 short clips)</summary>
+<summary><b>See the full workflow</b> (5 short clips)</summary>
 
 <p align="center">
   <a href="images/demo/01-setup.mp4"><img src="images/demo/01-setup.svg" alt="Running taskgraph init in a project" width="820"></a>
@@ -71,6 +71,12 @@ plan and progress stored in your repo.
   <a href="images/demo/04-terminal.mp4"><img src="images/demo/04-terminal.svg" alt="taskgraph list in a terminal: progress, what is ready, the next task and the task table" width="820"></a>
   <br>
   <sub>4. Or drive it from your terminal · <a href="images/demo/04-terminal.mp4">MP4</a></sub>
+</p>
+
+<p align="center">
+  <a href="images/demo/05-go.mp4"><img src="images/demo/05-go.svg" alt="taskgraph go on a PRD: it plans four tasks, then Claude Code builds and commits each one in its own session until all tasks are complete" width="820"></a>
+  <br>
+  <sub>5. Or hand it the whole PRD · <a href="images/demo/05-go.mp4">MP4</a></sub>
 </p>
 
 </details>
