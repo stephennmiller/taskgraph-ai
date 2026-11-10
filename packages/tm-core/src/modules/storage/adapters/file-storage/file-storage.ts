@@ -47,6 +47,10 @@ import {
 	settleChangedParents,
 	subtaskShapes
 } from '../../../tasks/utils/parent-status.js';
+import {
+	assertNoNewTaskProblems,
+	knownTaskProblems
+} from '../../../tasks/validation/stored-tasks.js';
 import { FileOperations } from './file-operations.js';
 import { FormatHandler } from './format-handler.js';
 import { PathResolver } from './path-resolver.js';
@@ -253,6 +257,8 @@ export class FileStorage implements IStorage {
 	 * Each parent whose subtasks changed is settled before the save
 	 * (settleChangedParents), unless `settle` is false: set-status settles
 	 * after each ID itself and may set a parent's status on purpose.
+	 * A status, priority or ID problem the change added is refused
+	 * (assertNoNewTaskProblems).
 	 */
 	private async mutateTasks<R>(
 		tag: string | undefined,
@@ -288,6 +294,7 @@ export class FileStorage implements IStorage {
 					resolvedTag
 				);
 				const before = settle ? subtaskShapes(current) : null;
+				const known = knownTaskProblems(current);
 				const outcome = await mutate(
 					current,
 					this.formatHandler.extractMetadata(existingData, resolvedTag)
@@ -300,6 +307,7 @@ export class FileStorage implements IStorage {
 				if (before) {
 					settleChangedParents(before, outcome.tasks, this.guardDone());
 				}
+				assertNoNewTaskProblems(known, outcome.tasks, resolvedTag);
 				return applyTagUpdate(
 					this.formatHandler,
 					existingData,

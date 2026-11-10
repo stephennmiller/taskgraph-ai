@@ -98,6 +98,9 @@ describe('runDoctor', () => {
 			{ name: 'claude', status: 'pass', detail: '2.1.309' },
 			{ name: 'signed-in', status: 'pass' },
 			{ name: 'project', status: 'pass', detail: root },
+			{ name: 'data-files', status: 'pass', detail: '1' },
+			// No tasks.json yet: nothing to check
+			{ name: 'tasks', status: 'skip' },
 			{ name: 'plugin', status: 'pass', detail: '0.58.0' },
 			{ name: 'mcp', status: 'pass', detail: '.mcp.json' }
 		]);

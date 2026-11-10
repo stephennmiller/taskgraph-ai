@@ -140,9 +140,8 @@ Converting between task and subtask (move, `add-subtask --task-id`,
 `acceptanceCriteria` and metadata, except `subtasks` and `parentId`.
 
 `set-status <parent> done` with open subtasks is allowed on purpose: it is
-an explicit user action. The next writer to add a subtask, reopen a
-complete one or set one to `pending` or `in-progress` moves it back;
-closing, holding or removing the leftover ones doesn't.
+an explicit user action. The `done` exception above says what reopens
+it.
 
 The git merge driver writes tasks.json outside the funnel, so it settles
 too (`git/merge-driver/merge-settle.ts`, #1093): a task whose merged
@@ -248,6 +247,8 @@ Invariants:
   `modifyTagged`, which re-read under the lock. AI results merge into what
   is on disk at write time.
 - A write is all or nothing: temp file, then rename.
+- The first two refuse a write adding an unknown status or priority
+  or a bad ID (`assertNoNewTaskProblems`, #1119).
 - Lock order is always tasks.json, then archive.json.
 
 A 4-process stress run (20 mixed writes each) lost no update.
