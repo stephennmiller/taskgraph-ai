@@ -129,6 +129,15 @@ describe('models and lang commands', () => {
 		expect(readConfig().global.responseLanguage).toBe('French');
 	});
 
+	it('refuses lang --setup without a terminal instead of prompting', () => {
+		const result = run(['lang', '--setup']);
+
+		expect(result.status).toBe(1);
+		expect(result.stderr).toContain('lang --setup needs a terminal');
+		expect(result.stdout).toBe('');
+		expect(readConfig().global.responseLanguage).toBe('English');
+	});
+
 	it('shows the response language instead of resetting it', () => {
 		run(['lang', '--response', 'French']);
 

@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { EnvironmentConfigProvider } from './environment-config-provider.service.js';
 import { RuntimeStateManager } from './runtime-state-manager.service.js';
@@ -136,5 +137,23 @@ describe('TASKGRAPH_RESPONSE_LANGUAGE', () => {
 		}).loadConfig();
 
 		expect(config).toEqual({ global: { responseLanguage: 'French' } });
+	});
+});
+
+// The AI key lookup parsed the whole file for any name it was asked for (#1099)
+describe('readers of a project .env', () => {
+	const SRC = path.resolve(fileURLToPath(import.meta.url), '../../../..');
+	const READS_ENV_FILE = /\bparseEnv\b|\bdotenv\b|['"`]\.env['"`]\s*\)/;
+
+	it('are only project-env.ts, which keeps just the allowlisted names', () => {
+		const readers = fs
+			.readdirSync(SRC, { recursive: true, encoding: 'utf8' })
+			.filter((file) => /\.ts$/.test(file) && !/\.(spec|test)\./.test(file))
+			.filter((file) =>
+				READS_ENV_FILE.test(fs.readFileSync(path.join(SRC, file), 'utf8'))
+			)
+			.map((file) => file.split(path.sep).join('/'));
+
+		expect(readers).toEqual(['modules/config/services/project-env.ts']);
 	});
 });

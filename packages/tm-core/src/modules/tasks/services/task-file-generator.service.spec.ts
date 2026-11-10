@@ -351,6 +351,28 @@ describe('TaskFileGeneratorService', () => {
 			expect(result.count).toBe(0);
 		});
 
+		it('deletes the files of a tag that ends with no tasks, and only those (#1125)', async () => {
+			const result = await service.generateTaskFiles({ tag: 'feature' });
+			const kept = ['notes.md', 'task_001.md', 'task_001_feature-x.md'];
+			for (const name of kept) {
+				fs.writeFileSync(path.join(result.directory, name), 'mine');
+			}
+			const emptyService = new TaskFileGeneratorService(
+				createMockStorage([]),
+				tempDir,
+				mockConfigManager
+			);
+
+			const emptied = await emptyService.generateTaskFiles({ tag: 'feature' });
+
+			expect(emptied).toMatchObject({
+				success: true,
+				count: 0,
+				orphanedFilesRemoved: 3
+			});
+			expect(fs.readdirSync(result.directory).sort()).toEqual(kept);
+		});
+
 		it('should clean up orphaned task files', async () => {
 			// First generate files for 3 tasks
 			await service.generateTaskFiles();

@@ -18,7 +18,6 @@ import {
 import { isWithin } from '../../../../common/utils/project-root-finder.js';
 import { writeAtomically } from '../../../../common/utils/write-atomically.js';
 import { resolvesWithin } from '../../../migration/import-paths.js';
-import type { FileStorageData } from './format-handler.js';
 
 /**
  * A file that exists but doesn't parse. The user message names the file the
@@ -323,52 +322,6 @@ export class FileOperations {
 	}
 
 	/**
-	 * Write JSON file with atomic operation and cross-process locking.
-	 * Writes atomically (see writeFileAtomic) under a proper-lockfile lock.
-	 * WARNING: This replaces the entire file. For concurrent modifications,
-	 * use modifyJson() instead to prevent lost updates.
-	 */
-	async writeJson(
-		filePath: string,
-		data: FileStorageData | any
-	): Promise<void> {
-		await enqueueWrite(filePath, () => this.writeJsonExclusive(filePath, data));
-	}
-
-	/**
-	 * writeJson while this process's queue for filePath is held.
-	 */
-	private async writeJsonExclusive(
-		filePath: string,
-		data: FileStorageData | any
-	): Promise<void> {
-		// Ensure file exists for locking (proper-lockfile requires this)
-		await this.ensureFileExists(filePath);
-
-		// Acquire cross-process lock
-		let release: (() => Promise<void>) | null = null;
-		try {
-			release = await this.acquireLock(filePath);
-
-			await writeFileAtomic(filePath, JSON.stringify(data, null, 2));
-		} finally {
-			if (release) {
-				try {
-					await release();
-				} catch (err: any) {
-					// Log but don't throw - lock may have been released already
-					// Other errors should be visible for debugging
-					if (process.env.DEBUG || process.env.TASKGRAPH_DEBUG === 'true') {
-						console.warn(
-							`[WARN] Lock release warning for ${filePath}: ${err.message}`
-						);
-					}
-				}
-			}
-		}
-	}
-
-	/**
 	 * Read-modify-write JSON file with cross-process locking.
 	 * Writes atomically (see writeFileAtomic) under a proper-lockfile lock.
 	 * Re-reads file inside lock to prevent lost updates from stale snapshots.
@@ -524,13 +477,6 @@ export class FileOperations {
 	}
 
 	/**
-	 * Read directory contents
-	 */
-	async readDir(dirPath: string): Promise<string[]> {
-		return fs.readdir(dirPath);
-	}
-
-	/**
 	 * Create directory recursively
 	 */
 	async ensureDir(dirPath: string): Promise<void> {
@@ -539,45 +485,6 @@ export class FileOperations {
 		} catch (error: any) {
 			throw new Error(
 				`Failed to create directory ${dirPath}: ${error.message}`
-			);
-		}
-	}
-
-	/**
-	 * Delete file
-	 */
-	async deleteFile(filePath: string): Promise<void> {
-		try {
-			await fs.unlink(filePath);
-		} catch (error: any) {
-			if (error.code !== 'ENOENT') {
-				throw new Error(`Failed to delete file ${filePath}: ${error.message}`);
-			}
-		}
-	}
-
-	/**
-	 * Rename/move file
-	 */
-	async moveFile(oldPath: string, newPath: string): Promise<void> {
-		try {
-			await fs.rename(oldPath, newPath);
-		} catch (error: any) {
-			throw new Error(
-				`Failed to move file from ${oldPath} to ${newPath}: ${error.message}`
-			);
-		}
-	}
-
-	/**
-	 * Copy file
-	 */
-	async copyFile(srcPath: string, destPath: string): Promise<void> {
-		try {
-			await fs.copyFile(srcPath, destPath);
-		} catch (error: any) {
-			throw new Error(
-				`Failed to copy file from ${srcPath} to ${destPath}: ${error.message}`
 			);
 		}
 	}

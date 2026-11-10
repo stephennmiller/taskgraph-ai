@@ -6,7 +6,8 @@ import path from 'node:path';
 import { isTaskComplete } from '../../../../common/constants/index.js';
 import {
 	ERROR_CODES,
-	TaskGraphError
+	TaskGraphError,
+	errorWithHint
 } from '../../../../common/errors/taskgraph-error.js';
 import type { IStorage } from '../../../../common/interfaces/storage.interface.js';
 import {
@@ -279,9 +280,10 @@ export class TagOperations {
 		}
 		const ids = Array.isArray(tasks) ? tasks.map((t) => Number(t?.id)) : [];
 		if (!ids.some((id) => id <= metadata.highestId)) return;
-		throw new TaskGraphError(
+		throw errorWithHint(
+			ERROR_CODES.VALIDATION_ERROR,
 			`Tag "${tag}" was removed or renamed, and its tasks used IDs up to ${metadata.highestId}. Tasks put under that name would reuse them and take over their GitHub issues; use another name`,
-			ERROR_CODES.VALIDATION_ERROR
+			`Or give them new IDs under that name: \`taskgraph tags add ${tag}\`, then \`taskgraph move --from <ids> --from-tag <tag> --to-tag ${tag}\` numbers them above ${metadata.highestId}. That moves the tasks; copy the tag to a spare name first to keep the originals`
 		);
 	}
 

@@ -56,9 +56,7 @@ const ALLOWED: Record<string, string> = {
 	'packages/tm-core/src/modules/migration/upstream-import.ts':
 		'copyNewFiles: COPYFILE_EXCL never writes through a link, and folders leading out are skipped',
 	'packages/tm-core/src/modules/config/services/runtime-state-manager.service.ts':
-		'clearState unlinks state.json for ConfigDomain.reset, which no command calls; left as is while #1116 rewrites this file',
-	'packages/tm-core/src/modules/tasks/services/task-removal.service.ts':
-		'unlinks task files beside tasks.json, whose folder the locked writer just refused if linked; unlink removes a link, never follows it',
+		'clearState unlinks state.json for ConfigDomain.reset, which no command calls',
 	'packages/tm-profiles/src/legacy-commands.ts':
 		'pruneLegacySlashCommands skips a linked folder on the way to .claude/commands/tm, and removes entries without following them',
 	'apps/cli/src/completion/install.ts':

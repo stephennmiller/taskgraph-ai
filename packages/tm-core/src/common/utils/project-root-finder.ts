@@ -20,6 +20,23 @@ export function isWithin(parent: string, child: string): boolean {
 	);
 }
 
+/**
+ * The project and each folder above it up to the repository's top level
+ * (the nearest with a `.git`, where git looks), as paths from the project:
+ * '', '..', '../..'. Undefined outside a repository.
+ */
+export function foldersToTop(root: string): string[] | undefined {
+	const folders: string[] = [];
+	for (let dir = root, rel = ''; ; rel = rel ? `${rel}/..` : '..') {
+		folders.push(rel);
+		if (fs.lstatSync(path.join(dir, '.git'), { throwIfNoEntry: false }))
+			return folders;
+		const parent = path.dirname(dir);
+		if (parent === dir) return undefined;
+		dir = parent;
+	}
+}
+
 function realpathOr(p: string): string {
 	try {
 		return fs.realpathSync(p);

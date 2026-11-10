@@ -15,7 +15,8 @@ export function displayUpgradeNotification(
 	highlights?: string[],
 	options?: { hint?: boolean }
 ) {
-	console.log(
+	// stderr: stdout may be redirected or piped while stdin is a terminal (#1106)
+	console.error(
 		formatUpdateNotice(
 			currentVersion,
 			latestVersion,

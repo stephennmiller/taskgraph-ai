@@ -15,7 +15,9 @@
 import { execSync } from 'node:child_process';
 import fs from 'node:fs';
 import { createRequire } from 'node:module';
+import os from 'node:os';
 import path from 'node:path';
+import { foldersToTop } from '../../../common/utils/project-root-finder.js';
 import { findOnPath } from '../../git/merge-driver/merge-driver-files.js';
 import {
 	BaseAIProvider,
@@ -84,11 +86,35 @@ function isWithin(root: string, candidate: string): boolean {
 }
 
 /**
+ * The highest folder from the project up to its git top level whose content
+ * comes with the repository: `repo` for a project at `repo/app` (#1127). A
+ * repository at or above the home folder is the user's own (dotfiles), as
+ * in the loop approval, so it stops below that. The project itself outside
+ * a repository.
+ */
+function repositoryRoot(root: string): string {
+	// Also where a linked home folder leads: `root` may be a resolved path
+	const homes = [os.homedir()];
+	try {
+		homes.push(fs.realpathSync(homes[0]));
+	} catch {
+		// Use the home folder as given
+	}
+	return (
+		(foldersToTop(root) ?? [])
+			.map((dir) => path.resolve(root, dir))
+			.filter((dir) => !homes.some((home) => isWithin(dir, home)))
+			.at(-1) ?? root
+	);
+}
+
+/**
  * Whether `pathToClaudeCodeExecutable` from config may be run. It comes from
  * the project's own .taskgraph/config.json, so a repo you didn't write could
  * otherwise name any program. Allowed: an absolute path to a file named
  * `claude` (`claude.exe`; not npm's `claude.cmd` shim) that is outside the
- * project, both as written and after resolving symlinks.
+ * project and the git repository it is in, both as written and after
+ * resolving symlinks.
  * @param candidate - Configured executable path
  * @param projectRoot - Project root, when known
  */
@@ -114,7 +140,10 @@ export function isTrustedClaudeExecutable(
 	} catch {
 		// Use the root as given
 	}
-	return !isWithin(root, path.resolve(candidate)) && !isWithin(realRoot, real);
+	return (
+		!isWithin(repositoryRoot(root), path.resolve(candidate)) &&
+		!isWithin(repositoryRoot(realRoot), real)
+	);
 }
 
 /**
@@ -135,7 +164,7 @@ function withTrustedExecutable(
 	}
 	log(
 		'warn',
-		`Ignoring pathToClaudeCodeExecutable "${executable}": it must be an absolute path to a file named claude (claude.exe on Windows, not claude.cmd) outside the project`
+		`Ignoring pathToClaudeCodeExecutable "${executable}": it must be an absolute path to a file named claude (claude.exe on Windows, not claude.cmd) outside the project and its git repository`
 	);
 	const { pathToClaudeCodeExecutable: _dropped, ...rest } = settings;
 	return rest;
@@ -166,7 +195,8 @@ export function bundledClaudeBinary(): string | undefined {
 
 /**
  * The `claude` on PATH, for when the SDK has no binary of its own. The SDK
- * doesn't look on PATH itself. Only a trusted one (outside the project).
+ * doesn't look on PATH itself. Only a trusted one (outside the project and
+ * its git repository).
  * @param bundled - Whether the SDK's own binary is installed
  */
 export function claudeFromPath(
@@ -246,17 +276,15 @@ function getRoleRestrictions(
  * - Command-specific configuration support
  */
 export class ClaudeCodeProvider extends BaseAIProvider {
-	readonly supportedModels: string[];
 	private readonly getSettingsForCommand: ClaudeCodeProviderOptions['getSettingsForCommand'];
 
 	constructor(options: ClaudeCodeProviderOptions) {
 		super(options.log);
 		this.name = 'Claude Code';
-		this.supportedModels = options.supportedModels;
 		this.getSettingsForCommand = options.getSettingsForCommand;
 
 		// Validate that models were loaded successfully
-		if (this.supportedModels.length === 0) {
+		if (options.supportedModels.length === 0) {
 			this.log(
 				'warn',
 				'No supported models found for claude-code provider. Check supported-models.json configuration.'
@@ -267,20 +295,6 @@ export class ClaudeCodeProvider extends BaseAIProvider {
 		this.needsExplicitJsonSchema = true;
 		// Claude Code does not support temperature parameter
 		this.supportsTemperature = false;
-	}
-
-	/**
-	 * @returns The environment variable name for API key (not used)
-	 */
-	getRequiredApiKeyName(): string {
-		return 'CLAUDE_CODE_API_KEY';
-	}
-
-	/**
-	 * @returns False - Claude Code doesn't require API keys
-	 */
-	isRequiredApiKey(): boolean {
-		return false;
 	}
 
 	/**
@@ -432,20 +446,5 @@ export class ClaudeCodeProvider extends BaseAIProvider {
 			);
 			return call({ ...params, withholdFileTools: true });
 		}
-	}
-
-	/**
-	 * @returns List of supported model IDs
-	 */
-	getSupportedModels(): string[] {
-		return this.supportedModels;
-	}
-
-	/**
-	 * Check if a model is supported
-	 */
-	isModelSupported(modelId: unknown): boolean {
-		if (!modelId) return false;
-		return this.supportedModels.includes(String(modelId).toLowerCase());
 	}
 }

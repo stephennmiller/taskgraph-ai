@@ -44,7 +44,11 @@ import {
 } from '../storage/adapters/file-storage/file-operations.js';
 import { readAsset } from './assets.js';
 import { type InitReport, setUpClaudeCode } from './claude-code.js';
-import { manageGitignoreFile, readStoreTasksInGit } from './gitignore.js';
+import {
+	ignoresLegacyTaskPaths,
+	manageGitignoreFile,
+	readStoreTasksInGit
+} from './gitignore.js';
 import {
 	GITATTRIBUTES_FILE,
 	type InitChange,
@@ -268,6 +272,11 @@ export function initializeProject(
 	// go to the gitignored config.local.json
 	const movedMachineSettings = moveMachineSettings(targetDir, report);
 
+	// Read before the rewrite: files the old unanchored lines hid show up in
+	// `git status` afterwards (#1105)
+	const unignoresLegacyPaths = ignoresLegacyTaskPaths(
+		path.join(targetDir, GITIGNORE_FILE)
+	);
 	try {
 		manageGitignoreFile(
 			path.join(targetDir, GITIGNORE_FILE),
@@ -363,6 +372,12 @@ export function initializeProject(
 				}
 			]
 		: [];
+	if (unignoresLegacyPaths) {
+		hints.push({
+			path: GITIGNORE_FILE,
+			note: 'now ignores only `.taskgraph/tasks/`; a `tasks/` folder or `tasks.json` elsewhere is no longer ignored'
+		});
+	}
 
 	return {
 		alreadySetUp,

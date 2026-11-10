@@ -23,7 +23,6 @@ import { omitShellOnlyConfig } from './project-env.js';
 export class ConfigLoader {
 	private localConfigPath: string;
 	private machineConfigPath: string;
-	private globalConfigPath: string;
 	private readonly logger = getLogger('ConfigLoader');
 
 	constructor(projectRoot: string) {
@@ -31,11 +30,6 @@ export class ConfigLoader {
 		this.machineConfigPath = path.join(
 			projectRoot,
 			TASKGRAPH_LOCAL_CONFIG_FILE
-		);
-		this.globalConfigPath = path.join(
-			process.env.HOME || '',
-			'.taskgraph',
-			'config.json'
 		);
 	}
 
@@ -132,29 +126,5 @@ export class ConfigLoader {
 		//     error
 		//   );
 		// }
-	}
-
-	/**
-	 * Check if local config exists
-	 */
-	async hasLocalConfig(): Promise<boolean> {
-		try {
-			await fs.access(this.localConfigPath);
-			return true;
-		} catch {
-			return false;
-		}
-	}
-
-	/**
-	 * Check if global config exists
-	 */
-	async hasGlobalConfig(): Promise<boolean> {
-		try {
-			await fs.access(this.globalConfigPath);
-			return true;
-		} catch {
-			return false;
-		}
 	}
 }

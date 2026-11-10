@@ -68,7 +68,7 @@ export class MoveCommand extends Command {
 	}
 
 	private async execute(options: MoveOptions): Promise<void> {
-		const { from, to, toTag } = options;
+		const { from, to } = options;
 		const fileError = otherTasksFileError(
 			options.file,
 			'add-subtask and move',
@@ -79,10 +79,9 @@ export class MoveCommand extends Command {
 			const tmCore = await createTmCore({
 				projectPath: getProjectRoot(options.project)
 			});
-			const fromTag =
-				options.fromTag || options.tag || tmCore.config.getActiveTag();
+			const { fromTag, toTag } = tmCore.tasks.moveTags(options);
 
-			if (toTag && fromTag !== toTag) {
+			if (toTag) {
 				if (!from) {
 					printError(
 						'A move to another tag needs --from, the tasks to move',
@@ -112,7 +111,7 @@ export class MoveCommand extends Command {
 				);
 				process.exit(1);
 			}
-			const result = await tmCore.tasks.move(from, to, { tag: options.tag });
+			const result = await tmCore.tasks.move(from, to, { tag: fromTag });
 			console.log(formatMoves(result.moves, result.skipped));
 		} catch (error: any) {
 			const details = error?.context?.details ?? {};

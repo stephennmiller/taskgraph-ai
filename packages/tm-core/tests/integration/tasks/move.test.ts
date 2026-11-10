@@ -220,6 +220,36 @@ describe('add-subtask and move through tasks', () => {
 		expect((task as Task).subtasks[0]).not.toHaveProperty('parentTaskId');
 	});
 
+	describe('moveTags (#1109)', () => {
+		it('takes the source from fromTag, then tag, then the current tag', () => {
+			expect(tmCore.tasks.moveTags({ toTag: 'feature' })).toEqual({
+				fromTag: 'master',
+				toTag: 'feature'
+			});
+			expect(
+				tmCore.tasks.moveTags({ tag: 'feature', toTag: 'master' })
+			).toEqual({ fromTag: 'feature', toTag: 'master' });
+			expect(
+				tmCore.tasks.moveTags({ fromTag: 'feature', tag: 'x', toTag: 'master' })
+			).toEqual({ fromTag: 'feature', toTag: 'master' });
+		});
+
+		it('is a move within the tag when there is no other target tag', () => {
+			expect(tmCore.tasks.moveTags({ to: '7' })).toEqual({
+				fromTag: 'master'
+			});
+			expect(tmCore.tasks.moveTags({ to: '7', toTag: 'master' })).toEqual({
+				fromTag: 'master'
+			});
+		});
+
+		it('refuses a destination ID with another target tag', () => {
+			expect(() =>
+				tmCore.tasks.moveTags({ to: '50', toTag: 'feature' })
+			).toThrow('takes no destination ID');
+		});
+	});
+
 	it('moves a task to another tag and saves both tags', async () => {
 		const result = await tmCore.tasks.moveToTag(['3'], 'master', 'feature');
 

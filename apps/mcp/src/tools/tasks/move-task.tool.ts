@@ -29,14 +29,19 @@ const MoveTaskSchema = z.object({
 		.string()
 		.optional()
 		.describe(
-			'ID of the destination (e.g., "7" or "7.3"). Required for within-tag moves. Not used for cross-tag moves: a task keeps its ID in the target tag, or gets the next free one there when that ID is taken'
+			'ID of the destination (e.g., "7" or "7.3"). Required for within-tag moves. Refused with toTag: a task keeps its ID in the target tag, or gets the next free one there when that ID is taken'
 		),
 	file: z.string().optional().describe('Custom path to tasks.json file'),
 	projectRoot: z
 		.string()
 		.describe('Root directory of the project (typically derived from session)'),
 	tag: z.string().optional().describe('Tag context to operate on'),
-	fromTag: z.string().optional().describe('Source tag for cross-tag moves'),
+	fromTag: z
+		.string()
+		.optional()
+		.describe(
+			'Source tag for cross-tag moves. Default: tag, else the current tag'
+		),
 	toTag: z.string().optional().describe('Target tag for cross-tag moves'),
 	withDependencies: z
 		.boolean()
@@ -97,14 +102,16 @@ export function registerMoveTaskTool(server: FastMCP) {
 		},
 		execute: withToolContext(
 			async (args: MoveTaskArgs, { log, tmCore }: ToolContext) => {
-				const { from, to, fromTag, toTag, projectRoot } = args;
+				const { from, to, projectRoot } = args;
+				let fromTag: string;
+				let toTag: string | undefined;
+				try {
+					({ fromTag, toTag } = tmCore.tasks.moveTags(args));
+				} catch (error: any) {
+					return createErrorResponse(error.message);
+				}
 
-				if (fromTag && toTag && fromTag !== toTag) {
-					if (to) {
-						log.warn(
-							'The "to" parameter is not used for cross-tag moves and will be ignored. Tasks keep their IDs in the target tag, or get the next free one when taken.'
-						);
-					}
+				if (toTag) {
 					const moveOptions = {
 						withDependencies: args.withDependencies || false,
 						ignoreDependencies: args.ignoreDependencies || false
@@ -149,10 +156,10 @@ export function registerMoveTaskTool(server: FastMCP) {
 
 				if (!to) {
 					return createErrorResponse(
-						'Destination ID is required for within-tag moves'
+						'Destination ID is required for within-tag moves; to move to another tag, pass toTag'
 					);
 				}
-				const tag = args.tag || tmCore.config.getActiveTag();
+				const tag = fromTag;
 				try {
 					const { moves, skipped } = await tmCore.tasks.move(from, to, { tag });
 					const message = `Successfully moved task/subtask ${from} to ${to}`;

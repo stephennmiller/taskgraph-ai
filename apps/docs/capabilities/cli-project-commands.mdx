@@ -30,7 +30,7 @@ taskgraph init --merge-driver
 
 Inside a Git repository, `init` also sets up the [tasks.json merge driver](/capabilities/merge-driver), so two branches that both add or archive tasks merge without an ID clash.
 
-`init` asks one question: whether to store tasks in Git (Yes by default, or what an earlier `init` chose). `--git-tasks`, `--no-git-tasks` or `--yes` answer it. Everything else takes its default: the default models (change them with `taskgraph models --setup`), English for AI responses (`taskgraph lang`), and a new Git repository if the folder isn't in one (`--no-git` skips it).
+`init` asks one question: whether to store tasks in Git (Yes by default, or what an earlier `init` chose). `--git-tasks`, `--no-git-tasks` or `--yes` answer it. The answer is kept in `.gitignore` as a `.taskgraph/tasks/` line under `# Task files`, commented out when tasks are stored in Git. `init` changes only that section: a `tasks/` or `tasks.json` line of your own stays as it is, and the unanchored `tasks.json` and `tasks/` pair an earlier `init` wrote under that header is replaced by the one anchored line. When that pair was not commented out, a `tasks/` folder or `tasks.json` elsewhere in the repo is no longer ignored afterwards, and `init` says so. Everything else takes its default: the default models (change them with `taskgraph models --setup`), English for AI responses (`taskgraph lang`), and a new Git repository if the folder isn't in one (`--no-git` skips it).
 
 `init` changes your shell startup file only with `--aliases`, which adds `alias tm='taskgraph'` to `~/.zshrc` or `~/.bashrc`.
 
@@ -182,7 +182,7 @@ taskgraph tags copy <source-tag> <target-tag>
 taskgraph tags remove <tag-name> --yes
 ```
 
-A copy (`tags copy` or `tags add --copy-from`) leaves out each task's GitHub link and claim, so pushing the copy creates its own issues. A removed or renamed tag's name keeps its highest task ID, so a new tag with that name numbers its tasks above it, and the tag's complexity report is deleted or renamed with it. A copy or rename onto a removed or renamed tag's name is refused when it would bring back one of that tag's IDs; renaming a tag back to its old name is allowed.
+A copy (`tags copy` or `tags add --copy-from`) leaves out each task's GitHub link and claim, so pushing the copy creates its own issues. A removed or renamed tag's name keeps its highest task ID, so a new tag with that name numbers its tasks above it, and the tag's complexity report is deleted or renamed with it. A copy or rename onto a removed or renamed tag's name is refused when it would bring back one of that tag's IDs; renaming a tag back to its old name is allowed. To put tasks under such a name anyway, run `taskgraph tags add <name>` and then `taskgraph move --from <ids> --from-tag <tag> --to-tag <name>`: the move gives them new IDs above the retired ones (copy the tag to a spare name first to keep the originals).
 
 ## Configure AI Models
 

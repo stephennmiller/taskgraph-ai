@@ -380,6 +380,8 @@ export function withToolContext<TArgs extends { projectRoot?: string }>(
 			// initialize TmCore"; the cause names the file and the fix
 			const tmCore = await createTmCore({
 				projectPath: args.projectRoot,
+				// A folder inside the project, or a typo, must not start a project (#1108)
+				requireProject: true,
 				loggerConfig: { mcpMode: true, logCallback: context.log }
 			}).catch((error) => {
 				throw error?.cause ?? error;

@@ -75,6 +75,7 @@ describe('wantsJsonOutput', () => {
 		[['next', '--format', 'json']],
 		[['graph', '--format=json']],
 		[['why', '5', '-f', 'json']],
+		[['list', '-fjson']],
 		[['github', 'status', '--json']],
 		[['parse-prd', 'prd.md', '--clarify', '--json']]
 	])('is true for %j', (args) => {

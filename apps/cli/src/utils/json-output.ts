@@ -53,7 +53,7 @@ export function printJson(
 
 /**
  * Does this command line ask for JSON output (`--json`, `--format json`,
- * `-f json`)? Such a run prints only its JSON on stdout, so the CLI skips
+ * `-f json`, `-fjson`)? Such a run prints only its JSON on stdout, so the CLI skips
  * notices around the command, like the update check.
  * @param args - The arguments after the program name
  */
@@ -62,7 +62,7 @@ export function wantsJsonOutput(args: readonly string[]): boolean {
 		const arg = args[i];
 		if (arg === '--') return false;
 		if (arg === '--json') return true;
-		if (arg === '--format=json' || arg === '-f=json') return true;
+		if (['--format=json', '-f=json', '-fjson'].includes(arg)) return true;
 		if ((arg === '--format' || arg === '-f') && args[i + 1] === 'json') {
 			return true;
 		}

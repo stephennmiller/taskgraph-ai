@@ -112,7 +112,6 @@ describe('ClaudeCodeProvider structured outputs (v2.2.0+)', () => {
 
 		it('should pass schema to generateObject call', async () => {
 			await provider.generateObject({
-				apiKey: 'test-key',
 				modelId: 'sonnet',
 				messages: testMessages,
 				schema: testSchema,
@@ -128,7 +127,6 @@ describe('ClaudeCodeProvider structured outputs (v2.2.0+)', () => {
 
 		it('should use json mode for Claude Code (enables native outputFormat)', async () => {
 			await provider.generateObject({
-				apiKey: 'test-key',
 				modelId: 'sonnet',
 				messages: testMessages,
 				schema: testSchema,
@@ -146,7 +144,6 @@ describe('ClaudeCodeProvider structured outputs (v2.2.0+)', () => {
 
 		it('should pass schemaName for better SDK context', async () => {
 			await provider.generateObject({
-				apiKey: 'test-key',
 				modelId: 'sonnet',
 				messages: testMessages,
 				schema: testSchema,
@@ -162,7 +159,6 @@ describe('ClaudeCodeProvider structured outputs (v2.2.0+)', () => {
 
 		it('should return structured object from SDK', async () => {
 			const result = await provider.generateObject({
-				apiKey: 'test-key',
 				modelId: 'sonnet',
 				messages: testMessages,
 				schema: testSchema,
@@ -178,7 +174,6 @@ describe('ClaudeCodeProvider structured outputs (v2.2.0+)', () => {
 
 		it('should return usage information', async () => {
 			const result = await provider.generateObject({
-				apiKey: 'test-key',
 				modelId: 'sonnet',
 				messages: testMessages,
 				schema: testSchema,
@@ -225,7 +220,6 @@ describe('ClaudeCodeProvider structured outputs (v2.2.0+)', () => {
 			});
 
 			const result = await provider.generateObject({
-				apiKey: 'test-key',
 				modelId: 'sonnet',
 				messages: [{ role: 'user', content: 'Generate tasks' }],
 				schema: complexSchema,
@@ -248,7 +242,6 @@ describe('ClaudeCodeProvider structured outputs (v2.2.0+)', () => {
 			});
 
 			const result = await provider.generateObject({
-				apiKey: 'test-key',
 				modelId: 'sonnet',
 				messages: [{ role: 'user', content: 'Create a task' }],
 				schema: prioritySchema,
@@ -263,7 +256,6 @@ describe('ClaudeCodeProvider structured outputs (v2.2.0+)', () => {
 		it('should throw error when schema is missing', async () => {
 			await expect(
 				provider.generateObject({
-					apiKey: 'test-key',
 					modelId: 'sonnet',
 					messages: [{ role: 'user', content: 'test' }],
 					objectName: 'test'
@@ -275,7 +267,6 @@ describe('ClaudeCodeProvider structured outputs (v2.2.0+)', () => {
 		it('should throw error when objectName is missing', async () => {
 			await expect(
 				provider.generateObject({
-					apiKey: 'test-key',
 					modelId: 'sonnet',
 					messages: [{ role: 'user', content: 'test' }],
 					schema: z.object({ name: z.string() })
@@ -291,7 +282,6 @@ describe('ClaudeCodeProvider structured outputs (v2.2.0+)', () => {
 
 			await expect(
 				provider.generateObject({
-					apiKey: 'test-key',
 					modelId: 'sonnet',
 					messages: [{ role: 'user', content: 'test' }],
 					schema: z.object({ name: z.string() }),
@@ -341,7 +331,6 @@ describe('ClaudeCodeProvider structured outputs (v2.2.0+)', () => {
 			});
 
 			const result = await provider.generateObject({
-				apiKey: 'test-key',
 				modelId: 'sonnet',
 				messages: [{ role: 'user', content: 'Expand task into subtasks' }],
 				schema: expandTaskSchema,

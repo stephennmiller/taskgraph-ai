@@ -187,46 +187,4 @@ describe('ConfigLoader', () => {
 			expect(result).toBeNull();
 		});
 	});
-
-	describe('hasLocalConfig', () => {
-		it('should return true when local config exists', async () => {
-			vi.mocked(fsPromises.access).mockResolvedValue(undefined);
-
-			const result = await configLoader.hasLocalConfig();
-
-			expect(fsPromises.access).toHaveBeenCalledWith(
-				'/test/project/.taskgraph/config.json'
-			);
-			expect(result).toBe(true);
-		});
-
-		it('should return false when local config does not exist', async () => {
-			vi.mocked(fsPromises.access).mockRejectedValue(new Error('Not found'));
-
-			const result = await configLoader.hasLocalConfig();
-
-			expect(result).toBe(false);
-		});
-	});
-
-	describe('hasGlobalConfig', () => {
-		it('should check global config path', async () => {
-			vi.mocked(fsPromises.access).mockResolvedValue(undefined);
-
-			const result = await configLoader.hasGlobalConfig();
-
-			expect(fsPromises.access).toHaveBeenCalledWith(
-				expect.stringContaining('.taskgraph/config.json')
-			);
-			expect(result).toBe(true);
-		});
-
-		it('should return false when global config does not exist', async () => {
-			vi.mocked(fsPromises.access).mockRejectedValue(new Error('Not found'));
-
-			const result = await configLoader.hasGlobalConfig();
-
-			expect(result).toBe(false);
-		});
-	});
 });

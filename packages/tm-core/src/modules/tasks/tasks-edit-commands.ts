@@ -25,6 +25,7 @@ import {
 	moveTasksToTag,
 	moveTasksWithinTag
 } from './services/task-restructure.js';
+import { removeGeneratedTaskFiles } from './services/task-file-generator.service.js';
 import type {
 	CrossTagMoveOptions,
 	CrossTagMoveResult,
@@ -77,6 +78,14 @@ export class TaskEditCommands {
 			{ olderThanDays, dryRun: options.dryRun },
 			tag
 		);
+		if (!options.dryRun) {
+			// Their generated files would otherwise outlive them
+			removeGeneratedTaskFiles(
+				this.configManager.getProjectRoot(),
+				tag,
+				tasks.map((task) => task.id)
+			);
+		}
 		return { tasks, tag, olderThanDays, dryRun: options.dryRun === true };
 	}
 
@@ -289,6 +298,30 @@ export class TaskEditCommands {
 		const storage = this.taskService.getStorage();
 		const moved = await moveTasksWithinTag(storage, tag, from, to);
 		return { ...moved, tag };
+	}
+
+	/**
+	 * Which tags a move request means, for the CLI and MCP alike: the source
+	 * is `fromTag`, else `tag`, else the current tag, and `toTag` is set only
+	 * when the move goes to another tag. Such a move keeps task IDs, so it is
+	 * refused with a destination ID (`to`) instead of ignoring one of the two.
+	 */
+	moveTags(request: {
+		to?: string;
+		tag?: string;
+		fromTag?: string;
+		toTag?: string;
+	}): { fromTag: string; toTag?: string } {
+		const fromTag =
+			request.fromTag || request.tag || this.configManager.getActiveTag();
+		if (!request.toTag || request.toTag === fromTag) return { fromTag };
+		if (request.to) {
+			throw new TaskGraphError(
+				`A move to another tag keeps task IDs, so it takes no destination ID. Leave out the destination ID to move to tag "${request.toTag}", or the target tag to renumber within "${fromTag}"`,
+				ERROR_CODES.VALIDATION_ERROR
+			);
+		}
+		return { fromTag, toTag: request.toTag };
 	}
 
 	/**
