@@ -2,7 +2,6 @@
  * @fileoverview Tag create/delete/rename/stats operations on the single tasks.json file
  */
 
-import fs from 'node:fs/promises';
 import path from 'node:path';
 import { isTaskComplete } from '../../../../common/constants/index.js';
 import {
@@ -22,7 +21,12 @@ import {
 } from '../../../tasks/utils/archive.js';
 import { CLAIM_KEYS, withoutClaim } from '../../../tasks/utils/claim.js';
 import { complexityReportPath } from '../../../reports/managers/complexity-report-manager.js';
-import type { FileOperations } from './file-operations.js';
+import {
+	type FileOperations,
+	refuseSymlinkedFolders,
+	removeProjectFile,
+	renameProjectFile
+} from './file-operations.js';
 import type { FormatHandler } from './format-handler.js';
 import { getOwnKey, setOwnKey } from '../../../../common/utils/own-key.js';
 import type { PathResolver } from './path-resolver.js';
@@ -200,6 +204,7 @@ export class TagOperations {
 	 * Uses modifyJson for atomic read-modify-write to prevent lost updates
 	 */
 	async deleteTag(tag: string): Promise<void> {
+		this.refuseLinkedReports(tag);
 		let highestId = 0;
 		await this.modifyTagged(this.pathResolver.getTasksPath(), (data) => {
 			if (!Object.hasOwn(data, tag)) throw tagNotFound(tag);
@@ -211,7 +216,7 @@ export class TagOperations {
 			dropArchiveTag(archive, tag, highestId)
 		);
 		const report = this.reportPath(tag);
-		if (report) await fs.rm(report, { force: true });
+		if (report) removeProjectFile(this.projectRoot, report);
 	}
 
 	/**
@@ -221,6 +226,7 @@ export class TagOperations {
 	 * Uses modifyJson for atomic read-modify-write to prevent lost updates
 	 */
 	async renameTag(oldTag: string, newTag: string): Promise<void> {
+		this.refuseLinkedReports(oldTag);
 		let highestId = 0;
 		await this.modifyTagged(this.pathResolver.getTasksPath(), (data) => {
 			if (!Object.hasOwn(data, oldTag)) throw tagNotFound(oldTag);
@@ -250,9 +256,11 @@ export class TagOperations {
 		const from = this.reportPath(oldTag);
 		const to = this.reportPath(newTag);
 		if (from && to) {
-			await fs.rename(from, to).catch((error) => {
-				if (error?.code !== 'ENOENT') throw error;
-			});
+			try {
+				renameProjectFile(this.projectRoot, from, to);
+			} catch (error) {
+				if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+			}
 		}
 	}
 
@@ -279,13 +287,24 @@ export class TagOperations {
 		);
 	}
 
+	/**
+	 * Before the tag changes: removeProjectFile and renameProjectFile refuse a
+	 * linked reports folder, and refused afterwards the command would fail
+	 * with the tag already removed or renamed
+	 */
+	private refuseLinkedReports(tag: string): void {
+		const report = this.reportPath(tag);
+		if (report) refuseSymlinkedFolders(report);
+	}
+
+	private get projectRoot(): string {
+		return path.dirname(this.pathResolver.getBasePath());
+	}
+
 	/** A tag's complexity report; undefined for a name that can't name a file */
 	private reportPath(tag: string): string | undefined {
 		try {
-			return complexityReportPath(
-				path.dirname(this.pathResolver.getBasePath()),
-				tag
-			);
+			return complexityReportPath(this.projectRoot, tag);
 		} catch {
 			return undefined;
 		}

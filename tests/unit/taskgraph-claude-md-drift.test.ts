@@ -25,6 +25,7 @@ import {
 import { JSON_OUTPUT_SCHEMA_VERSION } from '../../packages/tm-core/src/common/utils/json-output.js';
 import { PRIME_RULES } from '../../packages/tm-core/src/modules/tasks/utils/prime-context.js';
 import { setupCLI } from '../../apps/cli/src/program.js';
+import { codeSpans, stripComment } from './doc-code.js';
 
 const rootDir = path.resolve(
 	path.dirname(fileURLToPath(import.meta.url)),
@@ -48,31 +49,9 @@ const commandsByName = new Map<string, Command>(
 	)
 );
 
-/** Text inside fenced blocks and inline backticks, one entry per span/line. */
-function codeSpans(markdown: string): string[] {
-	const spans: string[] = [];
-	let inFence = false;
-	for (const line of markdown.split('\n')) {
-		if (line.trimStart().startsWith('```')) {
-			inFence = !inFence;
-			continue;
-		}
-		if (inFence) {
-			spans.push(line);
-			continue;
-		}
-		for (const m of line.matchAll(/`([^`]+)`/g)) spans.push(m[1]);
-	}
-	return spans;
-}
-
 function unique(values: string[]): string[] {
 	return [...new Set(values)].sort();
 }
-
-// Strip a trailing `# note`, but keep `// = taskgraph <cmd>` (it names a command)
-const stripComment = (s: string) =>
-	s.replace(/\s+#.*$/, '').replace(/\s+\/\/(?!\s*=\s*taskgraph\b).*$/, '');
 
 /** `taskgraph <command> [subcommand] --flag …` invocations in a line of code */
 function invocations(

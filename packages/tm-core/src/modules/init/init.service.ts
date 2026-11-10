@@ -8,7 +8,6 @@
  */
 
 import { runGitSync } from '../../common/utils/git-utils.js';
-import fs from 'node:fs';
 import path from 'node:path';
 import {
 	ENV_EXAMPLE_FILE,
@@ -39,7 +38,10 @@ import {
 	type UpstreamImportResult,
 	importUpstreamProject
 } from '../migration/upstream-import.js';
-import { refuseSymlinkSync } from '../storage/adapters/file-storage/file-operations.js';
+import {
+	makeProjectDir,
+	refuseSymlinkSync
+} from '../storage/adapters/file-storage/file-operations.js';
 import { readAsset } from './assets.js';
 import { type InitReport, setUpClaudeCode } from './claude-code.js';
 import {
@@ -257,7 +259,7 @@ export function initializeProject(
 		TASKGRAPH_REPORTS_DIR,
 		TASKGRAPH_TEMPLATES_DIR
 	]) {
-		fs.mkdirSync(path.join(targetDir, dir), { recursive: true });
+		makeProjectDir(targetDir, dir);
 	}
 	createInitialStateFile(targetDir, report);
 	createInitialTasksFile(targetDir, report);
