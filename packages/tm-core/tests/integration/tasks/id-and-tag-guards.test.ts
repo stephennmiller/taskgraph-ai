@@ -56,6 +56,19 @@ describe('ID and tag guards', () => {
 		expect(await new FileStorage(projectDir).getAllTags()).toEqual(['master']);
 	});
 
+	it('says how to get the tasks under the name with new IDs (#1126)', async () => {
+		await setup();
+		await tmCore.tasks.copyTag('master', 'feat');
+		await tmCore.tasks.deleteTag('feat');
+
+		await expect(tmCore.tasks.copyTag('master', 'feat')).rejects.toMatchObject({
+			message: expect.stringContaining('its tasks used IDs up to 3'),
+			hint: expect.stringMatching(
+				/taskgraph tags add feat.*taskgraph move --from <ids> --from-tag <tag> --to-tag feat/
+			)
+		});
+	});
+
 	it("numbers a move into a removed tag's recreated name above its IDs (#1095)", async () => {
 		await setup();
 		await tmCore.tasks.copyTag('master', 'feat');

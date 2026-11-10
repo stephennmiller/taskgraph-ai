@@ -288,4 +288,27 @@ describe('archive', () => {
 		expect(readArchive().empty).toBeUndefined();
 		expect(String((await tmCore.tasks.getNext('copy'))?.id)).toBe('2');
 	});
+
+	it('deletes the generated files of the tasks it archives, and no other (#1125)', async () => {
+		await setup({
+			master: [
+				createTask({ id: 1, title: 'Old', status: 'done', updatedAt: OLD }),
+				createTask({ id: 2, title: 'Open', status: 'pending' })
+			]
+		});
+		await tmCore.tasks.generateTaskFiles();
+		fs.writeFileSync(path.join(tasksDir(), 'task_001_notes.md'), 'mine');
+		const taskFiles = () =>
+			fs
+				.readdirSync(tasksDir())
+				.filter((name) => name.endsWith('.md'))
+				.sort();
+
+		await tmCore.tasks.archive({ olderThanDays: 0, dryRun: true });
+		expect(taskFiles()).toContain('task_001.md');
+
+		await tmCore.tasks.archive({ olderThanDays: 0 });
+
+		expect(taskFiles()).toEqual(['task_001_notes.md', 'task_002.md']);
+	});
 });
