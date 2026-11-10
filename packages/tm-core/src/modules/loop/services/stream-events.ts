@@ -38,6 +38,9 @@ export function isValidStreamEvent(event: unknown): event is {
 	return true;
 }
 
+/** The stop marker on the reply's last line: the loop reads it, the user doesn't need to */
+const MARKER_TAIL = /\s*<loop-(complete|blocked)>[^<]*<\/loop-\1>\s*$/i;
+
 export function handleStreamEvent(
 	event: {
 		type: string;
@@ -51,7 +54,8 @@ export function handleStreamEvent(
 
 	for (const block of event.message.content) {
 		if (block.type === 'text' && block.text) {
-			callbacks?.onText?.(block.text);
+			const text = block.text.replace(MARKER_TAIL, '');
+			if (text.trim()) callbacks?.onText?.(text);
 		} else if (block.type === 'tool_use' && block.name) {
 			callbacks?.onToolUse?.(block.name);
 		}
