@@ -54,7 +54,7 @@ function mutateTag<R>(
 	});
 }
 
-export function addSubtaskToTag(
+export async function addSubtaskToTag(
 	storage: IStorage,
 	tag: string,
 	parentId: string,
@@ -78,8 +78,9 @@ export function addSubtaskToTag(
 						: []
 				}
 			};
+	const archived = await storage.loadArchivedTaskIds(tag);
 	return mutateTag(storage, tag, (tasks) =>
-		addSubtaskIn(tasks, String(parentId), source)
+		addSubtaskIn(tasks, String(parentId), source, archived)
 	);
 }
 

@@ -144,6 +144,11 @@ export interface ParallelLoopResult {
 	 * uncommitted work, or Claude Code failed after setting review or done
 	 */
 	unmergedIds?: string[];
+	/**
+	 * --merge: tasks that were already in review and stay there, as no branch
+	 * is where a run left it (set by hand, branch deleted or moved since)
+	 */
+	leftInReviewIds?: string[];
 	/** --merge: tasks that kept failing, set to blocked and left out of later waves */
 	setAside?: SetAsideTask[];
 	/** --merge: why the run stopped early, when it failed (TRUST_LOST) */

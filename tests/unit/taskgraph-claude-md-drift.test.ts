@@ -22,8 +22,10 @@ import {
 	standardTools,
 	toolRegistry
 } from '../../apps/mcp/src/tools/tool-registry.js';
+import { JSON_OUTPUT_SCHEMA_VERSION } from '../../packages/tm-core/src/common/utils/json-output.js';
 import { PRIME_RULES } from '../../packages/tm-core/src/modules/tasks/utils/prime-context.js';
 import { setupCLI } from '../../apps/cli/src/program.js';
+import { codeSpans, stripComment } from './doc-code.js';
 
 const rootDir = path.resolve(
 	path.dirname(fileURLToPath(import.meta.url)),
@@ -47,31 +49,9 @@ const commandsByName = new Map<string, Command>(
 	)
 );
 
-/** Text inside fenced blocks and inline backticks, one entry per span/line. */
-function codeSpans(markdown: string): string[] {
-	const spans: string[] = [];
-	let inFence = false;
-	for (const line of markdown.split('\n')) {
-		if (line.trimStart().startsWith('```')) {
-			inFence = !inFence;
-			continue;
-		}
-		if (inFence) {
-			spans.push(line);
-			continue;
-		}
-		for (const m of line.matchAll(/`([^`]+)`/g)) spans.push(m[1]);
-	}
-	return spans;
-}
-
 function unique(values: string[]): string[] {
 	return [...new Set(values)].sort();
 }
-
-// Strip a trailing `# note`, but keep `// = taskgraph <cmd>` (it names a command)
-const stripComment = (s: string) =>
-	s.replace(/\s+#.*$/, '').replace(/\s+\/\/(?!\s*=\s*taskgraph\b).*$/, '');
 
 /** `taskgraph <command> [subcommand] --flag …` invocations in a line of code */
 function invocations(
@@ -259,6 +239,31 @@ describe('other places that state the tool tier counts', () => {
 		expect(Number(text.match(/`standard` \((\d+)\)/)?.[1])).toBe(
 			standardTools.length
 		);
+	});
+});
+
+describe('docs that state the JSON output schemaVersion', () => {
+	const read = (file: string) =>
+		fs.readFileSync(path.join(rootDir, file), 'utf8');
+
+	it('json-output.mdx gives the current version and a row for it (#1111)', () => {
+		const page = read('apps/docs/capabilities/json-output.mdx');
+		const rows = [...page.matchAll(/^\| `(\d+)` \|/gm)].map((m) =>
+			Number(m[1])
+		);
+
+		expect(Number(page.match(/The current version is `(\d+)`/)?.[1])).toBe(
+			JSON_OUTPUT_SCHEMA_VERSION
+		);
+		expect(rows[0]).toBe(JSON_OUTPUT_SCHEMA_VERSION);
+	});
+
+	it('.taskgraph/CLAUDE.md and assets/AGENTS.md give the current version', () => {
+		for (const file of DOCS) {
+			expect(
+				Number(read(file).match(/`schemaVersion` \(now (\d+)\)/)?.[1])
+			).toBe(JSON_OUTPUT_SCHEMA_VERSION);
+		}
 	});
 });
 

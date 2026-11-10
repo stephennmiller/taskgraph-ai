@@ -211,6 +211,47 @@ describe('merge driver with git merge', () => {
 		expect(gitOk('status', '--porcelain')).toBe('');
 	});
 
+	it('settles a parent both branches changed and drops a dependency on a removed task (#1093)', () => {
+		const setUp = (first: string, second: string) =>
+			createTask({
+				id: 1,
+				title: 'Set up',
+				status: 'in-progress',
+				subtasks: [
+					sub(1, 'Repo', '1', { status: first }),
+					sub(2, 'CI', '1', { status: second })
+				]
+			});
+		writeTasks([
+			setUp('pending', 'pending'),
+			createTask({ id: 2, title: 'Old' })
+		]);
+		commitAll('base');
+		gitOk('checkout', '-q', '-b', 'feature');
+		writeTasks([
+			setUp('pending', 'done'),
+			createTask({ id: 2, title: 'Old' }),
+			createTask({ id: 3, title: 'Theirs', dependencies: ['2'] })
+		]);
+		commitAll('feature');
+		gitOk('checkout', '-q', 'main');
+		// set-status 1.1 done and remove-task 2
+		writeTasks([setUp('done', 'pending')]);
+		commitAll('main');
+
+		const merge = git('merge', '--no-edit', 'feature');
+
+		expect(merge.status, merge.stderr).toBe(0);
+		expect(merge.stdout).toContain(
+			'✓ Merged tasks.json; dropped dependencies on removed tasks: 3 → 2'
+		);
+		const tasks = readTasks();
+		expect(tasks.map((t) => [String(t.id), t.status, t.dependencies])).toEqual([
+			['1', 'done', []],
+			['3', 'pending', []]
+		]);
+	});
+
 	it('marks the file conflicted, keeps valid JSON and lists the clash', () => {
 		const result = branchFromBase(
 			[

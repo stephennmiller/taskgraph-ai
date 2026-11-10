@@ -25,6 +25,9 @@ The rest of the CLI command rules are in [commands.md](commands.md).
   the parent's status, and deletes the removed tasks' generated files
   (`taskFileName`: `task_NNN.md`, or `task_NNN_<tag>.md` outside master)
   after `tasks.json` is saved. The command prints nothing of this itself.
+  `tags remove`, `tags rename` and `archive` do the same for their files
+  (`removeGeneratedTaskFiles`, `renameGeneratedTaskFiles`), matching only
+  those names (#1125).
 - **One result line.** `formatTasksRemoved` says what was removed and, when
   tasks still depend on missing ones, points to `taskgraph fix-dependencies`.
 - **Partial failure exits 1.** When tasks were removed but a task file

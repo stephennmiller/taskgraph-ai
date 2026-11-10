@@ -14,6 +14,7 @@ import {
 	ERROR_CODES,
 	TaskGraphError
 } from './common/errors/taskgraph-error.js';
+import { isTaskGraphProject } from './common/utils/project-root-finder.js';
 import {
 	type Logger,
 	type LoggerConfig,
@@ -28,6 +29,11 @@ export interface TmCoreOptions {
 	projectPath: string;
 	/** Optional logger configuration for MCP integration and debugging */
 	loggerConfig?: LoggerConfig;
+	/**
+	 * Refuse a path that isn't a TaskGraph project (see isTaskGraphProject)
+	 * instead of opening it, which creates `.taskgraph/` there
+	 */
+	requireProject?: boolean;
 }
 
 /**
@@ -128,6 +134,12 @@ export class TmCore {
 
 		// Normalize the path
 		this._projectPath = path.resolve(options.projectPath);
+		if (options.requireProject && !isTaskGraphProject(this._projectPath)) {
+			throw new TaskGraphError(
+				`No TaskGraph project at ${this._projectPath}. Use the project's root folder (not a folder inside it), or set one up there with \`taskgraph init\` (MCP: initialize_project)`,
+				ERROR_CODES.NOT_FOUND
+			);
+		}
 		this._options = options;
 		// Domain facades will be initialized in initialize()
 	}

@@ -10,7 +10,8 @@ import {
 	type ExpandOptions,
 	type ExpandTaskHooks,
 	type TmCore,
-	createTmCore
+	createTmCore,
+	exitOnStopSignals
 } from '@tm/core';
 import chalk from 'chalk';
 import { Command, Option } from 'commander';
@@ -111,12 +112,14 @@ Examples:
   $ taskgraph expand 3 --append --prompt='Cover the error paths'
 `
 			)
-			.action(async (id: string | undefined, options: ExpandCommandOptions) => {
-				await this.executeCommand({
-					...options,
-					id: pickId(id, options.id, 'expand')
-				});
-			});
+			.action((id: string | undefined, options: ExpandCommandOptions) =>
+				exitOnStopSignals(() =>
+					this.executeCommand({
+						...options,
+						id: pickId(id, options.id, 'expand')
+					})
+				)
+			);
 	}
 
 	private async executeCommand(options: ExpandCommandOptions): Promise<void> {

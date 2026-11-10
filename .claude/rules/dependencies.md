@@ -43,6 +43,9 @@ reused.
   missing or archived target, a self-dependency, or one that would close a
   loop (`wouldCloseDependencyLoop` in `dependency-edges.ts`). Adding one
   that exists already is a no-op with a message.
+- `add-subtask --dependencies` (`addSubtaskIn`) refuses a missing or
+  archived target with the same error, from `assertDependencyExists`
+  (#1097).
 - `related` and `discovered-from` links live in the task's metadata
   (`task-links.ts`), never in `dependencies`, so they can't block a task or
   make a loop.

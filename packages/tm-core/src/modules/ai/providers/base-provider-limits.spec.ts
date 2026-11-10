@@ -30,16 +30,12 @@ class TestProvider extends BaseAIProvider {
 		super(vi.fn());
 		this.name = 'TestProvider';
 	}
-	getRequiredApiKeyName() {
-		return 'TEST_API_KEY';
-	}
 	async getClient() {
 		return (modelId: string) => ({ modelId }) as any;
 	}
 }
 
 const base = {
-	apiKey: 'key',
 	modelId: 'model',
 	messages: [{ role: 'user', content: 'hi' }],
 	maxTokens: 1000

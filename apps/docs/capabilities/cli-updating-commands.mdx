@@ -94,7 +94,7 @@ A parent's status follows its subtasks whichever command changes them (`set-stat
 
 In Claude Code, the plugin's `/taskgraph:to-done <id>` does the checking for you: the `task-checker` agent compares your changes with each numbered item, the ones it can show evidence for are checked, and the rest are reported to you. It then saves a three-line summary on the task (what changed, files, follow-ups) and marks it done. It never passes `--force` unless you ask.
 
-Marking a parent task done leaves its subtasks as they are; mark each subtask done (or `cancelled`) yourself.
+Marking a parent task done leaves its subtasks as they are; mark each subtask done (or `cancelled`) yourself. That keeps the parent done, and so does setting a leftover subtask to `blocked`, `deferred` or `review`. Adding a subtask, starting one, or reopening one that was done or cancelled moves the parent back to `in-progress` (to `pending` when every subtask is pending again).
 
 ## Generate Task Files
 
@@ -102,6 +102,8 @@ Marking a parent task done leaves its subtasks as they are; mark each subtask do
 # Generate individual task files from tasks.json
 taskgraph generate
 ```
+
+Files are named `task_001.md` in `master` and `task_001_<tag>.md` in other tags. TaskGraph keeps them in step: `generate` deletes the files of tasks that are gone (also when the tag has no tasks left), `remove-task` and `archive` delete the files of the tasks they take out, `tags remove` deletes the tag's files and `tags rename` renames them (a file already under the new name is kept, and the old one deleted). Only files with those names in `.taskgraph/tasks` are touched; any other file there, and a folder given to `generate -o`, is left alone. The files are copies of `tasks.json`: a change made in one by hand is lost when it is written again or deleted.
 
 ## Managing Task Dependencies
 
@@ -145,19 +147,22 @@ Once `parse-prd` has recorded where tasks came from, `fix-dependencies --check` 
 # Move a task or subtask to a new position
 taskgraph move --from=<id> --to=<id>
 
-# Move task to become a subtask
-taskgraph move --from=5 --to=7
+# Move task to become a subtask: name a free subtask ID under the new parent
+# (a task that has subtasks of its own is refused)
+taskgraph move --from=6 --to=7.4
+# or let TaskGraph pick the subtask ID
+taskgraph add-subtask --parent=7 --task-id=6
 
-# Move subtask to become a standalone task
-taskgraph move --from=5.2 --to=7
+# Move subtask to become a standalone task (9 is a free task ID)
+taskgraph move --from=5.2 --to=9
 
-# Move subtask to a different parent
-taskgraph move --from=5.2 --to=7.3
+# Move subtask to a different parent (7.4 is a free subtask ID)
+taskgraph move --from=5.2 --to=7.4
 
 # Reorder subtasks within the same parent
 taskgraph move --from=5.2 --to=5.4
 
-# Move a task to a new ID position (creates placeholder if it doesn't exist)
+# Move a task to a new ID (25 must be free; the task is renumbered)
 taskgraph move --from=5 --to=25
 
 # Move multiple tasks at once (same number of IDs; if one pair fails, nothing moves)

@@ -97,7 +97,9 @@ Each iteration runs `claude -p` with permission prompts off, so the first run in
 
 ### Stop and resume
 
-Stop a run any time (Ctrl-C, a crash, closing the laptop) and run `taskgraph loop` again later. Finished tasks are committed, the task that was in progress is picked first, and the new session carries on from the task statuses and commits. The prompt names the files it left uncommitted (up to 20), so the session continues from them.
+Stop a run any time (Ctrl-C, a crash, closing the laptop) and run `taskgraph loop` again later. Finished tasks are committed, the task that was in progress is picked first, and the new session carries on from the task statuses and commits. The prompt names the files it left uncommitted (up to 20), so the session continues from them; a `--sandbox` run leaves them out, since listing them means running `git status` on your machine, and tells the session to run it in the sandbox (see [Loop permissions](/capabilities/loop-trust)).
+
+Ctrl-C, `kill` and closing the terminal tell Claude Code and everything it started to stop. `loop` waits for Claude Code to exit, then kills anything it started that is still running; after 5 seconds it kills Claude Code too. A second Ctrl-C kills it at once. An iteration stopped for its [timeout](/best-practices/configuration-advanced#loop-iteration-timeout) is stopped the same way.
 
 ### Smoke check
 

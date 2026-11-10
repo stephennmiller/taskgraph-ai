@@ -13,7 +13,8 @@ import chalk from 'chalk';
  * @param argv - Original command-line arguments (process.argv)
  */
 export function restartWithNewVersion(argv: string[]): void {
-	console.log(chalk.dim('Restarting with updated version...\n'));
+	// stderr: stdout belongs to the restarted command's output (#1106)
+	console.error(chalk.dim('Restarting with updated version...\n'));
 
 	// npm installed the new version over the entry script this run started
 	// from. Node runs it directly, with no shell to split or read the user's
@@ -37,7 +38,7 @@ export function restartWithNewVersion(argv: string[]): void {
 			chalk.red('Failed to restart with new version:'),
 			error.message
 		);
-		console.log(chalk.yellow('Please run your command again manually.'));
+		console.error(chalk.yellow('Please run your command again manually.'));
 		process.exit(1);
 	});
 }

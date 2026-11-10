@@ -67,7 +67,7 @@ describe('initializeProject', () => {
 		expect(exists('.taskgraph/templates/example_prd.txt')).toBe(true);
 		expect(exists('.taskgraph/templates/example_prd_rpg.txt')).toBe(true);
 		expect(exists('.env.example')).toBe(true);
-		expect(read('.gitignore')).toContain('# Task files\n# tasks.json\n');
+		expect(read('.gitignore')).toContain('# Task files\n# .taskgraph/tasks/\n');
 		expect(read('CLAUDE.md')).toContain('@./.taskgraph/CLAUDE.md');
 		expect(exists('.mcp.json')).toBe(false);
 		// A new repository with the tasks.json merge driver
@@ -124,7 +124,7 @@ describe('initializeProject', () => {
 		});
 		initializeProject({ projectRoot: projectDir, claudeCode: false });
 
-		expect(read('.gitignore')).toContain('# Task files\ntasks.json\n');
+		expect(read('.gitignore')).toContain('# Task files\n.taskgraph/tasks/\n');
 		expect(exists('.gitattributes')).toBe(false);
 	});
 
@@ -242,6 +242,39 @@ describe('initializeProject', () => {
 				note: 'ignored but still tracked; `git rm --cached` it'
 			}
 		]);
+	});
+
+	it('says once that the old unanchored ignore lines stopped hiding other tasks folders', () => {
+		write('.gitignore', '# Task files\ntasks.json\ntasks/\n');
+		write('tasks/notes.txt', 'private');
+
+		const first = initializeProject({
+			projectRoot: projectDir,
+			claudeCode: false
+		});
+		const second = initializeProject({
+			projectRoot: projectDir,
+			claudeCode: false
+		});
+
+		expect(first.hints).toEqual([
+			{
+				path: '.gitignore',
+				note: 'now ignores only `.taskgraph/tasks/`; a `tasks/` folder or `tasks.json` elsewhere is no longer ignored'
+			}
+		]);
+		expect(second.hints).toEqual([]);
+	});
+
+	it("gives no hint when the old lines were commented out or are the user's own", () => {
+		write('.gitignore', 'tasks/\n\n# Task files\n# tasks.json\n# tasks/\n');
+
+		const result = initializeProject({
+			projectRoot: projectDir,
+			claudeCode: false
+		});
+
+		expect(result.hints).toEqual([]);
 	});
 
 	it('reports a step that failed and carries on', () => {

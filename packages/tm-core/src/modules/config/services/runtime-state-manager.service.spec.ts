@@ -225,52 +225,14 @@ describe('RuntimeStateManager', () => {
 		});
 	});
 
-	describe('getState', () => {
-		it('should return copy of current state', () => {
-			const state1 = stateManager.getState();
-			const state2 = stateManager.getState();
-
-			expect(state1).not.toBe(state2);
-			expect(state1).toEqual(state2);
-			expect(state1.currentTag).toBe(DEFAULT_TAG);
-		});
-	});
-
-	describe('updateMetadata', () => {
-		it('should update metadata and save state', async () => {
-			await stateManager.updateMetadata({ key1: 'value1' });
-
-			expect(stateManager.getState().metadata).toEqual({ key1: 'value1' });
-			expect(readState().metadata).toEqual({ key1: 'value1' });
-		});
-
-		it('should merge metadata with existing values', async () => {
-			await stateManager.updateMetadata({ key1: 'value1' });
-			await stateManager.updateMetadata({ key2: 'value2' });
-
-			expect(stateManager.getState().metadata).toEqual({
-				key1: 'value1',
-				key2: 'value2'
-			});
-		});
-
-		it('should override existing metadata values', async () => {
-			await stateManager.updateMetadata({ key1: 'value1' });
-			await stateManager.updateMetadata({ key1: 'value2' });
-
-			expect(stateManager.getState().metadata).toEqual({ key1: 'value2' });
-		});
-	});
-
 	describe('clearState', () => {
 		it('should delete state file and reset to defaults', async () => {
-			await stateManager.updateMetadata({ key1: 'value1' });
+			await stateManager.setCurrentTag('feature');
 
 			await stateManager.clearState();
 
 			expect(fs.existsSync(statePath)).toBe(false);
 			expect(stateManager.getCurrentTag()).toBe(DEFAULT_TAG);
-			expect(stateManager.getState().metadata).toBeUndefined();
 		});
 
 		it('should ignore ENOENT errors when file does not exist', async () => {

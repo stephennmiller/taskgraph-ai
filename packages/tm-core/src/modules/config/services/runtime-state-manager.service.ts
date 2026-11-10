@@ -154,24 +154,6 @@ export class RuntimeStateManager {
 	}
 
 	/**
-	 * Get current state
-	 */
-	getState(): RuntimeState {
-		return { ...this.currentState };
-	}
-
-	/**
-	 * Update metadata
-	 */
-	async updateMetadata(metadata: Record<string, unknown>): Promise<void> {
-		this.currentState.metadata = {
-			...this.currentState.metadata,
-			...metadata
-		};
-		await this.saveState();
-	}
-
-	/**
 	 * Clear state file
 	 */
 	async clearState(): Promise<void> {

@@ -3,7 +3,10 @@
  * `move --from --to`. See task-moves.ts for the shared rules.
  */
 
-import { ERROR_CODES } from '../../../common/errors/taskgraph-error.js';
+import {
+	ERROR_CODES,
+	errorWithHint
+} from '../../../common/errors/taskgraph-error.js';
 import type { Task } from '../../../common/types/index.js';
 import { wouldSubtaskCloseLoop } from '../../dependencies/dependency-edges.js';
 import {
@@ -16,7 +19,11 @@ import {
 	dependenciesForMovedItem,
 	retargetDependents
 } from '../../dependencies/task-to-subtask.js';
-import { isValidTaskIdFormat, normalizeTaskId } from '../validation/task-id.js';
+import {
+	isAssignableTaskId,
+	isValidTaskIdFormat,
+	normalizeTaskId
+} from '../validation/task-id.js';
 import { promotedSubtaskDescription } from './promoted-subtask.js';
 import {
 	type DependencyId,
@@ -63,6 +70,15 @@ export function moveTasksIn(
 		fail(
 			`Invalid task ID "${invalid}": use a task ID such as 5 or a subtask ID such as 5.2`,
 			ERROR_CODES.INVALID_INPUT
+		);
+	}
+	// Checked for every destination before anything moves
+	const unusable = destinationIds.find((id) => !isAssignableTaskId(id));
+	if (unusable !== undefined) {
+		throw errorWithHint(
+			ERROR_CODES.INVALID_INPUT,
+			`Can't move to ID "${unusable}"`,
+			'Use a number from 1 up (15 digits at most), like `5`, or `5.2` for a subtask'
 		);
 	}
 

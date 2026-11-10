@@ -3,7 +3,7 @@
  * Generates individual markdown task files from tasks.json
  */
 
-import fs from 'node:fs/promises';
+import fs from 'node:fs';
 import path from 'node:path';
 import type { Task, Subtask, TaskStatus } from '../../../common/types/index.js';
 import type { IStorage } from '../../../common/interfaces/storage.interface.js';
@@ -11,10 +11,13 @@ import type { ConfigManager } from '../../config/managers/config-manager.js';
 import { resolveSubtaskDependency } from '../../dependencies/subtask-dependency.js';
 import { isSafeTaskId } from '../../../common/utils/safe-task-id.js';
 import {
-	refuseSymlink,
+	makeProjectDir,
+	refuseSymlinkedFolders,
+	removeProjectFile,
+	renameProjectFile,
 	writeProjectFile
 } from '../../storage/adapters/file-storage/file-operations.js';
-import { assertTagName } from '../utils/tag-names.js';
+import { TAG_NAME_PATTERN, assertTagName } from '../utils/tag-names.js';
 
 /**
  * Options for generating task files
@@ -47,12 +50,148 @@ export interface GenerateTaskFilesResult {
  * The file `generate` writes for a task, which `remove-task` deletes:
  * task_001.md in master, task_001_<tag>.md in other tags
  */
-export function taskFileName(taskId: string | number, tag: string): string {
+function taskFileName(taskId: string | number, tag: string): string {
 	assertTagName(tag);
 	const paddedId = String(taskId).padStart(3, '0');
 	return tag === 'master'
 		? `task_${paddedId}.md`
 		: `task_${paddedId}_${tag}.md`;
+}
+
+/**
+ * The files in `dir` named as `generate` names a tag's task files, with the
+ * task number each holds. Any other file there is someone else's.
+ */
+function taskFilesIn(
+	dir: string,
+	tag: string
+): Array<{ file: string; id: string }> {
+	// A valid tag name has no regex characters
+	const pattern =
+		tag === 'master'
+			? /^task_(\d+)\.md$/
+			: new RegExp(`^task_(\\d+)_${tag}\\.md$`);
+	return fs.readdirSync(dir).flatMap((file) => {
+		const match = file.match(pattern);
+		return match ? [{ file, id: String(Number.parseInt(match[1], 10)) }] : [];
+	});
+}
+
+/** What a cleanup deleted, and what it couldn't, as full paths and messages */
+export interface RemovedTaskFiles {
+	removed: string[];
+	errors: string[];
+}
+
+/**
+ * Delete a tag's generated files in `dir` whose task number `remove`
+ * accepts. `root` is the folder no link may lead out of (see removeProjectFile)
+ */
+function removeTaskFilesIn(
+	root: string,
+	dir: string,
+	tag: string,
+	remove: (id: string) => boolean
+): RemovedTaskFiles {
+	const result: RemovedTaskFiles = { removed: [], errors: [] };
+	for (const { file, id } of taskFilesIn(dir, tag)) {
+		if (!remove(id)) continue;
+		const target = path.join(dir, file);
+		try {
+			removeProjectFile(root, path.resolve(target));
+			result.removed.push(target);
+		} catch (error) {
+			// The file is a copy of tasks.json; one left behind loses nothing
+			result.errors.push(
+				`Failed to delete task file ${target}: ${(error as Error).message}`
+			);
+		}
+	}
+	return result;
+}
+
+/**
+ * The folder `generate` writes to by default, or undefined when the tag
+ * can't name a file (generate refuses it, so it has none) or the folder is
+ * missing or reached through a symlink
+ */
+function defaultTaskFilesDir(
+	projectRoot: string,
+	...tags: string[]
+): string | undefined {
+	if (!tags.every((tag) => TAG_NAME_PATTERN.test(tag))) return undefined;
+	const dir = path.join(projectRoot, '.taskgraph', 'tasks');
+	try {
+		refuseSymlinkedFolders(path.join(dir, 'task.md'));
+		return fs.statSync(dir).isDirectory() ? dir : undefined;
+	} catch {
+		return undefined;
+	}
+}
+
+/**
+ * Delete the files `generate` wrote for a tag in the default folder: all of
+ * them (the tag was removed), or those of `taskIds` (removed or archived
+ * tasks). Runs after tasks.json is saved and never throws.
+ */
+export function removeGeneratedTaskFiles(
+	projectRoot: string,
+	tag: string,
+	taskIds?: Iterable<string | number>
+): RemovedTaskFiles {
+	const dir = defaultTaskFilesDir(projectRoot, tag);
+	if (!dir) return { removed: [], errors: [] };
+	const ids = taskIds && new Set([...taskIds].map(String));
+	try {
+		return removeTaskFilesIn(
+			projectRoot,
+			dir,
+			tag,
+			(id) => !ids || ids.has(id)
+		);
+	} catch {
+		return { removed: [], errors: [] };
+	}
+}
+
+/**
+ * Rename a renamed tag's generated files in the default folder to the new
+ * tag's names. A file already under a new name is never replaced: it may be
+ * someone's own, so the old one, a copy of tasks.json, is deleted instead.
+ * Never throws.
+ */
+export function renameGeneratedTaskFiles(
+	projectRoot: string,
+	oldTag: string,
+	newTag: string
+): void {
+	const dir = defaultTaskFilesDir(projectRoot, oldTag, newTag);
+	if (!dir) return;
+	try {
+		// Without case: macOS and Windows folders hold one file per spelling
+		const names = fs.readdirSync(dir).map((name) => name.toLowerCase());
+		for (const { file, id } of taskFilesIn(dir, oldTag)) {
+			const renamed = taskFileName(id, newTag);
+			const taken =
+				renamed.toLowerCase() !== file.toLowerCase() &&
+				names.includes(renamed.toLowerCase());
+			try {
+				if (taken) removeProjectFile(projectRoot, path.join(dir, file));
+				else {
+					renameProjectFile(
+						projectRoot,
+						path.join(dir, file),
+						path.join(dir, renamed)
+					);
+				}
+				names.push(renamed.toLowerCase());
+			} catch {
+				// A file left under the old name loses nothing; go on to the rest
+			}
+		}
+	} catch {
+		// As above
+	}
 }
 
 /**
@@ -77,34 +216,32 @@ export class TaskFileGeneratorService {
 		const tag = options.tag || this.configManager.getActiveTag();
 		const outputDir =
 			options.outputDir || path.join(this.projectPath, '.taskgraph', 'tasks');
+		// A folder the user named may be a link; the default one may not
+		const root = options.outputDir ? outputDir : this.projectPath;
 
 		try {
 			// The tag goes into each file name
 			assertTagName(tag);
-			// Writes and orphan cleanup must not follow a symlinked default folder
-			if (!options.outputDir) await refuseSymlink(outputDir);
-
-			// Ensure output directory exists
-			await fs.mkdir(outputDir, { recursive: true });
+			// Writes and orphan cleanup must not follow a symlinked default
+			// folder, or a symlinked .taskgraph above it
+			makeProjectDir(root, path.resolve(outputDir));
 
 			// Load tasks from storage
 			const tasks = await this.storage.loadTasks(tag);
 
-			if (tasks.length === 0) {
-				return {
-					success: true,
-					count: 0,
-					directory: outputDir,
-					orphanedFilesRemoved: 0
-				};
+			// Clean up orphaned task files, also when the tag has no tasks left
+			const validTaskIds = new Set(tasks.map((task) => String(task.id)));
+			let orphanedCount = 0;
+			try {
+				orphanedCount = removeTaskFilesIn(
+					root,
+					outputDir,
+					tag,
+					(id) => !validTaskIds.has(id)
+				).removed.length;
+			} catch {
+				// Cleanup is best effort
 			}
-
-			// Clean up orphaned task files
-			const orphanedCount = await this.cleanupOrphanedFiles(
-				outputDir,
-				tasks,
-				tag
-			);
 
 			// Generate task files in parallel with individual error handling
 			// This allows partial success - some files can be written even if others fail
@@ -120,12 +257,7 @@ export class TaskFileGeneratorService {
 					const content = this.formatTaskContent(task, tasks);
 					const fileName = taskFileName(task.id, tag);
 					const filePath = path.join(outputDir, fileName);
-					// A folder the user named may be a link; the default one may not
-					writeProjectFile(
-						options.outputDir ? outputDir : this.projectPath,
-						path.resolve(filePath),
-						content
-					);
+					writeProjectFile(root, path.resolve(filePath), content);
 					return task.id;
 				})
 			);
@@ -158,79 +290,6 @@ export class TaskFileGeneratorService {
 				error: error.message
 			};
 		}
-	}
-
-	/**
-	 * Escape special regex characters in a string
-	 */
-	private escapeRegExp(str: string): string {
-		return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-	}
-
-	/**
-	 * Clean up orphaned task files (files for tasks that no longer exist)
-	 * @returns Number of files removed
-	 */
-	private async cleanupOrphanedFiles(
-		outputDir: string,
-		tasks: Task[],
-		tag: string
-	): Promise<number> {
-		let removedCount = 0;
-
-		try {
-			const files = await fs.readdir(outputDir);
-			const validTaskIds = tasks.map((task) => String(task.id));
-
-			// Tag-aware file patterns
-			const masterFilePattern = /^task_(\d+)\.md$/;
-			const taggedFilePattern = new RegExp(
-				`^task_(\\d+)_${this.escapeRegExp(tag)}\\.md$`
-			);
-
-			// Collect files to remove
-			const filesToRemove: string[] = [];
-
-			for (const file of files) {
-				let match = null;
-				let fileTaskId: string | null = null;
-
-				// Check if file belongs to current tag
-				if (tag === 'master') {
-					match = file.match(masterFilePattern);
-					if (match) {
-						fileTaskId = match[1];
-					}
-				} else {
-					match = file.match(taggedFilePattern);
-					if (match) {
-						fileTaskId = match[1];
-					}
-				}
-
-				// If this is a task file for the current tag and the task no longer exists
-				if (fileTaskId !== null) {
-					// Convert to integer for comparison (removes leading zeros)
-					const normalizedId = String(parseInt(fileTaskId, 10));
-					if (!validTaskIds.includes(normalizedId)) {
-						filesToRemove.push(file);
-					}
-				}
-			}
-
-			// Remove files in parallel
-			await Promise.all(
-				filesToRemove.map(async (file) => {
-					const filePath = path.join(outputDir, file);
-					await fs.unlink(filePath);
-				})
-			);
-			removedCount = filesToRemove.length;
-		} catch (error) {
-			// Ignore errors during cleanup - non-critical operation
-		}
-
-		return removedCount;
 	}
 
 	/**

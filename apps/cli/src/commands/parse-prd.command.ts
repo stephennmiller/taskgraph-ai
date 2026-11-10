@@ -15,6 +15,7 @@ import {
 	type ParsePrdHooks,
 	type TmCore,
 	createTmCore,
+	exitOnStopSignals,
 	neutralizeTaskData,
 	parseClarificationAnswers,
 	writeClarifications
@@ -173,9 +174,9 @@ export class ParsePrdCommand extends Command {
 			.option('-y, --yes', 'With --clarify: accept the suggested answers')
 			.option('--tag <tag>', 'Specify tag context for task operations')
 			.action(
-				async (file: string | undefined, options: ParsePrdCommandOptions) => {
-					await this.executeCommand(file, options);
-				}
+				// A stopped parse-prd (or `go`) leaves no Claude running (#1103)
+				(file: string | undefined, options: ParsePrdCommandOptions) =>
+					exitOnStopSignals(() => this.executeCommand(file, options))
 			);
 	}
 

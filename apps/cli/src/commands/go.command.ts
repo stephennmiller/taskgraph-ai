@@ -5,12 +5,15 @@
  * a later one are the same call), then `loop`. Each step is this CLI run
  * again, so it prints what it always prints, and the first step that fails
  * stops the rest. On a rerun it says what loop resumes before loop starts.
+ * A signal that stops `go` goes on to the running step (#1103).
  */
 
-import { spawnSync } from 'node:child_process';
+import { spawn } from 'node:child_process';
 import fs from 'node:fs';
+import os from 'node:os';
 import {
 	SKIP_AUTO_UPDATE_ENV,
+	STOP_SIGNALS,
 	createTmCore,
 	isTaskGraphProject,
 	resolveProjectRoot
@@ -40,6 +43,48 @@ function goSteps(
 		]
 	];
 }
+
+/** How a step ended. `stopped`: a stop signal came in while it ran */
+interface StepResult {
+	code: number | null;
+	signal: NodeJS.Signals | null;
+	stopped: boolean;
+}
+
+/**
+ * Run one step and pass it every stop signal this process gets: a `kill` of
+ * `go` alone would otherwise leave `loop` and Claude Code running (#1103).
+ * On Ctrl-C the step gets the signal twice (the terminal sends it to the
+ * whole group), which stops it just the same.
+ */
+export function runStep(command: string, args: string[]): Promise<StepResult> {
+	return new Promise((resolve) => {
+		// The parent already checked for an update; the steps don't again
+		const child = spawn(command, args, {
+			stdio: 'inherit',
+			env: { ...process.env, [SKIP_AUTO_UPDATE_ENV]: '1' }
+		});
+		let stopped = false;
+		const forward = (signal: NodeJS.Signals) => {
+			stopped = true;
+			child.kill(signal);
+		};
+		const done = (code: number | null, signal: NodeJS.Signals | null) => {
+			for (const sig of STOP_SIGNALS) process.off(sig, forward);
+			resolve({ code, signal, stopped });
+		};
+		for (const sig of STOP_SIGNALS) process.on(sig, forward);
+		child.once('error', () => done(1, null));
+		child.once('close', done);
+	});
+}
+
+/**
+ * `go`'s exit code for a step that failed or was stopped. For one a signal
+ * ended, what a shell reports (143 for SIGTERM, 130 for Ctrl-C)
+ */
+export const stepExitCode = ({ code, signal }: StepResult): number =>
+	signal ? 128 + os.constants.signals[signal] : code || 1;
 
 export class GoCommand extends Command {
 	constructor(name?: string) {
@@ -88,13 +133,9 @@ export class GoCommand extends Command {
 				// Only a heads-up: a file loop can't read fails loop's own way
 				await this.printResume(projectRoot).catch(() => {});
 			}
-			// The parent already checked for an update; the steps don't again
-			const step = spawnSync(process.execPath, [process.argv[1], ...args], {
-				stdio: 'inherit',
-				env: { ...process.env, [SKIP_AUTO_UPDATE_ENV]: '1' }
-			});
-			if (step.status !== 0) {
-				process.exitCode = step.status ?? 1;
+			const step = await runStep(process.execPath, [process.argv[1], ...args]);
+			if (step.code !== 0 || step.stopped) {
+				process.exitCode = stepExitCode(step);
 				return;
 			}
 		}

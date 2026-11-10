@@ -65,6 +65,30 @@ describe('TaskEntity', () => {
 
 			expect(entity.priority).toBe('medium');
 		});
+
+		// doctor passes a task without a status, so every reader has to as well
+		it('reads a missing status as pending', () => {
+			const task = createMinimalTask({ status: undefined });
+
+			expect(new TaskEntity(task).status).toBe('pending');
+		});
+
+		it.each([
+			['status', 'finished'],
+			['priority', 'urgent\u001b[2J']
+		])(
+			'names the task with an unknown %s and points at doctor',
+			(field, value) => {
+				const task = createMinimalTask({ id: '7', [field]: value });
+
+				expect(() => new TaskEntity(task)).toThrow(
+					expect.objectContaining({
+						message: `Task 7 has ${field} ${JSON.stringify(value)}`,
+						hint: 'Run `taskgraph doctor` to see how to fix it'
+					})
+				);
+			}
+		);
 	});
 
 	describe('toJSON() fields the entity does not model', () => {

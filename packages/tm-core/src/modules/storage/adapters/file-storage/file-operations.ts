@@ -18,7 +18,6 @@ import {
 import { isWithin } from '../../../../common/utils/project-root-finder.js';
 import { writeAtomically } from '../../../../common/utils/write-atomically.js';
 import { resolvesWithin } from '../../../migration/import-paths.js';
-import type { FileStorageData } from './format-handler.js';
 
 /**
  * A file that exists but doesn't parse. The user message names the file the
@@ -165,7 +164,7 @@ function refuseLinkedFolders(root: string, file: string): string {
 
 /**
  * Write a file in the project, creating its folders. Every write into the
- * project goes through here or appendProjectFile, so none can follow a
+ * project goes through here or one of the functions below it, so none can follow a
  * committed symlink out of it (GHSA-62pv, #616, #782, #1072);
  * src/project-writes.spec.ts fails on a write that doesn't.
  * @param file - Absolute, or relative to `root`
@@ -196,6 +195,38 @@ export async function appendProjectFile(
 	refuseSymlinkSync(full);
 	await fs.mkdir(path.dirname(full), { recursive: true });
 	await fs.appendFile(full, content, 'utf-8');
+}
+
+/**
+ * Create a folder in the project, and the folders above it, refusing a
+ * linked one on the way as writeProjectFile does
+ */
+export function makeProjectDir(root: string, dir: string): void {
+	const full = path.dirname(refuseLinkedFolders(root, path.join(dir, 'file')));
+	fsSync.mkdirSync(full, { recursive: true });
+}
+
+/**
+ * Delete a file in the project if it exists. A linked folder on the way is
+ * refused; a linked file is removed itself, never the file it points to
+ */
+export function removeProjectFile(root: string, file: string): void {
+	fsSync.rmSync(refuseLinkedFolders(root, file), { force: true });
+}
+
+/**
+ * Rename a file in the project, refusing a linked folder on either path
+ * @throws The rename's own error, such as ENOENT when `from` is missing
+ */
+export function renameProjectFile(
+	root: string,
+	from: string,
+	to: string
+): void {
+	fsSync.renameSync(
+		refuseLinkedFolders(root, from),
+		refuseLinkedFolders(root, to)
+	);
 }
 
 /**
@@ -288,52 +319,6 @@ export class FileOperations {
 			if (err.code !== 'ENOENT') throw err;
 		}
 		return lockfile.lock(filePath, LOCK_OPTIONS);
-	}
-
-	/**
-	 * Write JSON file with atomic operation and cross-process locking.
-	 * Writes atomically (see writeFileAtomic) under a proper-lockfile lock.
-	 * WARNING: This replaces the entire file. For concurrent modifications,
-	 * use modifyJson() instead to prevent lost updates.
-	 */
-	async writeJson(
-		filePath: string,
-		data: FileStorageData | any
-	): Promise<void> {
-		await enqueueWrite(filePath, () => this.writeJsonExclusive(filePath, data));
-	}
-
-	/**
-	 * writeJson while this process's queue for filePath is held.
-	 */
-	private async writeJsonExclusive(
-		filePath: string,
-		data: FileStorageData | any
-	): Promise<void> {
-		// Ensure file exists for locking (proper-lockfile requires this)
-		await this.ensureFileExists(filePath);
-
-		// Acquire cross-process lock
-		let release: (() => Promise<void>) | null = null;
-		try {
-			release = await this.acquireLock(filePath);
-
-			await writeFileAtomic(filePath, JSON.stringify(data, null, 2));
-		} finally {
-			if (release) {
-				try {
-					await release();
-				} catch (err: any) {
-					// Log but don't throw - lock may have been released already
-					// Other errors should be visible for debugging
-					if (process.env.DEBUG || process.env.TASKGRAPH_DEBUG === 'true') {
-						console.warn(
-							`[WARN] Lock release warning for ${filePath}: ${err.message}`
-						);
-					}
-				}
-			}
-		}
 	}
 
 	/**
@@ -492,13 +477,6 @@ export class FileOperations {
 	}
 
 	/**
-	 * Read directory contents
-	 */
-	async readDir(dirPath: string): Promise<string[]> {
-		return fs.readdir(dirPath);
-	}
-
-	/**
 	 * Create directory recursively
 	 */
 	async ensureDir(dirPath: string): Promise<void> {
@@ -507,45 +485,6 @@ export class FileOperations {
 		} catch (error: any) {
 			throw new Error(
 				`Failed to create directory ${dirPath}: ${error.message}`
-			);
-		}
-	}
-
-	/**
-	 * Delete file
-	 */
-	async deleteFile(filePath: string): Promise<void> {
-		try {
-			await fs.unlink(filePath);
-		} catch (error: any) {
-			if (error.code !== 'ENOENT') {
-				throw new Error(`Failed to delete file ${filePath}: ${error.message}`);
-			}
-		}
-	}
-
-	/**
-	 * Rename/move file
-	 */
-	async moveFile(oldPath: string, newPath: string): Promise<void> {
-		try {
-			await fs.rename(oldPath, newPath);
-		} catch (error: any) {
-			throw new Error(
-				`Failed to move file from ${oldPath} to ${newPath}: ${error.message}`
-			);
-		}
-	}
-
-	/**
-	 * Copy file
-	 */
-	async copyFile(srcPath: string, destPath: string): Promise<void> {
-		try {
-			await fs.copyFile(srcPath, destPath);
-		} catch (error: any) {
-			throw new Error(
-				`Failed to copy file from ${srcPath} to ${destPath}: ${error.message}`
 			);
 		}
 	}

@@ -406,6 +406,27 @@ describe('formatParallelSummary', () => {
 		);
 	});
 
+	it('names the tasks --merge left in review, also when nothing ran (#1124)', () => {
+		const line =
+			'Left in review, with no branch from a run to merge: 5, 7. Merge the work yourself, then taskgraph set-status --id=5 --status=done';
+
+		expect(
+			summary(result([], { waves: 1, leftInReviewIds: ['5', '7'] })).split('\n')
+		).toEqual([
+			'No tasks are ready to run',
+			line,
+			'Run taskgraph graph to see what the rest wait on'
+		]);
+		expect(
+			summary(
+				result([task('1', { finished: true, outcome: 'merged' })], {
+					waves: 1,
+					leftInReviewIds: ['5', '7']
+				})
+			)
+		).toContain(line);
+	});
+
 	it('fits 80 columns for typical output', () => {
 		const out = summary(
 			result([task('100', { commits: 12, uncommitted: true, outcome: 'kept' })])

@@ -68,6 +68,8 @@ Guards and side effects:
   Definition of Done) and, in a loop, `loop.smokeCommand`. `force` skips
   both. GitHub pull always forces.
 - Moving to `pending`, `blocked` or `deferred` clears the claim (machine 3).
+- parse-prd stores every new task as `pending`, whatever status the model
+  returned (#1102).
 - `update-task` and `update-subtask` never change a status, except that
   a rewrite that adds or drops subtasks settles the parent (section 2). Only
   `set-status`, the loop, GitHub pull and the parallel runner do.
@@ -84,7 +86,7 @@ from its subtasks. The write funnel runs it, so no writer has to:
 `FileStorage.mutateTasks` and `mutateTagsIn` compare each task's subtask
 IDs and statuses before and after the change (`settleChangedParents`) and
 settle every task that was there before and whose list changed, with the
-parent's done gate (acceptance criteria and Definition of Done). Only a
+parent's done gate. Only a
 status change on the same subtasks (same IDs and titles) counts as the
 subtask's own; expand --force reuses IDs for new subtasks. A task the
 write added (add-task, parse-prd, a move to a new ID or tag, restore)
@@ -103,7 +105,7 @@ on purpose.
 | all cancelled                  | unchanged                                |
 | any in-progress or done        | in-progress                              |
 | all pending                    | pending (claim cleared), set-status only |
-| other mixes, parent done       | in-progress                              |
+| other mixes, parent done       | in-progress, if the change reopens it    |
 | other mixes                    | unchanged                                |
 
 Exceptions:
@@ -111,12 +113,20 @@ Exceptions:
 - A parent in `review` stays in review when its last subtask finishes.
 - Only a subtask's own status change moves a parent in `review`,
   `blocked`, `deferred` or `cancelled`; the other writers leave it.
+- A `done` parent moves back only when the change added a subtask,
+  reopened a complete one, or set one to `pending` or `in-progress`
+  (`reopensDoneParent`, used by both callers). Cancelling, finishing or
+  removing the subtasks it was marked done over leaves it done, and so
+  does setting one of them to `blocked`, `deferred` or `review`: the parent
+  would stay in progress once the rest were cancelled (#1107). The funnel
+  tells subtasks apart by ID and title.
 - clear-subtasks and moving a whole task (in a tag or between tags) leave
   the parent's status as it is.
 
 Invariants the rest of the code relies on:
 
-- I1: a `done` parent has only complete subtasks. Dependents treat a done
+- I1: a `done` parent has only complete subtasks, unless the user marked
+  it done over open ones (below). Dependents treat a done
   parent as satisfied, and `next` offers subtasks only of in-progress
   parents, so an open subtask under a done parent is never offered.
 - I2: an `in-progress` parent has at least one open subtask. Claims and the
@@ -130,7 +140,20 @@ Converting between task and subtask (move, `add-subtask --task-id`,
 `acceptanceCriteria` and metadata, except `subtasks` and `parentId`.
 
 `set-status <parent> done` with open subtasks is allowed on purpose: it is
-an explicit user action. The next writer to touch its subtasks reopens it.
+an explicit user action. The `done` exception above says what reopens
+it.
+
+The git merge driver writes tasks.json outside the funnel, so it settles
+too (`git/merge-driver/merge-settle.ts`, #1093): a task whose merged
+status and subtasks together are neither branch's as written goes through
+`settleChangedParents` against each branch's subtasks, with the done gate
+(the Definition of Done from the project's config files). A task whose
+status and subtasks one branch wrote is left as that branch wrote it, also
+when the other edited another field. It also drops, and reports, a
+dependency on a task one branch removed while the other added the
+dependency. A dependency on a done or cancelled task the incoming branch
+took out stays: that branch may have archived it, and its archive.json
+isn't readable during the merge.
 
 ## 3. Claim
 
@@ -183,20 +206,28 @@ and the archive's `highestId`. That covers add-task, parse-prd (including
 `tags remove` and `tags rename` leave a tombstone
 `{ tasks: [], metadata: { highestId } }` under the old name in
 archive.json, so a tag recreated with that name numbers above it (#1064).
-A copy or rename onto that name is refused when one of its task IDs is
-at or below the tombstone's `highestId`, except a rename back (the
-tombstone's `renamedTo`).
+A copy, rename or `move --to-tag` bringing an ID at or below it is
+refused, except a rename back (`renamedTo`): `assertNoRetiredIds`, which
+`mutateTags` runs for any tag a write creates (#1095). `tags add` on that
+name copies its `highestId` into the new tag, so `move --to-tag` numbers
+above it.
 A tag copy strips `metadata.github` and the claim keys from every task
 and subtask, so two tags never link the same issue (#1063).
 The merge driver merges the mark as a max and renumbers an incoming new
-task whose ID this branch used and removed (#1040).
+task whose ID this branch used and removed (#1040). An incoming task under
+an archived ID keeps it only when it is the archived task restored: the
+same `createdAt` and title, or every field when `createdAt` isn't
+recorded (#1094).
 
 Invariant everything relies on: an ID names one task for its whole life.
 The merge driver, GitHub link recovery and every in-flight AI write find a
 task by ID only.
 
 Known limits: `move --to=<id>` within a tag may name a removed ID on
-purpose, and subtask IDs within a parent can still be reused.
+purpose, and subtask IDs within a parent can still be reused. The
+destination must pass `isAssignableTaskId` (`validation/task-id.ts`): each
+part 1 or more and at most 15 digits, so `0`, `4.0` and a number past 2^53
+are refused (#1096).
 
 ## 5. tasks.json write
 
@@ -216,6 +247,8 @@ Invariants:
   `modifyTagged`, which re-read under the lock. AI results merge into what
   is on disk at write time.
 - A write is all or nothing: temp file, then rename.
+- The first two refuse a write adding an unknown status or priority
+  or a bad ID (`assertNoNewTaskProblems`, #1119).
 - Lock order is always tasks.json, then archive.json.
 
 A 4-process stress run (20 mixed writes each) lost no update.
@@ -260,6 +293,9 @@ Invariants:
 - An interrupted task is picked up again by `interruptedTask`.
 - The progress file only appends. tasks.json is the source of truth.
 
+`stopProcessGroup` stops every Claude Code the loop starts: SIGTERM to
+its process group, SIGKILL after 5 seconds or once it exited.
+
 ## 8. Parallel task
 
 `loop/parallel/parallel-runner.ts`, `outcome.ts`.
@@ -296,11 +332,15 @@ Invariant: settle releases the claim on abort, failure, or no work.
 | settled    | conflict, cannot set aside    | run ends                |
 | wave end   | nothing merged, abort, budget | run ends                |
 
+Before wave 1 (#1124), a `review` task whose branch is at a tip
+recorded as finished (machine 11) is merged like a settled one; other
+`review` tasks are only listed (`leftInReviewIds`).
+
 Invariants (#1039):
 
 - An approved run checks trust before each wave, before it claims
   anything, and stops with `TRUST_LOST` (exit 1) once the approval is
-  withdrawn, like the serial loop.
+  withdrawn.
 - After an abort it does no new work: the abort is checked before each
   merge and before each resolver session, an aborted resolver is killed,
   and the run reports aborted (exit 130). A merge that already succeeded
@@ -318,11 +358,14 @@ atomic rename.
 
 `loop/parallel/task-worktrees.ts`. A task's worktree goes from absent to
 created or reused, then kept, removed, merged or renamed aside. The branch
-tip is recorded under `.git/taskgraph/branches/<branch>`.
+tip is recorded under `.git/taskgraph/branches/<branch>` (`finished`:
+Claude Code exited 0).
 `assertBranchReusable` refuses a branch whose tip is neither the base nor
 the recorded tip, except when the run took over its own claimant's stale
 claim (`TaskClaim.resumedFrom`): then a tip that descends from the recorded
 one, checked out in the task's worktree, is the dead run's worker's work.
+A worktree git still lists but whose folder was deleted by hand is pruned
+and made again on its branch (#1104).
 
 ## 12. GitHub link
 

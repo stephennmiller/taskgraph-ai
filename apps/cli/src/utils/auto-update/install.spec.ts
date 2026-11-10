@@ -45,7 +45,7 @@ describe('performAutoUpdate', () => {
 		process.stdin.isTTY = true;
 		process.argv = ['node', 'taskgraph', 'list'];
 		home = fs.mkdtempSync(path.join(os.tmpdir(), 'tg-update-'));
-		vi.spyOn(console, 'log').mockImplementation(() => {});
+		vi.spyOn(console, 'error').mockImplementation(() => {});
 		spawn.mockReset();
 	});
 
@@ -107,10 +107,38 @@ describe('performAutoUpdate', () => {
 
 		await expect(performAutoUpdate('1.2.3', { home })).resolves.toBe(false);
 
-		const printed = vi.mocked(console.log).mock.calls.flat().join('\n');
+		const printed = vi.mocked(console.error).mock.calls.flat().join('\n');
 		expect(printed).toContain('deprecated x@1: hi');
 		expect(printed).not.toContain('\u001b]0;');
 		expect(printed).not.toContain('\u001b[2J');
+	});
+
+	it('keeps its messages off stdout, which may be a file or a pipe (#1106)', async () => {
+		const stdout = vi.spyOn(console, 'log').mockImplementation(() => {});
+		const write = vi.spyOn(process.stdout, 'write').mockReturnValue(true);
+		spawn.mockReturnValue(fakeNpm(1, 'npm error E404'));
+		fs.mkdirSync(path.join(home, '.taskgraph'));
+		const lock = path.join(home, '.taskgraph', 'update.lock');
+
+		await performAutoUpdate('1.2.3', { home });
+		await performAutoUpdate('not-a-version', { home });
+		await performAutoUpdate('1.2.3', { home, argv: ['node', 'tg', '--json'] });
+		fs.writeFileSync(
+			lock,
+			JSON.stringify({ pid: process.pid, startedAt: Date.now() })
+		);
+		await performAutoUpdate('1.2.3', { home });
+		const wrote = write.mock.calls.length;
+		write.mockRestore();
+
+		const printed = vi.mocked(console.error).mock.calls.flat().join('\n');
+		expect(printed).toContain('Please run manually');
+		expect(printed).toContain('Error: npm error E404');
+		expect(printed).toContain('not a valid version number');
+		expect(printed).toContain('Skipping auto-update (');
+		expect(printed).toContain('another update is in progress');
+		expect(stdout).not.toHaveBeenCalled();
+		expect(wrote).toBe(0);
 	});
 
 	it('does nothing in CI', async () => {

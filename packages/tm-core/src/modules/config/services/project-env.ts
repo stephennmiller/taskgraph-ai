@@ -71,7 +71,7 @@ const shellEnvAtLoad: EnvMap = Object.freeze(
 );
 
 /** A name only the shell may set. A project `.env` value is ignored. */
-export function isShellOnlyEnv(name: string): boolean {
+function isShellOnlyEnv(name: string): boolean {
 	return SHELL_ONLY_KEYS.has(name);
 }
 

@@ -8,6 +8,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { isRunning } from './loop-parallel-fixture.js';
 import { LoopService } from '../../../src/modules/loop/services/loop.service.js';
 
 describe.skipIf(process.platform === 'win32')('loop iteration timeout', () => {
@@ -48,21 +49,6 @@ describe.skipIf(process.platform === 'win32')('loop iteration timeout', () => {
 		expect(result.iterations[0].status).toBe('error');
 		expect(result.iterations[0].message).toContain('TASKGRAPH_LOOP_TIMEOUT_MS');
 	}, 20_000);
-
-	// A killed process can stay a zombie until its new parent reaps it
-	const isRunning = (pid: number) => {
-		try {
-			process.kill(pid, 0);
-		} catch {
-			return false;
-		}
-		try {
-			return !/\) Z /.test(fs.readFileSync(`/proc/${pid}/stat`, 'utf8'));
-		} catch {
-			// On Linux a missing stat means the zombie was reaped after the kill check (#911); no /proc elsewhere
-			return process.platform !== 'linux';
-		}
-	};
 
 	it.each([
 		['an', false],

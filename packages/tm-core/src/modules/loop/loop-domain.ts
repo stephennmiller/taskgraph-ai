@@ -31,6 +31,7 @@ import { smokeCommandFor } from '../tasks/utils/smoke-gate.js';
 import { preflightContainer } from './parallel/container-workers.js';
 import { ParallelLoopRunner } from './parallel/parallel-runner.js';
 import { TaskWorktrees } from './parallel/task-worktrees.js';
+import { tasksLeftInReview } from './parallel/left-in-review.js';
 import { resolveConflict } from './parallel/resolve-conflict.js';
 import { runMergingWaves } from './parallel/wave-merge.js';
 import type {
@@ -163,10 +164,15 @@ export class LoopDomain {
 				? (id, note, tag) => blockTask(tasks, id, note, tag)
 				: undefined,
 			recordSpend: tasks?.addSpend,
-			uncommittedFiles: () =>
-				new TaskWorktrees(this.projectRoot).changedFiles(
-					fullConfig.progressFile
-				)
+			// `git status` starts a filter the repository's git config names, on
+			// the host, and a sandboxed session can write that config: never
+			// for a sandboxed run, approved or not (#1129, #1133)
+			uncommittedFiles: fullConfig.sandbox
+				? undefined
+				: () =>
+						new TaskWorktrees(this.projectRoot).changedFiles(
+							fullConfig.progressFile
+						)
 		});
 		return this.loopService.run(fullConfig);
 	}
@@ -332,7 +338,9 @@ export class LoopDomain {
 					return kept;
 				},
 				block: (id, note) => blockTask(tasks, id, note, options.tag),
-				keepTrust: () => !approved || keepLoopTrust(this.projectRoot)
+				keepTrust: () => !approved || keepLoopTrust(this.projectRoot),
+				leftInReview: () =>
+					tasksLeftInReview(this.projectRoot, tasks, git, options.tag)
 			});
 		} finally {
 			// The tasks' own changes (notes, new subtasks) stay approved for the next run

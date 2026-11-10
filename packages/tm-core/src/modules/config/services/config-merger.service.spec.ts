@@ -193,45 +193,4 @@ describe('ConfigMerger', () => {
 			expect(sources1).toEqual(sources2); // Same content
 		});
 	});
-
-	describe('hasSource', () => {
-		it('should return true when source exists', () => {
-			merger.addSource({ name: 'test', config: {}, precedence: 1 });
-
-			expect(merger.hasSource('test')).toBe(true);
-		});
-
-		it('should return false when source does not exist', () => {
-			expect(merger.hasSource('nonexistent')).toBe(false);
-		});
-	});
-
-	describe('removeSource', () => {
-		it('should remove source by name and return true', () => {
-			merger.addSource({ name: 'test', config: {}, precedence: 1 });
-			merger.addSource({ name: 'keep', config: {}, precedence: 2 });
-
-			const removed = merger.removeSource('test');
-
-			expect(removed).toBe(true);
-			expect(merger.hasSource('test')).toBe(false);
-			expect(merger.hasSource('keep')).toBe(true);
-		});
-
-		it('should return false when source does not exist', () => {
-			const removed = merger.removeSource('nonexistent');
-
-			expect(removed).toBe(false);
-		});
-
-		it('should handle removing all sources', () => {
-			merger.addSource({ name: 'test1', config: {}, precedence: 1 });
-			merger.addSource({ name: 'test2', config: {}, precedence: 2 });
-
-			merger.removeSource('test1');
-			merger.removeSource('test2');
-
-			expect(merger.getSources()).toHaveLength(0);
-		});
-	});
 });

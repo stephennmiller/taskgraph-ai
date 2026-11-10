@@ -27,7 +27,6 @@ export interface ProviderMessage {
 }
 
 export interface ProviderCallParams {
-	apiKey?: string;
 	modelId: string;
 	messages: ProviderMessage[];
 	maxTokens?: number | string;
@@ -236,14 +235,9 @@ export abstract class BaseAIProvider {
 	}
 
 	/**
-	 * Validates authentication parameters - can be overridden by providers
+	 * A provider's own sign-in check; nothing by default
 	 */
-	validateAuth(params?: Partial<ProviderCallParams>): void {
-		// Default: require API key (most providers need this)
-		if (!params?.apiKey) {
-			throw new Error(`${this.name} API key is required`);
-		}
-	}
+	validateAuth(_params?: Partial<ProviderCallParams>): void {}
 
 	/**
 	 * Validates common parameters across all methods
@@ -325,21 +319,6 @@ export abstract class BaseAIProvider {
 		_params?: Partial<ProviderCallParams>
 	): ModelFactory | Promise<ModelFactory> {
 		throw new Error('getClient must be implemented by provider');
-	}
-
-	/**
-	 * Returns if the API key is required, defaults to true
-	 */
-	isRequiredApiKey(): boolean {
-		return true;
-	}
-
-	/**
-	 * Returns the required API key environment variable name, or null if no
-	 * API key is required
-	 */
-	getRequiredApiKeyName(): string | null {
-		throw new Error('getRequiredApiKeyName must be implemented by provider');
 	}
 
 	/**

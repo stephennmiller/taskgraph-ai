@@ -159,8 +159,9 @@ slash commands (as `/taskgraph:<name>`) and two agents (`task-executor`,
 ```
 
 Then check the setup from your project folder. `taskgraph doctor` checks Node,
-Claude Code and its sign-in, the project, the plugin and the MCP server, and
-prints the fix under each one that failed:
+Claude Code and its sign-in, the project, its data files and tasks, the plugin
+and the MCP server, and prints the fix under each one that failed
+(`taskgraph doctor --fix` repairs the task problems that have one safe answer):
 
 ```bash
 taskgraph doctor

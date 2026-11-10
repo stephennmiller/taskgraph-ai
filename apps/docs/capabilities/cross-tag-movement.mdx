@@ -21,15 +21,17 @@ Cross-tag task movement enables you to:
 Move tasks within the same tag context:
 
 ```bash
-# Move a single task
-taskgraph move --from=5 --to=7
+# Move a single task to a free ID
+taskgraph move --from=5 --to=9
 
-# Move a subtask
-taskgraph move --from=5.2 --to=7.3
+# Move a subtask to a free subtask ID under another task
+taskgraph move --from=5.2 --to=7.4
 
-# Move multiple tasks
+# Move multiple tasks to free IDs
 taskgraph move --from=5,6,7 --to=10,11,12
 ```
+
+The destination must be free: a move onto a task that exists, or onto a subtask that exists under another parent, is refused.
 
 ### Cross-Tag Moves
 
@@ -122,6 +124,13 @@ Then move the new task, or move the parent task, which takes its subtasks along.
 When `--from-tag` and `--to-tag` name the same tag, `move` moves within that
 tag and needs `--to`.
 
+### Destination ID With a Target Tag
+
+A move to another tag keeps task IDs, so `--to` together with a different
+`--to-tag` is refused and nothing moves. Leave out `--to` to move to the tag,
+or `--to-tag` to renumber within the source tag. The MCP `move_task` tool
+refuses `to` with `toTag` the same way.
+
 ## Best Practices
 
 ### 1. Check Dependencies First
@@ -208,6 +217,8 @@ await moveTask({
   ignoreDependencies: true
 });
 ```
+
+As on the CLI, `fromTag` defaults to `tag`, else the current tag, so `moveTask({ from: "5", toTag: "in-progress" })` moves task 5 out of the current tag.
 
 A move refused for dependency conflicts returns an error that lists each conflict and says what to retry with: `withDependencies: true` or `ignoreDependencies: true`, or, for an archived dependency, `archive_tasks` with `restore` first (or `taskgraph archive restore <id>` when that tool isn't loaded), and for one the source tag doesn't have, `fix_dependencies` (or `taskgraph fix-dependencies`).
 

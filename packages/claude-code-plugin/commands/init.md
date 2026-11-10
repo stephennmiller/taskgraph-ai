@@ -36,5 +36,5 @@ Arguments: $ARGUMENTS
    taskgraph doctor
    ```
 
-   It prints a line per check (Node, Claude Code and its sign-in, the project, this plugin, the optional MCP server) and the fix under each `✗`. Pass each fix on to the user. TaskGraph runs its AI through Claude Code, so no API keys are needed.
+   It prints a line per check (Node, Claude Code and its sign-in, the project, its data files and tasks, this plugin, the optional MCP server) and the fix under each `✗`. Pass each fix on to the user. TaskGraph runs its AI through Claude Code, so no API keys are needed.
 5. If the arguments name a PRD file, go on with `/taskgraph:parse-prd <prd-file>`. Otherwise point out the next step `init` printed: write a PRD in `.taskgraph/docs/prd.md`, or add a first task with `/taskgraph:add-task`.

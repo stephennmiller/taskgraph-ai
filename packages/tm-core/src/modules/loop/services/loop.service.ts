@@ -188,7 +188,8 @@ export class LoopService {
 				config.taskId,
 				startTask,
 				statuses,
-				this.uncommittedFiles
+				this.uncommittedFiles,
+				config.sandbox
 			);
 			const run = async () =>
 				this.executeIteration(

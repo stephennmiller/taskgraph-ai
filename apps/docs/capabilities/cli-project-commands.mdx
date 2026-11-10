@@ -30,7 +30,7 @@ taskgraph init --merge-driver
 
 Inside a Git repository, `init` also sets up the [tasks.json merge driver](/capabilities/merge-driver), so two branches that both add or archive tasks merge without an ID clash.
 
-`init` asks one question: whether to store tasks in Git (Yes by default, or what an earlier `init` chose). `--git-tasks`, `--no-git-tasks` or `--yes` answer it. Everything else takes its default: the default models (change them with `taskgraph models --setup`), English for AI responses (`taskgraph lang`), and a new Git repository if the folder isn't in one (`--no-git` skips it).
+`init` asks one question: whether to store tasks in Git (Yes by default, or what an earlier `init` chose). `--git-tasks`, `--no-git-tasks` or `--yes` answer it. The answer is kept in `.gitignore` as a `.taskgraph/tasks/` line under `# Task files`, commented out when tasks are stored in Git. `init` changes only that section: a `tasks/` or `tasks.json` line of your own stays as it is, and the unanchored `tasks.json` and `tasks/` pair an earlier `init` wrote under that header is replaced by the one anchored line. When that pair was not commented out, a `tasks/` folder or `tasks.json` elsewhere in the repo is no longer ignored afterwards, and `init` says so. Everything else takes its default: the default models (change them with `taskgraph models --setup`), English for AI responses (`taskgraph lang`), and a new Git repository if the folder isn't in one (`--no-git` skips it).
 
 `init` changes your shell startup file only with `--aliases`, which adds `alias tm='taskgraph'` to `~/.zshrc` or `~/.bashrc`.
 
@@ -53,7 +53,8 @@ taskgraph go docs/prd.md --sandbox
 `parse-prd <file> --append` (new sections become tasks; tasks you already have
 stay), then [`loop`](/capabilities/loop) with the default preset. Each step
 prints what it always prints. The first step that fails stops the rest, and
-`go` exits with its code.
+`go` exits with its code. Stopping `go` (Ctrl-C, `kill`, closing the terminal) stops
+the step that is running too.
 
 When you run `go` again on a project with work done or under way, it prints
 one line saying what it is resuming before `loop` starts:
@@ -67,21 +68,28 @@ A first run, with every task still pending, prints no such line.
 ## Check the Setup
 
 ```bash
-# Check Node, Claude Code and its sign-in, the project, the plugin and
-# the MCP server
+# Check Node, Claude Code and its sign-in, the project, its data files and
+# tasks, the plugin and the MCP server
 taskgraph doctor
+
+# Also repair the task problems that have one safe answer
+taskgraph doctor --fix
 
 # The same checks as JSON
 taskgraph doctor --json
 ```
 
-Each check gets one line: `✓` when it passed, `✗` with the fix under it when it failed, and `–` for the MCP server when it isn't set up, since it's optional. Checks that need Claude Code are left out when it isn't installed. `doctor` exits 1 when a check failed, and it works outside a project.
+Each check gets one line: `✓` when it passed, `✗` with the fix under it when it failed, and `–` for the MCP server when it isn't set up, since it's optional. Checks that need Claude Code are left out when it isn't installed, and the project's own checks outside a project.
+
+`doctor` exits 0 when no check failed and 1 when one did. With `--fix` the exit code is for what is left after the repair. It works outside a project.
 
 ```
 ✓ Node            22.22.0
 ✓ Claude Code     2.1.309
 ✓ Claude sign-in  signed in
 ✓ Project         .
+✓ Data files      3 files read
+✓ Tasks           42 in 2 tags
 ✗ Plugin          not installed
   In Claude Code, run /plugin marketplace add stephennmiller/taskgraph-ai
   then /plugin install taskgraph@taskgraph
@@ -89,6 +97,48 @@ Each check gets one line: `✓` when it passed, `✗` with the fix under it when
 ```
 
 The plugin check also fails when this CLI is older than the installed plugin needs. The MCP check looks in the project's `.mcp.json` and in Claude Code's own config (`claude mcp add`), without starting the server.
+
+### Data files and tasks
+
+In a project, `doctor` parses `.taskgraph/config.json`, `config.local.json`, `state.json`, `tasks/tasks.json` and `tasks/archive.json`. A missing file is fine, and so is an empty `config.local.json`. One that is empty or isn't valid JSON fails the check, with the file and, when it can be told, the line. A git conflict marker is always found:
+
+```
+✗ Data files      1 can't be read
+  .taskgraph/config.json has a git conflict marker on line 3
+    Resolve the conflict in the file, then run taskgraph doctor again
+```
+
+It then checks every tag of `tasks.json`, without changing it, for:
+
+- a status or priority that isn't a known one, on a task or subtask
+- an ID that isn't a whole number from 1, and two tasks in a tag (or two subtasks of a task) with the same ID
+- what [`fix-dependencies --check`](/capabilities/cli-updating-commands#managing-task-dependencies) reports: a dependency or link to a task that doesn't exist, a task that depends on itself, a dependency loop
+
+```
+✗ Tasks           2 problems in .taskgraph/tasks/tasks.json
+  Task 2 has status "finished"
+    Run taskgraph set-status --id=2 --status=pending --tag=master, then set
+    the status it should have
+  Task 6 depends on non-existent task 99
+  Run taskgraph doctor --fix to repair 1 of them
+```
+
+`doctor --fix` repairs the problems with one safe answer, in every tag, and lists each change. Those are the dependency problems, as `fix-dependencies` repairs them: it drops the ones on missing tasks, on the task itself and repeats, and breaks loops made only of subtasks.
+
+```
+✓ Repaired 1 problem in .taskgraph/tasks/tasks.json
+  Task 6 no longer depends on 99, which doesn't exist
+```
+
+Everything else needs a decision, so it stays reported with its fix: an unknown status (`set-status` on that task to `pending`, then to the status it should have), an unknown priority or a bad or duplicate ID (edit the file), a loop between tasks. Until an unknown status or priority on a task is fixed, `list`, `next` and `show` stop with the task and `Run taskgraph doctor to see how to fix it`. `--fix` writes nothing while one of the five files can't be read, and never rewrites a file it couldn't parse.
+
+A parent's status is not checked against its subtasks. `set-status` may mark a parent `done` over open subtasks, or set it back over finished ones, and every command keeps that status until a subtask changes, so `doctor` has nothing to tell a stale status from a chosen one and leaves it alone.
+
+Commands can no longer save such a value: a write that would add an unknown status or priority, or a bad or duplicate ID, is refused with the task and the field. A value already in the file may stay until you fix it.
+
+### JSON
+
+The JSON has `ok`, `cliVersion` and `checks`, each with `name` (`node`, `claude`, `signed-in`, `project`, `data-files`, `tasks`, `plugin`, `mcp`), `status` (`pass`, `fail`, `skip`) and, when they apply, `detail`, `problem` and `required`. A failed `data-files` or `tasks` check has `findings`: each with `kind` (`unreadable-file`, `unknown-status`, `unknown-priority`, `bad-id`, `duplicate-id`, `dependency`, `unchecked`), `file`, `message`, `fixable` (whether `--fix` repairs it) and, when they apply, `line`, `tag`, `taskId` and `fix`. With `--fix`, the `tasks` check has `repaired` (each with `tag`, `taskId` and `message`) when it changed something, or `repairError` when it couldn't.
 
 ## Install the latest version
 
@@ -99,8 +149,6 @@ taskgraph upgrade
 This installs the newest `taskgraph-ai` from npm. Other commands only tell you when a newer version is out. See [Staying up to date](/getting-started/quick-start/installation#staying-up-to-date).
 
 `upgrade` installs nothing, and exits 1, when `loop` or `loop --parallel` started the process.
-
-The JSON has `ok`, `cliVersion` and `checks`, each with `name` (`node`, `claude`, `signed-in`, `project`, `plugin`, `mcp`), `status` (`pass`, `fail`, `skip`) and, when they apply, `detail`, `problem` and `required`.
 
 ## Tag Management
 
@@ -134,7 +182,7 @@ taskgraph tags copy <source-tag> <target-tag>
 taskgraph tags remove <tag-name> --yes
 ```
 
-A copy (`tags copy` or `tags add --copy-from`) leaves out each task's GitHub link and claim, so pushing the copy creates its own issues. A removed or renamed tag's name keeps its highest task ID, so a new tag with that name numbers its tasks above it, and the tag's complexity report is deleted or renamed with it. A copy or rename onto a removed or renamed tag's name is refused when it would bring back one of that tag's IDs; renaming a tag back to its old name is allowed.
+A copy (`tags copy` or `tags add --copy-from`) leaves out each task's GitHub link and claim, so pushing the copy creates its own issues. A removed or renamed tag's name keeps its highest task ID, so a new tag with that name numbers its tasks above it, and the tag's complexity report is deleted or renamed with it. A copy or rename onto a removed or renamed tag's name is refused when it would bring back one of that tag's IDs; renaming a tag back to its old name is allowed. To put tasks under such a name anyway, run `taskgraph tags add <name>` and then `taskgraph move --from <ids> --from-tag <tag> --to-tag <name>`: the move gives them new IDs above the retired ones (copy the tag to a spare name first to keep the originals).
 
 ## Configure AI Models
 

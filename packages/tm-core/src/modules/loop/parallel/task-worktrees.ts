@@ -32,7 +32,12 @@ function canonical(p: string): string {
 	try {
 		return fs.realpathSync(p);
 	} catch {
-		return path.resolve(p);
+		// Missing: resolve the part that exists, as git does for a worktree
+		// whose folder is gone
+		const parent = path.dirname(p);
+		return parent === p
+			? path.resolve(p)
+			: path.join(canonical(parent), path.basename(p));
 	}
 }
 
@@ -67,6 +72,9 @@ export function parseWorktreeList(output: string): Map<string, string | null> {
 	return worktrees;
 }
 
+/** Second line of a branch record whose Claude Code ended without an error */
+const FINISHED = 'finished';
+
 /**
  * TaskGraph's own files that change while tasks are claimed and worked on,
  * relative to the project: they don't count as uncommitted work. Anything
@@ -95,16 +103,32 @@ export class TaskWorktrees {
 		this.projectRoot = canonical(projectRoot);
 	}
 
-	private async git(args: string[], cwd = this.projectRoot): Promise<string> {
+	private async git(
+		args: string[],
+		cwd = this.projectRoot,
+		env?: NodeJS.ProcessEnv
+	): Promise<string> {
 		// No time limit: `worktree add`, `merge` and `checkout` run the user's
 		// hooks (an npm install, a test suite), and killing one leaves a
 		// half-made worktree or a merge in progress
-		return (await runGit(args, { cwd, timeoutMs: 0 })).stdout;
+		return (await runGit(args, { cwd, timeoutMs: 0, env })).stdout;
 	}
 
-	private async succeeds(args: string[]): Promise<boolean> {
+	/**
+	 * For `worktree add` and `merge`: their hooks may fetch (submodules, an
+	 * npm install), and start the repository's programs with or without
+	 * runGit's transport guard, so the user's own setting stands
+	 */
+	private hookEnv(): NodeJS.ProcessEnv {
+		return { GIT_ALLOW_PROTOCOL: process.env.GIT_ALLOW_PROTOCOL };
+	}
+
+	private async succeeds(
+		args: string[],
+		env?: NodeJS.ProcessEnv
+	): Promise<boolean> {
 		try {
-			await this.git(args);
+			await this.git(args, this.projectRoot, env);
 			return true;
 		} catch {
 			return false;
@@ -257,7 +281,8 @@ export class TaskWorktrees {
 	/**
 	 * Make the task's worktree on its branch. Picks up where an earlier run
 	 * left off: an existing worktree on the same branch is reused, and an
-	 * existing branch is checked out rather than recreated.
+	 * existing branch is checked out rather than recreated, also when the
+	 * worktree's folder was deleted by hand.
 	 * @returns Whether this call created the branch
 	 * @throws ParallelLoopError when the path holds something else
 	 */
@@ -266,7 +291,16 @@ export class TaskWorktrees {
 		branch: string,
 		base: string
 	): Promise<{ createdBranch: boolean }> {
-		const existing = (await this.worktreeBranches()).get(canonical(worktree));
+		const listed = canonical(worktree);
+		let existing = (await this.worktreeBranches()).get(listed);
+		// Deleted by hand (`rm -rf`, not `git worktree remove`): git still lists
+		// it, so drop that record and make the worktree again (#1104). Not
+		// `git worktree prune`: that drops every worktree whose folder is away,
+		// one on an unplugged drive too, with what was staged in it
+		if (existing !== undefined && !lstatOrNull(worktree)) {
+			await this.git(['worktree', 'remove', '--force', listed]);
+			existing = undefined;
+		}
 		if (existing !== undefined) {
 			if (existing === `refs/heads/${branch}`) return { createdBranch: false };
 			throw new ParallelLoopError(
@@ -282,18 +316,26 @@ export class TaskWorktrees {
 		}
 		fs.mkdirSync(path.dirname(worktree), { recursive: true });
 		if (await this.branchExists(branch)) {
-			await this.git(['worktree', 'add', '--quiet', worktree, gitRef(branch)]);
+			await this.git(
+				['worktree', 'add', '--quiet', worktree, gitRef(branch)],
+				this.projectRoot,
+				this.hookEnv()
+			);
 			return { createdBranch: false };
 		}
-		await this.git([
-			'worktree',
-			'add',
-			'--quiet',
-			'-b',
-			gitRef(branch),
-			worktree,
-			gitRef(base)
-		]);
+		await this.git(
+			[
+				'worktree',
+				'add',
+				'--quiet',
+				'-b',
+				gitRef(branch),
+				worktree,
+				gitRef(base)
+			],
+			this.projectRoot,
+			this.hookEnv()
+		);
 		return { createdBranch: true };
 	}
 
@@ -340,9 +382,10 @@ export class TaskWorktrees {
 
 	/**
 	 * Note where this run left `branch` (or that it's gone), so the next run
-	 * can pick it up again: see assertBranchReusable
+	 * can pick it up again: see assertBranchReusable. `finished`: its Claude
+	 * Code ended without an error, so `--merge` may merge it (isWhereRunLeft)
 	 */
-	async recordBranch(branch: string): Promise<void> {
+	async recordBranch(branch: string, finished = false): Promise<void> {
 		const [file, tip] = await Promise.all([
 			this.recordFile(branch),
 			this.tip(branch)
@@ -352,7 +395,7 @@ export class TaskWorktrees {
 			return;
 		}
 		fs.mkdirSync(path.dirname(file), { recursive: true });
-		fs.writeFileSync(file, tip);
+		fs.writeFileSync(file, finished ? `${tip}\n${FINISHED}` : tip);
 	}
 
 	/**
@@ -375,12 +418,7 @@ export class TaskWorktrees {
 	): Promise<void> {
 		const tip = await this.tip(branch);
 		if (tip === undefined || tip === base) return;
-		const recorded = await fs.promises
-			.readFile(await this.recordFile(branch), 'utf8')
-			.then(
-				(s) => s.trim(),
-				() => ''
-			);
+		const recorded = (await this.recorded(branch)).tip;
 		if (recorded === tip) return;
 		if (
 			recorded &&
@@ -394,6 +432,30 @@ export class TaskWorktrees {
 		throw new ParallelLoopError(
 			`${branch} already exists with commits the loop didn't record (made outside a run, or by a --container run), so its files weren't approved. Review it with \`git diff ${base} ${branch}\`, then rename it (\`git branch -m ${branch} <new-name>\`) or delete it (\`git branch -D ${branch}\`, after \`git worktree remove\` if a worktree has it), and run again`
 		);
+	}
+
+	/** What recordBranch noted for `branch`: its tip ('' when there's none) and whether it was finished */
+	private async recorded(
+		branch: string
+	): Promise<{ tip: string; finished: boolean }> {
+		const [tip = '', mark] = await fs.promises
+			.readFile(await this.recordFile(branch), 'utf8')
+			.then(
+				(s) => s.trim().split('\n'),
+				() => []
+			);
+		return { tip, finished: mark === FINISHED };
+	}
+
+	/**
+	 * `branch` exists and is at the commit a run left it at, after its Claude
+	 * Code ended without an error (recordBranch). Not so while its worker is
+	 * still running in another run, nor after one that failed or was stopped.
+	 */
+	async isWhereRunLeft(branch: string): Promise<boolean> {
+		const tip = await this.tip(branch);
+		const recorded = await this.recorded(branch);
+		return tip !== undefined && recorded.finished && tip === recorded.tip;
 	}
 
 	async branchExists(branch: string): Promise<boolean> {
@@ -425,7 +487,8 @@ export class TaskWorktrees {
 				top,
 				`${sha}:refs/heads/${branch}`
 			],
-			clone
+			clone,
+			{ GIT_ALLOW_PROTOCOL: 'file' }
 		);
 		await this.git(['checkout', '--quiet', branch], clone);
 	}
@@ -442,8 +505,6 @@ export class TaskWorktrees {
 				'-c',
 				'core.hooksPath=/dev/null',
 				'-c',
-				'protocol.file.allow=always',
-				'-c',
 				'transfer.fsckObjects=true',
 				'fetch',
 				'--quiet',
@@ -457,8 +518,10 @@ export class TaskWorktrees {
 			{
 				cwd: this.projectRoot,
 				timeoutMs: 10 * 60_000,
-				// upload-pack sets this itself; said again so nothing undoes it
-				env: { GIT_NO_LAZY_FETCH: '1' }
+				// shortcut: with the file transport on, git before 2.45 (no
+				// GIT_NO_LAZY_FETCH) can still start a partial-clone remote's
+				// program in this fetch and cloneFor's; needs a git version gate
+				env: { GIT_ALLOW_PROTOCOL: 'file' }
 			}
 		);
 	}
@@ -478,7 +541,12 @@ export class TaskWorktrees {
 	 * @returns false, with the merge undone, when it conflicts or fails
 	 */
 	async merge(branch: string): Promise<boolean> {
-		if (await this.succeeds(['merge', '--no-edit', gitRef(branch)])) {
+		if (
+			await this.succeeds(
+				['merge', '--no-edit', gitRef(branch)],
+				this.hookEnv()
+			)
+		) {
 			return true;
 		}
 		await this.succeeds(['merge', '--abort']);

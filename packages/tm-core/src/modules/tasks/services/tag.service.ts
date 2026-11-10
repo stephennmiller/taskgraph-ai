@@ -13,6 +13,10 @@ import {
 } from '../../../common/errors/taskgraph-error.js';
 import { assertStateWritable, recordCurrentTag } from '../utils/branch-tag.js';
 import { assertTagName, isReservedNewTagName } from '../utils/tag-names.js';
+import {
+	removeGeneratedTaskFiles,
+	renameGeneratedTaskFiles
+} from './task-file-generator.service.js';
 
 /**
  * Options for creating a new tag
@@ -187,8 +191,9 @@ export class TagService {
 	}
 
 	/**
-	 * Create a new tag, empty or with a copy of another tag's tasks. A source
-	 * tag that is missing or empty gives an empty tag (tasksCopied 0).
+	 * Create a new tag, empty or with a copy of another tag's tasks. An empty
+	 * source tag gives an empty tag (tasksCopied 0).
+	 * @throws {TaskGraphError} NOT_FOUND when `copyFromTag` names no tag
 	 */
 	async createTag(
 		name: string,
@@ -196,6 +201,9 @@ export class TagService {
 	): Promise<CreateTagResult> {
 		requireName(name, 'Tag name');
 		this.validateNewTagName(name);
+		if (options.copyFromTag) {
+			await this.requireTag(options.copyFromTag, 'Source tag');
+		}
 
 		const sourceTag =
 			options.copyFromTag ||
@@ -242,8 +250,11 @@ export class TagService {
 			return { tagName: name, deleted: false, cancelled: true };
 		}
 
-		if (wasCurrentTag) await assertStateWritable(this.context.projectRoot);
+		if (wasCurrentTag) {
+			await assertStateWritable(this.context.projectRoot, 'master', 'removed');
+		}
 		await this.storage.deleteTag(name);
+		removeGeneratedTaskFiles(this.context.projectRoot, name);
 		if (wasCurrentTag) {
 			await recordCurrentTag(this.context.projectRoot, 'master');
 		}
@@ -285,8 +296,11 @@ export class TagService {
 		}
 
 		const wasCurrentTag = this.context.getActiveTag() === oldName;
-		if (wasCurrentTag) await assertStateWritable(this.context.projectRoot);
+		if (wasCurrentTag) {
+			await assertStateWritable(this.context.projectRoot, newName, 'renamed');
+		}
 		await this.storage.renameTag(oldName, newName);
+		renameGeneratedTaskFiles(this.context.projectRoot, oldName, newName);
 		if (wasCurrentTag) {
 			await recordCurrentTag(this.context.projectRoot, newName);
 		}

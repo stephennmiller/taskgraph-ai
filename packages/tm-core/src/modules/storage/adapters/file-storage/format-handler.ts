@@ -13,11 +13,6 @@ import { STORED_TAG_PATTERN } from '../../../tasks/utils/tag-names.js';
 import { isTagObject } from './schema-version.js';
 import { buildTagMetadata } from './tag-update.js';
 
-export interface FileStorageData {
-	tasks: Task[];
-	metadata: TaskMetadata;
-}
-
 export type FileFormat = 'legacy' | 'standard';
 
 /**
@@ -81,19 +76,28 @@ export class FormatHandler {
 	 * status reads as 'done', so the next save writes 'done' back.
 	 */
 	extractTasks(data: any, tag: string): Task[] {
-		if (!data) {
-			return [];
-		}
-
-		const format = this.detectFormat(data);
-		const tasks =
-			format === 'legacy'
-				? this.extractTasksFromLegacy(data, tag)
-				: this.extractTasksFromStandard(data);
-
+		const tasks = this.storedTasks(data, tag);
 		if (!Array.isArray(tasks)) return tasks;
 		assertStoredIds(tasks);
 		return normalizeTaskStatuses(tasks);
+	}
+
+	/**
+	 * extractTasks for `doctor`: an ID that isn't a number is left for it to
+	 * report, and so is anything but a list, as null
+	 */
+	extractTasksUnchecked(data: any, tag: string): Task[] | null {
+		const tasks = this.storedTasks(data, tag);
+		return Array.isArray(tasks) ? normalizeTaskStatuses(tasks) : null;
+	}
+
+	private storedTasks(data: any, tag: string): Task[] {
+		if (!data) {
+			return [];
+		}
+		return this.detectFormat(data) === 'legacy'
+			? this.extractTasksFromLegacy(data, tag)
+			: this.extractTasksFromStandard(data);
 	}
 
 	/**
@@ -194,82 +198,6 @@ export class FormatHandler {
 
 		// Standard format - just has 'master' tag
 		return ['master'];
-	}
-
-	/**
-	 * Convert tasks and metadata to the appropriate format for saving
-	 */
-	convertToSaveFormat(
-		tasks: Task[],
-		metadata: TaskMetadata,
-		existingData: any,
-		tag: string
-	): any {
-		const resolvedTag = tag || 'master';
-
-		// Normalize task IDs to strings
-		const normalizedTasks = this.normalizeTasks(tasks);
-
-		// Check if existing file uses legacy format
-		if (existingData && this.detectFormat(existingData) === 'legacy') {
-			return this.convertToLegacyFormat(normalizedTasks, metadata, resolvedTag);
-		}
-
-		// Use standard format for new files
-		return this.convertToStandardFormat(normalizedTasks, metadata, tag);
-	}
-
-	/**
-	 * Convert to legacy format
-	 */
-	private convertToLegacyFormat(
-		tasks: Task[],
-		metadata: TaskMetadata,
-		tag: string
-	): any {
-		return {
-			[tag]: {
-				tasks,
-				metadata: {
-					...metadata,
-					tags: [tag]
-				}
-			}
-		};
-	}
-
-	/**
-	 * Convert to standard format
-	 */
-	private convertToStandardFormat(
-		tasks: Task[],
-		metadata: TaskMetadata,
-		tag?: string
-	): FileStorageData {
-		return {
-			tasks,
-			metadata: {
-				...metadata,
-				tags: tag ? [tag] : []
-			}
-		};
-	}
-
-	/**
-	 * Normalize task and subtask IDs to strings
-	 */
-	private normalizeTasks(tasks: Task[]): Task[] {
-		return tasks.map((task) => ({
-			...task,
-			id: String(task.id), // Task IDs are strings
-			dependencies: task.dependencies?.map((dep) => String(dep)) || [],
-			subtasks:
-				task.subtasks?.map((subtask) => ({
-					...subtask,
-					id: String(subtask.id), // Subtask IDs are strings since schema version 2
-					parentId: String(subtask.parentId ?? task.id) // Parent ID is string (Task ID); older files omit it
-				})) || []
-		}));
 	}
 
 	/**

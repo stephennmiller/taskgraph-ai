@@ -8,7 +8,8 @@ import path from 'node:path';
 import { TASKGRAPH_STATE_FILE } from '../../../common/constants/paths.js';
 import {
 	ERROR_CODES,
-	TaskGraphError
+	TaskGraphError,
+	errorWithHint
 } from '../../../common/errors/taskgraph-error.js';
 import { getLogger } from '../../../common/logger/index.js';
 import {
@@ -17,6 +18,7 @@ import {
 	isValidBranchForTag,
 	sanitizeBranchNameForTag
 } from '../../../common/utils/git-utils.js';
+import { readProjectEnv } from '../../config/services/project-env.js';
 import { stateFileError } from '../../config/services/runtime-state-manager.service.js';
 import { FileOperations } from '../../storage/adapters/file-storage/file-operations.js';
 
@@ -152,24 +154,63 @@ async function saveStateFile(
 	}
 }
 
+const UNSET_TAG_ENV =
+	"Unset TASKGRAPH_TAG (in your shell, the project's .env or the MCP server's env)";
+
 /**
- * Check that state.json can be saved, before a tag change that must be
+ * Refuse to make `tagName` current while TASKGRAPH_TAG names another tag: the
+ * variable wins over state.json on every load, so the switch would be
+ * reported and never happen (#1098)
+ */
+function assertTagNotSetByEnv(
+	projectRoot: string,
+	tagName: string,
+	change = `changed to "${tagName}"`
+): void {
+	const fromEnv = readProjectEnv(projectRoot).TASKGRAPH_TAG;
+	if (!fromEnv || fromEnv === tagName) return;
+	throw errorWithHint(
+		ERROR_CODES.VALIDATION_ERROR,
+		`TASKGRAPH_TAG sets the current tag to "${fromEnv}", so it can't be ${change}`,
+		`${UNSET_TAG_ENV}, then run this again`
+	);
+}
+
+/**
+ * What to do about an active tag tasks.json doesn't have: `tags use` can't
+ * change a tag TASKGRAPH_TAG sets, so that case names the variable
+ */
+export function missingActiveTagHint(projectRoot: string): string {
+	return readProjectEnv(projectRoot).TASKGRAPH_TAG
+		? `${UNSET_TAG_ENV}, or set it to a tag \`taskgraph tags\` lists`
+		: 'Switch with `taskgraph tags use <tag>`; `taskgraph tags` lists them';
+}
+
+/**
+ * Check that `tagName` can be made current, before a tag change that must be
  * followed by recordCurrentTag: the change can't be undone once made (#807)
+ * @param change - What the caller does to the current tag, for the refusal
  * @throws {TaskGraphError} as recordCurrentTag does
  */
-export async function assertStateWritable(projectRoot: string): Promise<void> {
+export async function assertStateWritable(
+	projectRoot: string,
+	tagName: string,
+	change: 'removed' | 'renamed'
+): Promise<void> {
+	assertTagNotSetByEnv(projectRoot, tagName, change);
 	await saveStateFile(projectRoot, () => {});
 }
 
 /**
  * Make tagName the current tag in state.json.
- * @throws {TaskGraphError} when state.json can't be saved, so the caller
- * never reports a switch that didn't happen
+ * @throws {TaskGraphError} when state.json can't be saved or TASKGRAPH_TAG
+ * names another tag, so the caller never reports a switch that didn't happen
  */
 export async function recordCurrentTag(
 	projectRoot: string,
 	tagName: string
 ): Promise<void> {
+	assertTagNotSetByEnv(projectRoot, tagName);
 	await saveStateFile(projectRoot, (state) => {
 		state.currentTag = tagName;
 		state.lastSwitched = new Date().toISOString();

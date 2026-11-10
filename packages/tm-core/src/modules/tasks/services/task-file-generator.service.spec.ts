@@ -210,6 +210,20 @@ describe('TaskFileGeneratorService', () => {
 				expect(fs.readdirSync(outside)).toEqual(['task_009.md']);
 			});
 
+			it('writes and deletes nothing through a symlinked .taskgraph', async () => {
+				fs.mkdirSync(path.join(outside, 'tasks'));
+				fs.writeFileSync(path.join(outside, 'tasks', 'task_009.md'), 'keep');
+				fs.symlinkSync(outside, path.join(tempDir, '.taskgraph'));
+
+				const result = await service.generateTaskFiles();
+
+				expect(result.success).toBe(false);
+				expect(result.error).toContain('symlink');
+				expect(fs.readdirSync(path.join(outside, 'tasks'))).toEqual([
+					'task_009.md'
+				]);
+			});
+
 			it('writes no task file that is a symlink, and still writes the rest', async () => {
 				const dir = path.join(tempDir, '.taskgraph', 'tasks');
 				fs.mkdirSync(dir, { recursive: true });
@@ -335,6 +349,28 @@ describe('TaskFileGeneratorService', () => {
 
 			expect(result.success).toBe(true);
 			expect(result.count).toBe(0);
+		});
+
+		it('deletes the files of a tag that ends with no tasks, and only those (#1125)', async () => {
+			const result = await service.generateTaskFiles({ tag: 'feature' });
+			const kept = ['notes.md', 'task_001.md', 'task_001_feature-x.md'];
+			for (const name of kept) {
+				fs.writeFileSync(path.join(result.directory, name), 'mine');
+			}
+			const emptyService = new TaskFileGeneratorService(
+				createMockStorage([]),
+				tempDir,
+				mockConfigManager
+			);
+
+			const emptied = await emptyService.generateTaskFiles({ tag: 'feature' });
+
+			expect(emptied).toMatchObject({
+				success: true,
+				count: 0,
+				orphanedFilesRemoved: 3
+			});
+			expect(fs.readdirSync(result.directory).sort()).toEqual(kept);
 		});
 
 		it('should clean up orphaned task files', async () => {

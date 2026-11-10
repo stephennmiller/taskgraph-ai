@@ -2,12 +2,12 @@
  * @fileoverview Tag create/delete/rename/stats operations on the single tasks.json file
  */
 
-import fs from 'node:fs/promises';
 import path from 'node:path';
 import { isTaskComplete } from '../../../../common/constants/index.js';
 import {
 	ERROR_CODES,
-	TaskGraphError
+	TaskGraphError,
+	errorWithHint
 } from '../../../../common/errors/taskgraph-error.js';
 import type { IStorage } from '../../../../common/interfaces/storage.interface.js';
 import {
@@ -21,7 +21,12 @@ import {
 } from '../../../tasks/utils/archive.js';
 import { CLAIM_KEYS, withoutClaim } from '../../../tasks/utils/claim.js';
 import { complexityReportPath } from '../../../reports/managers/complexity-report-manager.js';
-import type { FileOperations } from './file-operations.js';
+import {
+	type FileOperations,
+	refuseSymlinkedFolders,
+	removeProjectFile,
+	renameProjectFile
+} from './file-operations.js';
 import type { FormatHandler } from './format-handler.js';
 import { getOwnKey, setOwnKey } from '../../../../common/utils/own-key.js';
 import type { PathResolver } from './path-resolver.js';
@@ -95,13 +100,20 @@ export class TagOperations {
 			);
 			this.assertNoRetiredIds(tagName, tasks);
 			tasksCopied = tasks.length;
+			const retired = archiveTag(
+				readArchiveSync(this.pathResolver.getArchivePath()),
+				tagName
+			).metadata.highestId;
 			const now = new Date().toISOString();
 			setOwnKey(data, tagName, {
 				tasks,
 				metadata: {
 					created: now,
 					updated: now,
-					description: options?.description
+					description: options?.description,
+					// A removed tag's IDs stay taken under its name: move --to-tag
+					// numbers above this mark, as add-task does from the archive (#1095)
+					...(retired > 0 && { highestId: retired })
 				}
 			});
 			return data;
@@ -192,6 +204,7 @@ export class TagOperations {
 	 * Uses modifyJson for atomic read-modify-write to prevent lost updates
 	 */
 	async deleteTag(tag: string): Promise<void> {
+		this.refuseLinkedReports(tag);
 		let highestId = 0;
 		await this.modifyTagged(this.pathResolver.getTasksPath(), (data) => {
 			if (!Object.hasOwn(data, tag)) throw tagNotFound(tag);
@@ -203,7 +216,7 @@ export class TagOperations {
 			dropArchiveTag(archive, tag, highestId)
 		);
 		const report = this.reportPath(tag);
-		if (report) await fs.rm(report, { force: true });
+		if (report) removeProjectFile(this.projectRoot, report);
 	}
 
 	/**
@@ -213,6 +226,7 @@ export class TagOperations {
 	 * Uses modifyJson for atomic read-modify-write to prevent lost updates
 	 */
 	async renameTag(oldTag: string, newTag: string): Promise<void> {
+		this.refuseLinkedReports(oldTag);
 		let highestId = 0;
 		await this.modifyTagged(this.pathResolver.getTasksPath(), (data) => {
 			if (!Object.hasOwn(data, oldTag)) throw tagNotFound(oldTag);
@@ -242,9 +256,11 @@ export class TagOperations {
 		const from = this.reportPath(oldTag);
 		const to = this.reportPath(newTag);
 		if (from && to) {
-			await fs.rename(from, to).catch((error) => {
-				if (error?.code !== 'ENOENT') throw error;
-			});
+			try {
+				renameProjectFile(this.projectRoot, from, to);
+			} catch (error) {
+				if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+			}
 		}
 	}
 
@@ -254,11 +270,7 @@ export class TagOperations {
 	 * by tag and ID, so the task would take over the old task's issue. A tag
 	 * renamed back to its old name (the tombstone's `renamedTo`) is its own.
 	 */
-	private assertNoRetiredIds(
-		tag: string,
-		tasks: unknown,
-		renamedFrom?: string
-	): void {
+	assertNoRetiredIds(tag: string, tasks: unknown, renamedFrom?: string): void {
 		const { metadata } = archiveTag(
 			readArchiveSync(this.pathResolver.getArchivePath()),
 			tag
@@ -268,19 +280,31 @@ export class TagOperations {
 		}
 		const ids = Array.isArray(tasks) ? tasks.map((t) => Number(t?.id)) : [];
 		if (!ids.some((id) => id <= metadata.highestId)) return;
-		throw new TaskGraphError(
+		throw errorWithHint(
+			ERROR_CODES.VALIDATION_ERROR,
 			`Tag "${tag}" was removed or renamed, and its tasks used IDs up to ${metadata.highestId}. Tasks put under that name would reuse them and take over their GitHub issues; use another name`,
-			ERROR_CODES.VALIDATION_ERROR
+			`Or give them new IDs under that name: \`taskgraph tags add ${tag}\`, then \`taskgraph move --from <ids> --from-tag <tag> --to-tag ${tag}\` numbers them above ${metadata.highestId}. That moves the tasks; copy the tag to a spare name first to keep the originals`
 		);
+	}
+
+	/**
+	 * Before the tag changes: removeProjectFile and renameProjectFile refuse a
+	 * linked reports folder, and refused afterwards the command would fail
+	 * with the tag already removed or renamed
+	 */
+	private refuseLinkedReports(tag: string): void {
+		const report = this.reportPath(tag);
+		if (report) refuseSymlinkedFolders(report);
+	}
+
+	private get projectRoot(): string {
+		return path.dirname(this.pathResolver.getBasePath());
 	}
 
 	/** A tag's complexity report; undefined for a name that can't name a file */
 	private reportPath(tag: string): string | undefined {
 		try {
-			return complexityReportPath(
-				path.dirname(this.pathResolver.getBasePath()),
-				tag
-			);
+			return complexityReportPath(this.projectRoot, tag);
 		} catch {
 			return undefined;
 		}

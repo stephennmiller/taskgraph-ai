@@ -14,6 +14,7 @@ import {
 	PRESET_NAMES,
 	ParallelLoopError,
 	type ParallelTask,
+	STOP_SIGNALS,
 	type TmCore,
 	assertContainerFlags,
 	assertParallelFlags,
@@ -505,9 +506,6 @@ export class LoopCommand extends Command {
 		return cmd;
 	}
 }
-
-/** Signals that stop a parallel run the way Ctrl-C does */
-const STOP_SIGNALS: NodeJS.Signals[] = ['SIGINT', 'SIGTERM', 'SIGHUP'];
 
 /** A block of lines redrawn in place on a terminal */
 class LiveLines {
