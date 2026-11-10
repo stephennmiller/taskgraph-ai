@@ -13,3 +13,9 @@ export {
 	fullSubtaskId,
 	normalizeTaskId
 } from './task-id.js';
+export {
+	assertNoNewTaskProblems,
+	findStoredTaskProblems,
+	knownTaskProblems,
+	type StoredTaskProblem
+} from './stored-tasks.js';
