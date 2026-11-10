@@ -128,7 +128,8 @@ describe.skipIf(process.platform === 'win32')(
 			beforeEach(() => {
 				fs.writeFileSync(
 					claude,
-					`#!/bin/sh\n(trap '' TERM; exec sleep 30) &\necho "$$ $!" > "${path.join(dir, 'pids')}"\ntrap 'echo bye > "${path.join(dir, 'graceful')}"; exit 0' TERM\nwhile :; do sleep 0.1; done\n`,
+					// The trap goes in before the pids file says it's up, so no SIGTERM lands before it
+					`#!/bin/sh\ntrap 'echo bye > "${path.join(dir, 'graceful')}"; exit 0' TERM\n(trap '' TERM; exec sleep 30) &\necho "$$ $!" > "${path.join(dir, 'pids')}"\nwhile :; do sleep 0.1; done\n`,
 					{ mode: 0o755 }
 				);
 			});
