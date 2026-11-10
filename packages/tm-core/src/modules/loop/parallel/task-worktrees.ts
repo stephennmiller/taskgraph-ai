@@ -103,11 +103,15 @@ export class TaskWorktrees {
 		this.projectRoot = canonical(projectRoot);
 	}
 
-	private async git(args: string[], cwd = this.projectRoot): Promise<string> {
+	private async git(
+		args: string[],
+		cwd = this.projectRoot,
+		env?: NodeJS.ProcessEnv
+	): Promise<string> {
 		// No time limit: `worktree add`, `merge` and `checkout` run the user's
 		// hooks (an npm install, a test suite), and killing one leaves a
 		// half-made worktree or a merge in progress
-		return (await runGit(args, { cwd, timeoutMs: 0 })).stdout;
+		return (await runGit(args, { cwd, timeoutMs: 0, env })).stdout;
 	}
 
 	private async succeeds(args: string[]): Promise<boolean> {
@@ -463,7 +467,8 @@ export class TaskWorktrees {
 				top,
 				`${sha}:refs/heads/${branch}`
 			],
-			clone
+			clone,
+			{ GIT_ALLOW_PROTOCOL: 'file' }
 		);
 		await this.git(['checkout', '--quiet', branch], clone);
 	}
@@ -480,8 +485,6 @@ export class TaskWorktrees {
 				'-c',
 				'core.hooksPath=/dev/null',
 				'-c',
-				'protocol.file.allow=always',
-				'-c',
 				'transfer.fsckObjects=true',
 				'fetch',
 				'--quiet',
@@ -495,8 +498,10 @@ export class TaskWorktrees {
 			{
 				cwd: this.projectRoot,
 				timeoutMs: 10 * 60_000,
-				// upload-pack sets this itself; said again so nothing undoes it
-				env: { GIT_NO_LAZY_FETCH: '1' }
+				// shortcut: with the file transport on, git before 2.45 (no
+				// GIT_NO_LAZY_FETCH) can still start a partial-clone remote's
+				// program in this fetch and cloneFor's; needs a git version gate
+				env: { GIT_ALLOW_PROTOCOL: 'file' }
 			}
 		);
 	}
