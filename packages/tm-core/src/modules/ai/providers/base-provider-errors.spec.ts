@@ -14,16 +14,12 @@ class TestProvider extends BaseAIProvider {
 		super(vi.fn());
 		this.name = 'TestProvider';
 	}
-	getRequiredApiKeyName() {
-		return 'TEST_API_KEY';
-	}
 	async getClient() {
 		return (modelId: string) => ({ modelId }) as any;
 	}
 }
 
 const params = {
-	apiKey: 'key',
 	modelId: 'model',
 	messages: [{ role: 'user', content: 'test' }]
 };

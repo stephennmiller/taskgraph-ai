@@ -33,10 +33,6 @@ class ContractProvider extends BaseAIProvider {
 	getClient() {
 		return () => this.model;
 	}
-	isRequiredApiKey() {
-		return false;
-	}
-	validateAuth() {}
 }
 
 const params = (extra: Record<string, unknown> = {}) => ({

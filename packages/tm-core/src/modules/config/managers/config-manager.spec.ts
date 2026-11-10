@@ -44,8 +44,6 @@ describe('ConfigManager', () => {
 			});
 			this.loadLocalConfig = vi.fn().mockResolvedValue(null);
 			this.loadGlobalConfig = vi.fn().mockResolvedValue(null);
-			this.hasLocalConfig = vi.fn().mockResolvedValue(false);
-			this.hasGlobalConfig = vi.fn().mockResolvedValue(false);
 			return this;
 		} as any);
 
@@ -57,8 +55,6 @@ describe('ConfigManager', () => {
 				storage: { type: 'file' }
 			});
 			this.getSources = vi.fn().mockReturnValue([]);
-			this.hasSource = vi.fn().mockReturnValue(false);
-			this.removeSource = vi.fn().mockReturnValue(false);
 			return this;
 		} as any);
 
@@ -67,8 +63,6 @@ describe('ConfigManager', () => {
 			this.saveState = vi.fn().mockResolvedValue(undefined);
 			this.getCurrentTag = vi.fn().mockReturnValue('master');
 			this.setCurrentTag = vi.fn().mockResolvedValue(undefined);
-			this.getState = vi.fn().mockReturnValue({ activeTag: 'master' });
-			this.updateMetadata = vi.fn().mockResolvedValue(undefined);
 			this.clearState = vi.fn().mockResolvedValue(undefined);
 			return this;
 		} as any);
@@ -188,8 +182,6 @@ describe('ConfigManager', () => {
 						}
 					});
 					this.getSources = vi.fn().mockReturnValue([]);
-					this.hasSource = vi.fn().mockReturnValue(false);
-					this.removeSource = vi.fn().mockReturnValue(false);
 					return this;
 				} as any);
 

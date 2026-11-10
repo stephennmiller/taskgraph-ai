@@ -40,15 +40,6 @@ describe('Claude Code Integration (Optional)', () => {
 	it('should create a working provider instance', () => {
 		const provider = new ClaudeCodeProvider(providerOptions());
 		expect(provider.name).toBe('Claude Code');
-		expect(provider.getSupportedModels()).toEqual(['opus', 'sonnet', 'haiku']);
-	});
-
-	it('should support model validation', () => {
-		const provider = new ClaudeCodeProvider(providerOptions());
-		expect(provider.isModelSupported('sonnet')).toBe(true);
-		expect(provider.isModelSupported('opus')).toBe(true);
-		expect(provider.isModelSupported('haiku')).toBe(true);
-		expect(provider.isModelSupported('unknown')).toBe(false);
 	});
 
 	it('should create a client successfully', async () => {
@@ -119,7 +110,6 @@ describe('Claude Code Integration (Optional)', () => {
 
 	it('should not require authentication validation', () => {
 		const provider = new ClaudeCodeProvider(providerOptions());
-		expect(provider.isRequiredApiKey()).toBe(false);
 		expect(() => provider.validateAuth()).not.toThrow();
 		expect(() => provider.validateAuth({})).not.toThrow();
 		expect(() => provider.validateAuth({ commandName: 'test' })).not.toThrow();

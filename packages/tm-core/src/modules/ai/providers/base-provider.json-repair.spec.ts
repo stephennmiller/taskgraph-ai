@@ -48,9 +48,6 @@ class TestProvider extends BaseAIProvider {
 		super(vi.fn());
 		this.name = 'TestProvider';
 	}
-	getRequiredApiKeyName() {
-		return 'TEST_API_KEY';
-	}
 	async getClient(): Promise<any> {
 		return vi.fn((modelId: string) => ({ modelId }));
 	}
@@ -79,7 +76,6 @@ describe('BaseAIProvider JSON repair for malformed responses', () => {
 		mockJsonrepair.mockReturnValue(repairedJson);
 
 		const result = await testProvider.generateObject({
-			apiKey: 'key',
 			modelId: 'model',
 			messages: [{ role: 'user', content: 'test' }],
 			schema: z.object({ key: z.string() }),
@@ -107,7 +103,6 @@ describe('BaseAIProvider JSON repair for malformed responses', () => {
 
 		await expect(
 			testProvider.generateObject({
-				apiKey: 'key',
 				modelId: 'model',
 				messages: [{ role: 'user', content: 'test' }],
 				schema: z.object({ title: z.string(), priority: z.string() }),
@@ -130,7 +125,6 @@ describe('BaseAIProvider JSON repair for malformed responses', () => {
 
 		await expect(
 			testProvider.generateObject({
-				apiKey: 'key',
 				modelId: 'model',
 				messages: [{ role: 'user', content: 'test' }],
 				schema: { type: 'object' },
@@ -145,7 +139,6 @@ describe('BaseAIProvider JSON repair for malformed responses', () => {
 
 		await expect(
 			testProvider.generateObject({
-				apiKey: 'key',
 				modelId: 'model',
 				messages: [{ role: 'user', content: 'test' }],
 				schema: { type: 'object' },
