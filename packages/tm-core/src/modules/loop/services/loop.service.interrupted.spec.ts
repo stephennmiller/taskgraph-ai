@@ -88,4 +88,29 @@ describe('LoopService interrupted task', () => {
 
 		expect(prompt()).not.toContain(LINE);
 	});
+
+	it('tells a sandboxed session to look for itself, without asking git on the host (#1133)', async () => {
+		const uncommittedFiles = vi.fn(async () => ['src/a.ts']);
+		const sandboxed = new LoopService({
+			projectRoot: '/test/project',
+			findReadyTask: async () => '2',
+			taskStatuses: async () =>
+				new Map<string, TaskStatus>([['2', 'in-progress']]),
+			uncommittedFiles
+		});
+
+		await sandboxed.run(config({ sandbox: true }));
+
+		expect(prompt()).toContain(
+			'Task 2 was in progress when an earlier run stopped. Run git status, and if it shows uncommitted changes, check them and continue from them rather than starting over.'
+		);
+		expect(prompt()).not.toContain('src/a.ts');
+		expect(uncommittedFiles).not.toHaveBeenCalled();
+	});
+
+	it('says nothing to a sandboxed session that starts on a pending task', async () => {
+		await service('pending', ['src/a.ts']).run(config({ sandbox: true }));
+
+		expect(prompt()).not.toContain('earlier run stopped');
+	});
 });
