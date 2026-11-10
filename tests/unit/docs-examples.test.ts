@@ -75,6 +75,7 @@ const SKIPPED: Record<string, string> = {
 	'taskgraph doctor':
 		"exits 1 for what this machine lacks (Claude Code, the plugin), and starts the machine's claude",
 	'taskgraph doctor --json': 'as doctor',
+	'taskgraph doctor --fix': 'as doctor',
 	'taskgraph upgrade': 'downloads and installs a release from the network',
 	'taskgraph models --setup': 'asks its questions on a terminal',
 	'taskgraph list --watch': 'runs until Ctrl-C',
