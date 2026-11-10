@@ -114,9 +114,21 @@ export class TaskWorktrees {
 		return (await runGit(args, { cwd, timeoutMs: 0, env })).stdout;
 	}
 
-	private async succeeds(args: string[]): Promise<boolean> {
+	/**
+	 * For `worktree add` and `merge`: their hooks may fetch (submodules, an
+	 * npm install), and start the repository's programs with or without
+	 * runGit's transport guard, so the user's own setting stands
+	 */
+	private hookEnv(): NodeJS.ProcessEnv {
+		return { GIT_ALLOW_PROTOCOL: process.env.GIT_ALLOW_PROTOCOL };
+	}
+
+	private async succeeds(
+		args: string[],
+		env?: NodeJS.ProcessEnv
+	): Promise<boolean> {
 		try {
-			await this.git(args);
+			await this.git(args, this.projectRoot, env);
 			return true;
 		} catch {
 			return false;
@@ -304,18 +316,26 @@ export class TaskWorktrees {
 		}
 		fs.mkdirSync(path.dirname(worktree), { recursive: true });
 		if (await this.branchExists(branch)) {
-			await this.git(['worktree', 'add', '--quiet', worktree, gitRef(branch)]);
+			await this.git(
+				['worktree', 'add', '--quiet', worktree, gitRef(branch)],
+				this.projectRoot,
+				this.hookEnv()
+			);
 			return { createdBranch: false };
 		}
-		await this.git([
-			'worktree',
-			'add',
-			'--quiet',
-			'-b',
-			gitRef(branch),
-			worktree,
-			gitRef(base)
-		]);
+		await this.git(
+			[
+				'worktree',
+				'add',
+				'--quiet',
+				'-b',
+				gitRef(branch),
+				worktree,
+				gitRef(base)
+			],
+			this.projectRoot,
+			this.hookEnv()
+		);
 		return { createdBranch: true };
 	}
 
@@ -521,7 +541,12 @@ export class TaskWorktrees {
 	 * @returns false, with the merge undone, when it conflicts or fails
 	 */
 	async merge(branch: string): Promise<boolean> {
-		if (await this.succeeds(['merge', '--no-edit', gitRef(branch)])) {
+		if (
+			await this.succeeds(
+				['merge', '--no-edit', gitRef(branch)],
+				this.hookEnv()
+			)
+		) {
 			return true;
 		}
 		await this.succeeds(['merge', '--abort']);
