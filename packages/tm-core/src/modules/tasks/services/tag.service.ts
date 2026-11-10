@@ -187,8 +187,9 @@ export class TagService {
 	}
 
 	/**
-	 * Create a new tag, empty or with a copy of another tag's tasks. A source
-	 * tag that is missing or empty gives an empty tag (tasksCopied 0).
+	 * Create a new tag, empty or with a copy of another tag's tasks. An empty
+	 * source tag gives an empty tag (tasksCopied 0).
+	 * @throws {TaskGraphError} NOT_FOUND when `copyFromTag` names no tag
 	 */
 	async createTag(
 		name: string,
@@ -196,6 +197,9 @@ export class TagService {
 	): Promise<CreateTagResult> {
 		requireName(name, 'Tag name');
 		this.validateNewTagName(name);
+		if (options.copyFromTag) {
+			await this.requireTag(options.copyFromTag, 'Source tag');
+		}
 
 		const sourceTag =
 			options.copyFromTag ||

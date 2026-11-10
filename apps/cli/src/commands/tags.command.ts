@@ -378,7 +378,7 @@ Examples:
 
 			if (options?.copyFrom && created.tasksCopied === 0) {
 				console.log(
-					`${chalk.yellow('⚠')} Source tag "${terminalSafe(options.copyFrom)}" not found or has no tasks`
+					`${chalk.yellow('⚠')} Source tag "${terminalSafe(options.copyFrom)}" has no tasks`
 				);
 			}
 			// Only a description the user gave, not the default

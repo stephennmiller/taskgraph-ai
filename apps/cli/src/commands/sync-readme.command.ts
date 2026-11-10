@@ -35,7 +35,7 @@ export class SyncReadmeCommand extends Command {
 			)
 			.option(
 				'-t, --tag <tag>',
-				'Tag to use for the task list (default: master)'
+				'Tag to use for the task list (default: the current tag)'
 			)
 			.action(async (options: SyncReadmeCommandOptions) => {
 				await this.executeCommand(options);

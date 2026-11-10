@@ -5,14 +5,14 @@ describe('displayUpgradeNotification', () => {
 	let log: ReturnType<typeof vi.spyOn>;
 
 	beforeEach(() => {
-		log = vi.spyOn(console, 'log').mockImplementation(() => {});
+		log = vi.spyOn(console, 'error').mockImplementation(() => {});
 	});
 
 	afterEach(() => {
 		log.mockRestore();
 	});
 
-	it('names the new and the installed version', () => {
+	it('prints on stderr, naming the new and the installed version', () => {
 		displayUpgradeNotification('1.0.0', '1.1.0');
 
 		expect(log).toHaveBeenCalledTimes(1);

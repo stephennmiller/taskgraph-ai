@@ -33,6 +33,7 @@ import {
 	type ReadmeExportOptions,
 	writeReadmeExport
 } from './utils/readme-export.js';
+import { parseStatusFilter } from './utils/task-filters.js';
 import {
 	ERROR_CODES,
 	TaskGraphError
@@ -135,11 +136,14 @@ export class TasksDomain {
 	/**
 	 * Write the tag's task list into the project's README.md, between export
 	 * markers (replacing an earlier export)
+	 * @throws {TaskGraphError} VALIDATION_ERROR for an unknown status
 	 */
 	async syncReadme(
 		options: ReadmeExportOptions & { tag?: string } = {}
 	): Promise<{ readmePath: string }> {
 		this.requireTasksFile();
+		// A typo would match no task and replace the README's table with an empty one
+		parseStatusFilter(options.status);
 		const { tasks } = await this.list({ tag: options.tag });
 		return {
 			readmePath: writeReadmeExport(

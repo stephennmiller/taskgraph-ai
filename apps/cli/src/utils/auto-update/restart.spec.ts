@@ -21,7 +21,7 @@ describe('restartWithNewVersion', () => {
 	];
 
 	beforeEach(() => {
-		vi.spyOn(console, 'log').mockImplementation(() => {});
+		vi.spyOn(console, 'error').mockImplementation(() => {});
 		spawn.mockReset();
 		spawn.mockReturnValue(new EventEmitter());
 	});
@@ -41,6 +41,17 @@ describe('restartWithNewVersion', () => {
 		// Each argument stays whole: no shell joins them or reads the `&`
 		expect(args).toEqual(argv.slice(1));
 		expect(options.shell).toBeFalsy();
+	});
+
+	it('says it is restarting on stderr, not stdout (#1106)', () => {
+		const stdout = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+		restartWithNewVersion(argv);
+
+		expect(vi.mocked(console.error).mock.calls.flat().join('')).toContain(
+			'Restarting with updated version'
+		);
+		expect(stdout).not.toHaveBeenCalled();
 	});
 
 	it('does not check for an update again in the restarted run', () => {

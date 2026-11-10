@@ -50,6 +50,15 @@ Examples:
 		let language = options.response;
 
 		if (options.setup) {
+			// Without a terminal the prompt writes escapes into the pipe and waits
+			if (!(process.stdin.isTTY && process.stdout.isTTY)) {
+				printError(
+					'lang --setup needs a terminal to ask its question',
+					'Set it directly: `taskgraph lang --response <language>`'
+				);
+				process.exitCode = 1;
+				return;
+			}
 			try {
 				const { default: inquirer } = await import('inquirer');
 				const answer = await inquirer.prompt([
