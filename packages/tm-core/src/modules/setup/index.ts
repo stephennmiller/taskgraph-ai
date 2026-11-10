@@ -7,3 +7,4 @@ export * from './doctor.js';
 export * from './mcp-server.js';
 export * from './plugin-manifest.js';
 export * from './version-range.js';
+export type { DoctorFinding, DoctorRepair } from './doctor-data.js';
