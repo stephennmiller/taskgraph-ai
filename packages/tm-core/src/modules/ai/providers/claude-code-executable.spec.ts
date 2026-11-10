@@ -45,7 +45,7 @@ describe('isTrustedClaudeExecutable', () => {
 		base = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'tg-exe-')));
 		project = path.join(base, 'project');
 		fs.mkdirSync(path.join(project, 'bin'), { recursive: true });
-		fs.mkdirSync(path.join(base, 'bin'));
+		fs.mkdirSync(path.join(base, 'bin', 'linked'), { recursive: true });
 		outsideClaude = path.join(base, 'bin', 'claude');
 		fs.writeFileSync(outsideClaude, '');
 		fs.writeFileSync(path.join(project, 'bin', 'claude'), '');
@@ -91,6 +91,69 @@ describe('isTrustedClaudeExecutable', () => {
 		expect(isTrustedClaudeExecutable(path.join(base, 'claude'), project)).toBe(
 			false
 		);
+	});
+
+	describe('a project in a subfolder of a git repository (#1127)', () => {
+		let repo: string;
+		let app: string;
+
+		beforeAll(() => {
+			repo = path.join(base, 'repo');
+			app = path.join(repo, 'app');
+			fs.mkdirSync(path.join(repo, '.git'), { recursive: true });
+			fs.mkdirSync(path.join(repo, 'tools'));
+			fs.mkdirSync(app);
+			fs.writeFileSync(path.join(repo, 'tools', 'claude'), '');
+			// A link outside the repository that points into it
+			fs.symlinkSync(
+				path.join(repo, 'tools', 'claude'),
+				path.join(base, 'bin', 'linked', 'claude')
+			);
+			// The repository reached through a link, as a second path to the project
+			fs.symlinkSync(repo, path.join(base, 'repo-link'));
+		});
+
+		afterEach(() => vi.unstubAllEnvs());
+
+		it('refuses a claude elsewhere in the repository, directly or through a link', () => {
+			expect(
+				isTrustedClaudeExecutable(path.join(repo, 'tools', 'claude'), app)
+			).toBe(false);
+			expect(
+				isTrustedClaudeExecutable(
+					path.join(base, 'bin', 'linked', 'claude'),
+					app
+				)
+			).toBe(false);
+			expect(
+				isTrustedClaudeExecutable(
+					path.join(repo, 'tools', 'claude'),
+					path.join(base, 'repo-link', 'app')
+				)
+			).toBe(false);
+		});
+
+		it('still allows a claude outside the repository', () => {
+			expect(isTrustedClaudeExecutable(outsideClaude, app)).toBe(true);
+		});
+
+		it('keeps the project-folder rule when the repository is the home folder or above it', () => {
+			vi.stubEnv('HOME', repo);
+			vi.stubEnv('USERPROFILE', repo);
+
+			expect(
+				isTrustedClaudeExecutable(path.join(repo, 'tools', 'claude'), app)
+			).toBe(true);
+		});
+
+		it('keeps it too when the home folder is a link to the repository', () => {
+			vi.stubEnv('HOME', path.join(base, 'repo-link'));
+			vi.stubEnv('USERPROFILE', path.join(base, 'repo-link'));
+
+			expect(
+				isTrustedClaudeExecutable(path.join(repo, 'tools', 'claude'), app)
+			).toBe(true);
+		});
 	});
 
 	describe('claude on PATH', () => {
