@@ -152,6 +152,37 @@ describe('FileStorage tag delete and rename keep used IDs (#1064)', () => {
 		expect(fs.existsSync(reportOf('renamed'))).toBe(true);
 	});
 
+	// A committed link at .taskgraph/reports sent the delete and the rename
+	// to a file outside the project (#1123)
+	it.skipIf(process.platform === 'win32')(
+		'refuses to delete or move a report through a symlinked reports folder',
+		async () => {
+			const elsewhere = fs.mkdtempSync(path.join(os.tmpdir(), 'tg-out-'));
+			const reports = path.dirname(reportOf('other'));
+			fs.renameSync(reportOf('other'), path.join(elsewhere, 'kept.json'));
+			fs.writeFileSync(
+				path.join(elsewhere, path.basename(reportOf('other'))),
+				'{}'
+			);
+			fs.rmdirSync(reports);
+			fs.symlinkSync(elsewhere, reports);
+
+			await expect(storage.renameTag('other', 'renamed')).rejects.toThrow(
+				/symlink/
+			);
+			await expect(storage.deleteTag('other')).rejects.toThrow(/symlink/);
+
+			expect(fs.readdirSync(elsewhere).sort()).toEqual([
+				'kept.json',
+				'task-complexity-report_other.json'
+			]);
+			// Refused before the tag changed: a command that fails leaves it as it was
+			expect(await storage.getAllTags()).toContain('other');
+			expect(await storage.getAllTags()).not.toContain('renamed');
+			fs.rmSync(elsewhere, { recursive: true, force: true });
+		}
+	);
+
 	it('refuses a copy or rename onto a removed tag’s name that would reuse its IDs', async () => {
 		await storage.deleteTag('other');
 

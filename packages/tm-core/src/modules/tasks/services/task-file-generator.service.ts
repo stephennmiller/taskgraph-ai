@@ -11,7 +11,10 @@ import type { ConfigManager } from '../../config/managers/config-manager.js';
 import { resolveSubtaskDependency } from '../../dependencies/subtask-dependency.js';
 import { isSafeTaskId } from '../../../common/utils/safe-task-id.js';
 import {
+	makeProjectDir,
 	refuseSymlinkedFolders,
+	removeProjectFile,
+	renameProjectFile,
 	writeProjectFile
 } from '../../storage/adapters/file-storage/file-operations.js';
 import { TAG_NAME_PATTERN, assertTagName } from '../utils/tag-names.js';
@@ -80,8 +83,12 @@ export interface RemovedTaskFiles {
 	errors: string[];
 }
 
-/** Delete a tag's generated files in `dir` whose task number `remove` accepts */
+/**
+ * Delete a tag's generated files in `dir` whose task number `remove`
+ * accepts. `root` is the folder no link may lead out of (see removeProjectFile)
+ */
 function removeTaskFilesIn(
+	root: string,
 	dir: string,
 	tag: string,
 	remove: (id: string) => boolean
@@ -91,8 +98,7 @@ function removeTaskFilesIn(
 		if (!remove(id)) continue;
 		const target = path.join(dir, file);
 		try {
-			// unlink removes a link itself, never what it points at
-			fs.unlinkSync(target);
+			removeProjectFile(root, path.resolve(target));
 			result.removed.push(target);
 		} catch (error) {
 			// The file is a copy of tasks.json; one left behind loses nothing
@@ -137,7 +143,12 @@ export function removeGeneratedTaskFiles(
 	if (!dir) return { removed: [], errors: [] };
 	const ids = taskIds && new Set([...taskIds].map(String));
 	try {
-		return removeTaskFilesIn(dir, tag, (id) => !ids || ids.has(id));
+		return removeTaskFilesIn(
+			projectRoot,
+			dir,
+			tag,
+			(id) => !ids || ids.has(id)
+		);
 	} catch {
 		return { removed: [], errors: [] };
 	}
@@ -165,8 +176,14 @@ export function renameGeneratedTaskFiles(
 				renamed.toLowerCase() !== file.toLowerCase() &&
 				names.includes(renamed.toLowerCase());
 			try {
-				if (taken) fs.unlinkSync(path.join(dir, file));
-				else fs.renameSync(path.join(dir, file), path.join(dir, renamed));
+				if (taken) removeProjectFile(projectRoot, path.join(dir, file));
+				else {
+					renameProjectFile(
+						projectRoot,
+						path.join(dir, file),
+						path.join(dir, renamed)
+					);
+				}
 				names.push(renamed.toLowerCase());
 			} catch {
 				// A file left under the old name loses nothing; go on to the rest
@@ -199,17 +216,15 @@ export class TaskFileGeneratorService {
 		const tag = options.tag || this.configManager.getActiveTag();
 		const outputDir =
 			options.outputDir || path.join(this.projectPath, '.taskgraph', 'tasks');
+		// A folder the user named may be a link; the default one may not
+		const root = options.outputDir ? outputDir : this.projectPath;
 
 		try {
 			// The tag goes into each file name
 			assertTagName(tag);
 			// Writes and orphan cleanup must not follow a symlinked default
 			// folder, or a symlinked .taskgraph above it
-			if (!options.outputDir)
-				refuseSymlinkedFolders(path.join(outputDir, 'task.md'));
-
-			// Ensure output directory exists
-			await fs.promises.mkdir(outputDir, { recursive: true });
+			makeProjectDir(root, path.resolve(outputDir));
 
 			// Load tasks from storage
 			const tasks = await this.storage.loadTasks(tag);
@@ -219,6 +234,7 @@ export class TaskFileGeneratorService {
 			let orphanedCount = 0;
 			try {
 				orphanedCount = removeTaskFilesIn(
+					root,
 					outputDir,
 					tag,
 					(id) => !validTaskIds.has(id)
@@ -241,12 +257,7 @@ export class TaskFileGeneratorService {
 					const content = this.formatTaskContent(task, tasks);
 					const fileName = taskFileName(task.id, tag);
 					const filePath = path.join(outputDir, fileName);
-					// A folder the user named may be a link; the default one may not
-					writeProjectFile(
-						options.outputDir ? outputDir : this.projectPath,
-						path.resolve(filePath),
-						content
-					);
+					writeProjectFile(root, path.resolve(filePath), content);
 					return task.id;
 				})
 			);
