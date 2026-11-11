@@ -33,8 +33,9 @@ belongs:
 - **CLI commands**: `apps/cli/src/commands/`, registered in
   `apps/cli/src/command-registry.ts`. Call `@tm/core` and format the result.
 - **MCP tools**: `apps/mcp/src/tools/`, also a thin layer over `@tm/core`.
-- **Claude Code plugin**: `packages/claude-code-plugin/` (markdown, JSON and
-  shell only).
+- **Claude Code plugin**: `packages/claude-code-plugin/` (markdown and JSON
+  only, so the Claude plugin directory accepts it) and its hooks in
+  `packages/claude-code-hooks/` (JSON and POSIX shell).
 - **User docs**: `apps/docs/` (Mintlify).
 - **Repo-level tests**: `tests/` (git hooks, CI scripts, plugin hooks).
 

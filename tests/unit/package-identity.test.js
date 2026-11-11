@@ -97,7 +97,7 @@ describe('package identity', () => {
 			typeof author === 'string' ? author : author.name;
 		const authors = [
 			pkg,
-			readJson('packages/claude-code-plugin/package.json'),
+			readJson('packages/claude-code-hooks/.claude-plugin/plugin.json'),
 			readJson('packages/claude-code-plugin/.claude-plugin/plugin.json'),
 			...readJson('.claude-plugin/marketplace.json').plugins
 		].map(authorName);

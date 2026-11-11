@@ -148,18 +148,21 @@ describe('applyVersion', () => {
 
 	const pluginManifest = (version) =>
 		`{\n\t"name": "taskgraph",\n\t"version": "${version}",\n\t"metadata": { "taskgraphCli": ">=0.1.0" }\n}\n`;
-	const pluginPath = () =>
-		join(dir, 'packages/claude-code-plugin/.claude-plugin/plugin.json');
+	const plugins = ['claude-code-plugin', 'claude-code-hooks'];
+	const pluginPath = (plugin) =>
+		join(dir, `packages/${plugin}/.claude-plugin/plugin.json`);
 
 	beforeEach(() => {
 		dir = mkdtempSync(join(tmpdir(), 'version-bump-'));
-		mkdirSync(join(dir, 'packages/claude-code-plugin/.claude-plugin'), {
-			recursive: true
-		});
-		writeFileSync(pluginPath(), pluginManifest('1.0.0'));
+		for (const plugin of plugins) {
+			mkdirSync(join(dir, `packages/${plugin}/.claude-plugin`), {
+				recursive: true
+			});
+			writeFileSync(pluginPath(plugin), pluginManifest('1.0.0'));
+		}
 	});
 
-	it('bumps the plugin manifest with the package, leaving its CLI range alone', () => {
+	it('bumps both plugin manifests with the package, leaving its CLI range alone', () => {
 		writeFileSync(join(dir, 'package.json'), '{\n\t"version": "1.0.0"\n}\n');
 		writeFileSync(
 			join(dir, 'package-lock.json'),
@@ -168,10 +171,14 @@ describe('applyVersion', () => {
 
 		applyVersion(dir, '1.1.0');
 
-		expect(VERSION_FILES).toContain(
-			'packages/claude-code-plugin/.claude-plugin/plugin.json'
-		);
-		expect(readFileSync(pluginPath(), 'utf8')).toBe(pluginManifest('1.1.0'));
+		for (const plugin of plugins) {
+			expect(VERSION_FILES).toContain(
+				`packages/${plugin}/.claude-plugin/plugin.json`
+			);
+			expect(readFileSync(pluginPath(plugin), 'utf8')).toBe(
+				pluginManifest('1.1.0')
+			);
+		}
 	});
 
 	afterEach(() => {

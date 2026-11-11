@@ -1,7 +1,6 @@
 ---
 name: research
 description: Research a technical question, library, or approach on the web and return a sourced answer. Use when planning or implementing a TaskGraph task that needs current information, library documentation, or a comparison of options.
-allowed-tools: WebSearch WebFetch mcp__context7__resolve-library-id mcp__context7__query-docs
 ---
 
 # Research

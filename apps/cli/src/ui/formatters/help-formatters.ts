@@ -18,7 +18,11 @@
 import chalk from 'chalk';
 import { terminalWidth } from '../layout/helpers.js';
 import { theme } from '../theme.js';
-import { PLUGIN_MARKETPLACE, PLUGIN_NAME } from './init-summary-formatters.js';
+import {
+	HOOKS_PLUGIN_NAME,
+	PLUGIN_MARKETPLACE,
+	PLUGIN_NAME
+} from './init-summary-formatters.js';
 
 export interface HelpRow {
 	/** The command, plus a short hint for subcommands (`tags <add|use|…>`) */
@@ -173,7 +177,8 @@ export function formatHelp(width = terminalWidth(), hasProject = true): string {
 			theme.muted(' prints task context and rules'),
 		theme.muted('The CLI works on its own. For Claude Code slash commands:'),
 		`${INDENT}${theme.brand(`/plugin marketplace add ${PLUGIN_MARKETPLACE}`)}`,
-		`${INDENT}${theme.brand(`/plugin install ${PLUGIN_NAME}`)}`
+		`${INDENT}${theme.brand(`/plugin install ${PLUGIN_NAME}`)}`,
+		`${INDENT}${theme.brand(`/plugin install ${HOOKS_PLUGIN_NAME}`)}`
 	);
 
 	return lines.join('\n');

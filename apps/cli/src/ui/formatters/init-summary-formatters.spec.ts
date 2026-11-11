@@ -66,10 +66,11 @@ describe('formatInitSummary', () => {
 		expect(lines[next + 1]).toBe(
 			"      or taskgraph add-task -t 'Title' -d 'What'"
 		);
-		expect(lines.slice(next + 2, next + 5)).toEqual([
+		expect(lines.slice(next + 2, next + 6)).toEqual([
 			'Add the slash commands in Claude Code:',
 			'  /plugin marketplace add stephennmiller/taskgraph-ai',
-			'  /plugin install taskgraph@taskgraph'
+			'  /plugin install taskgraph@taskgraph',
+			'  /plugin install taskgraph-hooks@taskgraph'
 		]);
 	});
 

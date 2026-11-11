@@ -13,10 +13,10 @@ collects nothing about you or your project.
   [GitHub sync](/capabilities/github-sync) command.
 - The usage and cost summary printed after an AI command is computed locally
   and not sent anywhere.
-- The Claude Code plugin's hooks run your installed `taskgraph` CLI, read
+- The `taskgraph-hooks` plugin's hooks run your installed `taskgraph` CLI, read
   `.taskgraph/` in the project and keep the session start time in your temp
   folder. They turn off the update check and make no network calls.
-- The plugin's SessionStart hook adds the task in progress, the tasks ready
+- Its SessionStart hook adds the task in progress, the tasks ready
   next and TaskGraph's workflow rules to Claude's context, all printed by your
   locally installed `taskgraph prime`.
 
