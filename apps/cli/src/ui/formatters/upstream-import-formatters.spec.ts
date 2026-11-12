@@ -31,7 +31,7 @@ const imported: UpstreamImportSummary = {
 	},
 	changes: [
 		{ path: '.gitignore', note: 'created' },
-		{ path: '.env.example', note: 'optional settings' }
+		{ path: '.gitattributes', note: 'Git merges tasks.json by task; commit it' }
 	]
 };
 
@@ -41,8 +41,8 @@ describe('formatUpstreamImport', () => {
 
 		expect(lines).toEqual([
 			`✓ Imported 4 tasks in 2 tags, docs, reports and templates from ${dir}`,
-			'  .gitignore    created',
-			'  .env.example  optional settings',
+			'  .gitignore      created',
+			'  .gitattributes  Git merges tasks.json by task; commit it',
 			'Skipped the research model (perplexity sonar-pro) and 6 provider settings',
 			`${dir} is unchanged · Next: taskgraph next`
 		]);
