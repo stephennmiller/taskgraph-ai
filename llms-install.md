@@ -31,7 +31,7 @@ From the user's project folder:
 taskgraph init --yes
 ```
 
-This creates `.taskgraph/` and imports TaskGraph's workflow guide from `CLAUDE.md`. It writes no `.mcp.json` unless you add `--mcp`. Do not run `init` twice; it only re-adds the same files. It does not install slash commands; the Claude Code plugin does (in Claude Code, run `/plugin marketplace add stephennmiller/taskgraph-ai`, then `/plugin install taskgraph@taskgraph` and `/plugin install taskgraph-hooks@taskgraph` for the hooks that load task state automatically). The commands are then available as `/taskgraph:<name>`.
+This creates `.taskgraph/` and imports TaskGraph's workflow guide from `CLAUDE.md`. It writes no `.mcp.json` unless you add `--mcp`. Running `init` again is safe: it says the project is already set up and adds only what is missing. It does not install slash commands; the Claude Code plugin does (in Claude Code, run `/plugin marketplace add stephennmiller/taskgraph-ai`, then `/plugin install taskgraph@taskgraph` and `/plugin install taskgraph-hooks@taskgraph` for the hooks that load task state automatically). The commands are then available as `/taskgraph:<name>`.
 
 ### Step 3: (Optional) Add the MCP Server
 
@@ -99,12 +99,12 @@ taskgraph add-task --prompt="describe the task"
 
 ### Task Management
 
-| Slash command                           | CLI                                              |
-| --------------------------------------- | ------------------------------------------------ |
-| `/taskgraph:expand <id>`                | `taskgraph expand --id=<id>`                     |
-| `/taskgraph:add-task <description>`     | `taskgraph add-task --prompt='...'`              |
-| `/taskgraph:analyze-complexity`         | `taskgraph analyze-complexity`                   |
-| `/taskgraph:update-task <id> <changes>` | `taskgraph update-task --id=<id> --prompt='...'` |
+| Slash command                       | CLI                                    |
+| ----------------------------------- | -------------------------------------- |
+| `/taskgraph:expand <id>`            | `taskgraph expand --id=<id>`           |
+| `/taskgraph:add-task <description>` | `taskgraph add-task --prompt='...'`    |
+| `/taskgraph:analyze-complexity`     | `taskgraph analyze-complexity`         |
+| `/taskgraph:update <id> <changes>`  | `taskgraph update <id> --prompt='...'` |
 
 With the MCP server, the user can say the same things in plain language, such as "What's the next task I should work on?".
 

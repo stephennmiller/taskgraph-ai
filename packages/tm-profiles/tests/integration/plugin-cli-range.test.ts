@@ -60,10 +60,7 @@ function missing(
  * so an older CLI only loses that hook's extra text (the hook tests run each
  * one against an old CLI). Drop an entry once the minimum has it.
  */
-const OPTIONAL_HOOK_CALLS = new Set<string>([
-	// todo-write.sh: an older CLI's unknown-command error goes to /dev/null
-	'log-todos'
-]);
+const OPTIONAL_HOOK_CALLS = new Set<string>();
 
 const raise = `The plugin uses these, which taskgraph ${minimum} lacks. Raise metadata.taskgraphCli (${range}) in packages/claude-code-plugin/.claude-plugin/plugin.json to the first release that has them, then regenerate the snapshot: node packages/tm-profiles/tests/integration/cli-surface.ts v<that version>`;
 
