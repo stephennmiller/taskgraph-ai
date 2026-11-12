@@ -39,9 +39,10 @@ const EXPECTED_COMMANDS = [
 	'help',
 	'set-status',
 	'to-done',
-	'update-task',
+	'update',
 	'note',
-	'loop'
+	'loop',
+	'go'
 ];
 
 describe('plugin command files', () => {
@@ -94,16 +95,29 @@ describe('merged plugin commands', () => {
 		expect(body('list')).toContain('unmet dependencies');
 	});
 
-	it('update-task points bulk and status changes at the right commands', () => {
-		expect(body('update-task')).toContain('taskgraph update --from=<id>');
-		expect(body('update-task')).toContain('/taskgraph:set-status');
+	it('update points bulk and status changes at the right commands', () => {
+		expect(body('update')).toContain('taskgraph update --from=<id>');
+		expect(body('update')).toContain('/taskgraph:set-status');
 	});
 
-	it('loop runs with --trust only after the user agrees', () => {
-		expect(body('loop')).toMatch(
-			/go on only once they agree\. Then add `--trust`/
-		);
-		expect(body('loop')).not.toMatch(/^\s*taskgraph loop .*--trust/m);
+	it.each(['loop', 'go'])(
+		'%s runs with --trust only after the user agrees',
+		(name) => {
+			expect(body(name)).toMatch(
+				/go on only once they agree\. Then add `--trust`/
+			);
+			expect(body(name)).not.toMatch(
+				new RegExp(`^\\s*taskgraph ${name} .*--trust`, 'm')
+			);
+		}
+	);
+
+	it('go single-quotes the PRD path and stops when the file is missing', () => {
+		const calls = [...body('go').matchAll(/^\s*taskgraph go (\S+)/gm)];
+
+		expect(calls.map((call) => call[1])).toEqual(["'<prd-file>'"]);
+		expect(body('go')).toContain("writing any `'` in it as `'\\''`");
+		expect(body('go')).toContain("If it doesn't, say so and stop");
 	});
 
 	it('loop keeps parallel apart from the flags the CLI refuses with it', () => {
@@ -118,17 +132,16 @@ describe('merged plugin commands', () => {
 
 	it.each([
 		['list', '[status] [--subtasks]'],
-		['init', '[--quick] [<prd-file>]'],
-		['update-task', '<task ID> <changes>']
+		['init', '[--quick] [prd-file]'],
+		['update', '<task-id> <changes>'],
+		['go', '<prd-file> [sandbox]']
 	])('%s declares its argument hint', (name, hint) => {
 		expect(body(name)).toContain(`argument-hint: "${hint}"`);
 		expect(body(name)).toContain('$ARGUMENTS');
 	});
 
-	it('update-task runs the single-task CLI command', () => {
-		expect(body('update-task')).toContain(
-			'taskgraph update --id=<id> --prompt='
-		);
+	it('update runs the single-task CLI command', () => {
+		expect(body('update')).toContain('taskgraph update --id=<id> --prompt=');
 	});
 });
 
@@ -376,8 +389,9 @@ describe('command bodies run the CLI instead of asking for untracked data', () =
 		'set-status': 'set-status',
 		show: 'show',
 		'to-done': 'set-status',
-		'update-task': 'update',
-		why: 'why'
+		update: 'update',
+		why: 'why',
+		go: 'go'
 	};
 	// The list of the slash commands, not tied to one CLI command
 	const REFERENCES = ['help'];
@@ -400,6 +414,32 @@ describe('command bodies run the CLI instead of asking for untracked data', () =
 		expect(
 			body(name).match(/velocity|sprint|burndown|estimat|timeline/gi)
 		).toBeNull();
+	});
+
+	// One style (#1150): <required> and [optional], lowercase with hyphens,
+	// and a task ID is always `task-id`
+	const hintOf = (name: string) =>
+		body(name).match(/^argument-hint: "(.*)"$/m)?.[1] ?? '';
+	const ONE_STYLE = /^(?!.*(\[<|<[^>]* |[<[]ids?[>\]]))[a-z<>[\]| -]*$/;
+
+	it.each(names)('%s writes its argument hint in the one style', (name) => {
+		expect(hintOf(name)).toMatch(ONE_STYLE);
+	});
+
+	it('help shows each command with arguments from its hint', () => {
+		const lines = [
+			...body('help').matchAll(/^ {2}\/taskgraph:([a-z-]+)(.*?)(?: {2,}|$)/gm)
+		];
+		const strays = lines.flatMap(([, name, args]) =>
+			args
+				.trim()
+				.split(' ')
+				.filter((word) => word && !hintOf(name).includes(word))
+				.map((word) => `${name} ${word}`)
+		);
+
+		expect(lines.length).toBeGreaterThan(10);
+		expect(strays).toEqual([]);
 	});
 
 	it('help lists every slash command', () => {

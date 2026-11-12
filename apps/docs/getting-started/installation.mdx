@@ -4,7 +4,7 @@ sidebarTitle: "Installation"
 description: "Install the taskgraph-ai npm package, run taskgraph init in your project, and add the Claude Code plugin for /taskgraph: slash commands."
 ---
 
-With Claude Code and Node.js in place, install TaskGraph and set it up in your project.
+The [Quick Start](/getting-started/quick-start) gets you building in five steps. This page has the detail on each part of the setup: the CLI, the project, the plugin, the optional MCP server and updates. You need [Claude Code](https://docs.claude.com/en/docs/claude-code) installed and signed in (run `claude` once) and Node.js 22.19 or later.
 
 ## 1. Install the CLI
 
@@ -24,9 +24,7 @@ taskgraph init
 
 This creates `.taskgraph/` (tasks, docs, config), and a `CLAUDE.md` import with TaskGraph's workflow guide. Pass `--no-claude` to skip the `CLAUDE.md` import. `init` does not install slash commands (step 3 does) and doesn't register the MCP server unless you pass `--mcp` (step 4).
 
-<Warning>
-Don't run `init` twice. It only re-adds the same files.
-</Warning>
+Running `init` again is safe: it says the project is already set up and adds only what is missing.
 
 ## 3. Install the plugin
 

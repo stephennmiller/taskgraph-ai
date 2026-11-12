@@ -1,11 +1,11 @@
 ---
 description: "TaskGraph: install the CLI if needed and set up TaskGraph in this project. Use to start tracking work."
-argument-hint: "[--quick] [<prd-file>]"
+argument-hint: "[--quick] [prd-file]"
 ---
 
 Check that the `taskgraph` CLI is installed, install it if it isn't, and set up TaskGraph in this project.
 
-Usage: `/taskgraph:init [--quick] [<prd-file>]`
+Usage: `/taskgraph:init [--quick] [prd-file]`
 
 Arguments: $ARGUMENTS
 

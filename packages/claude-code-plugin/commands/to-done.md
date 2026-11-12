@@ -1,6 +1,6 @@
 ---
 description: "TaskGraph: check a task's criteria against your changes and close it. Use when a TaskGraph task is finished."
-argument-hint: "[task ID]"
+argument-hint: "[task-id]"
 ---
 
 Close a task: verify what you can, record what changed, then mark it done.

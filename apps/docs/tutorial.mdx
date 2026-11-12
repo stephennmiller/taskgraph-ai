@@ -33,13 +33,17 @@ claude mcp add taskgraph-ai --scope user \
 
 4. **Place your PRD** in `.taskgraph/docs/` (for example `.taskgraph/docs/prd.md`).
 
-5. **Talk to Claude Code** (or use the `/taskgraph:` slash commands from the [plugin](/getting-started/quick-start/installation) or the CLI):
+5. **Talk to Claude Code** (or use the `/taskgraph:` slash commands from the [plugin](/getting-started/installation#3-install-the-plugin) or the CLI):
 
 ```
 Can you parse my PRD at .taskgraph/docs/prd.md?
 What's the next task I should work on?
 Can you help me implement task 3?
 ```
+
+<Tip>
+To have the whole PRD planned and built without sitting in each session, run `taskgraph go .taskgraph/docs/prd.md`. It plans the PRD into tasks, then [`loop`](/capabilities/loop) has Claude Code work them one after another and commit after each. See the [Quick Start](/getting-started/quick-start#5-build-it). The rest of this tutorial is the step-by-step way.
+</Tip>
 
 ## Common Commands
 
@@ -55,6 +59,26 @@ taskgraph list
 # Show the next task to work on
 taskgraph next
 ```
+
+## Writing a PRD
+
+A PRD (product requirements document) says what you are building and why. A clear one gives better tasks. It doesn't have to cover the whole app: a focused PRD for the next feature works, in a new project or an existing one.
+
+A good PRD states:
+
+- the objective: the outcome or feature
+- the context: what is already in place or assumed
+- the constraints: limits and requirements to respect
+- the reasoning: why you are building it this way
+
+`init` puts two example PRDs in `.taskgraph/templates/`:
+
+- `example_prd.txt`: a simple template, for straightforward features, smaller projects and dependencies that are obvious.
+- `example_prd_rpg.txt`: the RPG (Repository Planning Graph) template, for systems with several modules, explicit dependencies, or a large codebase planned from scratch. It has you separate what the system does from how the code is organized, state what depends on what, and order the work foundation first. See [the RPG method](/capabilities/rpg-method).
+
+To draft one with Claude Code, or any chat model: explain what you want to build, share the example PRD so the model follows its format, then refine the draft together.
+
+Save PRDs in `.taskgraph/docs/`, with names you can tell apart (`dashboard_redesign.md`, `user_onboarding.md`). `.md` gets syntax highlighting in editors and renders on GitHub; `.txt` works too. A project can have several PRDs: parse a later one with `--append` to add its tasks to the ones you have. Running `--append` again on a PRD you edited only generates tasks for the sections you added.
 
 ## Initial Task Generation
 

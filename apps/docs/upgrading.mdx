@@ -32,7 +32,7 @@ Check your shell profile, `.mcp.json` and CI configuration. A project's `.env` s
 ## 3. Switch the commands and the MCP server
 
 - The package is `taskgraph-ai`, and the commands are `taskgraph` and `taskgraph-mcp`. Update any scripts or aliases that call the old command name.
-- Register the MCP server as `taskgraph-ai` and remove any old `task-master-ai` entry from `.mcp.json`. See [Installation](/getting-started/quick-start/installation).
+- Register the MCP server as `taskgraph-ai` and remove any old `task-master-ai` entry from `.mcp.json`. See [Installation](/getting-started/installation#4-optional-add-the-mcp-server).
 
 ## 4. Removed
 
@@ -77,12 +77,12 @@ The slash commands are named after the CLI commands they run (`/taskgraph:next` 
 | `show-task` | `show` |
 | `init-project`, `init-project-quick`, `install-taskgraph`, `quick-install-taskgraph` | `init [--quick]` (it installs the CLI first if it's missing) |
 | `view-models`, `setup-models` | `models` to see them, `models setup` to change them |
-| `update-tasks-from-id` | `update` |
-| `update-single-task` | `update-task` (it edits one task only: use `update` for bulk edits and `set-status` for status) |
-| `expand-task`, `expand-all-tasks` | `expand <id>`, `expand all` |
-| `parse-prd-with-research` | `parse-prd <file> research` |
-| `to-in-progress` | `set-status <id> in-progress` |
-| `to-pending`, `to-review`, `to-deferred`, `to-cancelled` | `set-status <id> <status>` (`to-done` stays) |
+| `update-tasks-from-id` | `taskgraph update --from=<id> --prompt='...'` in the CLI |
+| `update-single-task`, `update-task` | `update <task-id> <changes>` (it edits one task only: use `taskgraph update --from=<id>` for bulk edits and `set-status` for status) |
+| `expand-task`, `expand-all-tasks` | `expand <task-id>`, `expand all` |
+| `parse-prd-with-research` | `parse-prd <prd-file> research` |
+| `to-in-progress` | `set-status <task-id> in-progress` |
+| `to-pending`, `to-review`, `to-deferred`, `to-cancelled` | `set-status <task-id> <status>` (`to-done` stays) |
 | `convert-task-to-subtask` | `add-subtask <parent ID> <task ID>` |
 | `tm-main`, `learn` | `help` |
 | `remove-subtasks` | `clear-subtasks <id>` |

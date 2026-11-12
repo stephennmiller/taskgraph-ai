@@ -1,0 +1,90 @@
+---
+title: Quick Start
+sidebarTitle: "Quick Start"
+description: "Install TaskGraph, set it up in your project, write a PRD and run taskgraph go to plan it into tasks and have Claude Code build them."
+---
+
+From an empty folder to Claude Code building your PRD, on one page. Each step links to the page with the detail.
+
+## 1. Requirements
+
+- [Claude Code](https://docs.claude.com/en/docs/claude-code), installed and signed in. Run `claude` once to sign in. Every AI call TaskGraph makes runs through it, so there are no API keys or provider accounts to set up. See [Authentication](/getting-started/api-keys).
+- Node.js 22.19 or later, from [nodejs.org](https://nodejs.org) or your package manager. npm comes with it.
+
+## 2. Install
+
+```bash
+npm install -g taskgraph-ai
+```
+
+This gives you the `taskgraph` command. [Installation](/getting-started/installation) has the detail: the Claude Code plugin, the optional MCP server and staying up to date.
+
+## 3. Set up your project
+
+From your project folder:
+
+```bash
+taskgraph init
+```
+
+It creates `.taskgraph/` (tasks, docs, config) and adds an import to `CLAUDE.md` that loads TaskGraph's workflow guide in Claude Code. It asks one question: whether to store tasks in Git. Running it again is safe: it says the project is already set up and adds only what is missing.
+
+To check the setup at any point, run `taskgraph doctor`. It prints one line per check and the fix under each one that failed.
+
+## 4. Write a PRD
+
+A PRD (product requirements document) says what you want to build and why. Save it as `.taskgraph/docs/prd.md`. It can cover a whole app or only the next feature, and a project can have several.
+
+The more context it gives (the goal, what already exists, constraints, why you chose this approach), the better the tasks. `init` puts two examples in `.taskgraph/templates/`, and [Writing a PRD](/tutorial#writing-a-prd) says when to use each and how to draft one with Claude.
+
+## 5. Build it
+
+```bash
+taskgraph go .taskgraph/docs/prd.md
+```
+
+`go` plans the PRD into tasks with dependencies, then runs [`loop`](/capabilities/loop): Claude Code works the tasks in order, one fresh session per task, and commits after each. If it stops partway, run the same command again and it picks up from the task statuses.
+
+`loop` always runs Claude Code with permission prompts off, so it can read, edit and run anything in the project without asking. It asks you to allow that first. `--trust` skips the question, for scripts, and `--sandbox` runs each session in Docker instead. See [Loop Permissions](/capabilities/loop-trust) and [From a PRD to built tasks](/capabilities/cli-project-commands#from-a-prd-to-built-tasks).
+
+With the [plugin](/getting-started/installation#3-install-the-plugin) installed, `/taskgraph:go .taskgraph/docs/prd.md` does the same from inside Claude Code.
+
+## Or go step by step
+
+To review the plan before anything is built, and stay in each session yourself, run the steps one at a time.
+
+1. **Plan.** Turn the PRD into tasks. `--clarify` asks about gaps in the PRD first:
+
+   ```bash
+   taskgraph parse-prd .taskgraph/docs/prd.md --clarify
+   ```
+
+2. **Review.** `taskgraph list` shows the plan and `taskgraph show 3` one task in full. To change a task, run `taskgraph update 3 --prompt='use Postgres instead of MongoDB'`.
+
+3. **Work.** Find the next unblocked task and claim it:
+
+   ```bash
+   taskgraph next
+   taskgraph set-status --id=3 --status=in-progress
+   ```
+
+   Have Claude Code implement it, then mark it done. A task has acceptance criteria, and `set-status --status=done` refuses it until each one is checked off.
+
+4. **Repeat.** Next, implement, done, next.
+
+With the plugin installed you can ask Claude for each step in plain language, or use the slash commands:
+
+| You say | Slash command |
+| --- | --- |
+| Turn .taskgraph/docs/prd.md into tasks | `/taskgraph:parse-prd .taskgraph/docs/prd.md` |
+| What should I work on next? | `/taskgraph:next` |
+| Start task 3 | `/taskgraph:set-status 3 in-progress` |
+| Mark task 3 done | `/taskgraph:to-done 3` |
+
+## Where to go next
+
+- [Tutorial](/tutorial): the step-by-step workflow in depth, with tags, subtasks and research.
+- [Loop](/capabilities/loop): presets, cost caps, parallel runs and resuming.
+- [Configuration](/configuration): models, settings and environment variables.
+- [CLI Commands](/capabilities/cli-root-commands): every command, and the slash command for each.
+- [FAQ](/getting-started/faq): troubleshooting.

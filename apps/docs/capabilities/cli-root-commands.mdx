@@ -33,7 +33,8 @@ With the plugin installed, ask Claude in plain language. The same actions as sla
 | Mark task 3 done            | `/taskgraph:to-done 3`                | `taskgraph set-status --id=3 --status=done`        |
 | Break task 4 into subtasks  | `/taskgraph:expand 4`                 | `taskgraph expand 4`                               |
 | Add a task for ...          | `/taskgraph:add-task <what you want>` | `taskgraph add-task --prompt='...'`                |
-| Update task 5: ...          | `/taskgraph:update-task 5 <change>`   | `taskgraph update 5 --prompt='...'`                |
+| Update task 5: ...          | `/taskgraph:update 5 <change>`        | `taskgraph update 5 --prompt='...'`                |
+| Plan and build this PRD     | `/taskgraph:go <prd-file>`            | `taskgraph go <prd-file>`                          |
 | Research ...                | (research skill)                      | `taskgraph research "JWT best practices"`          |
 
 If you use the MCP server instead, research, tags and the dependency editing tools (`add_dependency`, `remove_dependency`, `validate_dependencies`, `fix_dependencies`) load only with `TASKGRAPH_TOOLS=all`. `dependency_analysis` is in `standard` (see [MCP tool tiers](/capabilities/mcp#tool-tiers-at-a-glance)), and everything else here works with `standard`.
@@ -45,14 +46,15 @@ Install the plugin and they appear as `/taskgraph:<name>`. `taskgraph init` does
 | Purpose        | Commands                                                                    |
 | -------------- | --------------------------------------------------------------------------- |
 | Daily workflow | `next`, `show`, `list`, `set-status`, `to-done`, `add-task`, `note`, `loop` |
-| Set up         | `init`                                                                      |
-| Plan & update  | `parse-prd`, `update-task`, `analyze-complexity`, `expand`                  |
+| Set up         | `init`, `go`                                                                |
+| Plan & update  | `parse-prd`, `update`, `analyze-complexity`, `expand`                       |
 | Dependencies   | `graph`, `why`                                                              |
 | Other          | `help`                                                                      |
 
 ### CLI cheat sheet
 
 ```bash
+taskgraph go .taskgraph/docs/prd.md          # plan a PRD and build every task
 taskgraph parse-prd .taskgraph/docs/prd.md   # generate tasks from a PRD
 taskgraph list                               # all tasks and their status
 taskgraph next                               # next task to work on

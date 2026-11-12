@@ -1,11 +1,11 @@
 ---
 description: "TaskGraph: log a progress note on a task, saved as written. Use to record what was done or decided."
-argument-hint: "[task ID] [note]"
+argument-hint: "[task-id] [note]"
 ---
 
 Log a progress note on a task. The note is saved as written, with a timestamp and no AI call, so the next session can pick up from it.
 
-Usage: `/taskgraph:note [<id>] [<note>]`
+Usage: `/taskgraph:note [task-id] [note]`
 
 Arguments: $ARGUMENTS (task ID, e.g. `3` or a subtask like `3.2`, then the note)
 

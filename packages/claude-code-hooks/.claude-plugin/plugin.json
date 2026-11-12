@@ -10,7 +10,7 @@
 	"repository": "https://github.com/stephennmiller/taskgraph-ai",
 	"license": "MIT WITH Commons-Clause",
 	"metadata": {
-		"taskgraphCli": ">=0.63.2"
+		"taskgraphCli": ">=0.63.18"
 	},
 	"keywords": ["task-management", "hooks", "workflow"]
 }
