@@ -62,8 +62,9 @@ is running too.
 allow that before its first step, unless you passed `--trust` or `--sandbox`.
 Answering no, or Ctrl-C, stops it before anything is set up or planned.
 Without a terminal it stops there with an error instead of asking. A yes
-covers the tasks this run plans from the PRD, and is remembered as
-[`loop` remembers it](/capabilities/loop-trust).
+covers the tasks this run plans from the PRD. It is remembered as
+[`loop` remembers it](/capabilities/loop-trust) once planning is done and
+`loop` starts; if planning fails or you stop it, nothing is remembered.
 
 An approval you gave earlier doesn't answer for tasks that aren't planned
 yet: `go` asks whenever it is going to plan (the folder isn't a project yet,

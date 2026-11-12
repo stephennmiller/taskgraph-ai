@@ -2,8 +2,9 @@
  * @fileoverview `go` settles loop's consent before its first step (#1146):
  * a "no", or no terminal to ask on, stops it before anything is planned. A
  * run that plans new tasks asks even where an approval is stored; a run that
- * only resumes lets it stand. The steps are not run: `spawn` is faked, as
- * are loop's question and the stored approval.
+ * only resumes lets it stand. A yes is stored when the loop step starts, for
+ * the project loop finds, and not before. The steps are not run: `spawn` is
+ * faked, as are loop's question and the stored approval.
  */
 
 import { EventEmitter } from 'node:events';
@@ -42,8 +43,10 @@ import { confirmLoopTrust } from './loop.command.js';
 describe('go consent', () => {
 	let dir: string;
 	let prd: string;
-	/** What happened, in order: `asked`, each step's command, and `trust` when the approval is stored again */
+	/** What happened, in order: `asked`, each step's command, and `trust` when the approval is stored */
 	let events: string[];
+	/** The exit code of each step that fails, by command */
+	let failing: Record<string, number>;
 	/** An approval for this project is in the user's home */
 	let stored: boolean;
 	/** What the user answers, or false with no terminal to ask on */
@@ -71,6 +74,7 @@ describe('go consent', () => {
 		prd = path.join(dir, 'prd.md');
 		fs.writeFileSync(prd, '# App\n');
 		events = [];
+		failing = {};
 		stored = false;
 		answer = true;
 		vi.spyOn(console, 'log').mockImplementation(() => {});
@@ -83,10 +87,12 @@ describe('go consent', () => {
 		vi.mocked(trustLoop).mockImplementation(() => {
 			events.push('trust');
 		});
-		// Loop's own: no question where it is trusted, else the answer
+		// Loop's own: no question where it is trusted, else the answer, and a
+		// yes goes to the `trust` it was handed
 		vi.mocked(confirmLoopTrust).mockImplementation(async (loop) => {
 			if (loop.isTrusted()) return true;
 			events.push('asked');
+			if (answer) loop.trust();
 			return answer;
 		});
 		vi.mocked(createTmCore).mockResolvedValue({
@@ -100,7 +106,7 @@ describe('go consent', () => {
 		vi.mocked(spawn).mockImplementation(((_cmd: string, args: string[]) => {
 			events.push(args[1]);
 			const child = new EventEmitter();
-			queueMicrotask(() => child.emit('close', 0, null));
+			queueMicrotask(() => child.emit('close', failing[args[1]] ?? 0, null));
 			return child;
 		}) as never);
 	});
@@ -154,6 +160,40 @@ describe('go consent', () => {
 
 			expect(createTmCore).not.toHaveBeenCalled();
 			expect(events).toEqual(['asked', 'init', 'parse-prd', 'trust', 'loop']);
+		});
+
+		it('stores the yes for the project init made, not the folder above it', async () => {
+			// `go` in repo/app: the root found is the repository until init
+			// makes the project in repo/app
+			const app = path.join(dir, 'app');
+			let root = dir;
+			vi.mocked(resolveProjectRoot).mockImplementation(() => root);
+			vi.mocked(spawn).mockImplementation(((_cmd: string, args: string[]) => {
+				events.push(args[1]);
+				if (args[1] === 'init') root = app;
+				const child = new EventEmitter();
+				queueMicrotask(() => child.emit('close', 0, null));
+				return child;
+			}) as never);
+			// An approval for the repository doesn't answer for the new project
+			stored = true;
+
+			await go();
+
+			// Once, as the loop step starts: loop then finds its own folder approved
+			expect(events).toEqual(['asked', 'init', 'parse-prd', 'trust', 'loop']);
+			expect(vi.mocked(trustLoop).mock.calls).toEqual([[app]]);
+		});
+
+		it('stores nothing when planning fails', async () => {
+			project(true);
+			failing = { 'parse-prd': 1 };
+
+			await go();
+
+			expect(events).toEqual(['asked', 'parse-prd']);
+			expect(trustLoop).not.toHaveBeenCalled();
+			expect(process.exitCode).toBe(1);
 		});
 
 		it('asks when it cannot tell whether the PRD has new sections', async () => {

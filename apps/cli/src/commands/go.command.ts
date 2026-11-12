@@ -7,8 +7,9 @@
  * `loop` print their result without a next step (#1146). `go` settles
  * loop's consent before the first step, so no planning is paid for and then
  * refused: a run that plans new tasks asks even where an approval is stored,
- * and a run that only resumes lets that approval stand. On a rerun it says
- * what loop resumes before loop starts.
+ * and a run that only resumes lets that approval stand. A yes is stored when
+ * the loop step starts, not before. On a rerun it says what loop resumes
+ * before loop starts.
  * A signal that stops `go` goes on to the running step (#1103).
  */
 
@@ -177,9 +178,11 @@ export class GoCommand extends Command {
 				projectRoot,
 				await this.plansTasks(projectRoot, prd, isProject)
 			);
+			// The yes is stored at the loop step: a run that fails or is stopped
+			// before it leaves no approval behind
 			const approved = await confirmLoopTrust({
 				isTrusted: () => trusted,
-				trust: () => trustLoop(projectRoot)
+				trust: () => {}
 			});
 			if (!approved) return;
 			asked = !trusted;
@@ -189,8 +192,10 @@ export class GoCommand extends Command {
 			trust: options.trust || asked
 		})) {
 			const isLoop = args[0] === 'loop';
-			// parse-prd withdrew the approval when it added tasks; the yes covers them
-			if (isLoop && asked) trustLoop(projectRoot);
+			// The yes covers the tasks parse-prd added. Stored for the project loop
+			// is about to find: init may have made it below the root found above,
+			// and loop checks that folder's approval before each iteration
+			if (isLoop && asked) trustLoop(resolveProjectRoot());
 			if (isLoop && isProject) {
 				// Only a heads-up: a file loop can't read fails loop's own way
 				await this.printResume(projectRoot).catch(() => {});

@@ -352,7 +352,8 @@ Invariants (#1039):
 instructions). `trustLoop` sets it, `keepLoopTrust` rolls the hash forward
 between iterations, `untrustLoop` removes it (github import and
 `parse-prd --append` call it). `go` asks before it plans, whatever is
-stored (`isGoTrusted`). The file is written under a lock with an
+stored (`isGoTrusted`), and stores a yes only when its loop step starts,
+for the project root resolved then. The file is written under a lock with an
 atomic rename.
 
 ## 11. Task worktree
