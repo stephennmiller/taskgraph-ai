@@ -26,6 +26,7 @@ import {
 import chalk from 'chalk';
 import { Command } from 'commander';
 import {
+	formatLoopConsent,
 	formatLoopDryRun,
 	formatLoopIntro,
 	formatLoopIterationEnd,
@@ -34,8 +35,9 @@ import {
 	formatLoopSummary,
 	formatSandboxAuth
 } from '../ui/formatters/loop-formatters.js';
+import { confirm } from '../utils/confirm.js';
 import { displayCommandHeader } from '../utils/display-helpers.js';
-import { displayError } from '../utils/error-handler.js';
+import { displayError, printError } from '../utils/error-handler.js';
 import {
 	formatParallelHeader,
 	formatParallelSummary,
@@ -65,6 +67,35 @@ export interface LoopCommandOptions {
 	model?: string;
 	reuseSession?: boolean;
 	dryRun?: boolean;
+}
+
+/**
+ * First run in a project, or the task text or project instructions changed
+ * since the approval: `loop` turns Claude's permission prompts off, so it
+ * asks first. `go` asks the same before its first step.
+ * With --parallel there's no sandbox to suggest instead.
+ * @returns false when the run must not start; what was printed says why and
+ *   the exit code is set
+ */
+export async function confirmLoopTrust(
+	loop: Pick<TmCore['loop'], 'isTrusted' | 'trust'>,
+	parallel?: number
+): Promise<boolean> {
+	if (loop.isTrusted()) return true;
+	const consent = formatLoopConsent(parallel);
+	if (!process.stdin.isTTY || !process.stdout.isTTY) {
+		printError(consent.error, consent.hint);
+		process.exitCode = 1;
+		return false;
+	}
+	console.log(consent.statement);
+	if (!(await confirm(consent.question, consent.cancelled))) {
+		// Not an error, but nothing ran: a script or `go` must not carry on
+		process.exitCode = 1;
+		return false;
+	}
+	loop.trust();
+	return true;
 }
 
 export class LoopCommand extends Command {
@@ -216,8 +247,12 @@ export class LoopCommand extends Command {
 				this.handleSandboxAuth();
 			}
 
-			if (!options.sandbox && !options.trust) {
-				await this.confirmTrust();
+			if (
+				!options.sandbox &&
+				!options.trust &&
+				!(await confirmLoopTrust(this.tmCore.loop))
+			) {
+				return;
 			}
 
 			// The task the run starts on, for presets that work on tasks
@@ -320,7 +355,11 @@ export class LoopCommand extends Command {
 				: undefined;
 			// Before asking for approval: a missing token or Docker stops here
 			if (container) await this.tmCore.loop.checkContainer(container);
-			if (!options.trust) await this.confirmTrust(parallel);
+			if (
+				!options.trust &&
+				!(await confirmLoopTrust(this.tmCore.loop, parallel))
+			)
+				return;
 
 			const logsDir = '.taskgraph/worktrees';
 			const tasks: ParallelTask[] = [];
@@ -393,42 +432,6 @@ export class LoopCommand extends Command {
 			clearInterval(timer);
 			for (const sig of STOP_SIGNALS) process.off(sig, onSigint);
 		}
-	}
-
-	/**
-	 * First run in a project, or the task text or project instructions
-	 * changed since the approval: `loop` turns Claude's permission prompts off.
-	 * With --parallel there's no sandbox to suggest instead.
-	 */
-	private async confirmTrust(parallel?: number): Promise<void> {
-		if (this.tmCore.loop.isTrusted()) return;
-		const who =
-			parallel === undefined
-				? 'Claude'
-				: `up to ${parallel} Claude Code processes at once,`;
-		const instead =
-			parallel === undefined ? ', or --sandbox to run in Docker' : '';
-		if (!process.stdin.isTTY || !process.stdout.isTTY) {
-			throw new Error(
-				`loop runs ${who} with permission prompts off. Pass --trust to allow that here${instead}.`
-			);
-		}
-		const { default: inquirer } = await import('inquirer');
-		const { confirmed } = await inquirer.prompt([
-			{
-				type: 'confirm',
-				name: 'confirmed',
-				message: `loop runs ${who} with permission prompts off: ${parallel === undefined ? 'it' : 'each'} can read, edit and run anything in this project without asking. Allow that here?`,
-				default: false
-			}
-		]);
-		if (!confirmed)
-			throw new Error(
-				parallel === undefined
-					? 'Not approved. Use --sandbox to run in Docker.'
-					: 'Not approved; no tasks were claimed.'
-			);
-		this.tmCore.loop.trust();
 	}
 
 	private handleSandboxAuth(): void {

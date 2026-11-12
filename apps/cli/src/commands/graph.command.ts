@@ -11,11 +11,10 @@ import {
 	formatTaskData,
 	neutralizeTaskData
 } from '@tm/core';
-import chalk from 'chalk';
 import { Command } from 'commander';
 import { renderDependencyTree } from '../ui/components/dependency-tree.component.js';
+import { formatNoTasks } from '../ui/formatters/task-list-formatters.js';
 import { fencesTaskData, getContentWidth } from '../ui/layout/helpers.js';
-import { theme } from '../ui/theme.js';
 import { displayCommandHeader } from '../utils/display-helpers.js';
 import { displayError } from '../utils/error-handler.js';
 import { jsonOption, printJson } from '../utils/json-output.js';
@@ -99,10 +98,7 @@ export class GraphCommand extends Command {
 		});
 
 		if (result.total === 0) {
-			console.log(chalk.yellow('No tasks yet.'));
-			console.log(
-				`${theme.muted('Create some with')} ${theme.brand('taskgraph parse-prd')} ${theme.muted('or')} ${theme.brand('taskgraph add-task')}`
-			);
+			console.log(formatNoTasks());
 			return;
 		}
 

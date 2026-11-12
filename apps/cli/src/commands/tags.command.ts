@@ -17,6 +17,7 @@ import {
 	terminalSafe
 } from '../ui/index.js';
 import { theme } from '../ui/theme.js';
+import { confirm } from '../utils/confirm.js';
 import { displayError, fromBranchError } from '../utils/index.js';
 import { printJson } from '../utils/json-output.js';
 import {
@@ -61,24 +62,10 @@ async function confirmDelete(tagName: string, taskCount: number) {
 			'Pass `--yes` to delete it without asking'
 		);
 	}
-	try {
-		const { default: inquirer } = await import('inquirer');
-		const prompt = inquirer.createPromptModule({ clearPromptOnDone: true });
-		const { proceed } = await prompt([
-			{
-				type: 'confirm',
-				name: 'proceed',
-				message: `Delete ${what}? This can't be undone.`,
-				default: false
-			}
-		]);
-		return proceed as boolean;
-	} catch (error: any) {
-		if (error?.name !== 'ExitPromptError') throw error;
-		// Ctrl-C
-		console.log(theme.muted('Cancelled; nothing was deleted'));
-		process.exit(130);
-	}
+	return confirm(
+		`Delete ${what}? This can't be undone.`,
+		'Cancelled; nothing was deleted'
+	);
 }
 
 /**
@@ -417,7 +404,6 @@ Examples:
 					: (taskCount) => confirmDelete(name, taskCount)
 			});
 			if (!result.deleted) {
-				console.log(theme.muted('Cancelled; nothing was deleted'));
 				return { message: `Cancelled; tag ${name} was not removed` };
 			}
 			console.log(formatTagDeleted(result));

@@ -8,6 +8,7 @@ import type { LoopPlan, LoopResult } from '@tm/core';
 import { describe, expect, it } from 'vitest';
 import {
 	type LoopIntro,
+	formatLoopConsent,
 	formatLoopDryRun,
 	formatLoopIntro,
 	formatLoopIterationEnd,
@@ -26,6 +27,49 @@ const intro = (overrides: Partial<LoopIntro> = {}): LoopIntro => ({
 });
 
 const plain = (lines: string[]) => lines.map(stripVTControlCharacters);
+
+describe('formatLoopConsent (#1146)', () => {
+	// `? ` before the question and ` (y/N)` after it, as inquirer draws them
+	const asked = (question: string) => `? ${question} (y/N)`;
+
+	it.each([undefined, 10])(
+		'fits every line in 80 columns (--parallel %s)',
+		(parallel) => {
+			const consent = formatLoopConsent(parallel);
+
+			for (const line of [
+				...consent.statement.split('\n'),
+				asked(consent.question),
+				consent.cancelled,
+				`✗ ${consent.error}`,
+				`  ${consent.hint.replaceAll('`', '')}`
+			]) {
+				expect(line.length).toBeLessThanOrEqual(80);
+			}
+		}
+	);
+
+	it('says what loop does in two lines, then asks a short question', () => {
+		const consent = formatLoopConsent();
+
+		expect(consent.statement.split('\n')).toEqual([
+			'loop runs Claude Code with permission prompts off.',
+			'It can read, edit and run anything in this project without asking.'
+		]);
+		expect(consent.question).toBe('Allow that here?');
+		expect(consent.hint).toContain('--sandbox');
+	});
+
+	it('counts the processes of a parallel run, which has no sandbox to offer', () => {
+		const consent = formatLoopConsent(3);
+
+		expect(consent.statement).toContain(
+			'up to 3 Claude Code processes at once'
+		);
+		expect(consent.cancelled).not.toContain('--sandbox');
+		expect(consent.hint).not.toContain('--sandbox');
+	});
+});
 
 describe('formatLoopIntro', () => {
 	it('says the preset, the iteration cap and the mode on one line', () => {

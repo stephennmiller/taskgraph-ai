@@ -21,7 +21,14 @@ vi.mock('../utils/display-helpers.js', () => ({
 	displayCommandHeader: () => false
 }));
 
+// The replace question needs a terminal; `ask` is the prompt module it is asked on
+vi.mock('inquirer', () => {
+	const ask = vi.fn();
+	return { default: { createPromptModule: () => ask, ask } };
+});
+
 import { createTmCore } from '@tm/core';
+import inquirer from 'inquirer';
 import { ParsePrdCommand } from './parse-prd.command.js';
 
 const parsePrd = vi.fn();
@@ -109,6 +116,46 @@ describe('parse-prd', () => {
 		expect(out.join('\n')).toContain(
 			'Saved to .taskgraph/tasks/tasks.json · research-backed'
 		);
+	});
+
+	it('ends by naming loop and next, but not as a step of go (#1146)', async () => {
+		await run('prd.md');
+		expect(out.join('\n')).toContain(
+			'Next: taskgraph loop to build them, or taskgraph next to pick one'
+		);
+
+		out.length = 0;
+		vi.stubEnv('TASKGRAPH_GO_STEP', '1');
+		try {
+			await run('prd.md');
+		} finally {
+			vi.unstubAllEnvs();
+		}
+		expect(out.join('\n')).toContain('Saved to .taskgraph/tasks/tasks.json');
+		expect(out.join('\n')).not.toContain('Next:');
+	});
+
+	it('Ctrl-C at the replace question cancels in one line and exits 130 (#1146)', async () => {
+		process.stdin.isTTY = true;
+		parsePrdTarget.mockResolvedValue({
+			prdPath: prd,
+			tag: 'master',
+			taskCount: 2
+		});
+		(
+			inquirer as unknown as { ask: ReturnType<typeof vi.fn> }
+		).ask.mockRejectedValue(
+			Object.assign(new Error('User force closed the prompt with SIGINT'), {
+				name: 'ExitPromptError'
+			})
+		);
+
+		// The faked exit throws, which the command's own catch then reports
+		await expect(run('prd.md')).rejects.toThrow();
+
+		expect(vi.mocked(process.exit).mock.calls[0]).toEqual([130]);
+		expect(out.at(-1)).toBe('Cancelled; no tasks changed');
+		expect(parsePrd).not.toHaveBeenCalled();
 	});
 
 	it('refuses a PRD that does not exist before starting tm-core', async () => {

@@ -287,8 +287,21 @@ export function formatListNextStep(
 }
 
 /**
- * What `list` says when no task matches: `No tasks found`,
- * `No pending tasks found` or `Nothing assigned to steve`, and how to get some
+ * The one line `list`, `next` and `graph` print in a project with no tasks
+ * (#1146). `add-task -t` needs no Claude, which `go` does (#924).
+ */
+export function formatNoTasks(width = terminalWidth()): string {
+	return wrapLine(
+		`No tasks yet. Run ${theme.brand('taskgraph go <prd>')} to build a PRD, or ${theme.brand('taskgraph add-task')}`,
+		width,
+		''
+	).join('\n');
+}
+
+/**
+ * What `list` says when no task matches: `No pending tasks found` or
+ * `Nothing assigned to steve`, and how to see the rest; `formatNoTasks`
+ * when there are none at all
  *
  * @param filter - The status or view asked for (`pending`, `ready`), if any
  * @param options.assignee - The login `--mine` matched
@@ -301,32 +314,19 @@ export function formatEmptyList(
 	const width = resolveWidth(options.width);
 	const assignee = sanitizeForTerminal(options.assignee);
 	const search = options.search && oneLine(options.search);
+	if (!filter && !assignee && !search) return formatNoTasks(width);
 	const message = search
 		? `No ${filter ? `${filter} ` : ''}tasks match "${search}"`
 		: filter
 			? `No ${filter} tasks found`
-			: assignee
-				? `Nothing assigned to ${assignee}`
-				: 'No tasks found';
-	const action =
-		filter || assignee || search
-			? { command: 'taskgraph list', description: 'to see every task' }
-			: {
-					command: "taskgraph add-task --prompt='...'",
-					description: 'to add one, or taskgraph parse-prd'
-				};
-	const lines = [theme.text(message), ...formatNextStep(action, width)];
-	// The prompt and parse-prd paths need Claude. -t/-d does not (#924).
-	if (!filter && !assignee && !search) {
-		lines.push(
-			...wrapLine(
-				`      or ${theme.brand("taskgraph add-task -t 'Title' -d 'What'")}`,
-				width,
-				'      '
-			)
-		);
-	}
-	return lines.join('\n');
+			: `Nothing assigned to ${assignee}`;
+	return [
+		theme.text(message),
+		...formatNextStep(
+			{ command: 'taskgraph list', description: 'to see every task' },
+			width
+		)
+	].join('\n');
 }
 
 /**

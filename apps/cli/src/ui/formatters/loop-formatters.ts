@@ -1,5 +1,12 @@
 /**
- * @fileoverview What `taskgraph loop` prints. Before its first iteration:
+ * @fileoverview What `taskgraph loop` prints. Before its first run in a
+ * project (and `go` before its first step), unless --trust or --sandbox:
+ *
+ *   loop runs Claude Code with permission prompts off.
+ *   It can read, edit and run anything in this project without asking.
+ *   ? Allow that here? (y/N)
+ *
+ * Before its first iteration:
  *
  *   Loop · tdd preset · up to 5 iterations · Claude CLI
  *   Starts with task 3  Set up the database schema
@@ -58,6 +65,33 @@ const spendFacts = (spend: Parameters<typeof formatLoopSpend>[0]) =>
 		/ · ([^·\x1b]+)/g,
 		(_, fact: string) => ` ·${NBSP}${fact.replaceAll(' ', NBSP)}`
 	);
+
+/**
+ * The words of loop's consent: what it says above the question, what "no"
+ * and Ctrl-C print, and the error and hint where there's no terminal to ask
+ * on. Every line fits 80 columns.
+ * @param parallel - The --parallel count; such a run has no sandbox to suggest
+ */
+export function formatLoopConsent(parallel?: number) {
+	const single = parallel === undefined;
+	return {
+		statement: [
+			single
+				? 'loop runs Claude Code with permission prompts off.'
+				: `loop runs up to ${parallel} Claude Code processes at once, with permission prompts off.`,
+			`${single ? 'It' : 'Each'} can read, edit and run anything in this project without asking.`
+		].join('\n'),
+		question: 'Allow that here?',
+		cancelled: single
+			? 'Cancelled; nothing ran. To run in Docker instead, pass --sandbox'
+			: 'Cancelled; no tasks were claimed',
+		error:
+			"loop needs your approval to turn Claude Code's permission prompts off",
+		hint: single
+			? 'Pass `--trust` to allow that here, or `--sandbox` to run in Docker'
+			: 'Pass `--trust` to allow that here'
+	};
+}
 
 export interface LoopIntro {
 	/** Preset name or custom prompt path */
