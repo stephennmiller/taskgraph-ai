@@ -67,20 +67,25 @@ describe('initializeProject', () => {
 		expect(exists('.taskgraph/templates/example_prd.txt')).toBe(true);
 		expect(exists('.taskgraph/templates/example_prd_rpg.txt')).toBe(true);
 		expect(exists('.env.example')).toBe(false);
-		expect(read('.gitignore')).toBe(
-			[
-				'# Environment variables',
+		// A .gitignore init creates keeps its starter list: loop --parallel
+		// commits leftover work with `git add -A`, node_modules/ included
+		const ignored = read('.gitignore').split('\n');
+		expect(ignored).toEqual(
+			expect.arrayContaining([
+				'node_modules/',
 				'.env',
-				'',
-				'# TaskGraph per-machine files',
+				'*.log',
+				'.vscode',
+				'.DS_Store',
 				'.taskgraph/state.json',
-				'.taskgraph/config.local.json',
-				'',
-				'# Task files',
-				'# .taskgraph/tasks/',
-				''
-			].join('\n')
+				'.taskgraph/config.local.json'
+			])
 		);
+		expect(ignored.slice(-3)).toEqual([
+			'# Task files',
+			'# .taskgraph/tasks/',
+			''
+		]);
 		expect(read('CLAUDE.md')).toContain('@./.taskgraph/CLAUDE.md');
 		expect(exists('.mcp.json')).toBe(false);
 		// A new repository with the tasks.json merge driver

@@ -141,8 +141,11 @@ const TASKGRAPH_PATHS = [
 	path.join(TASKGRAPH_DIR, 'CLAUDE.md')
 ];
 
-/** A .gitignore that init creates also keeps secrets out of Git */
-const NEW_GITIGNORE_LINES = '# Environment variables\n.env\n\n';
+/**
+ * What init adds to a .gitignore the project already has. One that init
+ * creates gets the whole `assets/gitignore`, which ends with these lines.
+ */
+const TASKGRAPH_GITIGNORE_LINES = `# TaskGraph per-machine files\n${TASKGRAPH_STATE_FILE}\n${TASKGRAPH_LOCAL_CONFIG_FILE}\n`;
 
 /** What init writes in the project root */
 const ROOT_FILES = [GITIGNORE_FILE, 'CLAUDE.md', '.mcp.json'];
@@ -282,8 +285,9 @@ export function initializeProject(
 			gitignorePath,
 			// The user's own .gitignore gains only TaskGraph's lines; what else
 			// their project ignores is theirs to choose (#1147)
-			(before.get(gitignorePath) == null ? NEW_GITIGNORE_LINES : '') +
-				readAsset('gitignore'),
+			before.get(gitignorePath) == null
+				? readAsset('gitignore')
+				: TASKGRAPH_GITIGNORE_LINES,
 			storeTasksInGit,
 			// A failure throws, and the catch below reports it once
 			(_level, message) => log.debug(message)
