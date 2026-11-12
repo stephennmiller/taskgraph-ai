@@ -1,6 +1,6 @@
 {
 	"name": "taskgraph-hooks",
-	"version": "0.63.47",
+	"version": "0.63.48",
 	"description": "Hooks for the taskgraph plugin: load the project's TaskGraph state at session start and after compaction, keep the task in progress in view on each prompt, log a finished todo list as a note on it, and keep Claude going while its acceptance criteria are unchecked.",
 	"author": {
 		"name": "Stephen Miller",
