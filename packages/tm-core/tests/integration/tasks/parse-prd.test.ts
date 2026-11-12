@@ -536,7 +536,7 @@ describe('tasks.parsePrd', () => {
 		expect(result.prdPath).toBe(path.join(docs, 'prd.txt'));
 		fs.rmSync(docs, { recursive: true });
 		await expect(p.tmCore.tasks.parsePrd({})).rejects.toThrow(
-			'Required PRD file not found'
+			'No PRD file given'
 		);
 	});
 });

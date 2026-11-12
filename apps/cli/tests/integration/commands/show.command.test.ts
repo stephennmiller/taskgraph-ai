@@ -534,6 +534,56 @@ describe('show command output', () => {
 		);
 	});
 
+	// #1148: several IDs printed "Tasks:" and a table, in a terminal and with
+	// --format text. A pipe with no --format keeps list's plain lines (#1069)
+	it('prints each of several IDs as show <id> does, a blank line apart, with no next step', () => {
+		const res = show('1,2.2,2', '--format', 'text');
+		const tasks = res.stdout
+			.split('<task-data>\n')
+			.slice(1)
+			.map((part) => part.split('\n</task-data>')[0]);
+
+		expect(res.status).toBe(0);
+		expect(tasks).toHaveLength(3);
+		expect(tasks[0]).toMatch(/^Task 1 {2}Set up the database schema\n✓ done/);
+		expect(tasks[1]).toMatch(
+			/^Subtask 2\.2 {2}Sessions table and cookie middleware\n○ pending · .*depends on 2\.1/
+		);
+		expect(tasks[2]).toContain('\nDetails\n  Hash passwords with bcrypt');
+		expect(tasks[2]).toContain('Subtasks · 1 of 2 done');
+		expect(res.stdout).toContain('</task-data>\n\n<task-data>');
+		expect(res.stdout).not.toMatch(/Tasks:|Next:|[┌│└]/);
+	});
+
+	it('still names a missing ID and exits 1 when the others print in full', () => {
+		const res = show('2,99', '--format', 'text');
+
+		expect(res.status).toBe(1);
+		expect(res.stdout).toMatch(/^⚠ Not found: 99\n\n<task-data>\nTask 2 {2}/);
+	});
+
+	// #1148: a note printed under Details as raw <info added on …> tags
+	it('prints notes as a Notes section, and leaves them as stored in --json', () => {
+		const note = spawnSync(
+			process.execPath,
+			[binPath, 'note', '1', 'Chose argon2 over bcrypt'],
+			{ cwd: testDir, encoding: 'utf8', env }
+		);
+
+		const text = show('1');
+		const json = show('1', '--json');
+
+		expect(note.status, note.stderr).toBe(0);
+		expect(text.status).toBe(0);
+		expect(text.stdout).toMatch(
+			/\nNotes\n {2}[A-Z][a-z]{2} \d{1,2} \d\d:\d\d {2}Chose argon2 over bcrypt\n/
+		);
+		expect(text.stdout).not.toContain('info added on');
+		expect(JSON.parse(json.stdout).task.details).toMatch(
+			/<info added on (.+)>\nChose argon2 over bcrypt\n<\/info added on \1>$/
+		);
+	});
+
 	it('neutralizes the task-data tag in --json output, for one ID and several (#777)', () => {
 		const tasksFile = path.join(testDir, '.taskgraph', 'tasks', 'tasks.json');
 		const data = JSON.parse(fs.readFileSync(tasksFile, 'utf8'));

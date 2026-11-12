@@ -185,7 +185,7 @@ export class ParsePrdService {
 		).find((file) => this.prdExists(file));
 		if (!found) {
 			throw new TaskGraphError(
-				`Required PRD file not found. Searched: ${DEFAULT_PRD_FILES.join(', ')}`,
+				`No PRD file given, and no prd.md or prd.txt in ${TASKGRAPH_DOCS_DIR}/`,
 				ERROR_CODES.FILE_NOT_FOUND
 			);
 		}
