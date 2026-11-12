@@ -100,7 +100,9 @@ describe('formatRemovalQuestion (#1146)', () => {
 		[[task('3'), task('4')], 3, 'Delete 2 tasks and their 3 subtasks?'],
 		[[subtask('5.2')], 0, 'Delete subtask 5.2?'],
 		[[subtask('5.1'), subtask('5.2')], 0, 'Delete 2 subtasks?'],
-		[[task('3'), subtask('5.2')], 2, 'Delete task 3 and 3 subtasks?']
+		[[task('3'), subtask('5.2')], 2, 'Delete task 3 and 3 subtasks?'],
+		// 5.2 is one of task 5's two, not a third
+		[[task('5'), subtask('5.2')], 2, 'Delete task 5 and its 2 subtasks?']
 	])('%j with %i subtasks asks "%s"', (found, subtaskCount, question) => {
 		expect(
 			formatRemovalQuestion({
