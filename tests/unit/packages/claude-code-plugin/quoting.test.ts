@@ -119,7 +119,7 @@ describe('taskgraphCalls', () => {
 describe('free text passed to taskgraph in plugin instructions', () => {
 	it('finds the files and the calls in them', () => {
 		expect(instructionFiles).toContain(
-			'packages/claude-code-plugin/commands/update-task.md'
+			'packages/claude-code-plugin/commands/update.md'
 		);
 		expect(instructionFiles).toContain(
 			'packages/claude-code-plugin/agents/task-executor.md'

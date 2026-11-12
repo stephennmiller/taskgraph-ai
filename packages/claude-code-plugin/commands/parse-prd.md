@@ -1,6 +1,6 @@
 ---
 description: "TaskGraph: turn a PRD or spec into tasks, asking about gaps first. Use when the user has a requirements doc."
-argument-hint: "[PRD file path] [number of tasks] [research]"
+argument-hint: "<prd-file> [count] [research]"
 ---
 
 Generate tasks from a PRD, after asking the user about the gaps that would change them.
