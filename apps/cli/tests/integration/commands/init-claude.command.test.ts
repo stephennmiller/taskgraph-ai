@@ -60,8 +60,10 @@ describe('init and the Claude Code integration', () => {
 		expect(fs.readFileSync(path.join(home, '.bashrc'), 'utf8')).toBe(
 			'# mine\n'
 		);
-		expect(result.stdout).toContain('/plugin install taskgraph@taskgraph');
+		expect(result.stdout).toContain('taskgraph doctor shows how to add');
+		expect(result.stdout).not.toContain('/plugin install');
 		expect(result.stdout).not.toContain('.mcp.json');
+		expect(exists('.env.example')).toBe(false);
 	});
 
 	it('leaves the shell startup file alone under --yes without --no-aliases', () => {
@@ -97,7 +99,7 @@ describe('init and the Claude Code integration', () => {
 		expect(exists('.taskgraph/config.json')).toBe(true);
 		expect(exists('CLAUDE.md')).toBe(false);
 		expect(exists('.taskgraph/CLAUDE.md')).toBe(false);
-		expect(result.stdout).not.toContain('/plugin install');
+		expect(result.stdout).not.toContain('taskgraph doctor');
 	});
 
 	it('--mcp also registers the MCP server in .mcp.json', () => {
@@ -180,7 +182,7 @@ describe('init and the Claude Code integration', () => {
 
 		expect(result.status).toBe(0);
 		expect(exists('CLAUDE.md')).toBe(true);
-		expect(result.stdout).toContain('Next: taskgraph add-task');
+		expect(result.stdout).toContain('Next: taskgraph go <prd>');
 		expect(result.stdout).not.toContain('Next steps');
 	});
 });

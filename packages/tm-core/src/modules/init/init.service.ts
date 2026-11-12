@@ -1,7 +1,7 @@
 /**
  * @fileoverview `taskgraph init` and the MCP `initialize_project` tool: set up
- * .taskgraph/ (tasks, settings, templates), .gitignore and .env.example, Git
- * and the tasks.json merge driver, the Claude Code integration, the response
+ * .taskgraph/ (tasks, settings, templates), .gitignore, Git and the
+ * tasks.json merge driver, the Claude Code integration, the response
  * language, the `tm` alias and the import from the upstream project.
  * Re-running it keeps every file the user already has. It prints nothing:
  * the caller shows the result.
@@ -10,7 +10,6 @@
 import { runGitSync } from '../../common/utils/git-utils.js';
 import path from 'node:path';
 import {
-	ENV_EXAMPLE_FILE,
 	EXAMPLE_PRD_FILE,
 	GITIGNORE_FILE,
 	TASKGRAPH_CONFIG_FILE,
@@ -142,8 +141,11 @@ const TASKGRAPH_PATHS = [
 	path.join(TASKGRAPH_DIR, 'CLAUDE.md')
 ];
 
+/** A .gitignore that init creates also keeps secrets out of Git */
+const NEW_GITIGNORE_LINES = '# Environment variables\n.env\n\n';
+
 /** What init writes in the project root */
-const ROOT_FILES = [ENV_EXAMPLE_FILE, GITIGNORE_FILE, 'CLAUDE.md', '.mcp.json'];
+const ROOT_FILES = [GITIGNORE_FILE, 'CLAUDE.md', '.mcp.json'];
 
 /**
  * Refuse a link leading out of the project; `file` is directly in the root.
@@ -264,7 +266,6 @@ export function initializeProject(
 	createInitialStateFile(targetDir, report);
 	createInitialTasksFile(targetDir, report);
 
-	copyTemplateFile('env.example', targetDir, ENV_EXAMPLE_FILE, report);
 	copyTemplateFile('config.json', targetDir, TASKGRAPH_CONFIG_FILE, report);
 	updateConfigMaxTokens(targetDir, report);
 	updateStorageConfig(targetDir, report);
@@ -274,13 +275,15 @@ export function initializeProject(
 
 	// Read before the rewrite: files the old unanchored lines hid show up in
 	// `git status` afterwards (#1105)
-	const unignoresLegacyPaths = ignoresLegacyTaskPaths(
-		path.join(targetDir, GITIGNORE_FILE)
-	);
+	const gitignorePath = path.join(targetDir, GITIGNORE_FILE);
+	const unignoresLegacyPaths = ignoresLegacyTaskPaths(gitignorePath);
 	try {
 		manageGitignoreFile(
-			path.join(targetDir, GITIGNORE_FILE),
-			readAsset('gitignore'),
+			gitignorePath,
+			// The user's own .gitignore gains only TaskGraph's lines; what else
+			// their project ignores is theirs to choose (#1147)
+			(before.get(gitignorePath) == null ? NEW_GITIGNORE_LINES : '') +
+				readAsset('gitignore'),
 			storeTasksInGit,
 			// A failure throws, and the catch below reports it once
 			(_level, message) => log.debug(message)

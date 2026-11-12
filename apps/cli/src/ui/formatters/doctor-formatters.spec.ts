@@ -49,6 +49,19 @@ describe('formatDoctorReport', () => {
 		expect(output).toBe('✓ Project  ..');
 	});
 
+	it('marks a missing plugin as optional, with how to install it (#1147)', () => {
+		const output = format([
+			{ name: 'plugin', status: 'skip', problem: 'not-installed' }
+		]);
+
+		expect(output.split('\n')).toEqual([
+			'– Plugin  optional; not installed',
+			'  In Claude Code, run /plugin marketplace add stephennmiller/taskgraph-ai',
+			'  then /plugin install taskgraph@taskgraph',
+			'  and /plugin install taskgraph-hooks@taskgraph for its hooks'
+		]);
+	});
+
 	it('marks an unset MCP server as optional, with how to add it', () => {
 		const output = format([
 			{ name: 'mcp', status: 'skip', problem: 'not-set-up' }
@@ -122,15 +135,6 @@ describe('formatDoctorReport', () => {
 			]
 		],
 		[
-			'a missing plugin',
-			{ name: 'plugin', status: 'fail', problem: 'not-installed' },
-			[
-				'✗ Plugin  not installed',
-				'  In Claude Code, run /plugin marketplace add stephennmiller/taskgraph-ai',
-				'  then /plugin install taskgraph@taskgraph'
-			]
-		],
-		[
 			'a disabled plugin',
 			{ name: 'plugin', status: 'fail', detail: '0.58.0', problem: 'disabled' },
 			['✗ Plugin  disabled', '  Run claude plugin enable taskgraph@taskgraph']
@@ -156,7 +160,7 @@ describe('formatDoctorReport', () => {
 	it('fits 80 columns', () => {
 		const output = format([
 			...allPass.slice(0, 4),
-			{ name: 'plugin', status: 'fail', problem: 'not-installed' },
+			{ name: 'plugin', status: 'skip', problem: 'not-installed' },
 			{
 				name: 'node',
 				status: 'fail',
