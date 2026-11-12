@@ -136,7 +136,8 @@ function setVersionInText(text, version, file) {
 export const VERSION_FILES = [
 	'package.json',
 	'package-lock.json',
-	'packages/claude-code-plugin/.claude-plugin/plugin.json'
+	'packages/claude-code-plugin/.claude-plugin/plugin.json',
+	'packages/claude-code-hooks/.claude-plugin/plugin.json'
 ];
 
 export function applyVersion(rootDir, version) {

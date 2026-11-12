@@ -35,11 +35,12 @@ The Claude Code plugin is the only way to get slash commands. It adds the `/task
 ```txt
 /plugin marketplace add stephennmiller/taskgraph-ai
 /plugin install taskgraph@taskgraph
+/plugin install taskgraph-hooks@taskgraph
 ```
 
 The plugin does not register an MCP server. The `task-checker` agent uses the `taskgraph show` CLI, and uses the MCP tool instead if you registered the server as `taskgraph-ai` (step 4).
 
-The plugin also adds four hooks and a `taskgraph` skill. In a project with a `.taskgraph/` folder, each Claude Code session (and each resume after compaction) starts with the output of [`taskgraph prime`](/capabilities/cli-viewing-commands#prime-a-coding-agent): the task in progress, what's ready next, and the workflow rules. Elsewhere the hook does nothing. The plugin states the oldest CLI it works with; when yours is older, or not installed, the hook tells Claude to ask you to run `npm install -g taskgraph-ai@latest` instead.
+The plugin also adds a `taskgraph` skill, and `taskgraph-hooks` adds four hooks. In a project with a `.taskgraph/` folder, each Claude Code session (and each resume after compaction) starts with the output of [`taskgraph prime`](/capabilities/cli-viewing-commands#prime-a-coding-agent): the task in progress, what's ready next, and the workflow rules. Elsewhere the hook does nothing. The plugin states the oldest CLI it works with; when yours is older, or not installed, the hook tells Claude to ask you to run `npm install -g taskgraph-ai@latest` instead.
 
 After compaction the hook also asks Claude to log a note on the task in progress, from the conversation summary, so what it did before compaction isn't lost. While a task is in progress, each prompt you send carries that task and its unchecked acceptance criteria ([`taskgraph prime --current`](/capabilities/cli-viewing-commands#prime-a-coding-agent), at most 13 lines), so Claude keeps it in view in a long session; with nothing in progress the hook adds nothing and doesn't start the CLI.
 

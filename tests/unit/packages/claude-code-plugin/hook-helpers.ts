@@ -13,7 +13,7 @@ const rootDir = path.resolve(
 	path.dirname(fileURLToPath(import.meta.url)),
 	'../../../..'
 );
-export const pluginDir = path.join(rootDir, 'packages/claude-code-plugin');
+export const pluginDir = path.join(rootDir, 'packages/claude-code-hooks');
 export const config = JSON.parse(
 	fs.readFileSync(path.join(pluginDir, 'hooks/hooks.json'), 'utf8')
 );

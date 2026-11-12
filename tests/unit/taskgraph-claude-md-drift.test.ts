@@ -165,7 +165,7 @@ describe('the plugin skill and hooks', () => {
 	);
 	const hooks = JSON.parse(
 		fs.readFileSync(
-			path.join(rootDir, 'packages/claude-code-plugin/hooks/hooks.json'),
+			path.join(rootDir, 'packages/claude-code-hooks/hooks/hooks.json'),
 			'utf8'
 		)
 	);
@@ -178,7 +178,7 @@ describe('the plugin skill and hooks', () => {
 						.readFileSync(
 							path.join(
 								rootDir,
-								'packages/claude-code-plugin',
+								'packages/claude-code-hooks',
 								h.command.match(/\/(hooks\/[\w-]+\.sh)/)[1]
 							),
 							'utf8'

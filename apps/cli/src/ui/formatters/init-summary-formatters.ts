@@ -10,6 +10,7 @@
  *   Add the slash commands in Claude Code:
  *     /plugin marketplace add stephennmiller/taskgraph-ai
  *     /plugin install taskgraph@taskgraph
+ *     /plugin install taskgraph-hooks@taskgraph
  *
  *   AI runs through Claude Code; run `claude` once to sign in
  *   Change the models or language with taskgraph models --setup or taskgraph lang
@@ -50,6 +51,8 @@ export interface InitSummary {
 /** The marketplace and plugin names from .claude-plugin/marketplace.json */
 export const PLUGIN_MARKETPLACE = 'stephennmiller/taskgraph-ai';
 export const PLUGIN_NAME = 'taskgraph@taskgraph';
+/** Its hooks ship as a second plugin: the Claude plugin directory refuses hooks */
+export const HOOKS_PLUGIN_NAME = 'taskgraph-hooks@taskgraph';
 
 function formatChanges(changes: InitChange[]): string[] {
 	const width = Math.max(0, ...changes.map((change) => change.path.length));
@@ -93,7 +96,8 @@ export function formatInitSummary(summary: InitSummary): string {
 		lines.push(
 			theme.muted('Add the slash commands in Claude Code:'),
 			`  ${theme.brand(`/plugin marketplace add ${PLUGIN_MARKETPLACE}`)}`,
-			`  ${theme.brand(`/plugin install ${PLUGIN_NAME}`)}`
+			`  ${theme.brand(`/plugin install ${PLUGIN_NAME}`)}`,
+			`  ${theme.brand(`/plugin install ${HOOKS_PLUGIN_NAME}`)}`
 		);
 	}
 	if (!summary.alreadySetUp) {

@@ -158,5 +158,6 @@ describe('formatHelp', () => {
 			'/plugin marketplace add stephennmiller/taskgraph-ai'
 		);
 		expect(text).toContain('/plugin install taskgraph@taskgraph');
+		expect(text).toContain('/plugin install taskgraph-hooks@taskgraph');
 	});
 });

@@ -25,6 +25,18 @@
 				"automation"
 			],
 			"category": "productivity"
+		},
+		{
+			"name": "taskgraph-hooks",
+			"source": "./packages/claude-code-hooks",
+			"description": "Hooks that load TaskGraph state at session start, keep the task in progress in view, and keep Claude going while its acceptance criteria are unchecked. Use with the taskgraph plugin.",
+			"author": {
+				"name": "Stephen Miller"
+			},
+			"homepage": "https://github.com/stephennmiller/taskgraph-ai",
+			"repository": "https://github.com/stephennmiller/taskgraph-ai",
+			"keywords": ["task-management", "hooks", "workflow"],
+			"category": "productivity"
 		}
 	]
 }

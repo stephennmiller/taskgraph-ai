@@ -162,6 +162,7 @@ slash commands (as `/taskgraph:<name>`) and two agents (`task-executor`,
 
 ```txt
 /plugin install taskgraph@taskgraph
+/plugin install taskgraph-hooks@taskgraph
 ```
 
 Then check the setup from your project folder. `taskgraph doctor` checks Node,

@@ -23,6 +23,7 @@ import {
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), '../../../..');
 const pluginDir = join(repoRoot, 'packages/claude-code-plugin');
+const hooksDir = join(repoRoot, 'packages/claude-code-hooks');
 const range: string = JSON.parse(
 	readFileSync(join(pluginDir, '.claude-plugin/plugin.json'), 'utf-8')
 ).metadata.taskgraphCli;
@@ -76,16 +77,14 @@ const markdownFiles = readdirSync(pluginDir, {
 const hooks: Record<
 	string,
 	Array<{ hooks: Array<{ command: string }> }>
-> = JSON.parse(
-	readFileSync(join(pluginDir, 'hooks/hooks.json'), 'utf-8')
-).hooks;
+> = JSON.parse(readFileSync(join(hooksDir, 'hooks/hooks.json'), 'utf-8')).hooks;
 /** Each hook's script, which its command runs by name */
 const hookCommands = Object.entries(hooks).flatMap(([event, groups]) =>
 	groups.flatMap((group) =>
 		group.hooks.map((hook) => {
 			const script = hook.command.match(/\/(hooks\/[\w-]+\.sh)/)?.[1];
 			if (!script) throw new Error(`${event} runs no hooks/*.sh script`);
-			return [event, readFileSync(join(pluginDir, script), 'utf-8')] as const;
+			return [event, readFileSync(join(hooksDir, script), 'utf-8')] as const;
 		})
 	)
 );

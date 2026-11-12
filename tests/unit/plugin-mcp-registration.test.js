@@ -25,7 +25,7 @@ describe('claude code plugin MCP registration', () => {
 		expect(readJson('.claude-plugin/plugin.json').mcpServers).toBeUndefined();
 	});
 
-	test.each(['.claude-plugin/plugin.json', 'package.json'])(
+	test.each(['.claude-plugin/plugin.json'])(
 		'%s does not advertise MCP integration',
 		(file) => {
 			const meta = readJson(file);

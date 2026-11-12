@@ -33,14 +33,15 @@ describe('plugin research skill', () => {
 	});
 
 	it('uses WebSearch and WebFetch for research', () => {
-		expect(allowed).toContain('WebSearch');
-		expect(allowed).toContain('WebFetch');
+		expect(body).toContain('WebSearch');
+		expect(body).toContain('WebFetch');
 	});
 
-	it('does not grant file-write or shell tools', () => {
-		for (const tool of ['Bash', 'Write', 'Edit']) {
-			expect(allowed).not.toContain(tool);
-		}
+	// The Claude plugin directory refuses other grants from an unverified org
+	it('pre-approves no tools beyond Read, Grep, Glob and LS', () => {
+		expect(
+			allowed.filter((tool) => !['Read', 'Grep', 'Glob', 'LS'].includes(tool))
+		).toEqual([]);
 	});
 
 	it('treats Context7 as optional and falls back to web tools', () => {
