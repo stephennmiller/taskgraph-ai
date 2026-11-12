@@ -258,6 +258,7 @@ export {
 	noteTimes,
 	hasNoteSince,
 	parseNoteSince,
+	splitNotes,
 	type TaskNote,
 	todoListNote,
 	type SelectNextTaskOptions,

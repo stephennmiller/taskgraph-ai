@@ -175,10 +175,9 @@ describe('GithubCommand', () => {
 		it('prints gh availability, repo and link counts', async () => {
 			await (command as any).runStatus({});
 
-			expect(output()).toContain('available and signed in');
+			expect(output()).toContain('signed in');
 			expect(output()).toContain('acme/app');
-			expect(output()).toContain('2 task(s)');
-			expect(output()).toContain('3 task(s)');
+			expect(output()).toContain('2 of 5 tasks');
 		});
 
 		it('passes --repo through and supports --json', async () => {

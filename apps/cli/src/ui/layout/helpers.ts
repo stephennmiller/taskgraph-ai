@@ -94,6 +94,11 @@ export interface ColumnSpec {
 	width: number | 'flex';
 	/** Optional columns are hidden in ascending dropOrder when the table does not fit */
 	dropOrder?: number;
+	/**
+	 * An optional column is hidden unless the flexible one keeps this width
+	 * beside it. Default: `planColumns`' `flexMin`
+	 */
+	flexMin?: number;
 }
 
 interface ColumnPlan {
@@ -106,15 +111,16 @@ interface ColumnPlan {
  * Fit table columns into a total width. Hides optional columns (lowest
  * dropOrder first) until the table fits, then gives the flexible column all
  * remaining space, going below `flexMin` (to 10) only once nothing is left
- * to hide. Accounts for the vertical borders cli-table3 draws.
+ * to hide. A column with its own `flexMin` is hidden unless the flexible
+ * column keeps that much. Accounts for the vertical borders cli-table3 draws.
  */
 export function planColumns(
 	totalWidth: number,
 	specs: ColumnSpec[],
 	flexMin: number = 20
 ): ColumnPlan {
-	const needed = (cols: ColumnSpec[]) =>
-		cols.reduce((sum, c) => sum + (c.width === 'flex' ? flexMin : c.width), 0) +
+	const needed = (cols: ColumnSpec[], min: number) =>
+		cols.reduce((sum, c) => sum + (c.width === 'flex' ? min : c.width), 0) +
 		cols.length +
 		1;
 
@@ -125,7 +131,7 @@ export function planColumns(
 		.sort((a, b) => (a.dropOrder ?? 0) - (b.dropOrder ?? 0));
 
 	for (const col of droppable) {
-		if (needed(active) <= totalWidth) break;
+		if (needed(active, col.flexMin ?? flexMin) <= totalWidth) continue;
 		active = active.filter((c) => c !== col);
 		hidden.push(col.key);
 	}
@@ -144,16 +150,6 @@ export function planColumns(
 		widths: active.map((c) => (c.width === 'flex' ? flexWidth : c.width)),
 		hidden
 	};
-}
-
-/**
- * Truncate text to specified length
- */
-export function truncate(text: string, maxLength: number): string {
-	if (text.length <= maxLength) {
-		return text;
-	}
-	return text.substring(0, maxLength - 3) + '...';
 }
 
 /**

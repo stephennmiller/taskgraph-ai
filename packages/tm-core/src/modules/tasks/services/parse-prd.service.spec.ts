@@ -49,12 +49,13 @@ describe('resolvePrdPath', () => {
 		expect(service.resolvePrdPath()).toBe(path.join(docs, 'PRD.md'));
 	});
 
-	it('keeps the not-found messages', () => {
+	// #1148: with no PRD named, the message listed four paths on one 137-character line
+	it('says which PRD is missing in a line that fits 80 columns', () => {
 		expect(() => service.resolvePrdPath('missing.md')).toThrow(
 			'missing.md not found'
 		);
 		expect(() => service.resolvePrdPath()).toThrow(
-			'Required PRD file not found. Searched: .taskgraph/docs/PRD.md, .taskgraph/docs/prd.md, .taskgraph/docs/PRD.txt, .taskgraph/docs/prd.txt'
+			'No PRD file given, and no prd.md or prd.txt in .taskgraph/docs/'
 		);
 	});
 

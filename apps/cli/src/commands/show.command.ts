@@ -15,13 +15,15 @@ import {
 import type { Subtask } from '@tm/core';
 import chalk from 'chalk';
 import { Command } from 'commander';
-import { formatTaskDetail } from '../ui/formatters/task-detail-formatters.js';
+import {
+	type TaskDetailOptions,
+	formatTaskDetail
+} from '../ui/formatters/task-detail-formatters.js';
 import { formatPlainTaskList } from '../ui/formatters/task-list-formatters.js';
 import { displayCommandHeader } from '../utils/display-helpers.js';
 import { displayError, printError } from '../utils/error-handler.js';
 import { jsonOption, printJson } from '../utils/json-output.js';
 import { getProjectRoot } from '../utils/project-root.js';
-import * as ui from '../utils/ui.js';
 import {
 	fencesTaskData,
 	shellOptsOutOfTaskDataFence
@@ -71,12 +73,12 @@ export class ShowCommand extends Command {
 	private tmCore?: TmCore;
 	private lastResult?: ShowTaskResult | ShowMultipleTasksResult;
 	private requestedId?: string;
-	/** The single task shown waits on unfinished dependencies */
-	private blocked = false;
-	/** Commits that name the single task shown (#954) */
-	private commits: Array<{ sha: string; subject: string }> = [];
-	/** `--status` kept these subtask statuses of the single task, out of `total` */
-	private subtaskFilter?: { statuses: string[]; total: number };
+	/**
+	 * What the text of each task found also shows: its full ID when it's a
+	 * subtask, whether it waits on dependencies, the commits that name it
+	 * (#954) and the subtask statuses `--status` kept
+	 */
+	private detail = new Map<ShownTask, TaskDetailOptions>();
 
 	constructor(name?: string) {
 		super(name || 'show');
@@ -191,22 +193,24 @@ export class ShowCommand extends Command {
 		const result = await this.tmCore.tasks.get(taskId, options.tag, {
 			subtaskStatus: options.status
 		});
-		if ('subtaskFilter' in result) this.subtaskFilter = result.subtaskFilter;
-		if (result.task) {
-			this.blocked = (
-				await this.tmCore.tasks.explainBlockers(taskId, { tag: options.tag })
-			).blocked;
-			this.commits = await this.tmCore.tasks.getCommits(taskId, options.tag);
+		const task = await this.withPrdSection(taskId, result.task, options.tag);
+		// The stored ID ("1.3" for "01.03"), or as typed when not found
+		const originalTaskId = result.isSubtask
+			? String(result.task?.id ?? taskId)
+			: undefined;
+		if (task) {
+			this.detail.set(task, {
+				id: originalTaskId,
+				subtaskFilter:
+					'subtaskFilter' in result ? result.subtaskFilter : undefined,
+				blocked: (
+					await this.tmCore.tasks.explainBlockers(taskId, { tag: options.tag })
+				).blocked,
+				commits: await this.tmCore.tasks.getCommits(taskId, options.tag)
+			});
 		}
 
-		return {
-			task: await this.withPrdSection(taskId, result.task, options.tag),
-			found: result.task !== null,
-			// The stored ID ("1.3" for "01.03"), or as typed when not found
-			originalTaskId: result.isSubtask
-				? String(result.task?.id ?? taskId)
-				: undefined
-		};
+		return { task, found: task !== null, originalTaskId };
 	}
 
 	/** The task with its PRD section; null stays null, so a missing subtask gets no parent section */
@@ -227,19 +231,12 @@ export class ShowCommand extends Command {
 		taskIds: string[],
 		options: ShowCommandOptions
 	): Promise<ShowMultipleTasksResult> {
-		if (!this.tmCore) {
-			throw new Error('TmCore not initialized');
-		}
-
 		const tasks: ShownTask[] = [];
 		const notFound: string[] = [];
 
 		// Get each task individually
 		for (const taskId of taskIds) {
-			const result = await this.tmCore.tasks.get(taskId, options.tag, {
-				subtaskStatus: options.status
-			});
-			const task = await this.withPrdSection(taskId, result.task, options.tag);
+			const { task } = await this.getSingleTask(taskId, options);
 			if (task) {
 				tasks.push(task);
 			} else {
@@ -325,21 +322,20 @@ export class ShowCommand extends Command {
 		});
 		// Separate the tag line from the task; with no tag line, start with the task
 		if (headerShown) console.log();
-		console.log(
-			formatTaskDetail(result.task, {
-				id: result.originalTaskId,
-				prdSection: result.task.prdSection,
-				subtaskFilter: this.subtaskFilter,
-				blocked: this.blocked,
-				rawText: !process.stdout.isTTY,
-				checklist: this.tmCore?.tasks.getChecklist(
-					result.task,
-					Boolean(result.originalTaskId)
-				),
-				fence: fencesTaskData() && !shellOptsOutOfTaskDataFence(),
-				commits: this.commits
-			})
-		);
+		console.log(this.formatTask(result.task));
+	}
+
+	/** One task as `show <id>` prints it */
+	private formatTask(task: ShownTask, nextStep = true): string {
+		const detail = this.detail.get(task);
+		return formatTaskDetail(task, {
+			...detail,
+			prdSection: task.prdSection,
+			rawText: !process.stdout.isTTY,
+			checklist: this.tmCore?.tasks.getChecklist(task, Boolean(detail?.id)),
+			fence: fencesTaskData() && !shellOptsOutOfTaskDataFence(),
+			nextStep
+		});
 	}
 
 	/**
@@ -391,16 +387,11 @@ export class ShowCommand extends Command {
 			return;
 		}
 
-		// Task table
-		console.log(theme.brand.bold(`${printed ? '\n' : ''}Tasks:\n`));
+		// Each task as `show <id>` prints it. Which of them to act on next is
+		// the reader's call, so no `Next:` line
 		console.log(
-			formatTaskData(
-				ui.createTaskTable(result.tasks, {
-					showSubtasks: true,
-					showDependencies: true
-				}),
-				fencesTaskData() && !shellOptsOutOfTaskDataFence()
-			)
+			(printed ? '\n' : '') +
+				result.tasks.map((task) => this.formatTask(task, false)).join('\n\n')
 		);
 	}
 
