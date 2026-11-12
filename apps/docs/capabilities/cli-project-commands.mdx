@@ -59,11 +59,17 @@ code. Stopping `go` (Ctrl-C, `kill`, closing the terminal) stops the step that
 is running too.
 
 `loop` runs Claude Code with permission prompts off, so `go` asks you to
-allow that before its first step, unless you already approved this project or
-passed `--trust` or `--sandbox`. Answering no, or Ctrl-C, stops it before
-anything is set up or planned. Without a terminal it stops there with an
-error instead of asking. Your answer covers the tasks this run plans from the
-PRD, and is remembered as [`loop` remembers it](/capabilities/loop-trust).
+allow that before its first step, unless you passed `--trust` or `--sandbox`.
+Answering no, or Ctrl-C, stops it before anything is set up or planned.
+Without a terminal it stops there with an error instead of asking. A yes
+covers the tasks this run plans from the PRD, and is remembered as
+[`loop` remembers it](/capabilities/loop-trust).
+
+An approval you gave earlier doesn't answer for tasks that aren't planned
+yet: `go` asks whenever it is going to plan (the folder isn't a project yet,
+or the PRD has sections with no tasks, or it can't tell). When you run `go`
+again and every section already has its tasks, nothing new is planned and an
+approval the project still has stands, as it does for `loop`.
 
 When you run `go` again on a project with work done or under way, it prints
 one line saying what it is resuming before `loop` starts:

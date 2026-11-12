@@ -22,7 +22,7 @@ export { LoopError } from './loop-task.js';
 export type { LoopTask } from './loop-task.js';
 
 // The stored approval, for `go`, which asks before the project exists
-export { isLoopTrusted, trustLoop } from './loop-trust.js';
+export { isGoTrusted, trustLoop } from './loop-trust.js';
 
 // Stop signals, and exiting on one so an AI command leaves no Claude running
 export { STOP_SIGNALS, exitOnStopSignals } from './process-group.js';

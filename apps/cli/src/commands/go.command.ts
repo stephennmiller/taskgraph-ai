@@ -6,18 +6,21 @@
  * again, and the first step that fails stops the rest. The steps before
  * `loop` print their result without a next step (#1146). `go` settles
  * loop's consent before the first step, so no planning is paid for and then
- * refused. On a rerun it says what loop resumes before loop starts.
+ * refused: a run that plans new tasks asks even where an approval is stored,
+ * and a run that only resumes lets that approval stand. On a rerun it says
+ * what loop resumes before loop starts.
  * A signal that stops `go` goes on to the running step (#1103).
  */
 
 import { spawn } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
+import path from 'node:path';
 import {
 	SKIP_AUTO_UPDATE_ENV,
 	STOP_SIGNALS,
 	createTmCore,
-	isLoopTrusted,
+	isGoTrusted,
 	isTaskGraphProject,
 	resolveProjectRoot,
 	trustLoop
@@ -35,7 +38,7 @@ interface GoCommandOptions {
 
 /**
  * The CLI commands `go` runs for `prd`, in order
- * @param options.trust - Also set once `go` itself settled the consent
+ * @param options.trust - Also set once `go` itself asked and got a yes
  */
 function goSteps(
 	prd: string,
@@ -131,6 +134,30 @@ export class GoCommand extends Command {
 		}
 	}
 
+	/**
+	 * Whether parse-prd will have the AI plan tasks from `prd`: not when every
+	 * section already has its tasks. true when that can't be told
+	 */
+	private async plansTasks(
+		projectRoot: string,
+		prd: string,
+		isProject: boolean
+	): Promise<boolean> {
+		if (!isProject) return true;
+		try {
+			const tmCore = await createTmCore({ projectPath: projectRoot });
+			try {
+				return await tmCore.tasks.prdHasNewSections({
+					prdPath: path.resolve(prd)
+				});
+			} finally {
+				await tmCore.close();
+			}
+		} catch {
+			return true;
+		}
+	}
+
 	private async run(prd: string, options: GoCommandOptions): Promise<void> {
 		if (!fs.existsSync(prd)) {
 			printError(
@@ -142,24 +169,28 @@ export class GoCommand extends Command {
 		}
 		const projectRoot = resolveProjectRoot();
 		const isProject = isTaskGraphProject(projectRoot);
-		// Loop's question, before any step: planning costs an AI call (#1146)
-		const asks = !options.trust && !options.sandbox;
-		if (
-			asks &&
-			!(await confirmLoopTrust({
-				isTrusted: () => isLoopTrusted(projectRoot),
+		// Loop's question, before any step: planning costs an AI call (#1146).
+		// `asked`: this run got a yes of its own, which covers what it plans
+		let asked = false;
+		if (!options.trust && !options.sandbox) {
+			const trusted = isGoTrusted(
+				projectRoot,
+				await this.plansTasks(projectRoot, prd, isProject)
+			);
+			const approved = await confirmLoopTrust({
+				isTrusted: () => trusted,
 				trust: () => trustLoop(projectRoot)
-			}))
-		) {
-			return;
+			});
+			if (!approved) return;
+			asked = !trusted;
 		}
 		for (const args of goSteps(prd, isProject, {
 			...options,
-			trust: options.trust || asks
+			trust: options.trust || asked
 		})) {
 			const isLoop = args[0] === 'loop';
-			// parse-prd withdrew the approval; it covers the tasks this run planned
-			if (isLoop && asks) trustLoop(projectRoot);
+			// parse-prd withdrew the approval when it added tasks; the yes covers them
+			if (isLoop && asked) trustLoop(projectRoot);
 			if (isLoop && isProject) {
 				// Only a heads-up: a file loop can't read fails loop's own way
 				await this.printResume(projectRoot).catch(() => {});

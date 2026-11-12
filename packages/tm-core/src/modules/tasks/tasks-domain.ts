@@ -341,6 +341,8 @@ export class TasksDomain {
 	parsePrd: TaskAiCommands['parsePrd'] = (...a) => this.ai.parsePrd(...a);
 	parsePrdTarget: TaskAiCommands['parsePrdTarget'] = (...a) =>
 		this.ai.parsePrdTarget(...a);
+	prdHasNewSections: TaskAiCommands['prdHasNewSections'] = (...a) =>
+		this.ai.prdHasNewSections(...a);
 	findPrdGaps: TaskAiCommands['findPrdGaps'] = (...a) =>
 		this.ai.findPrdGaps(...a);
 	generateObject: TaskAiCommands['generateObject'] = (...a) =>

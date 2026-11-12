@@ -1,7 +1,8 @@
 /**
  * @fileoverview `taskgraph go <prd>` against the built CLI with the fake
  * `claude` program (#957): without a terminal, `--trust` or `--sandbox` it
- * stops before planning anything (#1146), and a SIGTERM to `go` alone stops
+ * stops before planning anything, also where an approval is stored (#1146),
+ * and a SIGTERM to `go` alone stops
  * the running step too (#1103). What it runs once approved is in
  * `go.command.consent.spec.ts`; `loop` itself is never started here.
  *
@@ -14,6 +15,7 @@ import { spawn, spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { isGoTrusted, trustLoop } from '@tm/core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
 	installFakeClaude,
@@ -71,31 +73,48 @@ describe.skipIf(!built)('go (fake claude)', { timeout: 120000 }, () => {
 		expect(fs.existsSync(path.join(project, '.taskgraph'))).toBe(false);
 	});
 
-	it('without a terminal or --trust, stops before it plans anything (#1146)', () => {
-		spawnSync('git', ['init', '-q'], { cwd: project });
-		expect(run(project, {}, 'init', '--yes').status).toBe(0);
-		fs.mkdirSync(path.join(project, 'docs'));
-		fs.writeFileSync(path.join(project, 'docs', 'prd.md'), PRD);
-		const fake = installFakeClaude({
-			projectDir: project,
-			workDir: work,
-			replies: [{ object: { tasks: [], metadata: null } }]
-		});
+	it.each([
+		['no approval stored', false],
+		['an approval stored', true]
+	])(
+		'with no terminal or --trust and %s, plans nothing (#1146)',
+		(_, stored) => {
+			spawnSync('git', ['init', '-q'], { cwd: project });
+			expect(run(project, {}, 'init', '--yes').status).toBe(0);
+			fs.mkdirSync(path.join(project, 'docs'));
+			fs.writeFileSync(path.join(project, 'docs', 'prd.md'), PRD);
+			const fake = installFakeClaude({
+				projectDir: project,
+				workDir: work,
+				replies: [{ object: { tasks: [], metadata: null } }]
+			});
 
-		// HOME: no approval stored for this project, whatever the machine has
-		const res = run(project, { ...fake.env, HOME: work }, 'go', 'docs/prd.md');
+			// An approval loop would take; go is about to plan tasks it doesn't cover
+			if (stored) {
+				trustLoop(project, work);
+				expect(isGoTrusted(project, false, work)).toBe(true);
+			}
 
-		// loop's own error and hint, each within 80 columns, and nothing else
-		expect(res.status).toBe(1);
-		expect(res.stderr).toContain('permission prompts off');
-		expect(res.stderr).toContain('--trust');
-		for (const line of res.stderr.trimEnd().split('\n')) {
-			expect(line.length).toBeLessThanOrEqual(80);
+			// HOME: only that approval for this project, whatever the machine has
+			const res = run(
+				project,
+				{ ...fake.env, HOME: work },
+				'go',
+				'docs/prd.md'
+			);
+
+			// loop's own error and hint, each within 80 columns, and nothing else
+			expect(res.status).toBe(1);
+			expect(res.stderr).toContain('permission prompts off');
+			expect(res.stderr).toContain('--trust');
+			for (const line of res.stderr.trimEnd().split('\n')) {
+				expect(line.length).toBeLessThanOrEqual(80);
+			}
+			expect(res.stdout).toBe('');
+			// parse-prd never ran: no AI call was paid for and then refused
+			expect(readTrace(fake.dir)).toHaveLength(0);
 		}
-		expect(res.stdout).toBe('');
-		// parse-prd never ran: no AI call was paid for and then refused
-		expect(readTrace(fake.dir)).toHaveLength(0);
-	});
+	);
 
 	// Windows has no SIGTERM to pass on, and its fake claude has a launcher between
 	it.skipIf(process.platform === 'win32')(

@@ -1,7 +1,9 @@
 /**
  * @fileoverview `go` settles loop's consent before its first step (#1146):
- * a "no", or no terminal to ask on, stops it before anything is planned.
- * The steps are not run: `spawn` is faked, as is loop's question.
+ * a "no", or no terminal to ask on, stops it before anything is planned. A
+ * run that plans new tasks asks even where an approval is stored; a run that
+ * only resumes lets it stand. The steps are not run: `spawn` is faked, as
+ * are loop's question and the stored approval.
  */
 
 import { EventEmitter } from 'node:events';
@@ -18,7 +20,7 @@ vi.mock('node:child_process', async (importOriginal) => ({
 vi.mock('@tm/core', async (importOriginal) => ({
 	...(await importOriginal<typeof import('@tm/core')>()),
 	createTmCore: vi.fn(),
-	isLoopTrusted: vi.fn(),
+	isGoTrusted: vi.fn(),
 	trustLoop: vi.fn(),
 	isTaskGraphProject: vi.fn(),
 	resolveProjectRoot: vi.fn()
@@ -29,7 +31,7 @@ vi.mock('./loop.command.js', () => ({ confirmLoopTrust: vi.fn() }));
 import { spawn } from 'node:child_process';
 import {
 	createTmCore,
-	isLoopTrusted,
+	isGoTrusted,
 	isTaskGraphProject,
 	resolveProjectRoot,
 	trustLoop
@@ -40,8 +42,13 @@ import { confirmLoopTrust } from './loop.command.js';
 describe('go consent', () => {
 	let dir: string;
 	let prd: string;
-	/** What happened, in order: each step's command and `trust` when the approval is renewed */
+	/** What happened, in order: `asked`, each step's command, and `trust` when the approval is stored again */
 	let events: string[];
+	/** An approval for this project is in the user's home */
+	let stored: boolean;
+	/** What the user answers, or false with no terminal to ask on */
+	let answer: boolean;
+	const prdHasNewSections = vi.fn();
 
 	const go = (...args: string[]) =>
 		new GoCommand().parseAsync([prd, ...args], { from: 'user' });
@@ -51,6 +58,11 @@ describe('go consent', () => {
 			args: (args as string[]).slice(1),
 			goStep: options?.env?.TASKGRAPH_GO_STEP
 		}));
+	/** A project whose PRD has, or hasn't, sections with no tasks yet */
+	const project = (newSections: boolean) => {
+		vi.mocked(isTaskGraphProject).mockReturnValue(true);
+		prdHasNewSections.mockResolvedValue(newSections);
+	};
 
 	beforeEach(() => {
 		vi.clearAllMocks();
@@ -59,11 +71,32 @@ describe('go consent', () => {
 		prd = path.join(dir, 'prd.md');
 		fs.writeFileSync(prd, '# App\n');
 		events = [];
+		stored = false;
+		answer = true;
+		vi.spyOn(console, 'log').mockImplementation(() => {});
 		vi.mocked(resolveProjectRoot).mockReturnValue(dir);
 		vi.mocked(isTaskGraphProject).mockReturnValue(false);
+		// tm-core's rule, tested in loop-trust.spec.ts
+		vi.mocked(isGoTrusted).mockImplementation(
+			(_root, plansTasks) => !plansTasks && stored
+		);
 		vi.mocked(trustLoop).mockImplementation(() => {
 			events.push('trust');
 		});
+		// Loop's own: no question where it is trusted, else the answer
+		vi.mocked(confirmLoopTrust).mockImplementation(async (loop) => {
+			if (loop.isTrusted()) return true;
+			events.push('asked');
+			return answer;
+		});
+		vi.mocked(createTmCore).mockResolvedValue({
+			tasks: {
+				prdHasNewSections,
+				getStats: async () => ({ byStatus: { done: 1, pending: 1 } }),
+				getPrimeContext: async () => ({ inProgress: [] })
+			},
+			close: async () => {}
+		} as never);
 		vi.mocked(spawn).mockImplementation(((_cmd: string, args: string[]) => {
 			events.push(args[1]);
 			const child = new EventEmitter();
@@ -74,47 +107,88 @@ describe('go consent', () => {
 
 	afterEach(() => {
 		process.exitCode = undefined;
+		vi.restoreAllMocks();
 		fs.rmSync(dir, { recursive: true, force: true });
 	});
 
-	it('runs no step when the consent is refused or cannot be asked', async () => {
-		vi.mocked(confirmLoopTrust).mockResolvedValue(false);
+	it.each([
+		['--trust', ['loop', '--trust']],
+		['--sandbox', ['loop', '--sandbox']]
+	])('with %s: no question and no approval stored', async (flag, loop) => {
+		project(true);
 
-		await go();
+		await go(flag);
 
-		expect(spawn).not.toHaveBeenCalled();
+		expect(confirmLoopTrust).not.toHaveBeenCalled();
 		expect(trustLoop).not.toHaveBeenCalled();
+		expect(steps().at(-1)?.args).toEqual(loop);
 	});
 
-	it('asks loop’s own question about this project before the first step', async () => {
-		vi.mocked(confirmLoopTrust).mockImplementation(async (loop) => {
-			// Nothing has run yet when the question comes
-			expect(spawn).not.toHaveBeenCalled();
-			loop.isTrusted();
-			return true;
+	describe('a run that plans new tasks', () => {
+		it('asks before the first step even where an approval is stored', async () => {
+			project(true);
+			stored = true;
+
+			await go();
+
+			expect(prdHasNewSections).toHaveBeenCalledWith({ prdPath: prd });
+			// One question; the yes covers the tasks planned, so loop gets --trust
+			expect(events).toEqual(['asked', 'parse-prd', 'trust', 'loop']);
+			expect(steps().at(-1)?.args).toEqual(['loop', '--trust']);
 		});
 
-		await go();
+		it('runs no step on a "no", or with no terminal to ask on', async () => {
+			project(true);
+			stored = true;
+			answer = false;
 
-		expect(isLoopTrusted).toHaveBeenCalledWith(dir);
-		expect(events).toEqual(['init', 'parse-prd', 'trust', 'loop']);
+			await go();
+
+			expect(events).toEqual(['asked']);
+		});
+
+		it('asks in a folder that is not a project yet, which it sets up', async () => {
+			stored = true;
+
+			await go();
+
+			expect(createTmCore).not.toHaveBeenCalled();
+			expect(events).toEqual(['asked', 'init', 'parse-prd', 'trust', 'loop']);
+		});
+
+		it('asks when it cannot tell whether the PRD has new sections', async () => {
+			project(false);
+			stored = true;
+			prdHasNewSections.mockRejectedValue(new Error('tasks.json is not JSON'));
+
+			await go();
+
+			expect(events[0]).toBe('asked');
+		});
 	});
 
-	it('renews the approval parse-prd withdrew, and loop does not ask again', async () => {
-		vi.mocked(confirmLoopTrust).mockResolvedValue(true);
+	describe('a run that only resumes', () => {
+		it('lets a stored approval stand, and leaves the check to loop', async () => {
+			project(false);
+			stored = true;
 
-		await go();
+			await go();
 
-		expect(trustLoop).toHaveBeenCalledWith(dir);
-		expect(steps().at(-1)).toEqual({
-			args: ['loop', '--trust'],
-			goStep: undefined
+			// As `taskgraph loop` would run: nothing asked, stored or passed on
+			expect(events).toEqual(['parse-prd', 'loop']);
+			expect(steps().at(-1)?.args).toEqual(['loop']);
+		});
+
+		it('asks when no approval is stored', async () => {
+			project(false);
+
+			await go();
+
+			expect(events).toEqual(['asked', 'parse-prd', 'trust', 'loop']);
 		});
 	});
 
 	it('marks the steps before loop, so they print no next step; never loop', async () => {
-		vi.mocked(confirmLoopTrust).mockResolvedValue(true);
-
 		await go();
 
 		expect(steps().map((step) => [step.args[0], step.goStep])).toEqual([
@@ -124,22 +198,12 @@ describe('go consent', () => {
 		]);
 	});
 
-	it.each([
-		['--trust', ['loop', '--trust']],
-		['--sandbox', ['loop', '--sandbox']]
-	])('does not ask, or store an approval, with %s', async (flag, loop) => {
-		await go(flag);
-
-		expect(confirmLoopTrust).not.toHaveBeenCalled();
-		expect(trustLoop).not.toHaveBeenCalled();
-		expect(steps().at(-1)?.args).toEqual(loop);
-	});
-
 	it('says what it resumes on a rerun, right before loop', async () => {
-		vi.mocked(confirmLoopTrust).mockResolvedValue(true);
-		vi.mocked(isTaskGraphProject).mockReturnValue(true);
+		project(false);
+		stored = true;
 		vi.mocked(createTmCore).mockResolvedValue({
 			tasks: {
+				prdHasNewSections,
 				getStats: async () => ({
 					byStatus: { done: 1, 'in-progress': 1, pending: 1 }
 				}),
@@ -149,16 +213,15 @@ describe('go consent', () => {
 			},
 			close: async () => {}
 		} as never);
-		const log = vi.spyOn(console, 'log').mockImplementation(() => {
+		vi.mocked(console.log).mockImplementation(() => {
 			events.push('resuming');
 		});
 
 		await go();
 
-		expect(log.mock.calls[0][0]).toContain(
+		expect(vi.mocked(console.log).mock.calls[0][0]).toContain(
 			'Resuming: 1 done, task 2 in progress, 1 pending'
 		);
-		expect(events).toEqual(['parse-prd', 'trust', 'resuming', 'loop']);
-		log.mockRestore();
+		expect(events).toEqual(['parse-prd', 'resuming', 'loop']);
 	});
 });

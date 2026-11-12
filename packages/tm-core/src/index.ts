@@ -138,7 +138,7 @@ export {
 	STOP_SIGNALS,
 	TASK_PRESETS,
 	exitOnStopSignals,
-	isLoopTrusted,
+	isGoTrusted,
 	parseLoopCaps,
 	parseLoopModel,
 	trustLoop

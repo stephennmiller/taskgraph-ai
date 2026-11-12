@@ -430,6 +430,21 @@ export function isLoopTrusted(
 	);
 }
 
+/**
+ * Whether `go` may start without asking. A stored approval stands only for
+ * a run that plans nothing new: parse-prd withdraws it when it adds tasks,
+ * so a run that plans needs a yes of its own, given before it plans
+ * @param plansTasks - Whether the run will have the AI plan tasks from the
+ *   PRD; true when that can't be told
+ */
+export function isGoTrusted(
+	projectRoot: string,
+	plansTasks: boolean,
+	home: string = os.homedir()
+): boolean {
+	return !plansTasks && isLoopTrusted(projectRoot, home);
+}
+
 /** Approve this project's tasks and instructions as they are now */
 export function trustLoop(
 	projectRoot: string,
