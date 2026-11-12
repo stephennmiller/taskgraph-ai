@@ -44,13 +44,15 @@ describe('copyTemplateFile', () => {
 
 	it('reports a file it cannot write instead of throwing', () => {
 		// A link to a missing folder: not there, and writing through it is refused
-		const target = path.join(dir, '.env.example');
+		const target = path.join(dir, 'example_prd.txt');
 		fs.symlinkSync(path.join(dir, 'missing', 'x'), target);
 
-		copyTemplateFile('env.example', dir, '.env.example', report);
+		copyTemplateFile('example_prd.txt', dir, 'example_prd.txt', report);
 
 		expect(problems).toEqual([
-			expect.stringMatching(/^error: Couldn't write \.env\.example: .*symlink/)
+			expect.stringMatching(
+				/^error: Couldn't write example_prd\.txt: .*symlink/
+			)
 		]);
 	});
 

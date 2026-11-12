@@ -30,51 +30,41 @@ describe('formatInitSummary', () => {
 		]);
 	});
 
-	it('leads with one next step to a first task, not a numbered list', () => {
-		const text = plain(formatInitSummary(fresh));
+	it('gives one next step on one line, go first (#1147)', () => {
+		const lines = plain(formatInitSummary(fresh)).split('\n');
 
-		expect(text).toContain(
-			"Next: taskgraph add-task --prompt='<what to do>', or taskgraph parse-prd <file>"
-		);
-		expect(text).toContain("or taskgraph add-task -t 'Title' -d 'What'");
-		expect(text).not.toContain('Next steps');
-		expect(text).not.toMatch(/^\s*\d\. /m);
-		for (const line of text.split('\n')) expect(line.length).toBeLessThan(80);
+		expect(lines.slice(3)).toEqual([
+			'',
+			'Next: taskgraph go <prd> to plan and build it, or taskgraph add-task -t … -d …'
+		]);
+		for (const line of lines) expect(line.length).toBeLessThan(80);
 	});
 
-	it('says AI runs through Claude Code and never asks for API keys', () => {
-		const text = plain(formatInitSummary(fresh));
-
-		expect(text).toContain('run claude once to sign in');
-		expect(text).not.toMatch(/api key/i);
-	});
-
-	it('says how to change the default models and language', () => {
-		const text = plain(formatInitSummary(fresh));
-
-		expect(text).toContain(
-			'Change the models or language with taskgraph models --setup or taskgraph lang'
-		);
-	});
-
-	it('keeps the plugin install hint when Claude Code was set up', () => {
+	it('points at doctor for the plugin when Claude Code was set up', () => {
 		const lines = plain(
 			formatInitSummary({ ...fresh, claudeCode: true })
 		).split('\n');
-		const next = lines.findIndex((line) => line.startsWith('Next: '));
 
-		expect(lines[next + 1]).toBe(
-			"      or taskgraph add-task -t 'Title' -d 'What'"
+		expect(lines.slice(5)).toEqual([
+			'Optional: taskgraph doctor shows how to add the slash commands to Claude Code'
+		]);
+		expect(lines.join('\n')).not.toContain('/plugin');
+		for (const line of lines) expect(line.length).toBeLessThan(80);
+	});
+
+	it('prints only the result and its rows as a step of taskgraph go', () => {
+		const text = plain(
+			formatInitSummary({ ...fresh, claudeCode: true, resultOnly: true })
 		);
-		expect(lines.slice(next + 2, next + 6)).toEqual([
-			'Add the slash commands in Claude Code:',
-			'  /plugin marketplace add stephennmiller/taskgraph-ai',
-			'  /plugin install taskgraph@taskgraph',
-			'  /plugin install taskgraph-hooks@taskgraph'
+
+		expect(text.split('\n')).toEqual([
+			'✓ Set up TaskGraph in my-app',
+			'  .taskgraph/  tasks, settings and PRD templates',
+			'  .gitignore   created'
 		]);
 	});
 
-	it('shows only the plugin hint on a re-run with Claude Code', () => {
+	it('has no next step or plugin line on a re-run with Claude Code', () => {
 		const text = plain(
 			formatInitSummary({
 				...fresh,
@@ -84,8 +74,10 @@ describe('formatInitSummary', () => {
 			})
 		);
 
-		expect(text).toContain('/plugin install taskgraph@taskgraph');
-		expect(text).not.toContain('Next:');
+		expect(text.split('\n')).toEqual([
+			'✓ TaskGraph is already set up in my-app',
+			'  Run taskgraph list to see your tasks'
+		]);
 	});
 
 	it('says so when the folder was already set up and nothing changed', () => {
@@ -168,7 +160,7 @@ describe('formatInitDryRun', () => {
 			[
 				'Dry run; nothing was changed. Init would:',
 				'  create .taskgraph/ with tasks, settings and PRD templates',
-				'  create or update .gitignore and .env.example',
+				'  create or update .gitignore',
 				'  keep tasks out of Git'
 			].join('\n')
 		);
@@ -188,7 +180,7 @@ describe('formatInitDryRun', () => {
 		expect(text.split('\n').slice(1)).toEqual([
 			'  create .taskgraph/ with tasks, settings and PRD templates',
 			'  import tasks, docs, reports and settings from .upstream/',
-			'  create or update .gitignore and .env.example',
+			'  create or update .gitignore',
 			'  start a Git repository',
 			'  set up Git to merge tasks.json by task (.gitattributes)',
 			'  keep tasks in Git',

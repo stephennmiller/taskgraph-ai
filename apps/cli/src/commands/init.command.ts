@@ -19,6 +19,7 @@ import {
 	findInvalidRulesProfiles,
 	findProjectRoot,
 	initializeProject,
+	isTaskGraphProject,
 	planInit,
 	resolveStoreTasksInGit,
 	setUpMergeDriver
@@ -179,7 +180,18 @@ export class InitCommand extends Command {
 			process.exit(1);
 		}
 
-		displayInitBanner();
+		// `taskgraph go` runs init as a step and prints what comes next itself
+		const goStep = process.env.TASKGRAPH_GO_STEP === '1';
+		// The banner welcomes a first run in a terminal. A re-run, a dry run, a
+		// pipe and a `go` step start with the result (#1147)
+		if (
+			process.stdout.isTTY &&
+			!options.dryRun &&
+			!goStep &&
+			!isTaskGraphProject(projectRoot)
+		) {
+			displayInitBanner();
+		}
 
 		// No flag: keep what an earlier init chose, else store tasks in Git
 		const gitTasksDefault = resolveStoreTasksInGit(
@@ -248,13 +260,14 @@ export class InitCommand extends Command {
 			return;
 		}
 		console.log(
-			`${formatInitSummary({
+			formatInitSummary({
 				folder: terminalSafe(path.basename(projectRoot)),
 				changes: result.changes,
 				hints: result.hints,
 				alreadySetUp: result.alreadySetUp,
-				claudeCode: answers.claudeCode
-			})}\n`
+				claudeCode: answers.claudeCode,
+				resultOnly: goStep
+			})
 		);
 	}
 
