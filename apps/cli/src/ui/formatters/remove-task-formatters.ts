@@ -65,7 +65,10 @@ export function formatRemovalQuestion({
 			? `${noun} ${terminalSafe(items[0].id)}`
 			: plural(items.length, noun);
 	const tasks = found.filter((item) => !item.parent);
-	const named = found.filter((item) => item.parent);
+	// A subtask named with its own task is already in that task's count
+	const named = found.filter(
+		({ parent }) => parent && !tasks.some((task) => task.id === parent.id)
+	);
 	let what: string;
 	if (tasks.length === 0) {
 		what = name(named, 'subtask');
