@@ -92,7 +92,7 @@ describe('renderDependencyTree', () => {
 		);
 
 		expect(line.length).toBe(40);
-		expect(line.endsWith('...')).toBe(true);
+		expect(line.endsWith('…')).toBe(true);
 	});
 
 	it('calls out tasks stuck in a dependency loop', () => {

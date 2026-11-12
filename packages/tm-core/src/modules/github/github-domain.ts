@@ -454,9 +454,10 @@ export class GitHubDomain {
 	private async resolveRepo(repo?: string): Promise<string> {
 		const resolved = repo ?? (await this.detectRepo());
 		if (!resolved) {
-			throw new TaskGraphError(
-				'Could not determine the GitHub repository. Pass a repo as owner/name or run `gh auth login` in a GitHub checkout.',
-				ERROR_CODES.MISSING_CONFIGURATION
+			throw errorWithHint(
+				ERROR_CODES.MISSING_CONFIGURATION,
+				'No GitHub repository found for this project',
+				'Pass `--repo owner/name`, or run `gh auth login` in a GitHub checkout'
 			);
 		}
 		return resolved;

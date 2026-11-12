@@ -300,7 +300,6 @@ export {
 // Layout helpers
 export {
 	terminalWidth,
-	truncate,
 	wrapLine,
 	createProgressBar
 } from './layout/helpers.js';

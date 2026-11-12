@@ -11,8 +11,7 @@ import { type UpdateHooks, createTmCore, exitOnStopSignals } from '@tm/core';
 import chalk from 'chalk';
 import { Command } from 'commander';
 import type { Ora } from 'ora';
-import { truncate } from '../ui/layout/helpers.js';
-import { terminalSafe } from '../ui/formatters/markdown-formatters.js';
+import { fit, terminalSafe } from '../ui/formatters/markdown-formatters.js';
 import {
 	formatAssigned,
 	formatNotesAdded,
@@ -198,7 +197,7 @@ async function updateOne(
 					),
 				onAiCall: ([task]) =>
 					hooks.startSpinner(
-						`Updating task ${terminalSafe(task.id)}: ${truncate(terminalSafe(task.title), 50)}${options.research ? ' (with research)' : ''}`
+						`Updating task ${terminalSafe(task.id)}: ${fit(terminalSafe(task.title), 50)}${options.research ? ' (with research)' : ''}`
 					)
 			}
 		);
