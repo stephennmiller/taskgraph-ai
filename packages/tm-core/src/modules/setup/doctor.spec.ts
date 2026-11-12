@@ -193,7 +193,7 @@ describe('runDoctor', () => {
 		});
 	});
 
-	it('fails when the plugin is not installed, or is disabled', async () => {
+	it('skips a plugin that is not installed, and fails a disabled one', async () => {
 		const run = (plugins: object[]) =>
 			runDoctor({
 				projectPath: project(),
@@ -206,9 +206,11 @@ describe('runDoctor', () => {
 
 		expect(byName(missing.checks).plugin).toEqual({
 			name: 'plugin',
-			status: 'fail',
+			status: 'skip',
 			problem: 'not-installed'
 		});
+		expect(missing.ok).toBe(true);
+		expect(disabled.ok).toBe(false);
 		expect(byName(disabled.checks).plugin).toMatchObject({
 			status: 'fail',
 			problem: 'disabled'

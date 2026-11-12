@@ -2,7 +2,8 @@
  * @fileoverview Integration test for when the built CLI prints the ASCII
  * banner. stdout is forced to look like a terminal (the banner never prints
  * into a pipe), so this checks what a user sees: routine commands start with
- * their result, and only bare `taskgraph` and the top-level help screen carry the banner.
+ * their result, and only bare `taskgraph`, the top-level help screen and a
+ * first `init` carry the banner.
  */
 
 import { execFileSync } from 'node:child_process';
@@ -11,7 +12,15 @@ import os from 'node:os';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { createTask, createTasksFile } from '@tm/core/testing';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import {
+	afterAll,
+	afterEach,
+	beforeAll,
+	beforeEach,
+	describe,
+	expect,
+	it
+} from 'vitest';
 import { getCliBinPath } from '../../helpers/test-utils.js';
 
 const stripAnsi = (text: string) =>
@@ -28,27 +37,36 @@ const BANNER_CREDIT = 'by x.com/stephennmiller_';
 // The bottom row of the pre-rendered "TaskGraph" art
 const BANNER_ART_ROW = '|_|\\__,_|___/_|\\_\\\\____|_|  \\__,_| .__/|_| |_|';
 
+/** Run the built CLI in `cwd` with stdout looking like a terminal */
+const runInTerminal = (
+	cwd: string,
+	args: string[],
+	env: NodeJS.ProcessEnv = {}
+): string =>
+	stripAnsi(
+		execFileSync(
+			process.execPath,
+			['--import', forceTty, getCliBinPath(), ...args],
+			{
+				cwd,
+				encoding: 'utf-8',
+				stdio: 'pipe',
+				env: {
+					...process.env,
+					TASKGRAPH_SKIP_AUTO_UPDATE: '1',
+					TASKGRAPH_GO_STEP: '',
+					TM_HIDE_BANNER: '',
+					COLUMNS: '80',
+					...env
+				}
+			}
+		)
+	);
+
 describe('ASCII banner in a terminal', () => {
 	let testDir: string;
 
-	const run = (...args: string[]): string =>
-		stripAnsi(
-			execFileSync(
-				process.execPath,
-				['--import', forceTty, getCliBinPath(), ...args],
-				{
-					cwd: testDir,
-					encoding: 'utf-8',
-					stdio: 'pipe',
-					env: {
-						...process.env,
-						TASKGRAPH_SKIP_AUTO_UPDATE: '1',
-						TM_HIDE_BANNER: '',
-						COLUMNS: '80'
-					}
-				}
-			)
-		);
+	const run = (...args: string[]): string => runInTerminal(testDir, args);
 
 	beforeAll(() => {
 		testDir = fs.mkdtempSync(path.join(os.tmpdir(), 'tm-banner-test-'));
@@ -122,5 +140,50 @@ describe('ASCII banner in a terminal', () => {
 
 		expect(output).not.toContain(BANNER_CREDIT);
 		expect(output).toContain('master');
+	});
+});
+
+describe('ASCII banner on init (#1147)', () => {
+	let dir: string;
+
+	const init = (env: NodeJS.ProcessEnv, ...args: string[]): string =>
+		runInTerminal(dir, ['init', '--yes', ...args], env);
+
+	beforeEach(() => {
+		dir = fs.mkdtempSync(path.join(os.tmpdir(), 'tm-init-banner-'));
+	});
+
+	afterEach(() => {
+		fs.rmSync(dir, { recursive: true, force: true });
+	});
+
+	it('welcomes a first run, and starts a re-run with its result', () => {
+		const first = init({}, '--no-git');
+		const again = init({}, '--no-git');
+
+		expect(first).toContain(BANNER_CREDIT);
+		expect(first).toContain('Next: taskgraph go <prd>');
+		expect(again.split('\n')[0]).toBe(
+			`✓ TaskGraph is already set up in ${path.basename(dir)}`
+		);
+		expect(again).not.toContain('doctor');
+	});
+
+	it('leaves the banner out of a dry run', () => {
+		expect(init({}, '--dry-run').split('\n')[0]).toBe(
+			'Dry run; nothing was changed. Init would:'
+		);
+	});
+
+	it('prints only the result and its rows as a step of taskgraph go', () => {
+		const output = init({ TASKGRAPH_GO_STEP: '1' }, '--no-git');
+
+		expect(output.split('\n')).toEqual([
+			`✓ Set up TaskGraph in ${path.basename(dir)}`,
+			'  .taskgraph/  tasks, settings and PRD templates',
+			'  .gitignore   created',
+			"  CLAUDE.md    loads TaskGraph's instructions in Claude Code",
+			''
+		]);
 	});
 });

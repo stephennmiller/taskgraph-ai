@@ -5,19 +5,12 @@
  *     .taskgraph/    tasks, settings and PRD templates
  *     .gitignore     added TaskGraph entries
  *
- *   Next: taskgraph add-task --prompt='<what to do>', or taskgraph parse-prd <file>
- *         or taskgraph add-task -t 'Title' -d 'What'
- *   Add the slash commands in Claude Code:
- *     /plugin marketplace add stephennmiller/taskgraph-ai
- *     /plugin install taskgraph@taskgraph
- *     /plugin install taskgraph-hooks@taskgraph
+ *   Next: taskgraph go <prd> to plan and build it, or taskgraph add-task -t … -d …
+ *   Optional: taskgraph doctor shows how to add the slash commands to Claude Code
  *
- *   AI runs through Claude Code; run `claude` once to sign in
- *   Change the models or language with taskgraph models --setup or taskgraph lang
- *
- * It replaces a line per directory and file created (with absolute paths),
- * a "Success!" banner, a seven-step workflow box and a numbered Next steps
- * list that started with writing a PRD (#883).
+ * A re-run prints the result and its rows only, and so does init as a step
+ * of `taskgraph go`. `taskgraph doctor` has the plugin's install commands
+ * and the sign-in check that used to follow here (#1147).
  */
 
 import chalk from 'chalk';
@@ -46,6 +39,8 @@ export interface InitSummary {
 	alreadySetUp: boolean;
 	/** The Claude Code integration was installed in this run */
 	claudeCode: boolean;
+	/** Stop after the result and its rows: `taskgraph go` prints what comes next */
+	resultOnly?: boolean;
 }
 
 /** The marketplace and plugin names from .claude-plugin/marketplace.json */
@@ -84,31 +79,19 @@ export function formatInitSummary(summary: InitSummary): string {
 	}
 	lines.push(...formatChanges([...summary.changes, ...(summary.hints ?? [])]));
 
-	if (!summary.alreadySetUp || summary.claudeCode) lines.push('');
-	if (!summary.alreadySetUp) {
-		lines.push(
-			`Next: ${theme.brand("taskgraph add-task --prompt='<what to do>'")}, or ${theme.brand('taskgraph parse-prd <file>')}`,
-			// -t/-d needs no Claude sign-in; the line above does (#924)
-			`      or ${theme.brand("taskgraph add-task -t 'Title' -d 'What'")}`
-		);
-	}
+	if (summary.alreadySetUp || summary.resultOnly) return lines.join('\n');
+
+	lines.push(
+		'',
+		// add-task -t -d needs no Claude sign-in; go does (#924). The flags'
+		// values are left out so the line fits 80 columns
+		`Next: ${theme.brand('taskgraph go <prd>')} to plan and build it, or ${theme.brand('taskgraph add-task -t … -d …')}`
+	);
 	if (summary.claudeCode) {
 		lines.push(
-			theme.muted('Add the slash commands in Claude Code:'),
-			`  ${theme.brand(`/plugin marketplace add ${PLUGIN_MARKETPLACE}`)}`,
-			`  ${theme.brand(`/plugin install ${PLUGIN_NAME}`)}`,
-			`  ${theme.brand(`/plugin install ${HOOKS_PLUGIN_NAME}`)}`
-		);
-	}
-	if (!summary.alreadySetUp) {
-		lines.push(
-			'',
-			theme.muted(
-				withCode('AI runs through Claude Code; run `claude` once to sign in')
-			),
 			theme.muted(
 				withCode(
-					'Change the models or language with `taskgraph models --setup` or `taskgraph lang`'
+					'Optional: `taskgraph doctor` shows how to add the slash commands to Claude Code'
 				)
 			)
 		);
@@ -135,7 +118,7 @@ export interface InitDryRun {
  *
  *   Dry run; nothing was changed. Init would:
  *     create .taskgraph/ with tasks, settings and PRD templates
- *     create or update .gitignore and .env.example
+ *     create or update .gitignore
  *     keep tasks in Git
  */
 export function formatInitDryRun(plan: InitDryRun): string {
@@ -148,7 +131,7 @@ export function formatInitDryRun(plan: InitDryRun): string {
 			`  import tasks, docs, reports and settings from ${plan.importFrom}/`
 		);
 	}
-	lines.push('  create or update .gitignore and .env.example');
+	lines.push('  create or update .gitignore');
 	if (plan.startGit) lines.push('  start a Git repository');
 	if (plan.mergeDriver) {
 		lines.push('  set up Git to merge tasks.json by task (.gitattributes)');

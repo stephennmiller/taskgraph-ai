@@ -34,7 +34,6 @@ export const EXAMPLE_PRD_FILE = '.taskgraph/templates/example_prd.txt';
 export const TASKGRAPH_TASKS_FILE = '.taskgraph/tasks/tasks.json';
 
 // General project files (not TaskGraph specific but commonly used)
-export const ENV_EXAMPLE_FILE = '.env.example';
 export const GITIGNORE_FILE = '.gitignore';
 
 // Task file naming pattern

@@ -143,7 +143,7 @@ describe('first run', () => {
 		expect(result.status).toBe(0);
 		expect(result.stdout).toContain('Set up TaskGraph in');
 		expect(result.stdout).toContain('.taskgraph/');
-		expect(result.stdout).toContain('taskgraph parse-prd');
+		expect(result.stdout).toContain('Next: taskgraph go <prd>');
 		// No line per file with its absolute path, no figlet "Success!" box
 		expect(result.stdout).not.toContain(dir);
 		expect(result.stdout).not.toContain('Success!');
