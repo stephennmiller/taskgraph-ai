@@ -11,6 +11,7 @@
 import { spawn } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
+import path from 'node:path';
 import {
 	SKIP_AUTO_UPDATE_ENV,
 	STOP_SIGNALS,
@@ -20,11 +21,14 @@ import {
 } from '@tm/core';
 import { Command } from 'commander';
 import { formatGoResume } from '../ui/formatters/go-formatters.js';
+import { terminalSafe } from '../ui/formatters/markdown-formatters.js';
 import { printError } from '../utils/error-handler.js';
+import { projectOption } from '../utils/shared-options.js';
 
 interface GoCommandOptions {
 	trust?: boolean;
 	sandbox?: boolean;
+	project?: string;
 }
 
 /** The CLI commands `go` runs for `prd`, in order */
@@ -90,13 +94,14 @@ export class GoCommand extends Command {
 	constructor(name?: string) {
 		super(name || 'go');
 
-		this.description('Plan a PRD into tasks and build them with Claude Code')
+		this.description('Plan a PRD into tasks and build them')
 			.argument('<prd>', 'Path to the PRD file')
 			.option(
 				'--trust',
 				'Let loop run Claude Code with permission prompts off, without asking'
 			)
 			.option('--sandbox', 'Run loop in Docker sandbox mode')
+			.addOption(projectOption())
 			.action((prd: string, options: GoCommandOptions) =>
 				this.run(prd, options)
 			);
@@ -126,7 +131,21 @@ export class GoCommand extends Command {
 			process.exitCode = 1;
 			return;
 		}
-		const projectRoot = resolveProjectRoot();
+		const projectRoot = resolveProjectRoot(options.project);
+		if (options.project) {
+			// Each step is this CLI run again, so it runs from the project
+			prd = path.resolve(prd);
+			try {
+				process.chdir(projectRoot);
+			} catch {
+				printError(
+					`No folder at ${terminalSafe(options.project)}`,
+					'Create it first; `taskgraph go` sets up TaskGraph in it'
+				);
+				process.exitCode = 1;
+				return;
+			}
+		}
 		const isProject = isTaskGraphProject(projectRoot);
 		for (const args of goSteps(prd, isProject, options)) {
 			if (isProject && args[0] === 'loop') {

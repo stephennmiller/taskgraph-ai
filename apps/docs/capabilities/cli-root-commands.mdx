@@ -62,7 +62,8 @@ taskgraph graph                              # tasks as a dependency tree
 taskgraph why 7                              # why task 7 is blocked
 taskgraph show 1,3,5                         # one or more tasks
 taskgraph set-status --id=3 --status=done    # change status
-taskgraph add-task --prompt='...' --research # add a task
+taskgraph add-task 'Fix the login bug'       # add a task as written, no AI
+taskgraph add-task --prompt='...' --research # have the AI write a task
 taskgraph expand 4 --research                # split into subtasks
 taskgraph expand --all                       # expand every eligible task
 taskgraph update 5 --prompt='...'            # change one task
@@ -72,12 +73,14 @@ taskgraph analyze-complexity --research
 taskgraph analyze-complexity --report
 taskgraph depend 5 3
 taskgraph fix-dependencies --check
-taskgraph move --from=5 --from-tag=backlog --to-tag=in-progress
+taskgraph move 5 --from-tag=backlog --to-tag=in-progress
 taskgraph research "latest JWT best practices"
 taskgraph models --setup                     # choose models
 taskgraph completion --install               # Tab completion for your shell
 taskgraph doctor                             # check the setup, with fixes
 ```
+
+Every command that reads a project takes `-p, --project <path>` to work on a project other than the one you are in, and every task command takes `--tag <tag>` to work in a tag other than the current one. `taskgraph <command> --help` describes a command the way `taskgraph --help` does.
 
 For Tab completion of commands, flags, task IDs, tags and statuses in bash, zsh or fish, run `taskgraph completion --install` once, and again after upgrading.
 

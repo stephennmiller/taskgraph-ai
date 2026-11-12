@@ -22,6 +22,7 @@ const autoUpdate = vi.hoisted(() => ({
 
 vi.mock('./utils/auto-update/index.js', () => autoUpdate);
 
+import { CommandRegistry } from './command-registry.js';
 import { runCLI, setupCLI } from './program.js';
 import { HELP_GROUPS } from './ui/formatters/help-formatters.js';
 
@@ -66,14 +67,96 @@ describe('--help rows', () => {
 	});
 });
 
-describe('short flags (#882)', () => {
-	type Cmd = typeof program;
-	const all = (c: Cmd, path: string): [string, Cmd][] => [
-		[path, c],
-		...c.commands.flatMap((s) => all(s, `${path} ${s.name()}`.trim()))
-	];
-	const commands = all(program, '');
+// Every command and subcommand, with its path (`tags use`)
+type Cmd = typeof program;
+const all = (c: Cmd, path: string): [string, Cmd][] => [
+	[path, c],
+	...c.commands.flatMap((s) => all(s, `${path} ${s.name()}`.trim()))
+];
+const commands = all(program, '');
 
+describe('one description per command (#1149)', () => {
+	it("gives each --help row the command's own description", () => {
+		const differ = HELP_GROUPS.flatMap((g) => g.commands)
+			.map((row) => {
+				const name = row.name.split(' ')[0];
+				const own = program.commands.find((c) => c.name() === name);
+				return own?.description() === row.desc ? null : name;
+			})
+			.filter(Boolean);
+		expect(differ).toEqual([]);
+	});
+
+	it('registers each command under its own description', () => {
+		const differ = program.commands
+			.filter((c) => {
+				const registered = CommandRegistry.getCommand(c.name());
+				return registered && registered.description !== c.description();
+			})
+			.map((c) => c.name());
+		expect(differ).toEqual([]);
+	});
+
+	it('words -h the same on every command', () => {
+		const other = commands
+			.filter(
+				([, c]) =>
+					c
+						.createHelp()
+						.visibleOptions(c)
+						.find((o) => o.long === '--help')?.description !== 'Show help'
+			)
+			.map(([path]) => path);
+		expect(other).toEqual([]);
+	});
+});
+
+describe('shared options (#1149)', () => {
+	// These never open a project. `github` only groups its subcommands
+	const NO_PROJECT = new Set([
+		'',
+		'help',
+		'init',
+		'upgrade',
+		'completion',
+		'merge-driver',
+		'github'
+	]);
+
+	it('takes --project on every command that reads a project', () => {
+		const missing = commands
+			.filter(
+				([path, c]) =>
+					!NO_PROJECT.has(path) &&
+					!c.options.some((o) => o.long === '--project')
+			)
+			.map(([path]) => path);
+		expect(missing).toEqual([]);
+	});
+
+	it('excludes only commands that exist', () => {
+		const paths = commands.map(([path]) => path);
+		expect([...NO_PROJECT].filter((p) => !paths.includes(p))).toEqual([]);
+	});
+
+	it('describes --tag and --project in one sentence each', () => {
+		const texts = (long: string) => [
+			...new Set(
+				commands.flatMap(([, c]) =>
+					c.options.filter((o) => o.long === long).map((o) => o.description)
+				)
+			)
+		];
+		expect(texts('--tag')).toEqual([
+			'Tag to work in (default: the current tag)'
+		]);
+		expect(texts('--project')).toEqual([
+			'Project folder (default: found from the current folder)'
+		]);
+	});
+});
+
+describe('short flags (#882)', () => {
 	it('no command gives one short flag to two options', () => {
 		const clashes = commands.flatMap(([path, c]) => {
 			const shorts = c.options.map((o) => o.short).filter(Boolean);

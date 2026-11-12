@@ -25,6 +25,7 @@ import {
 } from '@tm/core';
 import chalk from 'chalk';
 import { Command } from 'commander';
+import { projectOption, tagOption } from '../utils/shared-options.js';
 import {
 	formatLoopDryRun,
 	formatLoopIntro,
@@ -73,9 +74,7 @@ export class LoopCommand extends Command {
 	constructor(name?: string) {
 		super(name || 'loop');
 
-		this.description(
-			'Run Claude Code in a loop over the ready tasks, committing after each'
-		)
+		this.description('Have Claude Code work through your tasks')
 			.option('-n, --iterations <number>', 'Maximum iterations')
 			.option(
 				'-i, --id <id>',
@@ -91,11 +90,8 @@ export class LoopCommand extends Command {
 				'Path to progress log file',
 				'.taskgraph/progress.txt'
 			)
-			.option('-t, --tag <tag>', 'Only work on tasks with this tag')
-			.option(
-				'-p, --project <path>',
-				'Project root directory (auto-detected if not provided)'
-			)
+			.addOption(tagOption('-t, --tag <tag>'))
+			.addOption(projectOption())
 			.option('--sandbox', 'Run Claude in Docker sandbox mode')
 			.option(
 				'--trust',

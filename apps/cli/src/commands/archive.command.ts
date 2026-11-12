@@ -7,6 +7,7 @@
 import path from 'node:path';
 import { type TmCore, createTmCore, neutralizeTaskData } from '@tm/core';
 import { Command } from 'commander';
+import { projectOption, tagOption } from '../utils/shared-options.js';
 import {
 	formatArchiveResult,
 	formatRestoreResult
@@ -41,21 +42,16 @@ export class ArchiveCommand extends Command {
 	constructor(name?: string) {
 		super(name || 'archive');
 
-		this.description(
-			'Move done and cancelled tasks out of tasks.json (restore <id> brings one back)'
-		)
+		this.description('Move finished tasks out, or restore one')
 			.option(
 				'--older-than <days>',
 				'Only tasks last changed at least this many days ago (default: global.archiveAfterDays, else 30)'
 			)
 			.option('--dry-run', 'List what would be archived without moving it')
-			.option('-t, --tag <tag>', 'Use a specific tag')
-			.option('-f, --format <format>', 'Output format (text, json)', 'text')
+			.addOption(tagOption('-t, --tag <tag>'))
+			.option('-f, --format <format>', 'Output format: text or json', 'text')
 			.addOption(jsonOption())
-			.option(
-				'-p, --project <path>',
-				'Project root directory (auto-detected if not provided)'
-			)
+			.addOption(projectOption())
 			.addHelpText(
 				'after',
 				`
@@ -76,13 +72,10 @@ Examples:
 		this.command('restore')
 			.description('Move an archived task back into tasks.json')
 			.argument('<id>', 'ID of the archived task')
-			.option('-t, --tag <tag>', 'Use a specific tag')
-			.option('-f, --format <format>', 'Output format (text, json)', 'text')
+			.addOption(tagOption('-t, --tag <tag>'))
+			.option('-f, --format <format>', 'Output format: text or json', 'text')
 			.addOption(jsonOption())
-			.option(
-				'-p, --project <path>',
-				'Project root directory (auto-detected if not provided)'
-			)
+			.addOption(projectOption())
 			.action(async (id: string, options: RestoreCommandOptions) => {
 				// `archive` defines --tag, --format and --project too, so Commander
 				// hands it those flags even when they come after `restore`

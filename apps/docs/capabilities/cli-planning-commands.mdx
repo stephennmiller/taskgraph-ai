@@ -60,7 +60,11 @@ Each task comes with 2-5 acceptance criteria taken from the PRD, all unchecked. 
 ## Add a New Task
 
 ```bash
-# Add a new task using AI
+# Add a task as written: the text is the title, and no AI is called
+taskgraph add-task 'Fix the login bug'
+taskgraph add-task 'Fix the login bug' -d 'Sessions expire on refresh'
+
+# Have the AI write the title, description, details and test strategy
 taskgraph add-task --prompt="Description of the new task"
 
 # Add a task with dependencies
@@ -78,6 +82,8 @@ taskgraph add-task --prompt="Description" --assignee=octocat
 # Add acceptance criteria (repeat --ac for each one)
 taskgraph add-task --prompt="Description" --ac="Users can log in" --ac="Tokens expire after 15 minutes"
 ```
+
+`--title` is the same as the argument. A title needs no description. `--prompt` together with a title and no description still has the AI write the task.
 
 ## Expand Tasks
 
@@ -118,11 +124,11 @@ Each new subtask gets 2-5 acceptance criteria of its own, unchecked. A subtask c
 ## Clear Subtasks
 
 ```bash
-# Clear subtasks from a specific task
-taskgraph clear-subtasks --id=<id>
+# Clear subtasks from a specific task (--id=<id> is the same)
+taskgraph clear-subtasks <id>
 
 # Clear subtasks from multiple tasks
-taskgraph clear-subtasks --id=1,2,3
+taskgraph clear-subtasks 1,2,3
 
 # Clear subtasks from all tasks
 taskgraph clear-subtasks --all

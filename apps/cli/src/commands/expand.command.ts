@@ -15,6 +15,7 @@ import {
 } from '@tm/core';
 import chalk from 'chalk';
 import { Command, Option } from 'commander';
+import { projectOption, tagOption } from '../utils/shared-options.js';
 import type { Ora } from 'ora';
 import {
 	formatExpandAll,
@@ -46,6 +47,7 @@ export interface ExpandCommandOptions {
 	file?: string;
 	complexityReport?: string;
 	tag?: string;
+	project?: string;
 }
 
 /** The muted usage line, or nothing without usage */
@@ -74,22 +76,19 @@ export class ExpandCommand extends Command {
 	constructor(name?: string) {
 		super(name || 'expand');
 
-		this.description('Expand a task into subtasks using AI')
+		this.description('Break a task into subtasks')
 			.argument('[id]', 'Task ID to expand, e.g. 3 (same as --id)')
 			.option('-i, --id <id>', 'The same as the [id] argument')
-			.option(
-				'-a, --all',
-				'Expand all pending tasks based on complexity analysis'
-			)
+			.option('-a, --all', 'Expand every pending task')
 			.option(
 				'-n, --num <number>',
-				'Number of subtasks to generate (uses complexity analysis by default if available)'
+				'How many subtasks (default: what the complexity report recommends)'
 			)
 			.option(
 				'-r, --research',
-				'Enable research-backed generation (web research via Claude Code)'
+				'Use the research model, which can search the web'
 			)
-			.option('--prompt <text>', 'Additional context for subtask generation')
+			.option('--prompt <text>', 'Extra context for the AI')
 			.option('-f, --force', 'Replace the subtasks the task has')
 			.option(
 				'--append',
@@ -99,9 +98,10 @@ export class ExpandCommand extends Command {
 			.addOption(new Option('--file <file>').hideHelp())
 			.option(
 				'--complexity-report <file>',
-				'Path to the complexity report file (use this to specify the complexity report, not --file)'
+				'Complexity report file to read instead of the saved one'
 			)
-			.option('--tag <tag>', 'Specify tag context for task operations')
+			.addOption(tagOption())
+			.addOption(projectOption())
 			.addHelpText(
 				'after',
 				`
@@ -131,9 +131,13 @@ Examples:
 			process.exit(1);
 		}
 
-		const fileError = otherTasksFileError(options.file, 'expand');
+		const fileError = otherTasksFileError(
+			options.file,
+			'expand',
+			options.project
+		);
 		if (fileError) displayError(fileError);
-		const projectRoot = getProjectRoot();
+		const projectRoot = getProjectRoot(options.project);
 
 		try {
 			const tmCore = await createTmCore({ projectPath: projectRoot });

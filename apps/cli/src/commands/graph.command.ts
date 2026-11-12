@@ -13,6 +13,7 @@ import {
 } from '@tm/core';
 import chalk from 'chalk';
 import { Command } from 'commander';
+import { projectOption, tagOption } from '../utils/shared-options.js';
 import { renderDependencyTree } from '../ui/components/dependency-tree.component.js';
 import { fencesTaskData, getContentWidth } from '../ui/layout/helpers.js';
 import { theme } from '../ui/theme.js';
@@ -44,13 +45,10 @@ export class GraphCommand extends Command {
 				'-i, --id <id>',
 				'Show only this task and the tasks drawn under it'
 			)
-			.option('-t, --tag <tag>', 'Use a specific tag')
-			.option('-f, --format <format>', 'Output format (text, json)', 'text')
+			.addOption(tagOption('-t, --tag <tag>'))
+			.option('-f, --format <format>', 'Output format: text or json', 'text')
 			.addOption(jsonOption())
-			.option(
-				'-p, --project <path>',
-				'Project root directory (auto-detected if not provided)'
-			)
+			.addOption(projectOption())
 			.action(async (options: GraphCommandOptions) => {
 				await this.executeCommand(options);
 			});

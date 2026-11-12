@@ -76,8 +76,7 @@ export function wantsJsonOutput(args: readonly string[]): boolean {
  * given, so the command reads only `options.format`.
  */
 export function jsonOption(): Option {
-	return new Option(
-		'--json',
-		'Output in JSON format (shorthand for --format json)'
-	).implies({ format: 'json' });
+	return new Option('--json', 'Print JSON (same as --format json)').implies({
+		format: 'json'
+	});
 }

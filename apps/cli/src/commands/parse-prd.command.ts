@@ -22,6 +22,7 @@ import {
 } from '@tm/core';
 import chalk from 'chalk';
 import { Command, Option } from 'commander';
+import { projectOption, tagOption } from '../utils/shared-options.js';
 import type { Ora } from 'ora';
 import { ParsePrdProgress } from '../ui/components/parse-prd-progress.component.js';
 import {
@@ -59,6 +60,7 @@ export interface ParsePrdCommandOptions {
 	json?: boolean;
 	yes?: boolean;
 	tag?: string;
+	project?: string;
 }
 
 /** --clarify's flags that need each other, or exclude each other */
@@ -138,29 +140,20 @@ export class ParsePrdCommand extends Command {
 	constructor(name?: string) {
 		super(name || 'parse-prd');
 
-		this.description('Parse a PRD file and generate tasks')
+		this.description('Generate tasks from a PRD')
 			.argument('[file]', 'Path to the PRD file')
-			.option(
-				'-i, --input <file>',
-				'Path to the PRD file (alternative to positional argument)'
-			)
+			.option('-i, --input <file>', 'The same as the [file] argument')
 			// Tasks live in the project's tasks.json; only that file is accepted
 			.addOption(new Option('-o, --output <file>').hideHelp())
 			.option(
 				'-n, --num-tasks <number>',
 				'About how many tasks (default: sized to the PRD)'
 			)
-			.option(
-				'-f, --force',
-				'Skip confirmation when overwriting existing tasks'
-			)
-			.option(
-				'--append',
-				'Append new tasks to existing tasks.json instead of overwriting'
-			)
+			.option('-f, --force', "Replace the tag's tasks without asking")
+			.option('--append', "Add to the tag's tasks instead of replacing them")
 			.option(
 				'-r, --research',
-				'Use Claude Code web research for research-backed task generation, providing more comprehensive and accurate task breakdown'
+				'Use the research model, which can search the web'
 			)
 			.option(
 				'--clarify',
@@ -172,7 +165,8 @@ export class ParsePrdCommand extends Command {
 			)
 			.option('--json', 'With --clarify: print the questions as JSON and stop')
 			.option('-y, --yes', 'With --clarify: accept the suggested answers')
-			.option('--tag <tag>', 'Specify tag context for task operations')
+			.addOption(tagOption())
+			.addOption(projectOption())
 			.action(
 				// A stopped parse-prd (or `go`) leaves no Claude running (#1103)
 				(file: string | undefined, options: ParsePrdCommandOptions) =>
@@ -224,12 +218,12 @@ export class ParsePrdCommand extends Command {
 		const fileError = otherTasksFileError(
 			options.output,
 			'parse-prd',
-			undefined,
+			options.project,
 			'--output'
 		);
 		if (fileError) displayError(fileError);
 
-		const projectRoot = getProjectRoot();
+		const projectRoot = getProjectRoot(options.project);
 		let tmCore: TmCore;
 		let target: Awaited<ReturnType<TmCore['tasks']['parsePrdTarget']>>;
 		try {

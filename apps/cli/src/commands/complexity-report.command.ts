@@ -11,6 +11,7 @@ import {
 	createTmCore
 } from '@tm/core';
 import { Command } from 'commander';
+import { projectOption, tagOption } from '../utils/shared-options.js';
 import { formatComplexityReport } from '../ui/formatters/complexity-report-formatters.js';
 import { displayCommandHeader } from '../utils/display-helpers.js';
 import { noticeOldAlias } from '../utils/alias-notice.js';
@@ -20,13 +21,14 @@ import { getProjectRoot } from '../utils/project-root.js';
 export interface ComplexityReportCommandOptions {
 	file?: string;
 	tag?: string;
+	project?: string;
 }
 
 /** Print the tag's complexity report, or exit 1 when there is none */
 export async function showComplexityReport(
 	options: ComplexityReportCommandOptions
 ): Promise<void> {
-	const projectRoot = getProjectRoot();
+	const projectRoot = getProjectRoot(options.project);
 	let found: { report: ComplexityReportFile } | null;
 	try {
 		const tmCore = await createTmCore({ projectPath: projectRoot });
@@ -58,13 +60,14 @@ export class ComplexityReportCommand extends Command {
 	constructor(name?: string) {
 		super(name || 'complexity-report');
 
-		this.description('Display the complexity analysis report')
+		this.description('Alias of analyze-complexity --report')
 			.option(
 				'-f, --file <file>',
-				'Path to the report file',
+				'Report file to show',
 				COMPLEXITY_REPORT_FILE
 			)
-			.option('--tag <tag>', 'Specify tag context for task operations')
+			.addOption(tagOption())
+			.addOption(projectOption())
 			.action(async (options: ComplexityReportCommandOptions) => {
 				await showComplexityReport(options);
 			});

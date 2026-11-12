@@ -90,6 +90,35 @@ describe.skipIf(!built)('add-task command output', () => {
 		expect(res.stdout).not.toContain('Using manually provided task data');
 	});
 
+	it('takes a bare title, with no description and no AI call (#1149)', () => {
+		// No fake `claude` is installed, so an AI call would fail
+		const res = addTask('Fix the login bug');
+
+		expect(res.stderr).toBe('');
+		expect(res.status).toBe(0);
+		expect(res.stdout).toContain(
+			'✓ Added task 3  Fix the login bug · medium priority'
+		);
+		const saved = JSON.parse(fs.readFileSync(tasksFile(), 'utf8'));
+		expect(saved.master.tasks[2]).toMatchObject({
+			title: 'Fix the login bug',
+			description: ''
+		});
+	});
+
+	it('takes --project from another folder (#1149)', () => {
+		const res = spawnSync(
+			process.execPath,
+			[binPath, 'add-task', 'From elsewhere', '--project', project],
+			{ cwd: work, encoding: 'utf8', timeout: 25000, env }
+		);
+
+		expect(res.stderr).toBe('');
+		expect(res.status).toBe(0);
+		const saved = JSON.parse(fs.readFileSync(tasksFile(), 'utf8'));
+		expect(saved.master.tasks[2].title).toBe('From elsewhere');
+	});
+
 	it.skipIf(process.platform === 'win32')(
 		'exits 0 without a stack trace when stdout closes early (#1017)',
 		() => {
