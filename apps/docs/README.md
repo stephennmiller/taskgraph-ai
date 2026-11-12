@@ -4,9 +4,8 @@ Welcome to the TaskGraph documentation. This documentation site provides compreh
 
 ## Getting Started
 
-- [Quick Start Guide](/getting-started/quick-start/quick-start) - Complete setup and first-time usage guide
-- [Requirements](/getting-started/quick-start/requirements) - What you need to get started
-- [Installation](/getting-started/quick-start/installation) - How to install TaskGraph
+- [Quick Start](/getting-started/quick-start) - Requirements, install, set up, write a PRD and build it with `taskgraph go`
+- [Installation](/getting-started/installation) - The CLI, the plugin, the optional MCP server and updates
 - [Upgrading](/upgrading) - Moving from Task Master or a release before 0.47
 
 ## Core Capabilities

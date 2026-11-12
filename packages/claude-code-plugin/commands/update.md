@@ -1,6 +1,6 @@
 ---
 description: "TaskGraph: change one task's details, with AI. Use when a TaskGraph task's plan changed."
-argument-hint: "<task ID> <changes>"
+argument-hint: "<task-id> <changes>"
 ---
 
 Rewrite one task's description, details and test strategy with AI.
