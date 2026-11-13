@@ -115,6 +115,7 @@ describe('old spellings (#882, #1155)', () => {
 
 		expect(typedOldShortFlagHint('add-task', 't', ['-t', 'x'])).toBe(hint);
 		expect(typedOldShortFlagHint('add-task', 't', ['-tx'])).toBe(hint);
+		expect(typedOldShortFlagHint('add-task', 't', ['-rt', 'x'])).toBe(hint);
 		expect(
 			typedOldShortFlagHint('add-task', 't', ['--tag', 'x'])
 		).toBeUndefined();

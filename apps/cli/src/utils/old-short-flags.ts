@@ -71,15 +71,18 @@ export function oldShortFlagHint(
 }
 
 /**
- * The same hint, only when the short form was typed (`-t x`, `-tx`) rather
- * than the long one; Commander doesn't say which spelling it read
+ * The same hint, only when the short form was typed (`-t x`, `-tx`, or after
+ * other letters as in `-rt x`) rather than the long one; Commander doesn't
+ * say which spelling it read. A value joined to another letter (`-dtest`)
+ * counts too: a wrong hint is better than a title quietly read as a tag.
  */
 export function typedOldShortFlagHint(
 	command: string,
 	letter: string,
 	argv: readonly string[] = process.argv
 ): string | undefined {
-	return argv.some((arg) => arg.startsWith(`-${letter}`))
+	const typed = new RegExp(`^-[A-Za-z]*${letter}`);
+	return argv.some((arg) => typed.test(arg))
 		? oldShortFlagHint(command, letter)
 		: undefined;
 }

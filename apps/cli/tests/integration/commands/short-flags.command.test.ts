@@ -87,6 +87,7 @@ describe.skipIf(!built)('old -t spellings', () => {
 		[['add-task', '-t', 'Fix login', '-d', 'Sessions expire'], '--title'],
 		[['add-task', '-t', 'Fix login', '--prompt', 'Add a login'], '--title'],
 		[['add-task', '-tFix login', '--prompt', 'Add a login'], '--title'],
+		[['add-task', '-rt', 'Fix login', '--prompt', 'Add a login'], '--title'],
 		[['add-subtask', '1', '-t', 'Fix login'], '--title'],
 		[['analyze-complexity', '-t', 'Fix login'], '--threshold'],
 		[['research', '-t', 'Fix login'], '--tree']
