@@ -43,7 +43,17 @@ export function createSpinner(
 	const { elapsed = true, ...base } =
 		typeof options === 'string' ? { text: options } : options;
 	const { default: ora } = require('ora') as typeof import('ora');
-	const spinner = ora({ ...base, spinner: brandSpinner(), color: false });
+	// A terminal 0 columns wide (a pty no one sized) has ora count the lines
+	// to clear as text width / 0 and erase lines forever (#1165). Don't
+	// animate there: ora prints the text once, as it does on a pipe
+	const stream = (base.stream ?? process.stderr) as Partial<NodeJS.WriteStream>;
+	const unsized = stream.columns === 0;
+	const spinner = ora({
+		...base,
+		...(unsized && { isEnabled: false }),
+		spinner: brandSpinner(),
+		color: false
+	});
 	const finish = (symbol: string) => (text?: string) =>
 		spinner.stopAndPersist({ symbol, text, suffixText: '' });
 	spinner.succeed = finish(chalk.green('✓'));
