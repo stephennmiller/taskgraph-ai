@@ -3,7 +3,7 @@ title: "Upgrading"
 description: "What to change when moving an existing project to a newer TaskGraph, from Task Master or from any earlier release"
 ---
 
-TaskGraph 0.47 renamed the project from Task Master to TaskGraph and removed the legacy support that went with the old name. Projects created with Task Master or with a release before 0.47 need steps 1 to 4. Step 5 (slash commands now come from the plugin) applies to every existing project, including those set up with 0.47 to 0.52. Step 7 (`start` and `autopilot` folded into `loop`) applies to anyone who used them. Step 8 (stop committing `state.json`) applies to every project set up before it.
+TaskGraph 0.47 renamed the project from Task Master to TaskGraph and removed the legacy support that went with the old name. Projects created with Task Master or with a release before 0.47 need steps 1 to 4. Step 5 (slash commands now come from the plugin) applies to every existing project, including those set up with 0.47 to 0.52. Step 7 (`start` and `autopilot` folded into `loop`) applies to anyone who used them. Step 8 (stop committing `state.json`) applies to every project set up before it. Step 12 (each short flag has one meaning) applies to every project and script that used `-t`, `-f`, `-i` or `-s` before 0.64.0.
 
 ## 1. Import the project folder
 
@@ -32,7 +32,7 @@ Check your shell profile, `.mcp.json` and CI configuration. A project's `.env` s
 ## 3. Switch the commands and the MCP server
 
 - The package is `taskgraph-ai`, and the commands are `taskgraph` and `taskgraph-mcp`. Update any scripts or aliases that call the old command name.
-- Register the MCP server as `taskgraph-ai` and remove any old `task-master-ai` entry from `.mcp.json`. See [Installation](/getting-started/quick-start/installation).
+- Register the MCP server as `taskgraph-ai` and remove any old `task-master-ai` entry from `.mcp.json`. See [Installation](/getting-started/installation#4-optional-add-the-mcp-server).
 
 ## 4. Removed
 
@@ -77,12 +77,12 @@ The slash commands are named after the CLI commands they run (`/taskgraph:next` 
 | `show-task` | `show` |
 | `init-project`, `init-project-quick`, `install-taskgraph`, `quick-install-taskgraph` | `init [--quick]` (it installs the CLI first if it's missing) |
 | `view-models`, `setup-models` | `models` to see them, `models setup` to change them |
-| `update-tasks-from-id` | `update` |
-| `update-single-task` | `update-task` (it edits one task only: use `update` for bulk edits and `set-status` for status) |
-| `expand-task`, `expand-all-tasks` | `expand <id>`, `expand all` |
-| `parse-prd-with-research` | `parse-prd <file> research` |
-| `to-in-progress` | `set-status <id> in-progress` |
-| `to-pending`, `to-review`, `to-deferred`, `to-cancelled` | `set-status <id> <status>` (`to-done` stays) |
+| `update-tasks-from-id` | `taskgraph update --from=<id> --prompt='...'` in the CLI |
+| `update-single-task`, `update-task` | `update <task-id> <changes>` (it edits one task only: use `taskgraph update --from=<id>` for bulk edits and `set-status` for status) |
+| `expand-task`, `expand-all-tasks` | `expand <task-id>`, `expand all` |
+| `parse-prd-with-research` | `parse-prd <prd-file> research` |
+| `to-in-progress` | `set-status <task-id> in-progress` |
+| `to-pending`, `to-review`, `to-deferred`, `to-cancelled` | `set-status <task-id> <status>` (`to-done` stays) |
 | `convert-task-to-subtask` | `add-subtask <parent ID> <task ID>` |
 | `tm-main`, `learn` | `help` |
 | `remove-subtasks` | `clear-subtasks <id>` |
@@ -172,6 +172,37 @@ Some commands were merged so `taskgraph --help` is shorter. The old names still 
 ## 11. A number after `update --id` is an ID
 
 `update --id=3 add rate limits` still takes the words as the prompt. `update --id=N` now treats a first positional word that looks like a task ID (`3`, `3.2`) as a second ID, so `update --id=3 2 more retries` exits 1 with `Give the ID once`. Put that prompt in `--prompt`: `update --id=3 --prompt='2 more retries'`. The same ID twice (`update 3 --id=3`) is still one ID.
+
+## 12. Each short flag has one meaning
+
+Before 0.64.0 a short flag changed meaning by command: `-t` was `--tag` in `list` and `--title` in `add-task`. Now each letter means one thing in every command, and the options that shared a letter are written in full. This is a breaking change. An old spelling fails with a hint that names the long form (`-f means --format; write --force in full`); it does not run with the new meaning.
+
+| Flag | Means now | Old spelling | Write |
+| --- | --- | --- | --- |
+| `-t` | `--tag` | `add-task -t 'Fix login' -d '…'` | `add-task 'Fix login' -d '…'` or `add-task --title='Fix login' -d '…'` |
+| | | `add-subtask 5 -t 'Add a test'` | `add-subtask 5 --title='Add a test'` |
+| | | `analyze-complexity -t 7` | `analyze-complexity --threshold 7` |
+| | | `research '…' -t` | `research '…' --tree` |
+| `-f` | `--format` | `expand 3 -f`, `parse-prd prd.md -f` | `expand 3 --force`, `parse-prd prd.md --force` |
+| | | `research '…' -f src/a.ts` | `research '…' --files src/a.ts` |
+| | | `note 3 -f notes.md` | `note 3 --file notes.md` |
+| | | `-f .taskgraph/tasks/tasks.json` on any other command | leave it out, or `--file` |
+| `-i` | `--id` | `parse-prd -i prd.md` | `parse-prd prd.md` or `parse-prd --input prd.md` |
+| | | `add-subtask 5 -i 7` | `add-subtask 5 --task-id 7` |
+| `-s` | `--status` | `scope 3 up -s light` | `scope 3 up --strength light` |
+| | | `research '…' -s answer.md` | `research '…' --save answer.md` |
+| `-d` | `--description` | `depend --id 3 -d 1` | `depend 3 1` or `depend --id 3 --depends-on 1` |
+| | | `research '…' -d high` | `research '…' --detail high` |
+| `-c` | `--compact` (in `list`) | `remove-task 5.2 -c` | `remove-task 5.2 --convert` |
+| | | `research '…' -c 'text'` | `research '…' --context 'text'` |
+| `-n` | a count: `loop --iterations`, `expand --num`, `parse-prd --num-tasks` | `init -n my-app` | `init --name my-app` |
+| `-r` | `--research` | `init -r claude` | `init --rules claude` |
+
+`-t` now works wherever `--tag` does, and `github push` and `github pull` take `-i` for `--id`. `-p`, `-o`, `-y` and `-w` are unchanged. `init` also drops two short flags it never showed in help: `-a` (`--author`) and `-v` (`--version`).
+
+**One case can't be caught.** Where `-t` changed meaning (`add-task`, `add-subtask`, `analyze-complexity`, `research`), an old value that is also the name of one of your tags reads as that tag. `add-task -t auth --prompt '…'` in a project with a tag `auth` adds the task to `auth`, and `analyze-complexity -t 7` in a project with a tag `7` analyzes that tag. Any other value stops with `Tag "Fix login" not found`, before an AI call. Search your scripts and agent instructions for `-t`.
+
+**Update `.taskgraph/CLAUDE.md`.** Every project set up with Claude Code has this file, and before 0.64.0 it told agents to run `taskgraph add-task -t '<title>' -d '…'`. Re-run `taskgraph init --yes` in the project: it rewrites `.taskgraph/CLAUDE.md` with the new spelling and leaves your tasks and settings as they are. Or change that one line by hand to `taskgraph add-task --title='<title>' -d '…'`. Check your own `CLAUDE.md`, `AGENTS.md`, scripts and CI for the old spellings too. The long forms work in every release, so a file that uses them is right before and after the upgrade.
 
 ## Credit
 

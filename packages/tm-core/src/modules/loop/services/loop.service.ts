@@ -15,7 +15,7 @@ import {
 	DEFAULT_RESUME_MAX_CONTEXT_TOKENS,
 	resumableSession
 } from '../session-resume.js';
-import { statusProgress } from '../task-progress.js';
+import { allComplete, statusProgress } from '../task-progress.js';
 import type { LoopServiceOptions } from './loop-service-options.js';
 import {
 	checkSandboxAuth,
@@ -34,7 +34,8 @@ import {
 	loopResult,
 	type RunSpend,
 	claudeRan,
-	runSpend
+	runSpend,
+	withoutMarker
 } from './iteration-result.js';
 import {
 	appendFinalSummary,
@@ -144,6 +145,14 @@ export class LoopService {
 
 		await initProgressFile(this.projectRoot, config);
 		let statuses = await this.readStatuses(config);
+		// Nothing left for a task preset to work on: don't pay for an iteration to find that out
+		if (
+			!config.taskId &&
+			isTaskPreset(config.prompt) &&
+			allComplete(statuses)
+		) {
+			return this.finalize(config, iterations, 0, 'all_complete');
+		}
 		let head = await this.readHead();
 		this.approved = !config.sandbox && isLoopTrusted(this.projectRoot);
 
@@ -536,7 +545,7 @@ export class LoopService {
 				if (timedOut) return fail(silenceMessage(timeout), runSpend(run));
 
 				const reply = run ? run.text : withoutEvents(stdout);
-				const output = reply + stderr;
+				const output = withoutMarker(reply) + stderr;
 				if (output) {
 					callbacks?.onOutput?.(output);
 				}

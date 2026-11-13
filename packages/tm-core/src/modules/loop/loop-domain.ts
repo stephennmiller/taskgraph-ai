@@ -40,7 +40,7 @@ import type {
 } from './parallel/types.js';
 import { LoopService } from './services/loop.service.js';
 import { resolveResumeLimit } from './session-resume.js';
-import { taskStatuses } from './task-progress.js';
+import { allComplete, taskStatuses } from './task-progress.js';
 import type {
 	LoopConfig,
 	LoopPlan,
@@ -204,6 +204,20 @@ export class LoopDomain {
 			);
 		}
 		return { id, title: found.task.title };
+	}
+
+	/**
+	 * Whether a run of this prompt with no pinned task has nothing to do: it
+	 * is a task preset and every task and subtask in the tag is done or
+	 * cancelled. `run` starts no iteration then (#1160); the CLI asks first so
+	 * it prints one line and no approval question.
+	 */
+	async nothingLeft(prompt: string, tag?: string): Promise<boolean> {
+		if (!this.tasks || !isTaskPreset(prompt)) return false;
+		const { tasks } = await this.tasks.list({
+			tag: tag || this.configManager.getActiveTag()
+		});
+		return allComplete(taskStatuses(tasks));
 	}
 
 	/**

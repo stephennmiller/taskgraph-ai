@@ -9,7 +9,6 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
-import readline from 'node:readline';
 import {
 	type Clarification,
 	type ParsePrdHooks,
@@ -22,6 +21,7 @@ import {
 } from '@tm/core';
 import chalk from 'chalk';
 import { Command, Option } from 'commander';
+import { projectOption, tagOption } from '../utils/shared-options.js';
 import type { Ora } from 'ora';
 import { ParsePrdProgress } from '../ui/components/parse-prd-progress.component.js';
 import {
@@ -35,7 +35,9 @@ import { formatPrdDelta } from '../ui/formatters/prd-delta-formatters.js';
 import { formatUsageLine } from '../ui/formatters/usage-formatters.js';
 import { createSpinner } from '../ui/spinner.js';
 import { theme } from '../ui/theme.js';
+import { confirm } from '../utils/confirm.js';
 import { displayCommandHeader } from '../utils/display-helpers.js';
+import { isGoStep } from '../utils/go-step.js';
 import {
 	aiErrorHint,
 	describeError,
@@ -59,6 +61,7 @@ export interface ParsePrdCommandOptions {
 	json?: boolean;
 	yes?: boolean;
 	tag?: string;
+	project?: string;
 }
 
 /** --clarify's flags that need each other, or exclude each other */
@@ -106,7 +109,7 @@ function readClarificationAnswers(source: string): Clarification[] {
 
 /**
  * Ask before replacing the tag's tasks. Without a terminal nobody can
- * answer, and readline would wait forever, so it fails instead (#481)
+ * answer, so it fails instead (#481)
  */
 async function confirmOverwrite(): Promise<boolean> {
 	if (!process.stdin.isTTY) {
@@ -120,15 +123,7 @@ async function confirmOverwrite(): Promise<boolean> {
 		`${chalk.yellow('⚠')} This tag has tasks; parse-prd replaces them` +
 			theme.muted(' (--append adds to them)')
 	);
-	const rl = readline.createInterface({
-		input: process.stdin,
-		output: process.stdout
-	});
-	const answer = await new Promise<string>((resolve) =>
-		rl.question(theme.brand('Replace them? (y/N) '), resolve)
-	);
-	rl.close();
-	return ['y', 'yes'].includes(answer.toLowerCase());
+	return confirm('Replace them?', 'Cancelled; no tasks changed');
 }
 
 export class ParsePrdCommand extends Command {
@@ -138,29 +133,20 @@ export class ParsePrdCommand extends Command {
 	constructor(name?: string) {
 		super(name || 'parse-prd');
 
-		this.description('Parse a PRD file and generate tasks')
+		this.description('Generate tasks from a PRD')
 			.argument('[file]', 'Path to the PRD file')
-			.option(
-				'-i, --input <file>',
-				'Path to the PRD file (alternative to positional argument)'
-			)
+			.option('--input <file>', 'The same as the [file] argument')
 			// Tasks live in the project's tasks.json; only that file is accepted
 			.addOption(new Option('-o, --output <file>').hideHelp())
 			.option(
 				'-n, --num-tasks <number>',
 				'About how many tasks (default: sized to the PRD)'
 			)
-			.option(
-				'-f, --force',
-				'Skip confirmation when overwriting existing tasks'
-			)
-			.option(
-				'--append',
-				'Append new tasks to existing tasks.json instead of overwriting'
-			)
+			.option('--force', "Replace the tag's tasks without asking")
+			.option('--append', "Add to the tag's tasks instead of replacing them")
 			.option(
 				'-r, --research',
-				'Use Claude Code web research for research-backed task generation, providing more comprehensive and accurate task breakdown'
+				'Use the research model, which can search the web'
 			)
 			.option(
 				'--clarify',
@@ -172,7 +158,8 @@ export class ParsePrdCommand extends Command {
 			)
 			.option('--json', 'With --clarify: print the questions as JSON and stop')
 			.option('-y, --yes', 'With --clarify: accept the suggested answers')
-			.option('--tag <tag>', 'Specify tag context for task operations')
+			.addOption(tagOption())
+			.addOption(projectOption())
 			.action(
 				// A stopped parse-prd (or `go`) leaves no Claude running (#1103)
 				(file: string | undefined, options: ParsePrdCommandOptions) =>
@@ -224,12 +211,12 @@ export class ParsePrdCommand extends Command {
 		const fileError = otherTasksFileError(
 			options.output,
 			'parse-prd',
-			undefined,
+			options.project,
 			'--output'
 		);
 		if (fileError) displayError(fileError);
 
-		const projectRoot = getProjectRoot();
+		const projectRoot = getProjectRoot(options.project);
 		let tmCore: TmCore;
 		let target: Awaited<ReturnType<TmCore['tasks']['parsePrdTarget']>>;
 		try {
@@ -274,10 +261,7 @@ export class ParsePrdCommand extends Command {
 		try {
 			let force = options.force === true;
 			if (target.taskCount > 0 && !force && !options.append) {
-				if (!(await confirmOverwrite())) {
-					console.log(theme.muted('Cancelled; no tasks changed'));
-					return;
-				}
+				if (!(await confirmOverwrite())) return;
 				force = true;
 			}
 
@@ -317,7 +301,9 @@ export class ParsePrdCommand extends Command {
 					),
 					added: result.added,
 					total: result.total,
-					research
+					research,
+					// `go` runs loop next itself
+					nextStep: !isGoStep()
 				})
 			);
 			const usage = formatUsageLine(result.telemetryData);

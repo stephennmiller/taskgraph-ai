@@ -8,6 +8,7 @@
 import { sanitizeForTerminal } from '@tm/core';
 import chalk from 'chalk';
 import { Command } from 'commander';
+import { projectOption, tagOption } from '../utils/shared-options.js';
 import {
 	formatDependencyCheck,
 	formatDependencyFixes
@@ -48,12 +49,9 @@ function editCommand(
 		.argument('[id]', idHelp)
 		.argument('[dependsOn]', dependsOnHelp)
 		.option('-i, --id <id>', idHelp)
-		.option('-d, --depends-on <ids>', dependsOnHelp)
-		.option('--tag <tag>', 'Tag to work in (default: the current tag)')
-		.option(
-			'-p, --project <path>',
-			'Project root directory (auto-detected if not provided)'
-		);
+		.option('--depends-on <ids>', dependsOnHelp)
+		.addOption(tagOption())
+		.addOption(projectOption());
 	// Before the ID check, which exits: the old name was still what they typed
 	if (replacement) noticeOldAlias(command, replacement);
 	return command.hook('preAction', (command) => {
@@ -112,7 +110,7 @@ export class DependCommand {
 	static register(program: Command): void {
 		const command = editCommand(
 			'depend',
-			'Make a task depend on others, or --remove the dependencies',
+			'Add or --remove a dependency',
 			'Task that depends on the others',
 			'Task or comma-separated tasks it depends on (1,2,3)'
 		)
@@ -130,7 +128,7 @@ export class AddDependencyCommand {
 	static register(program: Command): void {
 		const command = editCommand(
 			'add-dependency',
-			'Add a dependency to a task',
+			'Alias of depend',
 			'Task ID to add dependency to',
 			'Task ID, or comma-separated IDs, that will become dependencies',
 			'depend'
@@ -148,7 +146,7 @@ export class RemoveDependencyCommand {
 	static register(program: Command): void {
 		const command = editCommand(
 			'remove-dependency',
-			'Remove a dependency or a non-blocking link from a task',
+			'Alias of depend --remove',
 			'Task ID to remove dependency from',
 			'Task ID, or comma-separated IDs, to remove as dependencies',
 			'depend --remove'
@@ -168,11 +166,8 @@ function checkCommand(
 ): Command {
 	const command = new Command(name)
 		.description(description)
-		.option('--tag <tag>', 'Tag to work in (default: the current tag)')
-		.option(
-			'-p, --project <path>',
-			'Project root directory (auto-detected if not provided)'
-		);
+		.addOption(tagOption())
+		.addOption(projectOption());
 	if (replacement) noticeOldAlias(command, replacement);
 	return command;
 }
@@ -196,7 +191,7 @@ export class ValidateDependenciesCommand {
 	static register(program: Command): void {
 		const command = checkCommand(
 			'validate-dependencies',
-			'Identify invalid dependencies without fixing them',
+			'Alias of fix-dependencies --check',
 			'fix-dependencies --check'
 		).action(validateDependencies);
 		program.addCommand(command, { hidden: true });
@@ -207,7 +202,7 @@ export class FixDependenciesCommand {
 	static register(program: Command): void {
 		const command = checkCommand(
 			'fix-dependencies',
-			'Fix invalid dependencies automatically, or --check to only report them'
+			'Fix invalid dependencies, or --check'
 		)
 			.option('--check', 'Report invalid dependencies without fixing them')
 			.action((options: DependencyOptions) =>

@@ -15,6 +15,7 @@ import {
 	neutralizeTaskData
 } from '@tm/core';
 import { Command, Option } from 'commander';
+import { projectOption, tagOption } from '../utils/shared-options.js';
 import {
 	formatCliTooOldForPlugin,
 	formatCurrentTask,
@@ -43,12 +44,9 @@ export class PrimeCommand extends Command {
 		super(name || 'prime');
 
 		this.description('Print task context and workflow rules for a coding agent')
-			.option('-t, --tag <tag>', 'Use a specific tag')
-			.option('--json', 'Output JSON')
-			.option(
-				'-p, --project <path>',
-				'Project root directory (auto-detected if not provided)'
-			)
+			.addOption(tagOption())
+			.option('--json', 'Print JSON')
+			.addOption(projectOption())
 			.option(
 				'--unnoted-since <time>',
 				'Only list in-progress tasks with no note since <time> (ISO)'

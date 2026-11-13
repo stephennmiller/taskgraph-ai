@@ -28,6 +28,14 @@ export function parseCompletion(
 	return { status: 'success' };
 }
 
+/** The reply without the marker on its last line: the summary says why the loop stopped */
+export function withoutMarker(reply: string): string {
+	const lines = reply.trimEnd().split('\n');
+	return SIGNAL_LINE.test(lines.at(-1)?.trim() ?? '')
+		? lines.slice(0, -1).join('\n').trimEnd()
+		: reply;
+}
+
 /**
  * The iteration's result from the reply, the exit code and the cost Claude
  * Code reported. `started`: Claude Code printed a stream-json event.

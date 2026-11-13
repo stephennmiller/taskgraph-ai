@@ -169,7 +169,8 @@ describe('next command', () => {
 		it('says there are no tasks, without a box, in an empty project', () => {
 			const output = runAt80();
 
-			expect(output).toContain('No tasks found');
+			expect(output).toContain('No tasks yet');
+			expect(output).toContain('taskgraph go <prd>');
 			expect(output).toContain('taskgraph add-task');
 			expect(output).not.toMatch(/[╭╮╰╯]/);
 		});

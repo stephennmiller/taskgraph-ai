@@ -5,15 +5,19 @@
  * hidden alias for scripts (#882).
  */
 
-import { splitIds, type TaskRemovalPreview, type TmCore } from '@tm/core';
-import chalk from 'chalk';
+import { splitIds, type TmCore } from '@tm/core';
 import { Command, Option } from 'commander';
+import { projectOption, tagOption } from '../utils/shared-options.js';
 import { formatClearedSubtasks } from '../ui/formatters/clear-subtasks-formatters.js';
 import { terminalSafe } from '../ui/formatters/markdown-formatters.js';
-import { formatTasksRemoved } from '../ui/formatters/remove-task-formatters.js';
+import {
+	formatRemovalPlan,
+	formatRemovalQuestion,
+	formatTasksRemoved
+} from '../ui/formatters/remove-task-formatters.js';
 import { formatSubtaskRemoved } from '../ui/formatters/subtask-change-formatters.js';
-import { theme } from '../ui/theme.js';
 import { noticeOldAlias } from '../utils/alias-notice.js';
+import { confirm } from '../utils/confirm.js';
 import {
 	describeError,
 	displayError,
@@ -39,11 +43,8 @@ interface RemovalOptions {
 function removalCommand(name: string, description: string): Command {
 	return new Command(name)
 		.description(description)
-		.option('--tag <tag>', 'Tag to work in (default: the current tag)')
-		.option(
-			'-p, --project <path>',
-			'Project root directory (auto-detected if not provided)'
-		)
+		.addOption(tagOption())
+		.addOption(projectOption())
 		.addOption(legacyFileOption())
 		.hook('preAction', (cmd) => {
 			const { file, project } = cmd.opts<RemovalOptions>();
@@ -54,55 +55,6 @@ function removalCommand(name: string, description: string): Command {
 			);
 			if (fileError) displayError(fileError);
 		});
-}
-
-/** The items, the subtasks that go with them and the dependents */
-function printRemovalPlan(preview: TaskRemovalPreview): void {
-	const { found, subtaskCount, dependents } = preview;
-	console.log();
-	console.log(
-		`${chalk.yellow('⚠')} This will permanently delete ${found.length} item(s):`
-	);
-	console.log();
-	for (const { id, title, parent } of found) {
-		const label = `${parent ? 'Subtask' : 'Task'} ${terminalSafe(id)}: ${terminalSafe(title || '(no title)')}`;
-		if (!parent) {
-			console.log(theme.text.bold(`  ${label}`));
-			continue;
-		}
-		console.log(theme.text(`  ${label}`));
-		console.log(
-			theme.muted(
-				`    (Parent: ${terminalSafe(parent.id)} - ${terminalSafe(parent.title || '(no title)')})`
-			)
-		);
-	}
-	if (subtaskCount > 0) {
-		console.log(
-			chalk.yellow(
-				`⚠ This also deletes ${subtaskCount} ${subtaskCount === 1 ? 'subtask' : 'subtasks'}`
-			)
-		);
-	}
-	if (dependents.length > 0) {
-		console.log(chalk.yellow('⚠ Dependencies on them will be removed:'));
-		for (const { id, dependentIds } of dependents) {
-			console.log(
-				chalk.yellow(
-					`  - Task ${terminalSafe(id)}: ${dependentIds.length} dependent tasks (${dependentIds.map(terminalSafe).join(', ')})`
-				)
-			);
-		}
-	}
-	console.log();
-}
-
-async function confirm(message: string): Promise<boolean> {
-	const { default: inquirer } = await import('inquirer');
-	const { proceed } = await inquirer.prompt<{ proceed: boolean }>([
-		{ type: 'confirm', name: 'proceed', message, default: false }
-	]);
-	return proceed;
 }
 
 async function removeTasks(
@@ -126,7 +78,7 @@ async function removeTasks(
 
 	if (!options.yes) {
 		// A prompt without a terminal hangs scripts and agents
-		if (!process.stdin.isTTY) {
+		if (!(process.stdin.isTTY && process.stdout.isTTY)) {
 			printError(
 				'Removing tasks needs confirmation',
 				'Pass `--yes` to remove them without asking'
@@ -134,14 +86,13 @@ async function removeTasks(
 			process.exitCode = 1;
 			return;
 		}
-		printRemovalPlan(preview);
-		const proceed = await confirm(
-			chalk.red.bold(
-				`Are you sure you want to permanently delete these ${found.length} item(s)?`
-			)
-		);
-		if (!proceed) {
-			console.log(theme.brand('Task deletion cancelled.'));
+		console.log(formatRemovalPlan(preview));
+		if (
+			!(await confirm(
+				formatRemovalQuestion(preview),
+				'Cancelled; nothing was removed'
+			))
+		) {
 			return;
 		}
 	}
@@ -196,41 +147,35 @@ function removeSubtasks(name: string, options: RemovalOptions) {
 }
 
 /** `remove-task 5` and `remove-task --id=5` mean the same */
-function idArgument(command: Command): Command {
-	return command
-		.argument('[ids]', 'The same as --id')
-		.hook('preAction', (cmd) => {
-			const [ids] = cmd.args;
-			if (ids === undefined) return;
-			// Both would silently drop the IDs given as the argument
-			if (cmd.opts<RemovalOptions>().id !== undefined) {
-				printError(
-					'Give the IDs as an argument or as --id, not both',
-					`Try \`taskgraph ${cmd.name()} ${terminalSafe(ids)}\``
-				);
-				process.exit(1);
-			}
-			cmd.setOptionValue('id', ids);
-		});
+function idArgument(command: Command, description: string): Command {
+	return command.argument('[ids]', description).hook('preAction', (cmd) => {
+		const [ids] = cmd.args;
+		if (ids === undefined) return;
+		const flag = cmd.opts<RemovalOptions>().id;
+		// Two different lists would silently drop the one given as the argument
+		if (flag !== undefined && flag !== ids) {
+			printError(
+				'Give the IDs as an argument or as --id, not both',
+				`Try \`taskgraph ${cmd.name()} ${terminalSafe(ids)}\``
+			);
+			process.exit(1);
+		}
+		cmd.setOptionValue('id', ids);
+	});
 }
 
 export class RemoveTaskCommand {
 	static register(program: Command): void {
 		const command = idArgument(
-			removalCommand(
-				'remove-task',
-				'Remove one or more tasks or subtasks permanently'
-			)
+			removalCommand('remove-task', 'Remove a task or subtask'),
+			'Task or subtask to remove (5 or 5.2); several with commas (5,6.1,7)'
 		)
+			.option('-i, --id <ids>', 'The same as the [ids] argument')
 			.option(
-				'-i, --id <ids>',
-				'ID(s) of the task(s) or subtask(s) to remove (e.g., "5", "5.2", or "5,6.1,7")'
-			)
-			.option(
-				'-c, --convert',
+				'--convert',
 				'Make the subtasks standalone tasks instead of deleting them'
 			)
-			.option('-y, --yes', 'Skip confirmation prompt', false)
+			.option('-y, --yes', 'Remove without asking', false)
 			.hook('preAction', (cmd) => {
 				if (splitIds(cmd.opts<RemovalOptions>().id ?? '').length === 0) {
 					printError(
@@ -254,17 +199,14 @@ export class RemoveSubtaskCommand {
 	static register(program: Command): void {
 		const command = removalCommand(
 			'remove-subtask',
-			'Remove a subtask from its parent task'
+			'Alias of remove-task <subtask>'
 		);
 		noticeOldAlias(command, 'remove-task');
-		idArgument(command)
+		idArgument(command, 'Subtask to remove (5.2); several with commas')
+			.option('-i, --id <id>', 'The same as the [ids] argument')
 			.option(
-				'-i, --id <id>',
-				'Subtask ID(s) to remove in format "parentId.subtaskId" (can be comma-separated for multiple subtasks)'
-			)
-			.option(
-				'-c, --convert',
-				'Convert the subtask to a standalone task instead of deleting it'
+				'--convert',
+				'Make the subtask a standalone task instead of deleting it'
 			)
 			// Task files are written by `generate`; the old flag already did nothing
 			.addOption(new Option('--generate').hideHelp())
@@ -277,20 +219,25 @@ export class RemoveSubtaskCommand {
 
 export class ClearSubtasksCommand {
 	static register(program: Command): void {
-		const command = removalCommand(
-			'clear-subtasks',
-			'Clear subtasks from specified tasks'
+		const command = idArgument(
+			removalCommand('clear-subtasks', 'Remove all subtasks from tasks'),
+			'Task to clear; several with commas (3,5)'
 		)
-			.option(
-				'-i, --id <ids>',
-				'Task IDs (comma-separated) to clear subtasks from'
-			)
-			.option('--all', 'Clear subtasks from all tasks')
-			.action((options: RemovalOptions) => {
+			.option('-i, --id <ids>', 'The same as the [ids] argument')
+			.option('--all', 'Clear every task')
+			.action((ids: string | undefined, options: RemovalOptions) => {
+				// Read as "all of task 3's", `3 --all` would clear every task
+				if (ids !== undefined && options.all) {
+					printError(
+						'Give the tasks to clear or --all, not both',
+						`Try \`taskgraph clear-subtasks ${terminalSafe(ids)}\``
+					);
+					process.exit(1);
+				}
 				if (!options.id && !options.all) {
 					printError(
 						'Choose which tasks to clear',
-						'Use `--id=<ids>`, such as `--id=3,5`, or `--all`'
+						'Try `taskgraph clear-subtasks 3,5`, or `--all`'
 					);
 					process.exit(1);
 				}

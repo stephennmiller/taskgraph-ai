@@ -19,6 +19,7 @@ import {
 	findInvalidRulesProfiles,
 	findProjectRoot,
 	initializeProject,
+	isTaskGraphProject,
 	planInit,
 	resolveStoreTasksInGit,
 	setUpMergeDriver
@@ -36,6 +37,7 @@ import { formatMergeDriverSetup } from '../ui/formatters/merge-driver-formatters
 import { formatUpstreamImport } from '../ui/formatters/upstream-import-formatters.js';
 import { theme } from '../ui/theme.js';
 import { displayError, printError } from '../utils/error-handler.js';
+import { isGoStep } from '../utils/go-step.js';
 
 interface InitCommandOptions {
 	yes?: boolean;
@@ -74,7 +76,7 @@ export class InitCommand extends Command {
 	constructor(name?: string) {
 		super(name || 'init');
 
-		// --skip-install, -v/--version and -a/--author are accepted so old
+		// --skip-install, --version and --author are accepted so old
 		// scripts keep working. Nothing reads them: InitCommandOptions omits
 		// them, and initializeProject has no version, author or install step.
 		this.description('Set up TaskGraph in this project')
@@ -91,11 +93,11 @@ export class InitCommand extends Command {
 			.option('--no-claude', 'Skip the Claude Code integration')
 			.option('--mcp', 'Also add the TaskGraph MCP server to .mcp.json')
 			.option(
-				'-r, --rules <rules...>',
+				'--rules <rules...>',
 				'Rule profiles to install (claude; comma or space separated)'
 			)
 			.optionsGroup('Project:')
-			.option('-n, --name <name>', 'Project name')
+			.option('--name <name>', 'Project name')
 			.option('-d, --description <description>', 'Project description')
 			.option('--aliases', 'Add the tm alias to your shell startup file')
 			.option('--no-aliases', "Don't add the tm alias (the default)")
@@ -105,11 +107,11 @@ export class InitCommand extends Command {
 				`Import a ${UPSTREAM_NAME} project (${UPSTREAM_DIR}/)`
 			)
 			.addOption(
-				new Option('-v, --version <version>', 'Project version')
+				new Option('--version <version>', 'Project version')
 					.default('0.1.0')
 					.hideHelp()
 			)
-			.addOption(new Option('-a, --author <author>', 'Author name').hideHelp())
+			.addOption(new Option('--author <author>', 'Author name').hideHelp())
 			.addOption(
 				new Option('--skip-install', 'Skip installing dependencies').hideHelp()
 			);
@@ -179,7 +181,18 @@ export class InitCommand extends Command {
 			process.exit(1);
 		}
 
-		displayInitBanner();
+		// `taskgraph go` runs init as a step and prints what comes next itself
+		const goStep = isGoStep();
+		// The banner welcomes a first run in a terminal. A re-run, a dry run, a
+		// pipe and a `go` step start with the result (#1147)
+		if (
+			process.stdout.isTTY &&
+			!options.dryRun &&
+			!goStep &&
+			!isTaskGraphProject(projectRoot)
+		) {
+			displayInitBanner();
+		}
 
 		// No flag: keep what an earlier init chose, else store tasks in Git
 		const gitTasksDefault = resolveStoreTasksInGit(
@@ -248,13 +261,14 @@ export class InitCommand extends Command {
 			return;
 		}
 		console.log(
-			`${formatInitSummary({
+			formatInitSummary({
 				folder: terminalSafe(path.basename(projectRoot)),
 				changes: result.changes,
 				hints: result.hints,
 				alreadySetUp: result.alreadySetUp,
-				claudeCode: answers.claudeCode
-			})}\n`
+				claudeCode: answers.claudeCode,
+				resultOnly: goStep
+			})
 		);
 	}
 

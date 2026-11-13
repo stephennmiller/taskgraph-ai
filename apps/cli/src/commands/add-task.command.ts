@@ -1,6 +1,7 @@
 /**
- * @fileoverview `taskgraph add-task`: add a task, written by the AI from
- * `--prompt`, or given with `--title` and `--description` (no AI call).
+ * @fileoverview `taskgraph add-task`: add a task, given as a title
+ * (`add-task 'Fix the login bug'`, no AI call) or written by the AI from
+ * `--prompt`.
  * Thin layer over tm-core's tasks.add(), which saves the task under the
  * tasks.json lock without dropping changes made while the AI was writing.
  */
@@ -8,6 +9,7 @@
 import { type AddTaskResult, createTmCore, exitOnStopSignals } from '@tm/core';
 import chalk from 'chalk';
 import { Command } from 'commander';
+import { projectOption, tagOption } from '../utils/shared-options.js';
 import type { Ora } from 'ora';
 import { formatResearchContext } from '../ui/formatters/research-formatters.js';
 import { formatTaskCreated } from '../ui/formatters/task-created-formatters.js';
@@ -21,6 +23,8 @@ import {
 	displayError,
 	printError
 } from '../utils/error-handler.js';
+import { pickValue } from '../utils/id-argument.js';
+import { typedOldShortFlagHint } from '../utils/old-short-flags.js';
 import { getProjectRoot } from '../utils/project-root.js';
 import {
 	legacyFileOption,
@@ -40,6 +44,7 @@ export interface AddTaskCommandOptions {
 	ac?: string[];
 	assignee?: string;
 	tag?: string;
+	project?: string;
 }
 
 /** The ✓ line, dependency rows and next step for a saved task */
@@ -57,23 +62,19 @@ export class AddTaskCommand extends Command {
 	constructor(name?: string) {
 		super(name || 'add-task');
 
-		this.description(
-			'Add a task with AI from --prompt, or with -t and -d (no AI)'
-		)
+		this.description('Add a task; --prompt has the AI write it')
+			.argument('[title...]', 'Task title, saved as written (no AI call)')
 			.addOption(legacyFileOption())
 			.option(
 				'--prompt <prompt>',
-				'What the task should do. The AI writes the title and description'
+				'What the task should do; the AI writes the title and description'
 			)
-			.option('-t, --title <title>', 'Task title (with -d, no AI call)')
-			.option(
-				'-d, --description <description>',
-				'Task description (with -t, no AI call)'
-			)
+			.option('--title <title>', 'The same as the [title] argument')
+			.option('-d, --description <description>', 'Task description')
 			.option('--details <details>', 'Implementation details')
 			.option(
 				'--dependencies <dependencies>',
-				'Comma-separated IDs of tasks this one depends on'
+				'Tasks this one depends on, comma separated'
 			)
 			.option(
 				'--discovered-from <id>',
@@ -85,7 +86,7 @@ export class AddTaskCommand extends Command {
 			)
 			.option(
 				'-r, --research',
-				'Look through the project before the AI writes the task'
+				'With --prompt: use the research model, which can search the web'
 			)
 			.option(
 				'--ac <criterion>',
@@ -93,27 +94,48 @@ export class AddTaskCommand extends Command {
 				(value: string, previous: string[] = []) => [...previous, value]
 			)
 			.option('--assignee <login>', 'GitHub login of who the task is for')
-			.option(
-				'--tag <tag>',
-				'Tag to add the task to (default: the current tag)'
-			)
-			.action(async (options: AddTaskCommandOptions) => {
-				await exitOnStopSignals(() => this.executeCommand(options));
+			.addOption(tagOption())
+			.addOption(projectOption())
+			.action(async (words: string[], options: AddTaskCommandOptions) => {
+				// The AI writes the title from --prompt, so these words would be
+				// dropped: a title, or the rest of a prompt typed without quotes
+				if (words.length > 0 && options.prompt !== undefined) {
+					printError(
+						`add-task takes a title or --prompt, not both: "${terminalSafe(words.join(' '))}"`,
+						"Quote the prompt: `taskgraph add-task --prompt='Add a health check'`"
+					);
+					process.exit(1);
+				}
+				const title = pickValue(
+					words.join(' ') || undefined,
+					options.title,
+					{ name: 'the title', flag: '--title' },
+					'add-task'
+				);
+				await exitOnStopSignals(() =>
+					this.executeCommand({ ...options, title })
+				);
 			});
 	}
 
 	private async executeCommand(options: AddTaskCommandOptions): Promise<void> {
-		if (!options.prompt && !(options.title && options.description)) {
+		if (!options.prompt && !options.title?.trim()) {
 			printError(
-				'Say what the task is with --prompt, or give --title and --description',
-				"Example: taskgraph add-task --prompt='Add a health check endpoint'"
+				'add-task needs a title, or --prompt for the AI to write the task',
+				// `add-task -t auth -d '...'`: -t was --title before #1155
+				typedOldShortFlagHint('add-task', 't') ??
+					"Try `taskgraph add-task 'Fix the login bug'`"
 			);
 			process.exit(1);
 		}
 
-		const fileError = otherTasksFileError(options.file, 'add-task');
+		const fileError = otherTasksFileError(
+			options.file,
+			'add-task',
+			options.project
+		);
 		if (fileError) displayError(fileError);
-		const projectRoot = getProjectRoot();
+		const projectRoot = getProjectRoot(options.project);
 
 		let spinner: Ora | undefined;
 		// A line printed while the spinner runs would be drawn over

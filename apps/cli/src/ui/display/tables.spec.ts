@@ -130,8 +130,8 @@ describe('createTaskTable - narrow terminals', () => {
 		expect(withScore).toContain('│ Complexity');
 	});
 
-	it('keeps Blocks at 80 columns when asked to, hiding Dependencies instead', () => {
-		setColumns(80);
+	it('keeps Blocks at 60 columns when asked to, hiding Deps and Priority instead', () => {
+		setColumns(60);
 		const task = { ...makeTask('1', 'master'), blocks: ['2'] };
 
 		const output = stripAnsi(
@@ -139,7 +139,76 @@ describe('createTaskTable - narrow terminals', () => {
 		);
 
 		expect(output).toContain('│ Blocks');
-		expect(output).toContain('Hidden to fit width: Dependencies');
+		expect(output).toContain('Hidden to fit width: Deps, Priority');
+	});
+
+	// #1148: Status, Dependencies and Blocks were 15, 14 and 10 wide whatever
+	// they held, which left a title 22 characters at 80 columns
+	it('sizes each column to its widest value, never narrower than its header', () => {
+		setColumns(120);
+		const tasks = [
+			{ ...makeTask('1', 'master'), blocks: ['2'] },
+			{ ...makeTask('2', 'master'), dependencies: ['1'] }
+		];
+
+		const [, header, , first] = stripAnsi(
+			createTaskTable(tasks, listOptions)
+		).split('\n');
+
+		expect(header).toContain('│ Status    │ Priority │ Deps │ Blocks │');
+		expect(first).toContain('│ ○ pending │ medium   │ -    │ 2      │');
+	});
+
+	it('widens a column for a longer value, up to its old width', () => {
+		setColumns(120);
+		const tasks = [
+			{
+				...makeTask('9', 'master'),
+				status: 'in-progress' as const,
+				dependencies: ['1', '2', '3', '4', '5', '6', '7', '8']
+			}
+		];
+
+		const [, header] = stripAnsi(createTaskTable(tasks, listOptions)).split(
+			'\n'
+		);
+
+		expect(header).toContain('│ Status        │ Priority │ Deps         │');
+	});
+
+	it('hides Blocks and Complexity at 80 columns rather than cut titles under 28 characters', () => {
+		setColumns(80);
+		const tasks = [
+			{
+				...makeTask('1', 'master'),
+				status: 'in-progress' as const,
+				complexity: 7,
+				title: 'Set up the database schema and migrations'
+			}
+		];
+
+		const output = stripAnsi(createTaskTable(tasks, listOptions));
+
+		expect(output).toContain('│ Set up the database schema and m… │');
+		expect(output).toContain('│ Deps │');
+		expect(output).toContain('Hidden to fit width: Blocks, Complexity');
+		expect(widest(output)).toBeLessThanOrEqual(76);
+	});
+
+	it('keeps Priority and Deps at 80 columns, however long the dependency list', () => {
+		setColumns(80);
+		const tasks = [
+			{
+				...makeTask('9', 'master'),
+				status: 'in-progress' as const,
+				dependencies: ['1', '2', '3', '4', '5', '6', '7', '8']
+			}
+		];
+
+		const output = stripAnsi(createTaskTable(tasks, listOptions));
+
+		expect(output).toContain('│ Priority │ Deps         │');
+		expect(output).toContain('Hidden to fit width: Blocks');
 	});
 
 	it('hides Blocks at 40 columns even when asked to keep it, rather than overflow', () => {
@@ -166,7 +235,7 @@ describe('createTaskTable - narrow terminals', () => {
 		const cellWidth = lines[1].split('│')[2].length - 2;
 		const cut = lines.find((line) => line.includes('AAA')) ?? '';
 
-		expect(cut).toContain(`${'A'.repeat(cellWidth - 3)}... │`);
+		expect(cut).toContain(`${'A'.repeat(cellWidth - 1)}… │`);
 		// Top border, header, header rule, one line per task, bottom border
 		expect(lines.findIndex((line) => line.startsWith('└'))).toBe(
 			3 + tasks.length

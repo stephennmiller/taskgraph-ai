@@ -8,6 +8,7 @@ import path from 'node:path';
 import { createTmCore, exitOnStopSignals } from '@tm/core';
 import chalk from 'chalk';
 import { Command, Option } from 'commander';
+import { projectOption, tagOption } from '../utils/shared-options.js';
 import type { Ora } from 'ora';
 import { formatComplexityRun } from '../ui/formatters/complexity-report-formatters.js';
 import { terminalSafe } from '../ui/formatters/markdown-formatters.js';
@@ -36,6 +37,7 @@ export interface AnalyzeComplexityCommandOptions {
 	from?: string;
 	to?: string;
 	tag?: string;
+	project?: string;
 	/** Show the saved report instead; a string names the report file */
 	report?: boolean | string;
 }
@@ -50,27 +52,28 @@ export class AnalyzeComplexityCommand extends Command {
 	constructor(name?: string) {
 		super(name || 'analyze-complexity');
 
-		this.description('Analyze tasks and generate expansion recommendations')
-			.option('-o, --output <file>', 'Output file path for the report')
+		this.description('Score complexity; --report shows it')
+			.option('-o, --output <file>', 'Where to save the report')
 			// Never used; kept so scripts that pass it keep working
 			.addOption(new Option('-m, --model <model>').hideHelp())
 			.option(
-				'-t, --threshold <number>',
-				'Minimum complexity score to recommend expansion (1-10)',
+				'--threshold <number>',
+				'Lowest score, 1 to 10, that recommends expanding a task',
 				'5'
 			)
 			.addOption(legacyFileOption())
 			.option(
 				'-r, --research',
-				'Use configured research model for research-backed complexity analysis'
+				'Use the research model, which can search the web'
 			)
 			.option(
 				'-i, --id <ids>',
-				'Comma-separated task IDs to analyze, even ones with subtasks (e.g., "1,3,5")'
+				'Tasks to analyze, comma separated (1,3,5), even ones with subtasks'
 			)
-			.option('--from <id>', 'Starting task ID in a range to analyze')
-			.option('--to <id>', 'Ending task ID in a range to analyze')
-			.option('--tag <tag>', 'Specify tag context for task operations')
+			.option('--from <id>', 'First task ID of a range to analyze')
+			.option('--to <id>', 'Last task ID of the range')
+			.addOption(tagOption())
+			.addOption(projectOption())
 			.option(
 				'--report [file]',
 				'Show the saved report (from a file, if given) instead of analyzing'
@@ -80,8 +83,7 @@ export class AnalyzeComplexityCommand extends Command {
 					// Analysis options would be silently ignored
 					const extra = this.options.find(
 						(o) =>
-							o.attributeName() !== 'tag' &&
-							o.attributeName() !== 'report' &&
+							!['tag', 'project', 'report'].includes(o.attributeName()) &&
 							this.getOptionValueSource(o.attributeName()) === 'cli'
 					);
 					if (extra) {
@@ -93,6 +95,7 @@ export class AnalyzeComplexityCommand extends Command {
 					}
 					await showComplexityReport({
 						tag: options.tag,
+						project: options.project,
 						file: options.report === true ? undefined : options.report
 					});
 					return;
@@ -104,9 +107,13 @@ export class AnalyzeComplexityCommand extends Command {
 	private async executeCommand(
 		options: AnalyzeComplexityCommandOptions
 	): Promise<void> {
-		const fileError = otherTasksFileError(options.file, 'analyze-complexity');
+		const fileError = otherTasksFileError(
+			options.file,
+			'analyze-complexity',
+			options.project
+		);
 		if (fileError) displayError(fileError);
-		const projectRoot = getProjectRoot();
+		const projectRoot = getProjectRoot(options.project);
 
 		let spinner: Ora | undefined;
 		// A line printed while the spinner runs would be drawn over

@@ -17,12 +17,21 @@
  *   Test strategy
  *     Integration test that signs up, signs in and restarts the server.
  *
+ *   Notes
+ *     Nov 12 19:47  Chose argon2 over bcrypt: the login API already depends
+ *                   on it
+ *     Nov 13 09:02  Sessions table migrated
+ *
  *   Subtasks · 1 of 3 done
  *     2.1  ✓ done         Password hashing helpers
  *     2.2  ▶ in-progress  Sessions table and cookie middleware  after 2.1
  *     2.3  ○ pending      Sign-in rate limiting                 after 2.2
  *
  *   Next: taskgraph update 2 --prompt='...' to update details
+ *
+ * Notes are the timestamped blocks `note`, `update --append` and
+ * `update-subtask` add to the details, which used to print as raw
+ * `<info added on …>` tags under Details.
  *
  * It replaces a boxed title, a bordered two-column table whose labels
  * slipped out of line with their values when a value wrapped, a box for each
@@ -41,7 +50,8 @@ import {
 	getPrdSource,
 	getTaskLinks,
 	resolveSubtaskDependency,
-	sanitizeForTerminal
+	sanitizeForTerminal,
+	splitNotes
 } from '@tm/core';
 import chalk from 'chalk';
 import {
@@ -105,6 +115,8 @@ export interface TaskDetailOptions {
 	fence?: boolean;
 	/** Commits that name this task (`tasks.getCommits`), newest first */
 	commits?: Array<{ sha: string; subject: string }>;
+	/** End with the `Next:` line; default true. `show 1,2` leaves it out */
+	nextStep?: boolean;
 }
 
 /** `1`, `1 and 3`, `1, 3 and 4` */
@@ -141,6 +153,33 @@ function body(
 		? formatRawText(content, columns)
 		: formatMarkdown(toMarkdown(content), columns, { breaks: true });
 	return text.split('\n').map((line) => (line.trim() ? indent + line : ''));
+}
+
+/**
+ * `Nov 12 19:47  fixed the thing`: when each note was added (local time, with
+ * the year when it isn't this one) and its text, hanging under itself
+ */
+function noteRows(
+	notes: ReturnType<typeof splitNotes>['notes'],
+	width: number,
+	rawText: boolean | undefined
+): string[] {
+	const thisYear = new Date().getFullYear();
+	const stamps = notes.map(({ addedAt }) => {
+		const date = addedAt.toLocaleDateString('en-US', {
+			month: 'short',
+			day: 'numeric',
+			year: addedAt.getFullYear() === thisYear ? undefined : 'numeric'
+		});
+		return `${date.replace(',', '')} ${addedAt.toTimeString().slice(0, 5)}`;
+	});
+	const stampWidth = Math.max(...stamps.map((stamp) => stamp.length));
+	const hang = ' '.repeat(INDENT.length + stampWidth + 2);
+	return notes.flatMap((note, i) => {
+		const [first = '', ...rest] = body(note.text, width, rawText, hang);
+		const stamp = theme.muted(stamps[i].padEnd(stampWidth));
+		return [`${INDENT}${stamp}  ${first.slice(hang.length)}`, ...rest];
+	});
 }
 
 /**
@@ -411,14 +450,24 @@ export function formatTaskDetail(
 		]);
 	}
 
+	// Notes live in the details as timestamped blocks; show them apart
+	const { text: details, notes } = splitNotes(task.details);
 	const textSections: Array<[string, string | undefined]> = [
-		['Details', task.details],
+		['Details', details],
 		['Test strategy', task.testStrategy],
 		['Approach', task.implementationApproach]
 	];
 	for (const [title, text] of textSections) {
 		if (text?.trim())
 			sections.push([heading(title), ...body(text, width, options.rawText)]);
+	}
+
+	// The log of the work, above the commits it led to
+	if (notes.length > 0) {
+		sections.push([
+			heading('Notes'),
+			...noteRows(notes, width, options.rawText)
+		]);
 	}
 
 	if (options.commits?.length) {
@@ -478,9 +527,17 @@ export function formatTaskDetail(
 		sections.map((lines) => lines.join('\n')).join('\n\n'),
 		options.fence ?? true
 	);
-	const next = formatNextStep(
-		getSuggestedActions(id, task.status, subtaskTotal > 0, options.blocked)[0],
-		width
-	);
+	const next =
+		options.nextStep === false
+			? []
+			: formatNextStep(
+					getSuggestedActions(
+						id,
+						task.status,
+						subtaskTotal > 0,
+						options.blocked
+					)[0],
+					width
+				);
 	return next.length > 0 ? `${shown}\n\n${next.join('\n')}` : shown;
 }

@@ -47,11 +47,12 @@ const allRows = () => HELP_GROUPS.flatMap((group) => group.commands);
 const rowNames = () => allRows().map((row) => row.name.split(' ')[0]);
 
 describe('formatHelp', () => {
-	it('starts with the Daily workflow group, ending with loop', () => {
+	it('starts with the Daily workflow group, from go to loop (#1146)', () => {
 		const [first] = HELP_GROUPS;
 
 		expect(first.title).toBe('Daily workflow');
 		expect(first.commands.map((c) => c.name)).toEqual([
+			'go <prd>',
 			'next',
 			'show',
 			'list',

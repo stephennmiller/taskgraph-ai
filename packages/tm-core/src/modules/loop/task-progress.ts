@@ -3,7 +3,7 @@
  * its status moves to done or review, not when Claude Code exits 0 (#812)
  */
 
-import { statusesWhere } from '../../common/constants/index.js';
+import { isTaskComplete, statusesWhere } from '../../common/constants/index.js';
 import type { Task, TaskStatus } from '../../common/types/index.js';
 
 const FINISHED_STATUSES = statusesWhere('finished');
@@ -11,6 +11,11 @@ const FINISHED_STATUSES = statusesWhere('finished');
 /** Whether a task in this status counts as completed by the loop */
 export const isFinishedStatus = (status: TaskStatus | undefined): boolean =>
 	FINISHED_STATUSES.includes(status as TaskStatus);
+
+/** Whether there are tasks and every one, with its subtasks, is done or cancelled */
+export const allComplete = (
+	statuses: Map<string, TaskStatus> | undefined
+): boolean => !!statuses?.size && [...statuses.values()].every(isTaskComplete);
 
 /** Each task's and subtask's status, keyed `3` and `3.2` */
 export function taskStatuses(tasks: Task[]): Map<string, TaskStatus> {

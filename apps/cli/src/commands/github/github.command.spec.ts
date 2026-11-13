@@ -23,6 +23,9 @@ vi.mock('../../utils/project-root.js', () => ({
 	getProjectRoot: vi.fn((path?: string) => path || '/test/project')
 }));
 
+vi.mock('../../utils/confirm.js', () => ({ confirm: vi.fn() }));
+
+import { confirm as askConfirm } from '../../utils/confirm.js';
 import { GithubCommand } from './github.command.js';
 
 const PLAN: PushPlan = {
@@ -133,7 +136,7 @@ describe('GithubCommand', () => {
 	let logSpy: any;
 	let github: Record<string, ReturnType<typeof vi.fn>>;
 	let command: GithubCommand;
-	let confirm: ReturnType<typeof vi.fn>;
+	const confirm = vi.mocked(askConfirm);
 
 	const output = () =>
 		logSpy.mock.calls.map((c: unknown[]) => c.join(' ')).join('\n');
@@ -161,8 +164,7 @@ describe('GithubCommand', () => {
 		};
 		command = new GithubCommand();
 		(command as any).tmCore = { github };
-		confirm = vi.fn().mockResolvedValue(true);
-		(command as any).confirm = confirm;
+		confirm.mockResolvedValue(true);
 		(command as any).isInteractive = () => true;
 	});
 
@@ -175,10 +177,9 @@ describe('GithubCommand', () => {
 		it('prints gh availability, repo and link counts', async () => {
 			await (command as any).runStatus({});
 
-			expect(output()).toContain('available and signed in');
+			expect(output()).toContain('signed in');
 			expect(output()).toContain('acme/app');
-			expect(output()).toContain('2 task(s)');
-			expect(output()).toContain('3 task(s)');
+			expect(output()).toContain('2 of 5 tasks');
 		});
 
 		it('passes --repo through and supports --json', async () => {
@@ -250,7 +251,11 @@ describe('GithubCommand', () => {
 			expect(github.pull).not.toHaveBeenCalledWith(
 				expect.objectContaining({ dryRun: false })
 			);
-			expect(output()).toContain('Cancelled');
+			// confirm() prints this line on "no" and on Ctrl-C
+			expect(confirm).toHaveBeenCalledWith(
+				'Update these tasks?',
+				'Cancelled; no tasks were changed'
+			);
 		});
 
 		it('skips the confirmation with --yes', async () => {
@@ -401,7 +406,10 @@ describe('GithubCommand', () => {
 			await (command as any).runPush({});
 
 			expect(github.push).not.toHaveBeenCalled();
-			expect(output()).toContain('Cancelled');
+			expect(confirm).toHaveBeenCalledWith(
+				'Write these changes to acme/app?',
+				'Cancelled; nothing was written to GitHub'
+			);
 		});
 
 		it('refuses to write non-interactively without --yes', async () => {

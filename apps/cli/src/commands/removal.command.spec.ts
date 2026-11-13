@@ -12,7 +12,14 @@ vi.mock('@tm/core', async (importOriginal) => ({
 	createTmCore: vi.fn()
 }));
 
+// The question needs a terminal; `ask` is the prompt module it is asked on
+vi.mock('inquirer', () => {
+	const ask = vi.fn();
+	return { default: { createPromptModule: () => ask, ask } };
+});
+
 import { TASKGRAPH_TASKS_FILE, createTmCore } from '@tm/core';
+import inquirer from 'inquirer';
 import {
 	ClearSubtasksCommand,
 	RemoveSubtaskCommand,
@@ -128,6 +135,64 @@ describe('remove-task', () => {
 		expect(process.exitCode).toBe(1);
 	});
 
+	describe('on a terminal (#1146)', () => {
+		const ask = (inquirer as unknown as { ask: ReturnType<typeof vi.fn> }).ask;
+		const tty = [process.stdin.isTTY, process.stdout.isTTY];
+
+		beforeEach(() => {
+			process.stdin.isTTY = true;
+			process.stdout.isTTY = true;
+			tasks.previewTaskRemoval.mockResolvedValue({
+				...preview(['3']),
+				subtaskCount: 2
+			});
+		});
+
+		afterEach(() => {
+			[process.stdin.isTTY, process.stdout.isTTY] = tty;
+		});
+
+		it('shows the title, asks one short question and removes on yes', async () => {
+			ask.mockResolvedValue({ yes: true });
+
+			await run('remove-task', '3');
+
+			expect(output('log')).toContain('  3  Task 3');
+			expect(ask.mock.calls[0][0][0].message).toBe(
+				"Delete task 3 and its 2 subtasks? This can't be undone."
+			);
+			expect(tasks.removeTasks).toHaveBeenCalledWith('3', { tag: undefined });
+		});
+
+		it('removes nothing and says so in one line on no', async () => {
+			ask.mockResolvedValue({ yes: false });
+
+			await run('remove-task', '3');
+
+			expect(tasks.removeTasks).not.toHaveBeenCalled();
+			expect(output('log')).toContain('Cancelled; nothing was removed');
+			expect(output('error')).toBe('');
+		});
+
+		it('removes nothing and exits 130 on Ctrl-C', async () => {
+			ask.mockRejectedValue(
+				Object.assign(new Error('User force closed the prompt with SIGINT'), {
+					name: 'ExitPromptError'
+				})
+			);
+			vi.spyOn(process, 'exit').mockImplementation(((code: number) => {
+				throw new Error(`exit ${code}`);
+			}) as never);
+
+			await run('remove-task', '3');
+
+			expect(process.exit).toHaveBeenCalledWith(130);
+			expect(tasks.removeTasks).not.toHaveBeenCalled();
+			expect(output('log')).toContain('Cancelled; nothing was removed');
+			expect(output('error')).not.toContain('force closed');
+		});
+	});
+
 	it('exits 1 when a task file could not be deleted', async () => {
 		tasks.previewTaskRemoval.mockResolvedValue(preview(['2']));
 		tasks.removeTasks.mockResolvedValue({
@@ -202,7 +267,7 @@ describe('remove-task argument checks (#882)', () => {
 		expect(tasks.removeSubtasks).not.toHaveBeenCalled();
 	});
 
-	it('refuses IDs given both as the argument and --id', async () => {
+	it('refuses IDs given as the argument and different ones as --id', async () => {
 		await expect(run('remove-task', '5', '--id=6', '--yes')).rejects.toThrow(
 			'exit'
 		);
@@ -230,7 +295,7 @@ describe('remove-subtask', () => {
 		expect(output('log')).toContain('Subtask 2.2 is now task 7');
 	});
 
-	it("still takes the old --generate, and -f naming the project's file", async () => {
+	it("still takes the old --generate, and --file naming the project's file", async () => {
 		tasks.removeSubtasks.mockResolvedValue({
 			converted: [null],
 			tag: 'master'
@@ -240,7 +305,7 @@ describe('remove-subtask', () => {
 			'remove-subtask',
 			'--id=2.1',
 			'--generate',
-			'-f',
+			'--file',
 			TASKGRAPH_TASKS_FILE
 		);
 
@@ -248,13 +313,13 @@ describe('remove-subtask', () => {
 		expect(process.exitCode).toBeUndefined();
 	});
 
-	it('refuses -f naming another file, before changing anything', async () => {
+	it('refuses --file naming another file, before changing anything', async () => {
 		vi.spyOn(process, 'exit').mockImplementation(() => {
 			throw new Error('exit');
 		});
 
 		await expect(
-			run('remove-subtask', '--id=2.1', '-f', 'other/tasks.json')
+			run('remove-subtask', '--id=2.1', '--file', 'other/tasks.json')
 		).rejects.toThrow('exit');
 
 		expect(output('error')).toContain('--file is no longer supported');

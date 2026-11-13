@@ -21,6 +21,7 @@ import {
 } from '@tm/core';
 import chalk from 'chalk';
 import { Command } from 'commander';
+import { projectOption, tagOption } from '../utils/shared-options.js';
 import {
 	displaySyncMessage,
 	displayWatchFooter,
@@ -70,14 +71,14 @@ export class ListTasksCommand extends Command {
 				'-s, --status <status>',
 				'Status to show, same as the argument (the argument wins)'
 			)
-			.option('-t, --tag <tag>', 'Show tasks in one tag')
+			.addOption(tagOption())
 			.option('--with-subtasks', "Show each task's subtasks")
 			.option('-f, --format <format>', 'text, json or compact', 'text')
 			.addOption(jsonOption())
 			.option('-c, --compact', 'Same as --format compact')
 			.option('--no-header', 'Hide the tag line above the list')
 			.option('--silent', 'Print nothing')
-			.option('-p, --project <path>', 'Project folder (found automatically)')
+			.addOption(projectOption())
 			.option('-w, --watch', 'Reprint the list when tasks change')
 			.option('--ready', 'Only tasks you can start now')
 			.option('--blocking', 'Only tasks that block other tasks')

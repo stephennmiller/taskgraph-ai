@@ -1,6 +1,6 @@
 /**
  * @fileoverview Add a task, written by the AI from a prompt or given as a
- * title and description. The AI call runs without the tasks.json lock; the
+ * title (a description is optional). The AI call runs without the tasks.json lock; the
  * save re-reads the file under the lock and appends only the new task with
  * an ID that is free at that moment, so changes made during the call stay.
  */
@@ -42,8 +42,9 @@ const PRIORITIES = ['high', 'medium', 'low'];
 const DEFAULT_PRIORITY = 'medium';
 
 export interface AddTaskInput {
-	/** What the task is; the AI writes it. Not needed with title and description */
+	/** What the task is; the AI writes it. Not needed with a title */
 	prompt?: string;
+	/** Saved as given, with no AI call, unless a prompt comes without a description */
 	title?: string;
 	description?: string;
 	details?: string;
@@ -148,10 +149,14 @@ export class AddTaskService {
 		hooks: AddTaskHooks = {}
 	): Promise<AddTaskResult> {
 		const warn = (message: string) => hooks.onWarning?.(message);
-		const isManual = Boolean(input.title && input.description);
+		// A title is saved as given (#1149). A prompt with a title and no
+		// description still has the AI write the task, as it always did
+		const isManual = Boolean(
+			input.title?.trim() && (input.description || !input.prompt)
+		);
 		if (!input.prompt && !isManual) {
 			throw new TaskGraphError(
-				'Either the prompt parameter or both title and description parameters are required for adding a task',
+				'A task needs a title, or a prompt for the AI to write it from',
 				ERROR_CODES.INVALID_INPUT
 			);
 		}
@@ -212,8 +217,8 @@ export class AddTaskService {
 		let tagInfo: AiTagInfo | null = null;
 		if (isManual) {
 			taskData = {
-				title: input.title as string,
-				description: input.description as string,
+				title: (input.title as string).trim(),
+				description: input.description ?? '',
 				details: input.details,
 				testStrategy: input.testStrategy
 			};
