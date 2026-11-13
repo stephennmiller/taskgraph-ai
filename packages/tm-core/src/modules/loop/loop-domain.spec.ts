@@ -436,6 +436,14 @@ describe('LoopDomain.nothingLeft', () => {
 		expect(await domain(tasks).loop.nothingLeft('tdd', 'auth')).toBe(false);
 	});
 
+	it('reads the tag it is given, not the active one', async () => {
+		const { list, loop } = domain(finished);
+
+		await loop.nothingLeft('default', 'auth');
+
+		expect(list).toHaveBeenCalledWith({ tag: 'auth' });
+	});
+
 	it('is false for a preset that picks its own work, without reading tasks', async () => {
 		const { list, loop } = domain(finished);
 
