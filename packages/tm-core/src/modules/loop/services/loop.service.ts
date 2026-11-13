@@ -2,6 +2,7 @@
  * @fileoverview Loop Service - Orchestrates running Claude Code iterations (sandbox or CLI mode)
  */
 
+import { TERMINAL_COMPLETE_STATUSES } from '../../../common/constants/index.js';
 import { getLogger } from '../../../common/logger/index.js';
 import type { TaskStatus } from '../../../common/types/index.js';
 import { isTaskPreset } from '../loop-task.js';
@@ -34,7 +35,8 @@ import {
 	loopResult,
 	type RunSpend,
 	claudeRan,
-	runSpend
+	runSpend,
+	withoutMarker
 } from './iteration-result.js';
 import {
 	appendFinalSummary,
@@ -144,6 +146,17 @@ export class LoopService {
 
 		await initProgressFile(this.projectRoot, config);
 		let statuses = await this.readStatuses(config);
+		// Nothing left for a task preset to work on: don't pay for an iteration to find that out
+		if (
+			!config.taskId &&
+			isTaskPreset(config.prompt) &&
+			statuses?.size &&
+			[...statuses.values()].every((s) =>
+				TERMINAL_COMPLETE_STATUSES.includes(s)
+			)
+		) {
+			return this.finalize(config, iterations, 0, 'all_complete');
+		}
 		let head = await this.readHead();
 		this.approved = !config.sandbox && isLoopTrusted(this.projectRoot);
 
@@ -536,7 +549,7 @@ export class LoopService {
 				if (timedOut) return fail(silenceMessage(timeout), runSpend(run));
 
 				const reply = run ? run.text : withoutEvents(stdout);
-				const output = reply + stderr;
+				const output = withoutMarker(reply) + stderr;
 				if (output) {
 					callbacks?.onOutput?.(output);
 				}
