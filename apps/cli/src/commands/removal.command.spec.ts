@@ -202,7 +202,7 @@ describe('remove-task argument checks (#882)', () => {
 		expect(tasks.removeSubtasks).not.toHaveBeenCalled();
 	});
 
-	it('refuses IDs given both as the argument and --id', async () => {
+	it('refuses IDs given as the argument and different ones as --id', async () => {
 		await expect(run('remove-task', '5', '--id=6', '--yes')).rejects.toThrow(
 			'exit'
 		);

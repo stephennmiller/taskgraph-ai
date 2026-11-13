@@ -5,6 +5,7 @@
 
 import { createTmCore } from '@tm/core';
 import { Command } from 'commander';
+import { projectOption, tagOption } from '../utils/shared-options.js';
 import { formatReadmeSync } from '../ui/formatters/readme-sync-formatters.js';
 import { displayError } from '../utils/error-handler.js';
 import { getProjectRoot } from '../utils/project-root.js';
@@ -18,25 +19,19 @@ export interface SyncReadmeCommandOptions {
 	withSubtasks?: boolean;
 	status?: string;
 	tag?: string;
+	project?: string;
 }
 
 export class SyncReadmeCommand extends Command {
 	constructor(name?: string) {
 		super(name || 'sync-readme');
 
-		this.description(
-			'Sync the current task list to README.md in the project root'
-		)
+		this.description('Export tasks to README.md')
 			.addOption(legacyFileOption())
-			.option('--with-subtasks', 'Include subtasks in the README output')
-			.option(
-				'-s, --status <status>',
-				'Show only tasks matching this status (e.g., pending, done)'
-			)
-			.option(
-				'-t, --tag <tag>',
-				'Tag to use for the task list (default: the current tag)'
-			)
+			.option('--with-subtasks', 'Include subtasks')
+			.option('-s, --status <status>', 'Only tasks with this status')
+			.addOption(tagOption('-t, --tag <tag>'))
+			.addOption(projectOption())
 			.action(async (options: SyncReadmeCommandOptions) => {
 				await this.executeCommand(options);
 			});
@@ -45,10 +40,16 @@ export class SyncReadmeCommand extends Command {
 	private async executeCommand(
 		options: SyncReadmeCommandOptions
 	): Promise<void> {
-		const fileError = otherTasksFileError(options.file, 'sync-readme');
+		const fileError = otherTasksFileError(
+			options.file,
+			'sync-readme',
+			options.project
+		);
 		if (fileError) displayError(fileError);
 		try {
-			const tmCore = await createTmCore({ projectPath: getProjectRoot() });
+			const tmCore = await createTmCore({
+				projectPath: getProjectRoot(options.project)
+			});
 			await tmCore.tasks.syncReadme({
 				withSubtasks: Boolean(options.withSubtasks),
 				status: options.status,

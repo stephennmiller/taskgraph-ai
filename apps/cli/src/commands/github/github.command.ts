@@ -12,6 +12,7 @@ import {
 	neutralizeTaskData
 } from '@tm/core';
 import { Command } from 'commander';
+import { projectOption, tagOption } from '../../utils/shared-options.js';
 import { displayError } from '../../utils/error-handler.js';
 import { formatJson } from '../../utils/json-output.js';
 import { getProjectRoot } from '../../utils/project-root.js';
@@ -74,8 +75,9 @@ export class GithubCommand extends Command {
 	constructor(name?: string) {
 		super(name || 'github');
 
-		this.description(
-			'Push tasks to GitHub Issues, import existing issues and pull issue status back'
+		this.description('Sync tasks with GitHub Issues').helpCommand(
+			'help [command]',
+			'Show help for a command'
 		);
 		this.addStatusCommand();
 		this.addPushCommand();
@@ -88,8 +90,8 @@ export class GithubCommand extends Command {
 		this.command('status')
 			.description('Show gh availability, target repo and linked task counts')
 			.option('--repo <owner/name>', 'Repository to check')
-			.option('-p, --project <path>', 'Project root directory')
-			.option('--json', 'Output as JSON')
+			.addOption(projectOption())
+			.option('--json', 'Print JSON')
 			.action((options: StatusOptions) =>
 				this.guard(options, () => this.runStatus(options))
 			);
@@ -98,7 +100,7 @@ export class GithubCommand extends Command {
 	private addPushCommand(): void {
 		this.command('push')
 			.description('Create or update GitHub issues for tasks')
-			.option('--tag <name>', 'Tag to push (default: the active tag)')
+			.addOption(tagOption())
 			.option('--all-tags', 'Push every tag')
 			.option('--id <ids>', 'Only push these task ids, comma separated')
 			.option('--dry-run', 'Show the plan without writing anything')
@@ -106,8 +108,8 @@ export class GithubCommand extends Command {
 			.option('--repo <owner/name>', 'Repository (default: detected via gh)')
 			.option('--include-details', 'Include task details in issue bodies')
 			.option('--close-orphans', 'Close open issues whose task is gone')
-			.option('-p, --project <path>', 'Project root directory')
-			.option('--json', 'Output as JSON (requires --yes or --dry-run)')
+			.addOption(projectOption())
+			.option('--json', 'Print JSON (needs --yes or --dry-run)')
 			.addHelpText(
 				'after',
 				`
@@ -127,14 +129,14 @@ Examples:
 			.description(
 				'Update task statuses from their GitHub issues (status only, never writes to GitHub)'
 			)
-			.option('--tag <name>', 'Tag to pull (default: the active tag)')
+			.addOption(tagOption())
 			.option('--all-tags', 'Pull every tag')
 			.option('--id <ids>', 'Only pull these task ids, comma separated')
 			.option('--dry-run', 'Show the plan without changing any task')
 			.option('-y, --yes', 'Update tasks without asking for confirmation')
 			.option('--repo <owner/name>', 'Repository (default: detected via gh)')
-			.option('-p, --project <path>', 'Project root directory')
-			.option('--json', 'Output as JSON (requires --yes or --dry-run)')
+			.addOption(projectOption())
+			.option('--json', 'Print JSON (needs --yes or --dry-run)')
 			.addHelpText(
 				'after',
 				`
@@ -157,11 +159,11 @@ Examples:
 				'Create a linked task for each open GitHub issue (reads GitHub, never writes to it)'
 			)
 			.option('--label <name>', 'Only import issues with this label')
-			.option('--tag <name>', 'Tag for the new tasks (default: the active tag)')
+			.addOption(tagOption())
 			.option('--dry-run', 'Show what would be imported without adding tasks')
 			.option('--repo <owner/name>', 'Repository (default: detected via gh)')
-			.option('-p, --project <path>', 'Project root directory')
-			.option('--json', 'Output as JSON')
+			.addOption(projectOption())
+			.option('--json', 'Print JSON')
 			.addHelpText(
 				'after',
 				`
@@ -184,9 +186,9 @@ Examples:
 		this.command('unlink')
 			.description('Forget the GitHub issue a task is linked to')
 			.argument('<id>', 'Task id')
-			.option('--tag <name>', 'Tag the task lives in')
-			.option('-p, --project <path>', 'Project root directory')
-			.option('--json', 'Output as JSON')
+			.addOption(tagOption())
+			.addOption(projectOption())
+			.option('--json', 'Print JSON')
 			.action((id: string, options: UnlinkOptions) =>
 				this.guard(options, () => this.runUnlink(id, options))
 			);

@@ -16,6 +16,7 @@ import {
 import { terminalSafe } from '../../ui/formatters/markdown-formatters.js';
 import { displayError, printError } from '../../utils/error-handler.js';
 import { getProjectRoot } from '../../utils/project-root.js';
+import { projectOption } from '../../utils/shared-options.js';
 import { runInteractiveSetup } from './setup.js';
 
 interface ModelsCommandOptions {
@@ -23,6 +24,7 @@ interface ModelsCommandOptions {
 	setResearch?: string;
 	setFallback?: string;
 	setup?: boolean;
+	project?: string;
 	[removedFlag: string]: unknown;
 }
 
@@ -46,20 +48,18 @@ export class ModelsCommand extends Command {
 	constructor(name?: string) {
 		super(name || 'models');
 
-		this.description('Manage AI model configurations (Claude Code models)')
+		this.description('View or change the AI models')
 			.option(
 				'--set-main <model_id>',
-				'Set the primary model for task generation/updates'
+				'Set the main model, which writes and updates tasks'
 			)
-			.option(
-				'--set-research <model_id>',
-				'Set the model for research-backed operations'
-			)
+			.option('--set-research <model_id>', 'Set the model that --research uses')
 			.option(
 				'--set-fallback <model_id>',
-				'Set the model to use if the primary fails'
+				'Set the model to use when the main one fails'
 			)
-			.option('--setup', 'Run interactive setup to configure models')
+			.option('--setup', 'Choose the models interactively')
+			.addOption(projectOption())
 			// Accepted for older scripts; Claude Code is the only provider now
 			.addOption(new Option('--claude-code').hideHelp());
 		for (const flag of REMOVED_PROVIDER_FLAGS) {
@@ -95,7 +95,7 @@ Examples:
 			process.exit(1);
 		}
 
-		const projectRoot = getProjectRoot();
+		const projectRoot = getProjectRoot(options.project);
 		if (!isConfigFilePresent(projectRoot)) {
 			printError(
 				'No .taskgraph/config.json in this project',

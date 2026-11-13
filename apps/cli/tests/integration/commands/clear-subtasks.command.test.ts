@@ -86,6 +86,35 @@ describe('clear-subtasks command', () => {
 		expect(subtaskCounts()).toEqual([0, 0, 0]);
 	});
 
+	it('takes the IDs as an argument, the same as --id (#1149)', () => {
+		const result = run(['clear-subtasks', '1,2']);
+
+		expect(result.status).toBe(0);
+		expect(result.stdout).toContain('Cleared 4 subtasks from 2 tasks');
+		expect(subtaskCounts()).toEqual([0, 0, 0]);
+	});
+
+	it('refuses an argument and a different --id, clearing nothing', () => {
+		const result = run(['clear-subtasks', '1', '--id=2']);
+
+		expect(result.status).toBe(1);
+		expect(result.stderr).toContain(
+			'Give the IDs as an argument or as --id, not both'
+		);
+		expect(subtaskCounts()).toEqual([3, 1, 0]);
+	});
+
+	it('refuses an ID argument with --all instead of clearing every task', () => {
+		// `clear-subtasks 2 --all` reads as "all of task 2's subtasks"
+		const result = run(['clear-subtasks', '2', '--all']);
+
+		expect(result.status).toBe(1);
+		expect(result.stderr).toContain(
+			'Give the tasks to clear or --all, not both'
+		);
+		expect(subtaskCounts()).toEqual([3, 1, 0]);
+	});
+
 	it('refuses a subtask ID instead of clearing the whole parent', () => {
 		// --id=1.2 used to be read as task 1 and remove all three subtasks
 		const result = run(['clear-subtasks', '--id=1.2']);

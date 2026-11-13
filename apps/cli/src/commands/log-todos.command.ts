@@ -13,6 +13,7 @@
 
 import { type TmCore, createTmCore, todoListNote } from '@tm/core';
 import { Command } from 'commander';
+import { projectOption } from '../utils/shared-options.js';
 import { getProjectRoot } from '../utils/project-root.js';
 import { readNoteSource } from './note.command.js';
 
@@ -25,10 +26,7 @@ export class LogTodosCommand extends Command {
 		this.description(
 			"Log Claude Code's finished todo list on the task in progress (the plugin runs it)"
 		)
-			.option(
-				'-p, --project <path>',
-				'Project root directory (auto-detected if not provided)'
-			)
+			.addOption(projectOption())
 			.action(async (options: { project?: string }) => {
 				await this.executeCommand(options);
 			});

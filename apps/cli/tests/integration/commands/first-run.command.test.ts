@@ -78,6 +78,22 @@ describe('first run', () => {
 		expect(list.stderr).not.toContain('--prompt');
 	});
 
+	// These gained -p for --project in #1149; before, Commander refused -p
+	it.each([
+		['add-task', '-p', 'Add a login page'],
+		['expand', '--id', '3', '-p', 'focus on tests'],
+		['update', '--from', '3', '-p', 'use postgres'],
+		['update-subtask', '--id', '3.1', '-p', 'a note'],
+		['scope', '3', 'up', '-p', 'more detail']
+	])('points an old `%s … -p <prompt>` at --prompt', (...args) => {
+		const result = run(args);
+
+		expect(result.status).toBe(1);
+		expect(result.stderr).toContain(
+			'-p means --project; write --prompt or --parent in full'
+		);
+	});
+
 	it('gives `loop -p <existing folder>` the init hint', () => {
 		const result = run(['loop', '-p', dir, '-n', '1']);
 
