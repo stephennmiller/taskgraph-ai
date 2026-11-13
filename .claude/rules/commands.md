@@ -101,7 +101,7 @@ command, such as `note.command.ts` or `removal.command.ts`.
 The registry imports every command module, so a command file's top-level
 imports run on every `taskgraph` call. Import heavy packages (AI SDKs,
 markdown, inquirer) inside the function that uses them, as `confirm()` in
-`removal.command.ts` does with inquirer. The budget and the
+`utils/confirm.ts` does with inquirer. The budget and the
 `HEAVY_PACKAGES` check are in "Code Quality" in [CLAUDE.md](../../CLAUDE.md).
 
 ## Update check

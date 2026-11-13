@@ -9,7 +9,6 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
-import readline from 'node:readline';
 import {
 	type Clarification,
 	type ParsePrdHooks,
@@ -36,7 +35,9 @@ import { formatPrdDelta } from '../ui/formatters/prd-delta-formatters.js';
 import { formatUsageLine } from '../ui/formatters/usage-formatters.js';
 import { createSpinner } from '../ui/spinner.js';
 import { theme } from '../ui/theme.js';
+import { confirm } from '../utils/confirm.js';
 import { displayCommandHeader } from '../utils/display-helpers.js';
+import { isGoStep } from '../utils/go-step.js';
 import {
 	aiErrorHint,
 	describeError,
@@ -108,7 +109,7 @@ function readClarificationAnswers(source: string): Clarification[] {
 
 /**
  * Ask before replacing the tag's tasks. Without a terminal nobody can
- * answer, and readline would wait forever, so it fails instead (#481)
+ * answer, so it fails instead (#481)
  */
 async function confirmOverwrite(): Promise<boolean> {
 	if (!process.stdin.isTTY) {
@@ -122,15 +123,7 @@ async function confirmOverwrite(): Promise<boolean> {
 		`${chalk.yellow('⚠')} This tag has tasks; parse-prd replaces them` +
 			theme.muted(' (--append adds to them)')
 	);
-	const rl = readline.createInterface({
-		input: process.stdin,
-		output: process.stdout
-	});
-	const answer = await new Promise<string>((resolve) =>
-		rl.question(theme.brand('Replace them? (y/N) '), resolve)
-	);
-	rl.close();
-	return ['y', 'yes'].includes(answer.toLowerCase());
+	return confirm('Replace them?', 'Cancelled; no tasks changed');
 }
 
 export class ParsePrdCommand extends Command {
@@ -268,10 +261,7 @@ export class ParsePrdCommand extends Command {
 		try {
 			let force = options.force === true;
 			if (target.taskCount > 0 && !force && !options.append) {
-				if (!(await confirmOverwrite())) {
-					console.log(theme.muted('Cancelled; no tasks changed'));
-					return;
-				}
+				if (!(await confirmOverwrite())) return;
 				force = true;
 			}
 
@@ -311,7 +301,9 @@ export class ParsePrdCommand extends Command {
 					),
 					added: result.added,
 					total: result.total,
-					research
+					research,
+					// `go` runs loop next itself
+					nextStep: !isGoStep()
 				})
 			);
 			const usage = formatUsageLine(result.telemetryData);

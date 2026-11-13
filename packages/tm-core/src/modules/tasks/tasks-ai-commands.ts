@@ -271,6 +271,14 @@ export class TaskAiCommands {
 		);
 	}
 
+	/** Whether a parsePrd with `append` would plan anything: see `ParsePrdService.hasNewSections` */
+	async prdHasNewSections(input: Pick<ParsePrdInput, 'prdPath' | 'tag'>) {
+		return new ParsePrdService(
+			this.taskService,
+			this.configManager
+		).hasNewSections(input);
+	}
+
 	/**
 	 * One structured AI call with the project's models and settings, for a
 	 * caller that isn't a task command (the plan evals' judge)

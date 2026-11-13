@@ -5,16 +5,19 @@
  * hidden alias for scripts (#882).
  */
 
-import { splitIds, type TaskRemovalPreview, type TmCore } from '@tm/core';
-import chalk from 'chalk';
+import { splitIds, type TmCore } from '@tm/core';
 import { Command, Option } from 'commander';
 import { projectOption, tagOption } from '../utils/shared-options.js';
 import { formatClearedSubtasks } from '../ui/formatters/clear-subtasks-formatters.js';
 import { terminalSafe } from '../ui/formatters/markdown-formatters.js';
-import { formatTasksRemoved } from '../ui/formatters/remove-task-formatters.js';
+import {
+	formatRemovalPlan,
+	formatRemovalQuestion,
+	formatTasksRemoved
+} from '../ui/formatters/remove-task-formatters.js';
 import { formatSubtaskRemoved } from '../ui/formatters/subtask-change-formatters.js';
-import { theme } from '../ui/theme.js';
 import { noticeOldAlias } from '../utils/alias-notice.js';
+import { confirm } from '../utils/confirm.js';
 import {
 	describeError,
 	displayError,
@@ -54,55 +57,6 @@ function removalCommand(name: string, description: string): Command {
 		});
 }
 
-/** The items, the subtasks that go with them and the dependents */
-function printRemovalPlan(preview: TaskRemovalPreview): void {
-	const { found, subtaskCount, dependents } = preview;
-	console.log();
-	console.log(
-		`${chalk.yellow('⚠')} This will permanently delete ${found.length} item(s):`
-	);
-	console.log();
-	for (const { id, title, parent } of found) {
-		const label = `${parent ? 'Subtask' : 'Task'} ${terminalSafe(id)}: ${terminalSafe(title || '(no title)')}`;
-		if (!parent) {
-			console.log(theme.text.bold(`  ${label}`));
-			continue;
-		}
-		console.log(theme.text(`  ${label}`));
-		console.log(
-			theme.muted(
-				`    (Parent: ${terminalSafe(parent.id)} - ${terminalSafe(parent.title || '(no title)')})`
-			)
-		);
-	}
-	if (subtaskCount > 0) {
-		console.log(
-			chalk.yellow(
-				`⚠ This also deletes ${subtaskCount} ${subtaskCount === 1 ? 'subtask' : 'subtasks'}`
-			)
-		);
-	}
-	if (dependents.length > 0) {
-		console.log(chalk.yellow('⚠ Dependencies on them will be removed:'));
-		for (const { id, dependentIds } of dependents) {
-			console.log(
-				chalk.yellow(
-					`  - Task ${terminalSafe(id)}: ${dependentIds.length} dependent tasks (${dependentIds.map(terminalSafe).join(', ')})`
-				)
-			);
-		}
-	}
-	console.log();
-}
-
-async function confirm(message: string): Promise<boolean> {
-	const { default: inquirer } = await import('inquirer');
-	const { proceed } = await inquirer.prompt<{ proceed: boolean }>([
-		{ type: 'confirm', name: 'proceed', message, default: false }
-	]);
-	return proceed;
-}
-
 async function removeTasks(
 	tmCore: TmCore,
 	options: RemovalOptions
@@ -124,7 +78,7 @@ async function removeTasks(
 
 	if (!options.yes) {
 		// A prompt without a terminal hangs scripts and agents
-		if (!process.stdin.isTTY) {
+		if (!(process.stdin.isTTY && process.stdout.isTTY)) {
 			printError(
 				'Removing tasks needs confirmation',
 				'Pass `--yes` to remove them without asking'
@@ -132,14 +86,13 @@ async function removeTasks(
 			process.exitCode = 1;
 			return;
 		}
-		printRemovalPlan(preview);
-		const proceed = await confirm(
-			chalk.red.bold(
-				`Are you sure you want to permanently delete these ${found.length} item(s)?`
-			)
-		);
-		if (!proceed) {
-			console.log(theme.brand('Task deletion cancelled.'));
+		console.log(formatRemovalPlan(preview));
+		if (
+			!(await confirm(
+				formatRemovalQuestion(preview),
+				'Cancelled; nothing was removed'
+			))
+		) {
 			return;
 		}
 	}

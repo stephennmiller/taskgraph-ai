@@ -351,7 +351,9 @@ Invariants (#1039):
 `loop/loop-trust.ts`. States: untrusted, trusted (hash of tasks and
 instructions). `trustLoop` sets it, `keepLoopTrust` rolls the hash forward
 between iterations, `untrustLoop` removes it (github import and
-`parse-prd --append` call it). The file is written under a lock with an
+`parse-prd --append` call it). `go` asks before it plans, whatever is
+stored (`isGoTrusted`), and stores a yes only when its loop step starts,
+for the project root resolved then. The file is written under a lock with an
 atomic rename.
 
 ## 11. Task worktree

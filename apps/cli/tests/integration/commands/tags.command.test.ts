@@ -220,7 +220,7 @@ describe('tags command', () => {
 			expect(result.status).toBe(1);
 			expect(result.stderr).toContain('Tag "nosuch" not found');
 			expect(result.stderr).toContain('Run taskgraph tags to see your tags');
-			expect(result.stdout).not.toContain('No tasks found');
+			expect(result.stdout).not.toContain('No tasks yet');
 		}
 	});
 

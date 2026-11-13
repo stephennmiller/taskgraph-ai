@@ -12,7 +12,14 @@ vi.mock('@tm/core', async (importOriginal) => ({
 	createTmCore: vi.fn()
 }));
 
+// The question needs a terminal; `ask` is the prompt module it is asked on
+vi.mock('inquirer', () => {
+	const ask = vi.fn();
+	return { default: { createPromptModule: () => ask, ask } };
+});
+
 import { TASKGRAPH_TASKS_FILE, createTmCore } from '@tm/core';
+import inquirer from 'inquirer';
 import {
 	ClearSubtasksCommand,
 	RemoveSubtaskCommand,
@@ -126,6 +133,64 @@ describe('remove-task', () => {
 		expect(tasks.removeTasks).not.toHaveBeenCalled();
 		expect(output('error')).toContain('--yes');
 		expect(process.exitCode).toBe(1);
+	});
+
+	describe('on a terminal (#1146)', () => {
+		const ask = (inquirer as unknown as { ask: ReturnType<typeof vi.fn> }).ask;
+		const tty = [process.stdin.isTTY, process.stdout.isTTY];
+
+		beforeEach(() => {
+			process.stdin.isTTY = true;
+			process.stdout.isTTY = true;
+			tasks.previewTaskRemoval.mockResolvedValue({
+				...preview(['3']),
+				subtaskCount: 2
+			});
+		});
+
+		afterEach(() => {
+			[process.stdin.isTTY, process.stdout.isTTY] = tty;
+		});
+
+		it('shows the title, asks one short question and removes on yes', async () => {
+			ask.mockResolvedValue({ yes: true });
+
+			await run('remove-task', '3');
+
+			expect(output('log')).toContain('  3  Task 3');
+			expect(ask.mock.calls[0][0][0].message).toBe(
+				"Delete task 3 and its 2 subtasks? This can't be undone."
+			);
+			expect(tasks.removeTasks).toHaveBeenCalledWith('3', { tag: undefined });
+		});
+
+		it('removes nothing and says so in one line on no', async () => {
+			ask.mockResolvedValue({ yes: false });
+
+			await run('remove-task', '3');
+
+			expect(tasks.removeTasks).not.toHaveBeenCalled();
+			expect(output('log')).toContain('Cancelled; nothing was removed');
+			expect(output('error')).toBe('');
+		});
+
+		it('removes nothing and exits 130 on Ctrl-C', async () => {
+			ask.mockRejectedValue(
+				Object.assign(new Error('User force closed the prompt with SIGINT'), {
+					name: 'ExitPromptError'
+				})
+			);
+			vi.spyOn(process, 'exit').mockImplementation(((code: number) => {
+				throw new Error(`exit ${code}`);
+			}) as never);
+
+			await run('remove-task', '3');
+
+			expect(process.exit).toHaveBeenCalledWith(130);
+			expect(tasks.removeTasks).not.toHaveBeenCalled();
+			expect(output('log')).toContain('Cancelled; nothing was removed');
+			expect(output('error')).not.toContain('force closed');
+		});
 	});
 
 	it('exits 1 when a task file could not be deleted', async () => {
