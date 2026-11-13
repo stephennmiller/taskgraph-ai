@@ -241,6 +241,18 @@ describe('long messages', () => {
 });
 
 describe('spend facts', () => {
+	it('says nothing was left when the run started no iteration (#1160)', () => {
+		const line = stripVTControlCharacters(
+			formatLoopSummary({
+				iterations: [],
+				totalIterations: 0,
+				tasksCompleted: 0,
+				finalStatus: 'all_complete'
+			})
+		);
+		expect(line).toBe('✓ All tasks complete · nothing left to work on');
+	});
+
 	it('wrap between facts, never inside one', () => {
 		const line = stripVTControlCharacters(
 			formatLoopSummary(
