@@ -23,7 +23,11 @@
  *
  *   ✓ All tasks complete · 3 tasks completed in 4 iterations · $1.42 · 61 turns
  *
- * followed, when it set stuck tasks aside, by:
+ * A project whose tasks are all done or cancelled gets that line alone:
+ *
+ *   ✓ All tasks complete · nothing left to work on
+ *
+ * The summary is followed, when the run set stuck tasks aside, by:
  *
  *   Set aside 1 stuck task as blocked
  *     4  stuck: no progress in 2 sessions

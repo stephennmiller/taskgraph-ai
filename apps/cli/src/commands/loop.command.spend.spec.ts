@@ -62,6 +62,7 @@ describe('LoopCommand cost and caps', () => {
 				resolveIterations: () => 1,
 				isPreset: () => true,
 				isTaskPreset: () => false,
+				nothingLeft: async () => false,
 				resolveTask: async (id: string) => ({ id, title: 'Users table' })
 			},
 			tasks: { getPickableCount: async () => 0 },

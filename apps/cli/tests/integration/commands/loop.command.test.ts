@@ -77,7 +77,7 @@ describe('loop command', () => {
 			const output = execSync(`node "${binPath}" loop ${args}`, {
 				encoding: 'utf-8',
 				stdio: 'pipe',
-				// Every call here fails validation before a Claude session could start,
+				// Every call here stops before a Claude session could start,
 				// so wait for the CLI to exit. The kill timeout only stops a run that
 				// did start a session; execSync blocks, so Vitest's own timeout can't.
 				timeout: 30000,
@@ -199,6 +199,22 @@ describe('loop command', () => {
 			expect(exitCode).toBe(1);
 			expect(output.toLowerCase()).toContain('invalid');
 			expect(output.toLowerCase()).toContain('iterations');
+		});
+	});
+
+	describe('a project whose tasks are all finished (#1160)', () => {
+		it('prints only the all-done line, without asking for approval', () => {
+			const finished = createTasksFile({
+				tasks: [createTask({ id: 1, title: 'Test Task', status: 'done' })]
+			});
+			fs.writeFileSync(tasksPath, JSON.stringify(finished, null, 2));
+
+			const { output, exitCode } = runLoop();
+
+			expect(exitCode).toBe(0);
+			expect(output.trim()).toBe(
+				'✓ All tasks complete · nothing left to work on'
+			);
 		});
 	});
 
