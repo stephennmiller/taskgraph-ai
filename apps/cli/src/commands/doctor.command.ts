@@ -9,6 +9,7 @@
 
 import { runDoctor } from '@tm/core';
 import { Command } from 'commander';
+import { projectOption } from '../utils/shared-options.js';
 import { formatDoctorReport } from '../ui/formatters/doctor-formatters.js';
 import { printJson } from '../utils/json-output.js';
 
@@ -22,13 +23,10 @@ export class DoctorCommand extends Command {
 	constructor(name?: string) {
 		super(name || 'doctor');
 
-		this.description('Check that TaskGraph and Claude Code are set up')
-			.option('--json', 'Output JSON')
+		this.description('Check that TaskGraph and Claude Code work')
+			.option('--json', 'Print JSON')
 			.option('--fix', 'Repair task problems that have one safe answer')
-			.option(
-				'-p, --project <path>',
-				'Project root directory (auto-detected if not provided)'
-			)
+			.addOption(projectOption())
 			.action(async (options: DoctorCommandOptions) => {
 				const report = await runDoctor({
 					projectPath: options.project,

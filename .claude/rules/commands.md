@@ -26,7 +26,9 @@ command, such as `note.command.ts` or `removal.command.ts`.
   reads the Commander program; the `taskgraph --help` screen doesn't, so
   give a visible command a row in `HELP_GROUPS`
   (`apps/cli/src/ui/formatters/help-formatters.ts`). `program.spec.ts`
-  fails without one.
+  fails without one. The row, the registry entry and the class's own
+  `.description()` are the same sentence (#1149); the spec fails when they
+  differ.
 - Run the work with `withTmCore(options, async (tmCore) => ...)` from
   `apps/cli/src/utils/with-tm-core.ts`. It opens a TmCore for `--project`,
   prints the `[tag] X` line, prints any error through `displayError`, sets
@@ -41,13 +43,23 @@ command, such as `note.command.ts` or `removal.command.ts`.
 - Command and option names are kebab-case; Commander hands them to the
   action as camelCase (`--num-tasks` is `options.numTasks`).
 - `-p` is `--project` in every command (#882), so `--prompt` and `--parent`
-  have no short form. `-t, --tag <tag>` picks the tag.
+  have no short form. Every command that reads a project takes it: add it
+  with `projectOption()` and the tag with `tagOption()`
+  (`utils/shared-options.ts`), so each is worded once, and pass
+  `options.project` to `getProjectRoot` (#1149). `program.spec.ts` fails on
+  a command without `--project` or with its own `--tag` sentence.
 - Use the name other commands use for the same thing. `jsonOption()` from
   `utils/json-output.ts` adds `--json` as shorthand for `--format json`
   (`json-alias.spec.ts` checks every command with `--format`); print the
   payload with `printJson` so it carries `schemaVersion`.
 - A task ID is accepted as an argument and as `--id` (`pickId` in
-  `utils/id-argument.ts`, #926).
+  `utils/id-argument.ts`, #926). Any other value a command can't run
+  without (`add-subtask <parent>`, `move <from> <to>`, `add-task <title>`)
+  is an argument too, with its flag kept; `pickValue` refuses two different
+  values (#1149).
+- Write option text in the voice of [ui.md](ui.md): what the option does,
+  in a few plain words. A flag that repeats an argument says `The same as
+  the [id] argument`.
 - An old flag a script may still pass stays as a hidden option
   (`new Option(...).hideHelp()`), such as `legacyFileOption()` for `-f`.
 

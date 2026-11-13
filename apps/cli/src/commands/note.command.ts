@@ -8,6 +8,7 @@
 import fs from 'node:fs';
 import { MAX_NOTE_BYTES, type TmCore, createTmCore } from '@tm/core';
 import { Command } from 'commander';
+import { projectOption, tagOption } from '../utils/shared-options.js';
 import { formatNoteAdded } from '../ui/formatters/task-update-formatters.js';
 import { displayError, printError } from '../utils/error-handler.js';
 import { getProjectRoot } from '../utils/project-root.js';
@@ -55,15 +56,12 @@ export class NoteCommand extends Command {
 	constructor(name?: string) {
 		super(name || 'note');
 
-		this.description('Log a progress note on a task, as written (no AI)')
+		this.description('Log a progress note on a task, as written')
 			.argument('<id>', 'Task or subtask ID (3 or 3.2)')
 			.argument('[text...]', 'The note; quote it to keep spacing')
 			.option('-f, --file <path>', 'Read the note from a file, or - for stdin')
-			.option('-t, --tag <tag>', 'Use a specific tag')
-			.option(
-				'-p, --project <path>',
-				'Project root directory (auto-detected if not provided)'
-			)
+			.addOption(tagOption('-t, --tag <tag>'))
+			.addOption(projectOption())
 			.action(
 				async (id: string, words: string[], options: NoteCommandOptions) => {
 					await this.executeCommand(id, words, options);

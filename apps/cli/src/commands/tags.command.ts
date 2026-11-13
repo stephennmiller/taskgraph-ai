@@ -20,6 +20,7 @@ import { theme } from '../ui/theme.js';
 import { confirm } from '../utils/confirm.js';
 import { displayError, fromBranchError } from '../utils/index.js';
 import { printJson } from '../utils/json-output.js';
+import { projectOption } from '../utils/shared-options.js';
 import {
 	legacyFileOption,
 	otherTasksFileError
@@ -75,17 +76,21 @@ export class TagsCommand extends Command {
 	private tmCore?: TmCore;
 	private lastResult?: TagsResult;
 	private throwOnError: boolean = false;
+	/** --project as an old alias (`add-tag`) got it; `tags` reads its own */
+	private project?: string;
 
 	constructor(name?: string) {
 		super(name || 'tags');
 
 		// Configure the command with options that apply to default list action
-		this.description('Manage tags for task organization')
+		this.description('List or manage tags')
 			.option('--show-metadata', 'Show additional tag metadata')
 			.option('--ready', 'Show only tags with ready tasks available')
-			.option('--json', 'Output the tag list as JSON')
+			.option('--json', 'Print the tag list as JSON')
+			// Parsed here wherever it is typed, so it reaches every subcommand
+			.addOption(projectOption())
 			// Commander adds no `help` subcommand to a command with a default action
-			.helpCommand(true);
+			.helpCommand('help [command]', 'Show help for a command');
 
 		// Add subcommands
 		this.addListCommand();
@@ -94,6 +99,8 @@ export class TagsCommand extends Command {
 		this.addRemoveCommand();
 		this.addRenameCommand();
 		this.addCopyCommand();
+		// Listed in each subcommand's help too
+		for (const sub of this.commands) sub.addOption(projectOption());
 
 		// The root program passes on flags it doesn't know, so `tags` parses its
 		// list flags even after another subcommand (`tags use x --json`).
@@ -101,7 +108,9 @@ export class TagsCommand extends Command {
 		this.hook('preSubcommand', (tags, sub) => {
 			if (sub.name() === 'list') return;
 			const flag = tags.options.find(
-				(option) => tags.getOptionValueSource(option.attributeName()) === 'cli'
+				(option) =>
+					option.attributeName() !== 'project' &&
+					tags.getOptionValueSource(option.attributeName()) === 'cli'
 			);
 			if (flag) {
 				sub.error(`error: unknown option '${flag.long}'`, {
@@ -121,10 +130,10 @@ export class TagsCommand extends Command {
 	 */
 	private addListCommand(): void {
 		this.command('list')
-			.description('List all tags with statistics (default action)')
+			.description('List tags and their task counts (the default)')
 			.option('--show-metadata', 'Show additional tag metadata')
 			.option('--ready', 'Show only tags with ready tasks available')
-			.option('--json', 'Output the tag list as JSON')
+			.option('--json', 'Print the tag list as JSON')
 			.addHelpText(
 				'after',
 				`
@@ -258,7 +267,8 @@ Examples:
 	private async initTmCore(): Promise<TmCore> {
 		if (!this.tmCore) {
 			this.tmCore = await createTmCore({
-				projectPath: getProjectPaths().projectRoot
+				projectPath: getProjectPaths(this.project ?? this.opts().project)
+					.projectRoot
 			});
 		}
 		return this.tmCore;
@@ -482,7 +492,7 @@ Examples:
 	 * project's tasks.json, rather than change the project's file instead
 	 */
 	private rejectOtherTasksFile(file: string | undefined): void {
-		const error = otherTasksFileError(file, 'tag commands');
+		const error = otherTasksFileError(file, 'tag commands', this.project);
 		if (!error) return;
 		displayError(error);
 		this.handleError(error);
@@ -503,23 +513,19 @@ Examples:
 	 * its replacement
 	 */
 	private registerDeprecatedAliases(program: Command): void {
-		const alias = (name: string, replacement: string, what: string) =>
+		const alias = (name: string, replacement: string) =>
 			program
 				.command(name)
-				.description(
-					`[DEPRECATED] ${what} (use "taskgraph ${replacement}" instead)`
-				)
+				.description(`Alias of ${replacement}`)
+				.addOption(projectOption())
 				.addOption(legacyFileOption())
 				.hook('preAction', (command) => {
 					warnDeprecated(name, replacement);
+					this.project = command.opts().project;
 					this.rejectOtherTasksFile(command.opts().file);
 				});
 
-		alias(
-			'add-tag',
-			'tags add',
-			'Create a new tag context for organizing tasks'
-		)
+		alias('add-tag', 'tags add')
 			.argument(
 				'[tagName]',
 				'Name of the new tag to create (optional when using --from-branch)'
@@ -542,29 +548,21 @@ Examples:
 				this.executeAdd(options.fromBranch ? undefined : tagName, options)
 			);
 
-		alias(
-			'delete-tag',
-			'tags remove',
-			'Delete an existing tag and all its tasks'
-		)
+		alias('delete-tag', 'tags remove')
 			.argument('<tagName>', 'Name of the tag to delete')
 			.option('-y, --yes', 'Skip confirmation prompts')
 			.action((tagName, options) => this.executeRemove(tagName, options));
 
-		alias('use-tag', 'tags use', 'Switch to a different tag context')
+		alias('use-tag', 'tags use')
 			.argument('<tagName>', 'Name of the tag to switch to')
 			.action((tagName) => this.executeUse(tagName));
 
-		alias('rename-tag', 'tags rename', 'Rename an existing tag')
+		alias('rename-tag', 'tags rename')
 			.argument('<oldName>', 'Current name of the tag')
 			.argument('<newName>', 'New name for the tag')
 			.action((oldName, newName) => this.executeRename(oldName, newName));
 
-		alias(
-			'copy-tag',
-			'tags copy',
-			'Copy an existing tag to create a new tag with the same tasks'
-		)
+		alias('copy-tag', 'tags copy')
 			.argument('<sourceName>', 'Name of the source tag to copy from')
 			.argument('<targetName>', 'Name of the new tag to create')
 			.option(

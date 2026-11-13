@@ -58,7 +58,7 @@ export const HELP_GROUPS: readonly HelpGroup[] = [
 			{ name: 'show', desc: 'Show one task in detail' },
 			{ name: 'list', desc: 'List tasks, filtered by status or tag' },
 			{ name: 'set-status', desc: 'Change a task or subtask status' },
-			{ name: 'add-task', desc: 'Add a task from a description' },
+			{ name: 'add-task', desc: 'Add a task; --prompt has the AI write it' },
 			{ name: 'loop', desc: 'Have Claude Code work through your tasks' }
 		]
 	},
@@ -67,7 +67,7 @@ export const HELP_GROUPS: readonly HelpGroup[] = [
 		commands: [
 			{ name: 'init', desc: 'Set up TaskGraph in this project' },
 			{ name: 'doctor', desc: 'Check that TaskGraph and Claude Code work' },
-			{ name: 'upgrade', desc: 'Install the latest TaskGraph' },
+			{ name: 'upgrade', desc: 'Install the latest version of TaskGraph' },
 			{ name: 'models', desc: 'View or change the AI models' },
 			{ name: 'lang', desc: 'View or change the AI response language' },
 			{ name: 'completion', desc: 'Install Tab completion for your shell' }

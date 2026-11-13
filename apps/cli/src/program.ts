@@ -51,6 +51,21 @@ const RUNS_WITHOUT_PROJECT = new Set([
 	'go'
 ]);
 
+// Where -p was --prompt, or --parent in add-subtask, before it meant
+// --project everywhere (#882)
+const OLD_SHORT_P_COMMANDS = new Set([
+	'loop',
+	'add-subtask',
+	'add-task',
+	'expand',
+	'update',
+	'update-task',
+	'update-subtask',
+	'scope',
+	'scope-up',
+	'scope-down'
+]);
+
 /**
  * Stop a command that needs a project when it runs outside one.
  *
@@ -71,10 +86,8 @@ function requireProject(_hookedCommand: Command, actionCommand: Command) {
 	// An explicit tasks file means the caller has said where the project is
 	if (actionCommand.getOptionValueSource('file') === 'cli') return;
 
-	const takesProject = actionCommand.options.some(
-		(option) => option.attributeName() === 'project'
-	);
-	const projectOption = takesProject ? actionCommand.opts().project : null;
+	// With globals: `tags` parses --project for its subcommands
+	const projectOption = actionCommand.optsWithGlobals().project;
 	const explicitRoot =
 		typeof projectOption === 'string' ? path.resolve(projectOption) : null;
 
@@ -89,7 +102,7 @@ function requireProject(_hookedCommand: Command, actionCommand: Command) {
 			`No TaskGraph project at ${explicitRoot}`,
 			// An old script's `loop -p tdd` or `add-subtask -p 5` lands here (#882);
 			// a real folder means the caller meant --project
-			['loop', 'add-subtask'].includes(topLevel.name()) &&
+			OLD_SHORT_P_COMMANDS.has(topLevel.name()) &&
 				process.argv.some((arg) => /^-p/.test(arg)) &&
 				!fs.existsSync(explicitRoot)
 				? '-p means --project; write --prompt or --parent in full'
@@ -117,7 +130,6 @@ export function setupCLI(): Command {
 		.name('taskgraph')
 		.description('AI-driven development task management')
 		.version(process.env.TM_PUBLIC_VERSION || 'unknown')
-		.helpOption('-h, --help', 'Display help')
 		.helpCommand(false);
 
 	// The program's own help is the grouped screen; subcommands keep
@@ -168,14 +180,14 @@ export function setupCLI(): Command {
 			target.help();
 		});
 
-	program.configureHelp({ helpWidth: 120, sortSubcommands: false });
-
 	registerAllCommands(program);
 
 	// Commander's own parse errors (unknown command, missing argument) read
 	// like every other error. Commands added with addCommand() don't inherit
-	// output settings, so apply them to the whole tree.
-	const styleParseErrors = (command: Command, commandPath: string) => {
+	// output settings, so apply them to the whole tree. The same for the -h
+	// row, which Commander words `display help for command`.
+	const styleCommands = (command: Command, commandPath: string) => {
+		command.helpOption('-h, --help', 'Show help');
 		command.configureOutput({
 			// No leading blank line: printError doesn't start with one (#928)
 			outputError: (text, write) =>
@@ -184,13 +196,13 @@ export function setupCLI(): Command {
 				)
 		});
 		for (const sub of command.commands) {
-			styleParseErrors(
+			styleCommands(
 				sub,
 				commandPath ? `${commandPath} ${sub.name()}` : sub.name()
 			);
 		}
 	};
-	styleParseErrors(program, '');
+	styleCommands(program, '');
 
 	// Runs before every subcommand's action, nested ones included
 	program.hook('preAction', requireProject);

@@ -10,6 +10,7 @@ import {
 	createTmCore
 } from '@tm/core';
 import { Command } from 'commander';
+import { projectOption, tagOption } from '../utils/shared-options.js';
 import {
 	formatGenerateError,
 	formatGenerateResult
@@ -41,17 +42,14 @@ export class GenerateCommand extends Command {
 		super(name || 'generate');
 
 		// Configure the command
-		this.description('Generate individual task files from tasks.json')
-			.option('-t, --tag <tag>', 'Tag context for task operations')
+		this.description('Write a file for each task')
+			.addOption(tagOption('-t, --tag <tag>'))
 			.option(
 				'-o, --output <dir>',
-				'Output directory for generated files (defaults to .taskgraph/tasks)'
+				'Folder to write the files to (default: .taskgraph/tasks)'
 			)
-			.option(
-				'-p, --project <path>',
-				'Project root directory (auto-detected if not provided)'
-			)
-			.option('-f, --format <format>', 'Output format (text, json)', 'text')
+			.addOption(projectOption())
+			.option('-f, --format <format>', 'Output format: text or json', 'text')
 			.addOption(jsonOption())
 			.action(async (options: GenerateCommandOptions) => {
 				await this.executeCommand(options);

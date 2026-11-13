@@ -162,6 +162,26 @@ describe('go consent', () => {
 			expect(events).toEqual(['asked', 'init', 'parse-prd', 'trust', 'loop']);
 		});
 
+		it('with --project, stores the yes for that folder and names it to loop', async () => {
+			project(true);
+			vi.spyOn(process, 'chdir').mockImplementation(() => {});
+			// TASKGRAPH_PROJECT_ROOT could name another project: only the
+			// folder asked for by name resolves to `dir`
+			vi.mocked(resolveProjectRoot).mockImplementation((named) =>
+				named ? dir : path.join(dir, 'elsewhere')
+			);
+
+			await go('--project', dir);
+
+			expect(trustLoop).toHaveBeenCalledWith(dir);
+			expect(steps().at(-1)?.args).toEqual([
+				'loop',
+				'--trust',
+				'--project',
+				dir
+			]);
+		});
+
 		it('stores the yes for the project init made, not the folder above it', async () => {
 			// `go` in repo/app: the root found is the repository until init
 			// makes the project in repo/app

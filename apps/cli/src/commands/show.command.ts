@@ -15,6 +15,7 @@ import {
 import type { Subtask } from '@tm/core';
 import chalk from 'chalk';
 import { Command } from 'commander';
+import { projectOption, tagOption } from '../utils/shared-options.js';
 import {
 	type TaskDetailOptions,
 	formatTaskDetail
@@ -84,21 +85,15 @@ export class ShowCommand extends Command {
 		super(name || 'show');
 
 		// Configure the command
-		this.description('Display detailed information about one or more tasks')
-			.argument('[id]', 'Task ID(s) to show (comma-separated for multiple)')
-			.option(
-				'-i, --id <id>',
-				'Task ID(s) to show (comma-separated for multiple)'
-			)
-			.option('-s, --status <status>', 'Filter subtasks by status')
-			.option('-t, --tag <tag>', 'Use a specific tag')
-			.option('-f, --format <format>', 'Output format (text, json)', 'text')
+		this.description('Show one task in detail')
+			.argument('[id]', 'Task or subtask ID; several with commas (3,3.2)')
+			.option('-i, --id <id>', 'The same as the [id] argument')
+			.option('-s, --status <status>', 'Only show subtasks with this status')
+			.addOption(tagOption('-t, --tag <tag>'))
+			.option('-f, --format <format>', 'Output format: text or json', 'text')
 			.addOption(jsonOption())
-			.option('--silent', 'Suppress output (useful for programmatic usage)')
-			.option(
-				'-p, --project <path>',
-				'Project root directory (auto-detected if not provided)'
-			)
+			.option('--silent', 'Print nothing')
+			.addOption(projectOption())
 			.action(
 				async (taskId: string | undefined, options: ShowCommandOptions) => {
 					await this.executeCommand(taskId, options);

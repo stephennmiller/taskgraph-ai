@@ -8,6 +8,7 @@
 import { createTmCore, exitOnStopSignals } from '@tm/core';
 import chalk from 'chalk';
 import { Command } from 'commander';
+import { projectOption, tagOption } from '../utils/shared-options.js';
 import type { Ora } from 'ora';
 import { fit, terminalSafe } from '../ui/formatters/markdown-formatters.js';
 import { formatNotesAdded } from '../ui/formatters/task-update-formatters.js';
@@ -33,6 +34,7 @@ export interface UpdateSubtaskCommandOptions {
 	research?: boolean;
 	file?: string;
 	tag?: string;
+	project?: string;
 }
 
 const EXAMPLE =
@@ -51,21 +53,17 @@ export class UpdateSubtaskCommand extends Command {
 	constructor(name?: string) {
 		super(name || 'update-subtask');
 
-		this.description(
-			'Update a subtask by appending additional timestamped information'
-		)
-			.argument('[id]', 'Subtask ID to update (or use --id)')
+		this.description('Have the AI append a timestamped note to a subtask')
+			.argument('[id]', 'Subtask ID, e.g. 3.2 (same as --id)')
 			.addOption(legacyFileOption())
-			.option('-i, --id <id>', 'Subtask ID to update')
-			.option(
-				'--prompt <text>',
-				'Prompt explaining what information to add (required)'
-			)
+			.option('-i, --id <id>', 'The same as the [id] argument')
+			.option('--prompt <text>', 'What to add (required)')
 			.option(
 				'-r, --research',
-				'Use Claude Code web research for research-backed updates'
+				'Use the research model, which can search the web'
 			)
-			.option('--tag <tag>', 'Specify tag context for task operations')
+			.addOption(tagOption())
+			.addOption(projectOption())
 			.action(
 				async (
 					id: string | undefined,
@@ -92,9 +90,13 @@ export class UpdateSubtaskCommand extends Command {
 			printError('Missing --prompt: say what to add to the subtask', EXAMPLE);
 			process.exit(1);
 		}
-		const fileError = otherTasksFileError(options.file, 'update-subtask');
+		const fileError = otherTasksFileError(
+			options.file,
+			'update-subtask',
+			options.project
+		);
 		if (fileError) displayError(fileError);
-		const projectRoot = getProjectRoot();
+		const projectRoot = getProjectRoot(options.project);
 
 		try {
 			const tmCore = await createTmCore({ projectPath: projectRoot });

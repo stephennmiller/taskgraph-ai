@@ -28,31 +28,40 @@ import {
 } from '@tm/core';
 import { Command } from 'commander';
 import { formatGoResume } from '../ui/formatters/go-formatters.js';
+import { terminalSafe } from '../ui/formatters/markdown-formatters.js';
 import { printError } from '../utils/error-handler.js';
 import { GO_STEP_ENV } from '../utils/go-step.js';
+import { projectOption } from '../utils/shared-options.js';
 import { confirmLoopTrust } from './loop.command.js';
 
 interface GoCommandOptions {
 	trust?: boolean;
 	sandbox?: boolean;
+	project?: string;
 }
 
 /**
- * The CLI commands `go` runs for `prd`, in order
+ * The CLI commands `go` runs for `prd`, in order.
  * @param options.trust - Also set once `go` itself asked and got a yes
+ * @param project - The `--project` folder, absolute. The steps name it too:
+ *   from the folder alone they would follow TASKGRAPH_PROJECT_ROOT instead
  */
 function goSteps(
 	prd: string,
 	isProject: boolean,
-	options: GoCommandOptions
+	options: GoCommandOptions,
+	project?: string
 ): string[][] {
+	const inProject = project ? ['--project', project] : [];
 	return [
+		// init takes no --project: it sets up the folder it runs in
 		...(isProject ? [] : [['init', '--yes']]),
-		['parse-prd', prd, '--append'],
+		['parse-prd', prd, '--append', ...inProject],
 		[
 			'loop',
 			...(options.trust ? ['--trust'] : []),
-			...(options.sandbox ? ['--sandbox'] : [])
+			...(options.sandbox ? ['--sandbox'] : []),
+			...inProject
 		]
 	];
 }
@@ -108,13 +117,14 @@ export class GoCommand extends Command {
 	constructor(name?: string) {
 		super(name || 'go');
 
-		this.description('Plan a PRD into tasks and build them with Claude Code')
+		this.description('Plan a PRD into tasks and build them')
 			.argument('<prd>', 'Path to the PRD file')
 			.option(
 				'--trust',
 				'Let loop run Claude Code with permission prompts off, without asking'
 			)
 			.option('--sandbox', 'Run loop in Docker sandbox mode')
+			.addOption(projectOption())
 			.action((prd: string, options: GoCommandOptions) =>
 				this.run(prd, options)
 			);
@@ -168,7 +178,21 @@ export class GoCommand extends Command {
 			process.exitCode = 1;
 			return;
 		}
-		const projectRoot = resolveProjectRoot();
+		const projectRoot = resolveProjectRoot(options.project);
+		if (options.project) {
+			// Each step is this CLI run again, so it runs from the project
+			prd = path.resolve(prd);
+			try {
+				process.chdir(projectRoot);
+			} catch {
+				printError(
+					`No folder at ${terminalSafe(options.project)}`,
+					'Create it first; `taskgraph go` sets up TaskGraph in it'
+				);
+				process.exitCode = 1;
+				return;
+			}
+		}
 		const isProject = isTaskGraphProject(projectRoot);
 		// Loop's question, before any step: planning costs an AI call (#1146).
 		// `asked`: this run got a yes of its own, which covers what it plans
@@ -187,15 +211,19 @@ export class GoCommand extends Command {
 			if (!approved) return;
 			asked = !trusted;
 		}
-		for (const args of goSteps(prd, isProject, {
-			...options,
-			trust: options.trust || asked
-		})) {
+		const project = options.project ? projectRoot : undefined;
+		const steps = goSteps(
+			prd,
+			isProject,
+			{ ...options, trust: options.trust || asked },
+			project
+		);
+		for (const args of steps) {
 			const isLoop = args[0] === 'loop';
 			// The yes covers the tasks parse-prd added. Stored for the project loop
 			// is about to find: init may have made it below the root found above,
 			// and loop checks that folder's approval before each iteration
-			if (isLoop && asked) trustLoop(resolveProjectRoot());
+			if (isLoop && asked) trustLoop(resolveProjectRoot(project));
 			if (isLoop && isProject) {
 				// Only a heads-up: a file loop can't read fails loop's own way
 				await this.printResume(projectRoot).catch(() => {});

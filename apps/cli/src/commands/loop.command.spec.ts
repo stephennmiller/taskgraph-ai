@@ -147,7 +147,9 @@ describe('LoopCommand', () => {
 		});
 
 		it('should have correct description', () => {
-			expect(loopCommand.description()).toContain('loop');
+			expect(loopCommand.description()).toBe(
+				'Have Claude Code work through your tasks'
+			);
 		});
 
 		it('should register on parent program via static register()', () => {

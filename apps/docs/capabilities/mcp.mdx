@@ -156,7 +156,7 @@ The MCP tools can be categorized in the same way as the core functionalities:
 
 ### 1. Task and Subtask Management
 
--   **`add_task`**: Creates a new task. `discoveredFrom` links it to the task it was found in, without blocking it. `assignee` sets who it is for, as a GitHub login. It fails on a dependency or priority that doesn't exist. Its reply lists any `warnings`, such as a dependency the AI suggested that doesn't exist and was dropped.
+-   **`add_task`**: Creates a new task: a `title` saves it as written (a `description` is optional), and a `prompt` has the AI write it. `discoveredFrom` links it to the task it was found in, without blocking it. `assignee` sets who it is for, as a GitHub login. It fails on a dependency or priority that doesn't exist. Its reply lists any `warnings`, such as a dependency the AI suggested that doesn't exist and was dropped.
 -   **`add_subtask`**: Adds a subtask to a parent task.
 -   **`remove_task`**: Removes one or more tasks or subtasks.
 -   **`remove_subtask`**: Removes a subtask from its parent.

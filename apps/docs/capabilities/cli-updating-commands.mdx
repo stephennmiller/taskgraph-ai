@@ -145,32 +145,34 @@ Once `parse-prd` has recorded where tasks came from, `fix-dependencies --check` 
 ## Move Tasks
 
 ```bash
-# Move a task or subtask to a new position
-taskgraph move --from=<id> --to=<id>
+# Move a task or subtask to a new position (--from=<id> --to=<id> is the same)
+taskgraph move <id> <id>
 
 # Move task to become a subtask: name a free subtask ID under the new parent
 # (a task that has subtasks of its own is refused)
-taskgraph move --from=6 --to=7.4
-# or let TaskGraph pick the subtask ID
-taskgraph add-subtask --parent=7 --task-id=6
+taskgraph move 6 7.4
+# or let TaskGraph pick the subtask ID (--parent=7 is the same)
+taskgraph add-subtask 7 --task-id=6
 
 # Move subtask to become a standalone task (9 is a free task ID)
-taskgraph move --from=5.2 --to=9
+taskgraph move 5.2 9
 
 # Move subtask to a different parent (7.4 is a free subtask ID)
-taskgraph move --from=5.2 --to=7.4
+taskgraph move 5.2 7.4
 
 # Reorder subtasks within the same parent
-taskgraph move --from=5.2 --to=5.4
+taskgraph move 5.2 5.4
 
 # Move a task to a new ID (25 must be free; the task is renumbered)
-taskgraph move --from=5 --to=25
+taskgraph move 5 25
 
 # Move multiple tasks at once (same number of IDs; if one pair fails, nothing moves)
-taskgraph move --from=10,11,12 --to=16,17,18
+taskgraph move 10,11,12 16,17,18
 
 # Move a task to another tag (it gets the next free ID there if its own is taken)
-taskgraph move --from=5 --from-tag=backlog --to-tag=in-progress
+taskgraph move 5 --from-tag=backlog --to-tag=in-progress
 ```
+
+An argument and its flag with two different values (`move 5 7 --to=8`) is refused.
 
 Moving between tags, and handling dependencies that cross tags, is covered in [Cross-Tag Task Movement](/capabilities/cross-tag-movement).

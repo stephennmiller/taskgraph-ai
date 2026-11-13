@@ -9,6 +9,7 @@
 import { createTmCore, exitOnStopSignals } from '@tm/core';
 import chalk from 'chalk';
 import { Argument, Command } from 'commander';
+import { projectOption, tagOption } from '../utils/shared-options.js';
 import type { Ora } from 'ora';
 import { terminalSafe } from '../ui/formatters/markdown-formatters.js';
 import { formatScopeResult } from '../ui/formatters/scope-formatters.js';
@@ -36,6 +37,7 @@ interface ScopeCommandOptions {
 	research?: boolean;
 	file?: string;
 	tag?: string;
+	project?: string;
 }
 
 type Direction = 'up' | 'down';
@@ -110,11 +112,12 @@ export class ScopeCommand extends Command {
 		super(name);
 		if (name !== 'scope') {
 			this.fixedDirection = name === 'scope-down' ? 'down' : 'up';
-			this.description(
-				`${this.fixedDirection === 'up' ? 'Increase' : 'Decrease'} task complexity with AI assistance`
-			).argument('[ids]', ID_HELP);
+			this.description(`Alias of scope <ids> ${this.fixedDirection}`).argument(
+				'[ids]',
+				ID_HELP
+			);
 		} else {
-			this.description('Make tasks more (up) or less (down) complex with AI')
+			this.description('Grow or shrink a task’s scope with AI')
 				.argument('[ids]', ID_HELP)
 				.addArgument(
 					new Argument('[direction]', 'up or down').choices(['up', 'down'])
@@ -136,13 +139,14 @@ Examples:
 				'How far to change it: light, regular, heavy',
 				'regular'
 			)
+			.option('--prompt <text>', 'Extra instructions for the AI')
 			.option(
-				'--prompt <text>',
-				'Custom instructions for targeted scope adjustments'
+				'-r, --research',
+				'Use the research model, which can search the web'
 			)
-			.option('-r, --research', 'Use research AI for more informed adjustments')
 			.addOption(legacyFileOption())
-			.option('--tag <tag>', 'Specify tag context for task operations')
+			.addOption(tagOption())
+			.addOption(projectOption())
 			.action(async () => {
 				const [argIds, argDirection] = this.args as (string | undefined)[];
 				const options = this.opts<ScopeCommandOptions>();
@@ -177,9 +181,9 @@ Examples:
 			process.exit(1);
 		}
 		this.direction = direction;
-		const fileError = otherTasksFileError(options.file, name);
+		const fileError = otherTasksFileError(options.file, name, options.project);
 		if (fileError) displayError(fileError);
-		const projectRoot = getProjectRoot();
+		const projectRoot = getProjectRoot(options.project);
 
 		try {
 			const tmCore = await createTmCore({ projectPath: projectRoot });

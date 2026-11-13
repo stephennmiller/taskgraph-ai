@@ -213,11 +213,31 @@ describe('tasks.add', () => {
 			});
 		});
 
-		it('refuses a call with neither a prompt nor a title and description', async () => {
-			await expect(tmCore.tasks.add({ title: 'Only a title' })).rejects.toThrow(
-				'Either the prompt parameter or both title and description parameters are required for adding a task'
-			);
+		it('saves a title alone as given, with no AI call (#1149)', async () => {
+			await tmCore.tasks.add({ title: '  Only a title ' });
+
+			expect(generateObject).not.toHaveBeenCalled();
+			expect(added()).toMatchObject({
+				id: '4',
+				title: 'Only a title',
+				description: ''
+			});
 		});
+
+		it('still has the AI write a task given a prompt and a title but no description', async () => {
+			await tmCore.tasks.add({ title: 'Ignored', prompt: 'p' });
+
+			expect(generateObject).toHaveBeenCalledTimes(1);
+		});
+
+		it.each([{}, { title: ' ' }, { description: 'No title' }])(
+			'refuses a call with neither a prompt nor a title: %j',
+			async (input) => {
+				await expect(tmCore.tasks.add(input)).rejects.toThrow(
+					'A task needs a title, or a prompt for the AI to write it from'
+				);
+			}
+		);
 	});
 
 	describe('dependencies', () => {
