@@ -236,8 +236,11 @@ export function formatLoopSummary(
 		result.errorMessage && !shown.has(result.errorMessage)
 			? chalk.red(`: ${terminalSafe(result.errorMessage)}`)
 			: '';
+	// A run that found every task finished started nothing (#1160)
 	const counts = theme.muted(
-		` · ${plural(result.tasksCompleted, 'task')} completed in ${plural(result.totalIterations, 'iteration')}`
+		result.finalStatus === 'all_complete' && result.totalIterations === 0
+			? ' · nothing left to work on'
+			: ` · ${plural(result.tasksCompleted, 'task')} completed in ${plural(result.totalIterations, 'iteration')}`
 	);
 	const line = wrap(
 		STOP_REASON[result.finalStatus] +

@@ -182,6 +182,49 @@ describe('LoopService completion', () => {
 			});
 		});
 
+		it('starts no iteration when every task is done or cancelled', async () => {
+			const result = await new LoopService({
+				projectRoot: '/p',
+				taskStatuses: async () =>
+					new Map([
+						['1', 'done' as const],
+						['2', 'cancelled' as const]
+					])
+			}).run(config);
+
+			expect(spawn).not.toHaveBeenCalled();
+			expect(result.totalIterations).toBe(0);
+			expect(result.finalStatus).toBe('all_complete');
+		});
+
+		it.each([
+			['a task is in review', { prompt: 'default' }, 'review' as const],
+			['the preset picks its own work', { prompt: 'linting' }, 'done' as const],
+			['the run is pinned to one task', { taskId: '1' }, 'done' as const]
+		])('still runs when %s', async (_name, overrides, status) => {
+			spawn.mockImplementation(reply(MARKER));
+
+			const result = await new LoopService({
+				projectRoot: '/p',
+				taskStatuses: async () => new Map([['1', status]])
+			}).run({ ...config, ...overrides });
+
+			expect(result.totalIterations).toBe(1);
+		});
+
+		it('leaves the marker out of the output it shows', async () => {
+			const onOutput = vi.fn();
+			spawn.mockImplementation(reply(MARKER));
+
+			await new LoopService({ projectRoot: '/p' }).run({
+				...config,
+				iterations: 1,
+				callbacks: { onOutput }
+			});
+
+			expect(onOutput).toHaveBeenCalledWith('All done.');
+		});
+
 		it('tells Claude where the marker must go', async () => {
 			spawn.mockImplementation(reply(QUOTED));
 
