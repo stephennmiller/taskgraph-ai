@@ -24,6 +24,7 @@ import {
 	printError
 } from '../utils/error-handler.js';
 import { pickValue } from '../utils/id-argument.js';
+import { typedOldShortFlagHint } from '../utils/old-short-flags.js';
 import { getProjectRoot } from '../utils/project-root.js';
 import {
 	legacyFileOption,
@@ -68,7 +69,7 @@ export class AddTaskCommand extends Command {
 				'--prompt <prompt>',
 				'What the task should do; the AI writes the title and description'
 			)
-			.option('-t, --title <title>', 'The same as the [title] argument')
+			.option('--title <title>', 'The same as the [title] argument')
 			.option('-d, --description <description>', 'Task description')
 			.option('--details <details>', 'Implementation details')
 			.option(
@@ -121,7 +122,9 @@ export class AddTaskCommand extends Command {
 		if (!options.prompt && !options.title?.trim()) {
 			printError(
 				'add-task needs a title, or --prompt for the AI to write the task',
-				"Try `taskgraph add-task 'Fix the login bug'`"
+				// `add-task -t auth -d '...'`: -t was --title before #1155
+				typedOldShortFlagHint('add-task', 't') ??
+					"Try `taskgraph add-task 'Fix the login bug'`"
 			);
 			process.exit(1);
 		}

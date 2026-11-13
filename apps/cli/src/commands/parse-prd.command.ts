@@ -135,14 +135,14 @@ export class ParsePrdCommand extends Command {
 
 		this.description('Generate tasks from a PRD')
 			.argument('[file]', 'Path to the PRD file')
-			.option('-i, --input <file>', 'The same as the [file] argument')
+			.option('--input <file>', 'The same as the [file] argument')
 			// Tasks live in the project's tasks.json; only that file is accepted
 			.addOption(new Option('-o, --output <file>').hideHelp())
 			.option(
 				'-n, --num-tasks <number>',
 				'About how many tasks (default: sized to the PRD)'
 			)
-			.option('-f, --force', "Replace the tag's tasks without asking")
+			.option('--force', "Replace the tag's tasks without asking")
 			.option('--append', "Add to the tag's tasks instead of replacing them")
 			.option(
 				'-r, --research',

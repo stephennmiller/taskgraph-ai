@@ -57,7 +57,7 @@ export class AnalyzeComplexityCommand extends Command {
 			// Never used; kept so scripts that pass it keep working
 			.addOption(new Option('-m, --model <model>').hideHelp())
 			.option(
-				'-t, --threshold <number>',
+				'--threshold <number>',
 				'Lowest score, 1 to 10, that recommends expanding a task',
 				'5'
 			)

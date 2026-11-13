@@ -160,7 +160,7 @@ describe('analyze-complexity and complexity-report', () => {
 		});
 
 		await report('--tag=feat');
-		await report('-f', 'custom.json');
+		await report('--file', 'custom.json');
 
 		expect(getComplexityReport.mock.calls).toEqual([
 			[{ tag: 'feat', file: undefined }],

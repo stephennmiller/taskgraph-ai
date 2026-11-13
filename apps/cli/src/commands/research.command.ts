@@ -65,21 +65,17 @@ export class ResearchCommand extends Command {
 
 		this.description('Ask a research question about the project')
 			.argument('[prompt]', 'The question')
-			// -f is --files here, so the legacy flag has no short form
 			.addOption(new Option('--file <file>').hideHelp())
 			.option(
 				'-i, --id <ids>',
 				'Tasks or subtasks to include as context, comma separated (15,16.2)'
 			)
+			.option('--files <paths>', 'Files to include as context, comma separated')
+			.option('--context <text>', 'Extra context to include')
+			.option('--tree', "Include the project's file tree")
+			.option('--save <file>', 'Save the answer to a markdown file')
 			.option(
-				'-f, --files <paths>',
-				'Files to include as context, comma separated'
-			)
-			.option('-c, --context <text>', 'Extra context to include')
-			.option('-t, --tree', "Include the project's file tree")
-			.option('-s, --save <file>', 'Save the answer to a markdown file')
-			.option(
-				'-d, --detail <level>',
+				'--detail <level>',
 				'How detailed the answer is: low, medium or high',
 				'medium'
 			)

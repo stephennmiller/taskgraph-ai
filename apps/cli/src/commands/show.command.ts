@@ -89,7 +89,7 @@ export class ShowCommand extends Command {
 			.argument('[id]', 'Task or subtask ID; several with commas (3,3.2)')
 			.option('-i, --id <id>', 'The same as the [id] argument')
 			.option('-s, --status <status>', 'Only show subtasks with this status')
-			.addOption(tagOption('-t, --tag <tag>'))
+			.addOption(tagOption())
 			.option('-f, --format <format>', 'Output format: text or json', 'text')
 			.addOption(jsonOption())
 			.option('--silent', 'Print nothing')

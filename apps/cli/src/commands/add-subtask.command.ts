@@ -11,6 +11,7 @@ import { formatSubtaskAdded } from '../ui/formatters/subtask-change-formatters.j
 import { terminalSafe } from '../ui/formatters/markdown-formatters.js';
 import { displayError, printError } from '../utils/error-handler.js';
 import { pickValue } from '../utils/id-argument.js';
+import { typedOldShortFlagHint } from '../utils/old-short-flags.js';
 import { getProjectRoot } from '../utils/project-root.js';
 import {
 	legacyFileOption,
@@ -37,8 +38,8 @@ export class AddSubtaskCommand extends Command {
 		this.description('Add a subtask, or make a task one')
 			.argument('[parent]', 'Task to add the subtask to')
 			.option('--parent <id>', 'The same as the [parent] argument')
-			.option('-i, --task-id <id>', 'Make this existing task the subtask')
-			.option('-t, --title <title>', 'Title of the new subtask')
+			.option('--task-id <id>', 'Make this existing task the subtask')
+			.option('--title <title>', 'Title of the new subtask')
 			.option('-d, --description <text>', 'Description of the new subtask')
 			.option('--details <text>', 'Implementation details of the new subtask')
 			.option(
@@ -82,7 +83,9 @@ export class AddSubtaskCommand extends Command {
 		if (!options.taskId && !options.title) {
 			printError(
 				'add-subtask needs --title for a new subtask, or --task-id to move a task',
-				`Try \`taskgraph add-subtask ${terminalSafe(parentId)} --title='<title>'\` or \`--task-id=<id>\``
+				// `add-subtask 5 -t auth`: -t was --title before #1155
+				typedOldShortFlagHint('add-subtask', 't') ??
+					`Try \`taskgraph add-subtask ${terminalSafe(parentId)} --title='<title>'\` or \`--task-id=<id>\``
 			);
 			process.exit(1);
 		}

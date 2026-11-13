@@ -44,7 +44,7 @@ export class GraphCommand extends Command {
 				'-i, --id <id>',
 				'Show only this task and the tasks drawn under it'
 			)
-			.addOption(tagOption('-t, --tag <tag>'))
+			.addOption(tagOption())
 			.option('-f, --format <format>', 'Output format: text or json', 'text')
 			.addOption(jsonOption())
 			.addOption(projectOption())

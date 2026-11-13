@@ -121,7 +121,7 @@ export class LoopCommand extends Command {
 				'Path to progress log file',
 				'.taskgraph/progress.txt'
 			)
-			.addOption(tagOption('-t, --tag <tag>'))
+			.addOption(tagOption())
 			.addOption(projectOption())
 			.option('--sandbox', 'Run Claude in Docker sandbox mode')
 			.option(

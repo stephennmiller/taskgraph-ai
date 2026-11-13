@@ -41,7 +41,7 @@ export class WhyCommand extends Command {
 		this.description('Explain why a task is blocked')
 			.argument('[id]', 'Task ID, or a subtask ID like 3.1')
 			.option('-i, --id <id>', 'Task ID, or a subtask ID like 3.1')
-			.addOption(tagOption('-t, --tag <tag>'))
+			.addOption(tagOption())
 			.option('-f, --format <format>', 'Output format: text or json', 'text')
 			.addOption(jsonOption())
 			.addOption(projectOption())

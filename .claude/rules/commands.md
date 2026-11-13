@@ -42,9 +42,16 @@ command, such as `note.command.ts` or `removal.command.ts`.
 
 - Command and option names are kebab-case; Commander hands them to the
   action as camelCase (`--num-tasks` is `options.numTasks`).
-- `-p` is `--project` in every command (#882), so `--prompt` and `--parent`
-  have no short form. Every command that reads a project takes it: add it
-  with `projectOption()` and the tag with `tagOption()`
+- A short flag has one meaning in every command (#882, #1155): `-p` is
+  `--project`, `-t` is `--tag`, `-f` is `--format`, `-i` is `--id`, `-s` is
+  `--status`, `-d` is `--description`, `-r` is `--research`, `-n` is a
+  count. Give a new option a short form only when no command uses the letter
+  for something else; `utils/old-short-flags.spec.ts` fails on a letter
+  with two long names. A letter that used to mean something else on a command is listed
+  in `OLD_SHORT_FLAGS` (`utils/old-short-flags.ts`), so the old spelling
+  fails with `-f means --format; write --force in full`.
+- Every command that reads a project takes `--project`: add it with
+  `projectOption()` and the tag with `tagOption()`
   (`utils/shared-options.ts`), so each is worded once, and pass
   `options.project` to `getProjectRoot` (#1149). `program.spec.ts` fails on
   a command without `--project` or with its own `--tag` sentence.
@@ -61,7 +68,7 @@ command, such as `note.command.ts` or `removal.command.ts`.
   in a few plain words. A flag that repeats an argument says `The same as
   the [id] argument`.
 - An old flag a script may still pass stays as a hidden option
-  (`new Option(...).hideHelp()`), such as `legacyFileOption()` for `-f`.
+  (`new Option(...).hideHelp()`), such as `legacyFileOption()` for `--file`.
 
 ## Validation and exit codes
 

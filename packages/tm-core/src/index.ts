@@ -234,6 +234,7 @@ export {
 	parseStatusFilter,
 	ACTIONABLE_STATUSES,
 	selectNextTask,
+	projectHasTagSync,
 	readTagNamesSync,
 	shouldShowTagIndicator,
 	shouldShowTagIndicatorForProject,

@@ -13,6 +13,7 @@ import {
 } from '@tm/core';
 import { Command } from 'commander';
 import { projectOption, tagOption } from '../../utils/shared-options.js';
+import { confirm } from '../../utils/confirm.js';
 import { displayError } from '../../utils/error-handler.js';
 import { formatJson } from '../../utils/json-output.js';
 import { getProjectRoot } from '../../utils/project-root.js';
@@ -102,7 +103,7 @@ export class GithubCommand extends Command {
 			.description('Create or update GitHub issues for tasks')
 			.addOption(tagOption())
 			.option('--all-tags', 'Push every tag')
-			.option('--id <ids>', 'Only push these task ids, comma separated')
+			.option('-i, --id <ids>', 'Only push these task ids, comma separated')
 			.option('--dry-run', 'Show the plan without writing anything')
 			.option('-y, --yes', 'Write without asking for confirmation')
 			.option('--repo <owner/name>', 'Repository (default: detected via gh)')
@@ -131,7 +132,7 @@ Examples:
 			)
 			.addOption(tagOption())
 			.option('--all-tags', 'Pull every tag')
-			.option('--id <ids>', 'Only pull these task ids, comma separated')
+			.option('-i, --id <ids>', 'Only pull these task ids, comma separated')
 			.option('--dry-run', 'Show the plan without changing any task')
 			.option('-y, --yes', 'Update tasks without asking for confirmation')
 			.option('--repo <owner/name>', 'Repository (default: detected via gh)')
@@ -266,10 +267,11 @@ Examples:
 				);
 			}
 			console.log(formatPlan(plan));
-			if (!(await this.confirm(`Write these changes to ${plan.repo}?`))) {
-				console.log('Cancelled. Nothing was written.');
-				return;
-			}
+			const yes = await confirm(
+				`Write these changes to ${plan.repo}?`,
+				'Cancelled; nothing was written to GitHub'
+			);
+			if (!yes) return;
 		}
 
 		const result = await core.github.push({ ...pushOptions, dryRun: false });
@@ -315,10 +317,11 @@ Examples:
 				);
 			}
 			console.log(formatPullPlan(plan));
-			if (!(await this.confirm('Update these tasks?'))) {
-				console.log('Cancelled. Nothing was changed.');
-				return;
-			}
+			const yes = await confirm(
+				'Update these tasks?',
+				'Cancelled; no tasks were changed'
+			);
+			if (!yes) return;
 		}
 
 		const result = await core.github.pull({ ...pullOptions, dryRun: false });
@@ -355,18 +358,5 @@ Examples:
 	/** Can we prompt? Overridable for tests */
 	protected isInteractive(): boolean {
 		return Boolean(process.stdin.isTTY && process.stdout.isTTY);
-	}
-
-	protected async confirm(message: string): Promise<boolean> {
-		const { default: inquirer } = await import('inquirer');
-		const { proceed } = await inquirer.prompt<{ proceed: boolean }>([
-			{
-				type: 'confirm',
-				name: 'proceed',
-				message,
-				default: false
-			}
-		]);
-		return proceed;
 	}
 }

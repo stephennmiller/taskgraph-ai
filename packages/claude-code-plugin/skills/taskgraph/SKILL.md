@@ -14,7 +14,7 @@ For what the user asked:
 - What next: `taskgraph next`, then `taskgraph show <id>` for its details.
 - What's left: `taskgraph list --status=pending` (or `--status=in-progress`, `--tag=<tag>`).
 - Plan from a spec: `taskgraph parse-prd <file>`, then `taskgraph expand <id>` for a task too big to do in one go.
-- New work: `taskgraph add-task -t '<title>' -d '<what and why>'` (no AI call).
+- New work: `taskgraph add-task --title='<title>' -d '<what and why>'` (no AI call).
 - Start a task: `taskgraph set-status --id=<id> --status=in-progress`.
 - Log progress: `taskgraph note <id> '<what you did or decided>'`.
 - Finish: check its criteria, then `taskgraph set-status --id=<id> --status=done`.

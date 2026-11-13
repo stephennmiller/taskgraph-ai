@@ -41,6 +41,24 @@ export function readTagNamesSync(tasksPath: string): string[] {
 }
 
 /**
+ * Whether the project's tasks.json has the tag, read synchronously so a
+ * command can refuse a tag before it starts. `master` always counts, and so
+ * does any tag when the file is there but can't be read or parsed: that is
+ * the command's error to report, not a missing tag.
+ * @param projectRoot - The project; found from the working directory when omitted
+ */
+export function projectHasTagSync(tag: string, projectRoot?: string): boolean {
+	if (tag === DEFAULT_TAG) return true;
+	try {
+		const { tasksPath } = getProjectPaths(projectRoot);
+		const data = JSON.parse(fs.readFileSync(tasksPath, 'utf8'));
+		return new FormatHandler().extractTags(data).includes(tag);
+	} catch (error) {
+		return (error as NodeJS.ErrnoException)?.code !== 'ENOENT';
+	}
+}
+
+/**
  * Whether a command in this project should print its tag line
  * @param tag - The tag the command works in
  * @param projectRoot - The project; found from the working directory when omitted

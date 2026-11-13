@@ -108,7 +108,7 @@ export class SetStatusCommand extends Command {
 				collect
 			)
 			.option('--force', 'Mark done even with unchecked criteria')
-			.addOption(tagOption('-t, --tag <tag>'))
+			.addOption(tagOption())
 			.option('-f, --format <format>', 'Output format: text or json', 'text')
 			.addOption(jsonOption())
 			.option('--silent', 'Print nothing')

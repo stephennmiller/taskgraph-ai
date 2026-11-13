@@ -12,9 +12,6 @@ export const projectOption = (): Option =>
 		'Project folder (default: found from the current folder)'
 	);
 
-/**
- * `--tag <tag>`: the tag to work in.
- * @param flags - `-t, --tag <tag>` on the commands that have the short form
- */
-export const tagOption = (flags = '--tag <tag>'): Option =>
-	new Option(flags, 'Tag to work in (default: the current tag)');
+/** `-t, --tag <tag>`: the tag to work in */
+export const tagOption = (): Option =>
+	new Option('-t, --tag <tag>', 'Tag to work in (default: the current tag)');

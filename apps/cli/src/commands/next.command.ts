@@ -72,7 +72,7 @@ export class NextCommand extends Command {
 
 		// Configure the command
 		this.description('Show the next task to work on')
-			.addOption(tagOption('-t, --tag <tag>'))
+			.addOption(tagOption())
 			.option('-f, --format <format>', 'Output format: text or json', 'text')
 			.addOption(jsonOption())
 			.option(

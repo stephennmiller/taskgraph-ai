@@ -30,7 +30,7 @@ export class SyncReadmeCommand extends Command {
 			.addOption(legacyFileOption())
 			.option('--with-subtasks', 'Include subtasks')
 			.option('-s, --status <status>', 'Only tasks with this status')
-			.addOption(tagOption('-t, --tag <tag>'))
+			.addOption(tagOption())
 			.addOption(projectOption())
 			.action(async (options: SyncReadmeCommandOptions) => {
 				await this.executeCommand(options);

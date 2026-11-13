@@ -5,7 +5,7 @@
  *     .taskgraph/    tasks, settings and PRD templates
  *     .gitignore     added TaskGraph entries
  *
- *   Next: taskgraph go <prd> to plan and build it, or taskgraph add-task -t … -d …
+ *   Next: taskgraph go <prd> to plan and build it, or taskgraph add-task '<title>'
  *   Optional: taskgraph doctor shows how to add the slash commands to Claude Code
  *
  * A re-run prints the result and its rows only, and so does init as a step
@@ -83,9 +83,8 @@ export function formatInitSummary(summary: InitSummary): string {
 
 	lines.push(
 		'',
-		// add-task -t -d needs no Claude sign-in; go does (#924). The flags'
-		// values are left out so the line fits 80 columns
-		`Next: ${theme.brand('taskgraph go <prd>')} to plan and build it, or ${theme.brand('taskgraph add-task -t … -d …')}`
+		// add-task with a title needs no Claude sign-in; go does (#924)
+		`Next: ${theme.brand('taskgraph go <prd>')} to plan and build it, or ${theme.brand("taskgraph add-task '<title>'")}`
 	);
 	if (summary.claudeCode) {
 		lines.push(

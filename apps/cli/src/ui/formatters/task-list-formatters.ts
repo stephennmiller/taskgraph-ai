@@ -288,7 +288,7 @@ export function formatListNextStep(
 
 /**
  * The one line `list`, `next` and `graph` print in a project with no tasks
- * (#1146). `add-task -t` needs no Claude, which `go` does (#924).
+ * (#1146). `add-task '<title>'` needs no Claude, which `go` does (#924).
  */
 export function formatNoTasks(width = terminalWidth()): string {
 	return wrapLine(
