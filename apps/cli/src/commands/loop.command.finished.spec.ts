@@ -87,6 +87,12 @@ it.each([
 	expect(process.exitCode).toBeUndefined();
 });
 
+it('asks about the tag --tag names, not the active one', async () => {
+	await execute({ tag: 'auth' });
+
+	expect(loop.nothingLeft).toHaveBeenCalledWith('default', 'auth');
+});
+
 it('still runs a task pinned with --id', async () => {
 	await execute({ trust: true, id: '1' });
 
