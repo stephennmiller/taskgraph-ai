@@ -238,6 +238,27 @@ export class LoopCommand extends Command {
 				return;
 			}
 
+			// Every task is finished: say so once, before the sign-in, the approval
+			// question and the intro, none of which lead anywhere (#1160)
+			if (
+				!pinned &&
+				(await this.tmCore.loop.nothingLeft(prompt, options.tag))
+			) {
+				console.log(
+					formatLoopSummary(
+						{
+							iterations: [],
+							totalIterations: 0,
+							tasksCompleted: 0,
+							finalStatus: 'all_complete'
+						},
+						undefined,
+						terminalWidth()
+					)
+				);
+				return;
+			}
+
 			// Only check sandbox auth when --sandbox flag is used
 			if (options.sandbox) {
 				this.handleSandboxAuth();

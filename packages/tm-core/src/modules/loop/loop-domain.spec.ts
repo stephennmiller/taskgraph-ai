@@ -400,3 +400,46 @@ describe('LoopDomain.plan', () => {
 		expect(tasks.getNextSequence).not.toHaveBeenCalled();
 	});
 });
+
+describe('LoopDomain.nothingLeft', () => {
+	const domain = (tasks: unknown[]) => {
+		const list = vi.fn().mockResolvedValue({ tasks });
+		const config = {
+			getProjectRoot: () => '/p',
+			getActiveTag: () => 'master'
+		} as unknown as ConfigManager;
+		return {
+			list,
+			loop: new LoopDomain(config, { list } as unknown as TasksDomain)
+		};
+	};
+	const finished = [
+		{ id: '1', status: 'done', subtasks: [{ id: 1, status: 'cancelled' }] },
+		{ id: '2', status: 'cancelled' }
+	];
+
+	it('is true when every task and subtask is done or cancelled', async () => {
+		const { list, loop } = domain(finished);
+
+		expect(await loop.nothingLeft('default')).toBe(true);
+		expect(list).toHaveBeenCalledWith({ tag: 'master' });
+	});
+
+	it.each([
+		['a task is in review', [...finished, { id: '3', status: 'review' }]],
+		[
+			'a subtask is open under a done task',
+			[{ id: '1', status: 'done', subtasks: [{ id: 1, status: 'pending' }] }]
+		],
+		['the tag is empty', []]
+	])('is false when %s', async (_name, tasks) => {
+		expect(await domain(tasks).loop.nothingLeft('tdd', 'auth')).toBe(false);
+	});
+
+	it('is false for a preset that picks its own work, without reading tasks', async () => {
+		const { list, loop } = domain(finished);
+
+		expect(await loop.nothingLeft('linting')).toBe(false);
+		expect(list).not.toHaveBeenCalled();
+	});
+});

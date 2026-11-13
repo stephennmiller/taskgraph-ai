@@ -33,6 +33,8 @@ Invariants:
 - A task preset run over a tag whose tasks and subtasks are all done or
   cancelled starts no Claude Code session (#1160). A task in review, an
   empty tag, a pinned task and a prompt that picks its own work still run.
+  The CLI asks `loop.nothingLeft` first, so such a run prints one line and
+  no sign-in, approval question or intro; both use `allComplete`.
 - An approved run checks trust before each iteration.
 - A retried iteration never applies a status twice: the fresh retry runs
   only when the resumed one did no turns.

@@ -112,6 +112,7 @@ describe('LoopCommand', () => {
 					title: 'Pinned Task'
 				})),
 				isPreset: vi.fn().mockReturnValue(true),
+				nothingLeft: async () => false,
 				plan: vi.fn().mockResolvedValue({
 					prompt: 'default',
 					iterations: 1,
