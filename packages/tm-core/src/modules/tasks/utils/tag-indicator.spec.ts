@@ -3,6 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
+	projectHasTagSync,
 	readTagNamesSync,
 	shouldShowTagIndicator,
 	shouldShowTagIndicatorForProject
@@ -66,6 +67,16 @@ describe('reading tags from tasks.json', () => {
 		fs.mkdirSync(path.dirname(tasksPath()), { recursive: true });
 		fs.writeFileSync(tasksPath(), '{ not json');
 		expect(readTagNamesSync(tasksPath())).toEqual([]);
+	});
+
+	it('finds a tag only when tasks.json has it, and master always', () => {
+		// No tasks file yet: a later check takes any tag, this one doesn't
+		expect(projectHasTagSync('master', dir)).toBe(true);
+		expect(projectHasTagSync('Fix login', dir)).toBe(false);
+
+		writeTasks({ master: { tasks: [] }, 'feature-auth': { tasks: [] } });
+		expect(projectHasTagSync('feature-auth', dir)).toBe(true);
+		expect(projectHasTagSync('Fix login', dir)).toBe(false);
 	});
 
 	it('decides from the project tasks file', () => {

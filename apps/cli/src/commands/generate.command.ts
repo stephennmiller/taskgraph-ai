@@ -43,7 +43,7 @@ export class GenerateCommand extends Command {
 
 		// Configure the command
 		this.description('Write a file for each task')
-			.addOption(tagOption('-t, --tag <tag>'))
+			.addOption(tagOption())
 			.option(
 				'-o, --output <dir>',
 				'Folder to write the files to (default: .taskgraph/tasks)'

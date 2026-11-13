@@ -13,7 +13,7 @@ TASK: Finish one TaskGraph task in this session, record it, and stop. The loop s
 PROCESS:
 1. Run taskgraph next to pick the task, then taskgraph show <id> for its criteria and the PRD section it prints. Routes, field names and formats must match that section exactly. Read only the code this task touches.
 2. Build it the way you would without TaskGraph: write whole files at a time, in as few steps as you can, with tests alongside.
-3. When the work is in place, run the type check and tests, then run the app through its real entry point (the CLI, server or UI the PRD describes) on an input this task should handle, and fix what is wrong. If nothing wires this task into the entry point yet and no pending task does, add one (taskgraph add-task --priority=high -t '<wire what into the entry point>' -d '<what and why>').
+3. When the work is in place, run the type check and tests, then run the app through its real entry point (the CLI, server or UI the PRD describes) on an input this task should handle, and fix what is wrong. If nothing wires this task into the entry point yet and no pending task does, add one (taskgraph add-task --priority=high --title='<wire what into the entry point>' -d '<what and why>').
 4. Record it with ONE command, checking off every criterion the task meets:
    git add <the files you changed> && git commit -qm 'feat(<scope>): <what was implemented> [task <id>]' && taskgraph set-status <id> done --check=<criteria numbers, comma-separated, like 1,2,3>
    The tag links the commit to the task in taskgraph show.

@@ -59,8 +59,8 @@ export class NoteCommand extends Command {
 		this.description('Log a progress note on a task, as written')
 			.argument('<id>', 'Task or subtask ID (3 or 3.2)')
 			.argument('[text...]', 'The note; quote it to keep spacing')
-			.option('-f, --file <path>', 'Read the note from a file, or - for stdin')
-			.addOption(tagOption('-t, --tag <tag>'))
+			.option('--file <path>', 'Read the note from a file, or - for stdin')
+			.addOption(tagOption())
 			.addOption(projectOption())
 			.action(
 				async (id: string, words: string[], options: NoteCommandOptions) => {

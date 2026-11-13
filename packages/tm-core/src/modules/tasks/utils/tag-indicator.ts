@@ -41,6 +41,20 @@ export function readTagNamesSync(tasksPath: string): string[] {
 }
 
 /**
+ * Whether the project's tasks.json has the tag, read synchronously so a
+ * command can refuse a tag before it starts. `master` always counts. Unlike
+ * the tag check a command makes later, a project with no tasks yet has no
+ * other tag.
+ * @param projectRoot - The project; found from the working directory when omitted
+ */
+export function projectHasTagSync(tag: string, projectRoot?: string): boolean {
+	return (
+		tag === DEFAULT_TAG ||
+		readTagNamesSync(getProjectPaths(projectRoot).tasksPath).includes(tag)
+	);
+}
+
+/**
  * Whether a command in this project should print its tag line
  * @param tag - The tag the command works in
  * @param projectRoot - The project; found from the working directory when omitted

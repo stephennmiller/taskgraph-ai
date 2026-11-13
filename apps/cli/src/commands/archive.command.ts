@@ -48,7 +48,7 @@ export class ArchiveCommand extends Command {
 				'Only tasks last changed at least this many days ago (default: global.archiveAfterDays, else 30)'
 			)
 			.option('--dry-run', 'List what would be archived without moving it')
-			.addOption(tagOption('-t, --tag <tag>'))
+			.addOption(tagOption())
 			.option('-f, --format <format>', 'Output format: text or json', 'text')
 			.addOption(jsonOption())
 			.addOption(projectOption())
@@ -72,7 +72,7 @@ Examples:
 		this.command('restore')
 			.description('Move an archived task back into tasks.json')
 			.argument('<id>', 'ID of the archived task')
-			.addOption(tagOption('-t, --tag <tag>'))
+			.addOption(tagOption())
 			.option('-f, --format <format>', 'Output format: text or json', 'text')
 			.addOption(jsonOption())
 			.addOption(projectOption())

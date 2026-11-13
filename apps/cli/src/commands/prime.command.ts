@@ -44,7 +44,7 @@ export class PrimeCommand extends Command {
 		super(name || 'prime');
 
 		this.description('Print task context and workflow rules for a coding agent')
-			.addOption(tagOption('-t, --tag <tag>'))
+			.addOption(tagOption())
 			.option('--json', 'Print JSON')
 			.addOption(projectOption())
 			.option(

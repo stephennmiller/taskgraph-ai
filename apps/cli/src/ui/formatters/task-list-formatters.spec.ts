@@ -222,7 +222,7 @@ describe('formatEmptyList', () => {
 		expect(out).toEqual([
 			'No tasks found',
 			"Next: taskgraph add-task --prompt='...' to add one, or taskgraph parse-prd",
-			"      or taskgraph add-task -t 'Title' -d 'What'"
+			"      or taskgraph add-task 'Title' -d 'What'"
 		]);
 		for (const line of out) expect(line.length).toBeLessThanOrEqual(80);
 	});
@@ -272,7 +272,7 @@ describe('formatNoNextTask', () => {
 		const out = lines(formatNoNextTask(false, { width: 80 }));
 
 		expect(out[0]).toBe('No tasks found');
-		expect(out).toContain("      or taskgraph add-task -t 'Title' -d 'What'");
+		expect(out).toContain("      or taskgraph add-task 'Title' -d 'What'");
 	});
 });
 

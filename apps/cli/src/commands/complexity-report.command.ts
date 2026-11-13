@@ -61,11 +61,7 @@ export class ComplexityReportCommand extends Command {
 		super(name || 'complexity-report');
 
 		this.description('Alias of analyze-complexity --report')
-			.option(
-				'-f, --file <file>',
-				'Report file to show',
-				COMPLEXITY_REPORT_FILE
-			)
+			.option('--file <file>', 'Report file to show', COMPLEXITY_REPORT_FILE)
 			.addOption(tagOption())
 			.addOption(projectOption())
 			.action(async (options: ComplexityReportCommandOptions) => {

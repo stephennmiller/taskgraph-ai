@@ -219,7 +219,7 @@ export class RemoveTaskCommand {
 		)
 			.option('-i, --id <ids>', 'The same as the [ids] argument')
 			.option(
-				'-c, --convert',
+				'--convert',
 				'Make the subtasks standalone tasks instead of deleting them'
 			)
 			.option('-y, --yes', 'Remove without asking', false)
@@ -252,7 +252,7 @@ export class RemoveSubtaskCommand {
 		idArgument(command, 'Subtask to remove (5.2); several with commas')
 			.option('-i, --id <id>', 'The same as the [ids] argument')
 			.option(
-				'-c, --convert',
+				'--convert',
 				'Make the subtask a standalone task instead of deleting it'
 			)
 			// Task files are written by `generate`; the old flag already did nothing

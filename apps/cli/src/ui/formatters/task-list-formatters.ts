@@ -316,11 +316,11 @@ export function formatEmptyList(
 					description: 'to add one, or taskgraph parse-prd'
 				};
 	const lines = [theme.text(message), ...formatNextStep(action, width)];
-	// The prompt and parse-prd paths need Claude. -t/-d does not (#924).
+	// The prompt and parse-prd paths need Claude. A title does not (#924).
 	if (!filter && !assignee && !search) {
 		lines.push(
 			...wrapLine(
-				`      or ${theme.brand("taskgraph add-task -t 'Title' -d 'What'")}`,
+				`      or ${theme.brand("taskgraph add-task 'Title' -d 'What'")}`,
 				width,
 				'      '
 			)

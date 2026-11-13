@@ -92,11 +92,11 @@ export class InitCommand extends Command {
 			.option('--no-claude', 'Skip the Claude Code integration')
 			.option('--mcp', 'Also add the TaskGraph MCP server to .mcp.json')
 			.option(
-				'-r, --rules <rules...>',
+				'--rules <rules...>',
 				'Rule profiles to install (claude; comma or space separated)'
 			)
 			.optionsGroup('Project:')
-			.option('-n, --name <name>', 'Project name')
+			.option('--name <name>', 'Project name')
 			.option('-d, --description <description>', 'Project description')
 			.option('--aliases', 'Add the tm alias to your shell startup file')
 			.option('--no-aliases', "Don't add the tm alias (the default)")
@@ -106,11 +106,11 @@ export class InitCommand extends Command {
 				`Import a ${UPSTREAM_NAME} project (${UPSTREAM_DIR}/)`
 			)
 			.addOption(
-				new Option('-v, --version <version>', 'Project version')
+				new Option('--version <version>', 'Project version')
 					.default('0.1.0')
 					.hideHelp()
 			)
-			.addOption(new Option('-a, --author <author>', 'Author name').hideHelp())
+			.addOption(new Option('--author <author>', 'Author name').hideHelp())
 			.addOption(
 				new Option('--skip-install', 'Skip installing dependencies').hideHelp()
 			);

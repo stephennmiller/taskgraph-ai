@@ -10,6 +10,7 @@
 import { MISSING_TAG_HINT, stripTerminalControls } from '@tm/core';
 import chalk from 'chalk';
 import { theme } from '../ui/theme.js';
+import { oldShortFlagHint, typedOldShortFlagHint } from './old-short-flags.js';
 
 /**
  * Check if debug mode is enabled via environment variable
@@ -194,8 +195,21 @@ export function formatCommanderError(
 		});
 	}
 
+	// `expand 3 -f` (unknown now) and `research 'q' -t` (now --tag, which
+	// needs a value): the letter meant something else here before #1155
+	const raw = first.replace(/^error:\s*/i, '');
+	const unknown = /^unknown option '-(\w)/i.exec(raw)?.[1];
+	const needsValue = /^option '-(\w), .* argument missing$/i.exec(raw)?.[1];
+	const oldFlagHint =
+		commandPath &&
+		(unknown
+			? oldShortFlagHint(commandPath, unknown)
+			: needsValue && typedOldShortFlagHint(commandPath, needsValue));
+
 	let hint: string | undefined;
-	if (/^unknown command/i.test(reason)) {
+	if (oldFlagHint) {
+		hint = oldFlagHint;
+	} else if (/^unknown command/i.test(reason)) {
 		hint = suggestion
 			? `Did you mean \`taskgraph ${suggestion}\`?`
 			: 'Run `taskgraph --help` to see all commands';

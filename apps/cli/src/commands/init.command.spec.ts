@@ -58,7 +58,15 @@ describe('init --help', () => {
 		vi.spyOn(console, 'log').mockImplementation(() => {});
 
 		await command.parseAsync(
-			['--yes', '--dry-run', '--skip-install', '-v', '1.2.3', '-a', 'Ada'],
+			[
+				'--yes',
+				'--dry-run',
+				'--skip-install',
+				'--version',
+				'1.2.3',
+				'--author',
+				'Ada'
+			],
 			{ from: 'user' }
 		);
 

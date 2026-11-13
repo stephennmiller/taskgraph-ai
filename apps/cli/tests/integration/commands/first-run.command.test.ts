@@ -90,7 +90,7 @@ describe('first run', () => {
 
 		expect(result.status).toBe(1);
 		expect(result.stderr).toContain(
-			'-p means --project; write --prompt or --parent in full'
+			'-p means --project; write --prompt in full'
 		);
 	});
 

@@ -230,7 +230,7 @@ describe('remove-subtask', () => {
 		expect(output('log')).toContain('Subtask 2.2 is now task 7');
 	});
 
-	it("still takes the old --generate, and -f naming the project's file", async () => {
+	it("still takes the old --generate, and --file naming the project's file", async () => {
 		tasks.removeSubtasks.mockResolvedValue({
 			converted: [null],
 			tag: 'master'
@@ -240,7 +240,7 @@ describe('remove-subtask', () => {
 			'remove-subtask',
 			'--id=2.1',
 			'--generate',
-			'-f',
+			'--file',
 			TASKGRAPH_TASKS_FILE
 		);
 
@@ -248,13 +248,13 @@ describe('remove-subtask', () => {
 		expect(process.exitCode).toBeUndefined();
 	});
 
-	it('refuses -f naming another file, before changing anything', async () => {
+	it('refuses --file naming another file, before changing anything', async () => {
 		vi.spyOn(process, 'exit').mockImplementation(() => {
 			throw new Error('exit');
 		});
 
 		await expect(
-			run('remove-subtask', '--id=2.1', '-f', 'other/tasks.json')
+			run('remove-subtask', '--id=2.1', '--file', 'other/tasks.json')
 		).rejects.toThrow('exit');
 
 		expect(output('error')).toContain('--file is no longer supported');

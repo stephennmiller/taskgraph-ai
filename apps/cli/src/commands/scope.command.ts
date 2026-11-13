@@ -135,7 +135,7 @@ Examples:
 
 		this.option('-i, --id <ids>', 'The same as the [ids] argument')
 			.option(
-				'-s, --strength <level>',
+				'--strength <level>',
 				'How far to change it: light, regular, heavy',
 				'regular'
 			)

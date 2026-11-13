@@ -49,7 +49,7 @@ function editCommand(
 		.argument('[id]', idHelp)
 		.argument('[dependsOn]', dependsOnHelp)
 		.option('-i, --id <id>', idHelp)
-		.option('-d, --depends-on <ids>', dependsOnHelp)
+		.option('--depends-on <ids>', dependsOnHelp)
 		.addOption(tagOption())
 		.addOption(projectOption());
 	// Before the ID check, which exits: the old name was still what they typed

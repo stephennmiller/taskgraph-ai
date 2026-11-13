@@ -68,7 +68,7 @@ describe('add-subtask and move', () => {
 			'add-subtask',
 			'--parent=1',
 			'--title=Child',
-			'-f',
+			'--file',
 			'.taskgraph/tasks/tasks.json',
 			'--generate'
 		]);

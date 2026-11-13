@@ -12,6 +12,7 @@ import {
 	PROJECT_ROOT_ENV,
 	TASKGRAPH_VERSION,
 	isTaskGraphProject,
+	projectHasTagSync,
 	resolveProjectRoot,
 	stripTerminalControls,
 	takeMigrationNotice
@@ -36,6 +37,7 @@ import {
 	printError
 } from './utils/error-handler.js';
 import { wantsJsonOutput } from './utils/json-output.js';
+import { typedOldShortFlagHint } from './utils/old-short-flags.js';
 
 const RUNS_WITHOUT_PROJECT = new Set([
 	'init',
@@ -49,21 +51,6 @@ const RUNS_WITHOUT_PROJECT = new Set([
 	'upgrade',
 	// Runs init itself when the folder isn't a project yet
 	'go'
-]);
-
-// Where -p was --prompt, or --parent in add-subtask, before it meant
-// --project everywhere (#882)
-const OLD_SHORT_P_COMMANDS = new Set([
-	'loop',
-	'add-subtask',
-	'add-task',
-	'expand',
-	'update',
-	'update-task',
-	'update-subtask',
-	'scope',
-	'scope-up',
-	'scope-down'
 ]);
 
 /**
@@ -102,11 +89,10 @@ function requireProject(_hookedCommand: Command, actionCommand: Command) {
 			`No TaskGraph project at ${explicitRoot}`,
 			// An old script's `loop -p tdd` or `add-subtask -p 5` lands here (#882);
 			// a real folder means the caller meant --project
-			OLD_SHORT_P_COMMANDS.has(topLevel.name()) &&
-				process.argv.some((arg) => /^-p/.test(arg)) &&
-				!fs.existsSync(explicitRoot)
-				? '-p means --project; write --prompt or --parent in full'
-				: 'Run `taskgraph init` in that folder to set one up'
+			(fs.existsSync(explicitRoot)
+				? undefined
+				: typedOldShortFlagHint(topLevel.name(), 'p')) ??
+				'Run `taskgraph init` in that folder to set one up'
 		);
 	} else if (process.env[PROJECT_ROOT_ENV]?.trim()) {
 		printError(
@@ -119,6 +105,26 @@ function requireProject(_hookedCommand: Command, actionCommand: Command) {
 			'Run `taskgraph init` to set one up, or cd into your project'
 		);
 	}
+	process.exit(1);
+}
+
+/**
+ * Stop `add-task -t 'Fix login'`, where `-t` was `--title` until it meant
+ * `--tag` everywhere (#1155), unless the value is one of the project's tags.
+ * Stricter than `--tag`, which a project with no tasks yet takes as a new
+ * tag: that project is where the old spelling would make a tag out of a
+ * title.
+ *
+ * @param _hookedCommand - The program
+ * @param actionCommand - The command about to run
+ */
+function refuseOldShortTag(_hookedCommand: Command, actionCommand: Command) {
+	const { tag, project } = actionCommand.opts();
+	const hint = typedOldShortFlagHint(actionCommand.name(), 't');
+	if (!hint || typeof tag !== 'string') return;
+	if (projectHasTagSync(tag, typeof project === 'string' ? project : undefined))
+		return;
+	printError(`Tag "${tag}" not found`, hint);
 	process.exit(1);
 }
 
@@ -206,6 +212,7 @@ export function setupCLI(): Command {
 
 	// Runs before every subcommand's action, nested ones included
 	program.hook('preAction', requireProject);
+	program.hook('preAction', refuseOldShortTag);
 
 	return program;
 }

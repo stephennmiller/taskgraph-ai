@@ -242,6 +242,32 @@ describe('formatCommanderError', () => {
 			'✗ --status needs a value\n  Run taskgraph list --help to see its options'
 		);
 	});
+
+	it('names the long form for a short flag that meant something else (#1155)', () => {
+		const text = formatCommanderError("error: unknown option '-f'", 'expand');
+
+		expect(plain(text)).toBe(
+			"✗ Unknown option '-f'\n  -f means --format; write --force in full"
+		);
+	});
+
+	it('names --tree when research gets -t with no value, not when --tag does', () => {
+		const missing = "error: option '-t, --tag <tag>' argument missing";
+		const argv = process.argv;
+		try {
+			process.argv = ['node', 'taskgraph', 'research', 'q', '-t'];
+			expect(plain(formatCommanderError(missing, 'research'))).toBe(
+				'✗ --tag needs a value\n  -t means --tag; write --tree in full'
+			);
+
+			process.argv = ['node', 'taskgraph', 'research', 'q', '--tag'];
+			expect(plain(formatCommanderError(missing, 'research'))).toContain(
+				'taskgraph research --help'
+			);
+		} finally {
+			process.argv = argv;
+		}
+	});
 });
 
 describe('printError and displayError', () => {

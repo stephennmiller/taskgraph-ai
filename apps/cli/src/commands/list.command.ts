@@ -71,7 +71,7 @@ export class ListTasksCommand extends Command {
 				'-s, --status <status>',
 				'Status to show, same as the argument (the argument wins)'
 			)
-			.addOption(tagOption('-t, --tag <tag>'))
+			.addOption(tagOption())
 			.option('--with-subtasks', "Show each task's subtasks")
 			.option('-f, --format <format>', 'text, json or compact', 'text')
 			.addOption(jsonOption())

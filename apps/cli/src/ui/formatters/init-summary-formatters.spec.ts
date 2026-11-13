@@ -35,7 +35,7 @@ describe('formatInitSummary', () => {
 
 		expect(lines.slice(3)).toEqual([
 			'',
-			'Next: taskgraph go <prd> to plan and build it, or taskgraph add-task -t … -d …'
+			"Next: taskgraph go <prd> to plan and build it, or taskgraph add-task '<title>'"
 		]);
 		for (const line of lines) expect(line.length).toBeLessThan(80);
 	});

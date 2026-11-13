@@ -80,7 +80,7 @@ taskgraph completion --install               # Tab completion for your shell
 taskgraph doctor                             # check the setup, with fixes
 ```
 
-Every command that reads a project takes `-p, --project <path>` to work on a project other than the one you are in, and every task command takes `--tag <tag>` to work in a tag other than the current one. `taskgraph <command> --help` describes a command the way `taskgraph --help` does.
+Every command that reads a project takes `-p, --project <path>` to work on a project other than the one you are in, and every task command takes `-t, --tag <tag>` to work in a tag other than the current one. A short flag means the same thing on every command: `-t` is `--tag`, `-f` is `--format`, `-i` is `--id` and `-s` is `--status`; other options are written in full (see [Upgrading](/upgrading#12-each-short-flag-has-one-meaning) for the spellings that changed in 0.64.0). `taskgraph <command> --help` describes a command the way `taskgraph --help` does.
 
 For Tab completion of commands, flags, task IDs, tags and statuses in bash, zsh or fish, run `taskgraph completion --install` once, and again after upgrading.
 

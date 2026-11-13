@@ -89,12 +89,11 @@ export class ExpandCommand extends Command {
 				'Use the research model, which can search the web'
 			)
 			.option('--prompt <text>', 'Extra context for the AI')
-			.option('-f, --force', 'Replace the subtasks the task has')
+			.option('--force', 'Replace the subtasks the task has')
 			.option(
 				'--append',
 				'Keep the subtasks the task has and add new ones after them (with --all, tasks with subtasks are expanded too)'
 			)
-			// -f is --force here, so the legacy flag is --file only
 			.addOption(new Option('--file <file>').hideHelp())
 			.option(
 				'--complexity-report <file>',
