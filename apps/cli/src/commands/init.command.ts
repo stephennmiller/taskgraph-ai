@@ -76,7 +76,7 @@ export class InitCommand extends Command {
 	constructor(name?: string) {
 		super(name || 'init');
 
-		// --skip-install, -v/--version and -a/--author are accepted so old
+		// --skip-install, --version and --author are accepted so old
 		// scripts keep working. Nothing reads them: InitCommandOptions omits
 		// them, and initializeProject has no version, author or install step.
 		this.description('Set up TaskGraph in this project')

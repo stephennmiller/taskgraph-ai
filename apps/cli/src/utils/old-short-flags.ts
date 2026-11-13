@@ -71,17 +71,40 @@ export function oldShortFlagHint(
 }
 
 /**
- * The same hint, only when the short form was typed (`-t x`, `-tx`, or after
- * other letters as in `-rt x`) rather than the long one; Commander doesn't
- * say which spelling it read. A value joined to another letter (`-dtest`)
- * counts too: a wrong hint is better than a title quietly read as a tag.
+ * The hint for `research 'q' -t --save out.md`: `-t` took no value when it
+ * was `--tree`, so as `--tag` it swallows the next flag and Commander stops
+ * on the argument left over
+ */
+export function swallowedFlagHint(
+	command: string,
+	argv: readonly string[] = process.argv
+): string | undefined {
+	for (const [i, arg] of argv.entries()) {
+		if (!/^-[A-Za-z]$/.test(arg) || !argv[i + 1]?.startsWith('-')) continue;
+		const hint = oldShortFlagHint(command, arg[1]);
+		if (hint) return hint;
+	}
+	return undefined;
+}
+
+/**
+ * The short flags that take no value, which can sit before another letter
+ * in one word (`-rt x`). old-short-flags.spec.ts checks it against the
+ * program.
+ */
+export const VALUELESS_SHORT_FLAGS = 'acrvwyh';
+
+/**
+ * The same hint, only when the short form was typed (`-t x`, `-tx`, or
+ * `-rt x`) rather than the long one; Commander doesn't say which spelling it
+ * read. `-dtest` is `--description test`, not a typed `-t`.
  */
 export function typedOldShortFlagHint(
 	command: string,
 	letter: string,
 	argv: readonly string[] = process.argv
 ): string | undefined {
-	const typed = new RegExp(`^-[A-Za-z]*${letter}`);
+	const typed = new RegExp(`^-[${VALUELESS_SHORT_FLAGS}]*${letter}`);
 	return argv.some((arg) => typed.test(arg))
 		? oldShortFlagHint(command, letter)
 		: undefined;

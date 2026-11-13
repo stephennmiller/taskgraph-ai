@@ -81,8 +81,7 @@ describe.skipIf(!built)('old -t spellings', () => {
 		fs.rmSync(work, { recursive: true, force: true });
 	});
 
-	// A project with no tasks takes any --tag as a new tag, so this is where
-	// the old spelling would have made a tag named after the title
+	// A new project, where init's next step used to print this spelling
 	it.each([
 		[['add-task', '-t', 'Fix login', '-d', 'Sessions expire'], '--title'],
 		[['add-task', '-t', 'Fix login', '--prompt', 'Add a login'], '--title'],
@@ -118,6 +117,54 @@ describe.skipIf(!built)('old -t spellings', () => {
 		expect(subtask.stderr).toContain('add-subtask needs --title');
 		expect(subtask.stderr).toContain('-t means --tag; write --title in full');
 		expect(saved()).toBe(before);
+	});
+
+	// Commander keeps the last --tag, so the old -t value would be dropped
+	it.each([
+		[['analyze-complexity', '-t', '7', '--tag', 'master'], '--threshold'],
+		[
+			[
+				'add-task',
+				'-t',
+				'Fix login',
+				'--prompt',
+				'Add a login',
+				'--tag=master'
+			],
+			'--title'
+		]
+	])('%j stops on -t with --tag and names %s', (args, long) => {
+		withTags();
+		const before = saved();
+
+		const res = run(...args);
+
+		expect(res.status).toBe(1);
+		expect(res.stderr).toBe(
+			`✗ -t and --tag both name a tag\n  -t means --tag; write ${long} in full\n`
+		);
+		expect(saved()).toBe(before);
+		expect(readTrace(fake.dir)).toEqual([]);
+	});
+
+	// The old-flag check must not turn a broken file into "tag not found"
+	it.each([
+		[['add-task', '-t', 'auth', 'Reset password']],
+		[['add-subtask', '1', '-t', 'auth', '--title', 'Add a test']],
+		[['analyze-complexity', '-t', 'auth']]
+	])('%j reports a tasks file that is not JSON', (args) => {
+		fs.writeFileSync(tasksFile(), '{ not json');
+
+		const res = run(...args);
+
+		expect(res.status).toBe(1);
+		// Each command words a broken file its own way
+		expect(res.stderr).toMatch(
+			/isn't valid JSON|Corrupted JSON in|Couldn't read/
+		);
+		expect(res.stderr).not.toContain('-t means --tag');
+		expect(saved()).toBe('{ not json');
+		expect(readTrace(fake.dir)).toEqual([]);
 	});
 
 	it('names --tree when research gets -t with no value', () => {

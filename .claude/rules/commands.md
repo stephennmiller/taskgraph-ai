@@ -46,8 +46,8 @@ command, such as `note.command.ts` or `removal.command.ts`.
   `--project`, `-t` is `--tag`, `-f` is `--format`, `-i` is `--id`, `-s` is
   `--status`, `-d` is `--description`, `-r` is `--research`, `-n` is a
   count. Give a new option a short form only when no command uses the letter
-  for something else; `program.spec.ts` fails on a letter with two long
-  names. A letter that used to mean something else on a command is listed
+  for something else; `utils/old-short-flags.spec.ts` fails on a letter
+  with two long names. A letter that used to mean something else on a command is listed
   in `OLD_SHORT_FLAGS` (`utils/old-short-flags.ts`), so the old spelling
   fails with `-f means --format; write --force in full`.
 - Every command that reads a project takes `--project`: add it with

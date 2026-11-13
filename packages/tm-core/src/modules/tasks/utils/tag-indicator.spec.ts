@@ -70,13 +70,20 @@ describe('reading tags from tasks.json', () => {
 	});
 
 	it('finds a tag only when tasks.json has it, and master always', () => {
-		// No tasks file yet: a later check takes any tag, this one doesn't
+		// No tasks file yet
 		expect(projectHasTagSync('master', dir)).toBe(true);
 		expect(projectHasTagSync('Fix login', dir)).toBe(false);
 
 		writeTasks({ master: { tasks: [] }, 'feature-auth': { tasks: [] } });
 		expect(projectHasTagSync('feature-auth', dir)).toBe(true);
 		expect(projectHasTagSync('Fix login', dir)).toBe(false);
+	});
+
+	it('leaves a tasks file it cannot parse for the command to report', () => {
+		fs.mkdirSync(path.dirname(tasksPath()), { recursive: true });
+		fs.writeFileSync(tasksPath(), '{ not json');
+
+		expect(projectHasTagSync('auth', dir)).toBe(true);
 	});
 
 	it('decides from the project tasks file', () => {

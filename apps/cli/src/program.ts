@@ -111,9 +111,8 @@ function requireProject(_hookedCommand: Command, actionCommand: Command) {
 /**
  * Stop `add-task -t 'Fix login'`, where `-t` was `--title` until it meant
  * `--tag` everywhere (#1155), unless the value is one of the project's tags.
- * Stricter than `--tag`, which a project with no tasks yet takes as a new
- * tag: that project is where the old spelling would make a tag out of a
- * title.
+ * The command would refuse the tag too; this names the long form to write
+ * instead, before any AI call.
  *
  * @param _hookedCommand - The program
  * @param actionCommand - The command about to run
@@ -122,6 +121,12 @@ function refuseOldShortTag(_hookedCommand: Command, actionCommand: Command) {
 	const { tag, project } = actionCommand.opts();
 	const hint = typedOldShortFlagHint(actionCommand.name(), 't');
 	if (!hint || typeof tag !== 'string') return;
+	// `analyze-complexity -t 7 --tag feature`: Commander keeps the last value,
+	// so the old -t value would be dropped without a word
+	if (process.argv.some((arg) => /^--tag(=|$)/.test(arg))) {
+		printError('-t and --tag both name a tag', hint);
+		process.exit(1);
+	}
 	if (projectHasTagSync(tag, typeof project === 'string' ? project : undefined))
 		return;
 	printError(`Tag "${tag}" not found`, hint);

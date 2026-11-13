@@ -10,7 +10,11 @@
 import { MISSING_TAG_HINT, stripTerminalControls } from '@tm/core';
 import chalk from 'chalk';
 import { theme } from '../ui/theme.js';
-import { oldShortFlagHint, typedOldShortFlagHint } from './old-short-flags.js';
+import {
+	oldShortFlagHint,
+	swallowedFlagHint,
+	typedOldShortFlagHint
+} from './old-short-flags.js';
 
 /**
  * Check if debug mode is enabled via environment variable
@@ -195,8 +199,9 @@ export function formatCommanderError(
 		});
 	}
 
-	// `expand 3 -f` (unknown now) and `research 'q' -t` (now --tag, which
-	// needs a value): the letter meant something else here before #1155
+	// `expand 3 -f` (unknown now), `research 'q' -t` (now --tag, which needs
+	// a value) and `research 'q' -t --save out.md` (--tag took `--save`): the
+	// letter meant something else here before #1155
 	const raw = first.replace(/^error:\s*/i, '');
 	const unknown = /^unknown option '-(\w)/i.exec(raw)?.[1];
 	const needsValue = /^option '-(\w), .* argument missing$/i.exec(raw)?.[1];
@@ -204,7 +209,9 @@ export function formatCommanderError(
 		commandPath &&
 		(unknown
 			? oldShortFlagHint(commandPath, unknown)
-			: needsValue && typedOldShortFlagHint(commandPath, needsValue));
+			: needsValue
+				? typedOldShortFlagHint(commandPath, needsValue)
+				: /^too many arguments/i.test(raw) && swallowedFlagHint(commandPath));
 
 	let hint: string | undefined;
 	if (oldFlagHint) {

@@ -264,6 +264,25 @@ describe('formatCommanderError', () => {
 			expect(plain(formatCommanderError(missing, 'research'))).toContain(
 				'taskgraph research --help'
 			);
+
+			// -t took `--save` as its value and left out.md over
+			process.argv = [
+				'node',
+				'taskgraph',
+				'research',
+				'q',
+				'-t',
+				'--save',
+				'out.md'
+			];
+			expect(
+				plain(
+					formatCommanderError(
+						"error: too many arguments for 'research'. Expected 1 argument but got 2.",
+						'research'
+					)
+				)
+			).toContain('-t means --tag; write --tree in full');
 		} finally {
 			process.argv = argv;
 		}

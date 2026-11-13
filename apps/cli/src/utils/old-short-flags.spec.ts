@@ -8,7 +8,9 @@ import { describe, expect, it, vi } from 'vitest';
 import { setupCLI } from '../program.js';
 import {
 	OLD_SHORT_FLAGS,
+	VALUELESS_SHORT_FLAGS,
 	oldShortFlagHint,
+	swallowedFlagHint,
 	typedOldShortFlagHint
 } from './old-short-flags.js';
 
@@ -110,12 +112,41 @@ describe('old spellings (#882, #1155)', () => {
 		expect(parseError(['list', '-x'])).toContain('taskgraph list --help');
 	});
 
+	it('knows which short flags take no value', () => {
+		const valueless = new Set(['h']);
+		for (const [, c] of commands) {
+			for (const o of c.options) {
+				if (o.short && !o.required && !o.optional) valueless.add(o.short[1]);
+			}
+		}
+		// -V is the program's --version
+		valueless.delete('V');
+		expect([...valueless].sort().join('')).toBe(
+			[...VALUELESS_SHORT_FLAGS].sort().join('')
+		);
+	});
+
+	it("names --tree when research's -t swallowed the next flag", () => {
+		const argv = ['research', 'q', '-t', '--save', 'out.md'];
+
+		expect(swallowedFlagHint('research', argv)).toBe(
+			'-t means --tag; write --tree in full'
+		);
+		// An unquoted prompt with a real tag is not an old spelling
+		expect(
+			swallowedFlagHint('research', ['research', 'how', 'so', '-t', 'auth'])
+		).toBeUndefined();
+		expect(swallowedFlagHint('list', ['list', '-t', '--json'])).toBeUndefined();
+	});
+
 	it('gives the hint only when the short form was typed', () => {
 		const hint = '-t means --tag; write --title in full';
 
 		expect(typedOldShortFlagHint('add-task', 't', ['-t', 'x'])).toBe(hint);
 		expect(typedOldShortFlagHint('add-task', 't', ['-tx'])).toBe(hint);
 		expect(typedOldShortFlagHint('add-task', 't', ['-rt', 'x'])).toBe(hint);
+		// --description test, joined: not a typed -t
+		expect(typedOldShortFlagHint('add-task', 't', ['-dtest'])).toBeUndefined();
 		expect(
 			typedOldShortFlagHint('add-task', 't', ['--tag', 'x'])
 		).toBeUndefined();
