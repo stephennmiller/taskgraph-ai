@@ -46,7 +46,7 @@ describe('go --project', () => {
 		fs.rmSync(dir, { recursive: true, force: true });
 	});
 
-	it('runs every step from the project, with the PRD path made absolute', async () => {
+	it('runs every step from the project and on it, with the PRD path made absolute', async () => {
 		const project = path.join(dir, 'app');
 		fs.mkdirSync(project);
 		const chdir = vi.spyOn(process, 'chdir').mockImplementation(() => {});
@@ -65,8 +65,9 @@ describe('go --project', () => {
 			vi.mocked(spawn).mock.calls.map(([, args]) => (args as string[]).slice(1))
 		).toEqual([
 			['init', '--yes'],
-			['parse-prd', prd, '--append'],
-			['loop', '--trust']
+			// Named, or the steps would work on TASKGRAPH_PROJECT_ROOT's project
+			['parse-prd', prd, '--append', '--project', project],
+			['loop', '--trust', '--project', project]
 		]);
 	});
 

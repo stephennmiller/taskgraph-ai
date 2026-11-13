@@ -96,6 +96,15 @@ export class AddTaskCommand extends Command {
 			.addOption(tagOption())
 			.addOption(projectOption())
 			.action(async (words: string[], options: AddTaskCommandOptions) => {
+				// The AI writes the title from --prompt, so these words would be
+				// dropped: a title, or the rest of a prompt typed without quotes
+				if (words.length > 0 && options.prompt !== undefined) {
+					printError(
+						`add-task takes a title or --prompt, not both: "${terminalSafe(words.join(' '))}"`,
+						"Quote the prompt: `taskgraph add-task --prompt='Add a health check'`"
+					);
+					process.exit(1);
+				}
 				const title = pickValue(
 					words.join(' ') || undefined,
 					options.title,

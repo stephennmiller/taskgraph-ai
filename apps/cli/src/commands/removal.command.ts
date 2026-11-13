@@ -272,7 +272,15 @@ export class ClearSubtasksCommand {
 		)
 			.option('-i, --id <ids>', 'The same as the [ids] argument')
 			.option('--all', 'Clear every task')
-			.action((_ids, options: RemovalOptions) => {
+			.action((ids: string | undefined, options: RemovalOptions) => {
+				// Read as "all of task 3's", `3 --all` would clear every task
+				if (ids !== undefined && options.all) {
+					printError(
+						'Give the tasks to clear or --all, not both',
+						`Try \`taskgraph clear-subtasks ${terminalSafe(ids)}\``
+					);
+					process.exit(1);
+				}
 				if (!options.id && !options.all) {
 					printError(
 						'Choose which tasks to clear',

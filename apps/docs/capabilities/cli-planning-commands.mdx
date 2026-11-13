@@ -83,7 +83,7 @@ taskgraph add-task --prompt="Description" --assignee=octocat
 taskgraph add-task --prompt="Description" --ac="Users can log in" --ac="Tokens expire after 15 minutes"
 ```
 
-`--title` is the same as the argument. A title needs no description. `--prompt` together with a title and no description still has the AI write the task.
+`--title` is the same as the argument. A title needs no description. `--prompt` together with `--title` and no description still has the AI write the task; a title argument together with `--prompt` is refused, so a prompt typed without quotes isn't cut short.
 
 ## Expand Tasks
 
@@ -130,7 +130,7 @@ taskgraph clear-subtasks <id>
 # Clear subtasks from multiple tasks
 taskgraph clear-subtasks 1,2,3
 
-# Clear subtasks from all tasks
+# Clear subtasks from all tasks (an ID argument with --all is refused)
 taskgraph clear-subtasks --all
 ```
 

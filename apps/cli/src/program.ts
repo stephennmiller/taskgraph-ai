@@ -51,6 +51,21 @@ const RUNS_WITHOUT_PROJECT = new Set([
 	'go'
 ]);
 
+// Where -p was --prompt, or --parent in add-subtask, before it meant
+// --project everywhere (#882)
+const OLD_SHORT_P_COMMANDS = new Set([
+	'loop',
+	'add-subtask',
+	'add-task',
+	'expand',
+	'update',
+	'update-task',
+	'update-subtask',
+	'scope',
+	'scope-up',
+	'scope-down'
+]);
+
 /**
  * Stop a command that needs a project when it runs outside one.
  *
@@ -87,7 +102,7 @@ function requireProject(_hookedCommand: Command, actionCommand: Command) {
 			`No TaskGraph project at ${explicitRoot}`,
 			// An old script's `loop -p tdd` or `add-subtask -p 5` lands here (#882);
 			// a real folder means the caller meant --project
-			['loop', 'add-subtask'].includes(topLevel.name()) &&
+			OLD_SHORT_P_COMMANDS.has(topLevel.name()) &&
 				process.argv.some((arg) => /^-p/.test(arg)) &&
 				!fs.existsSync(explicitRoot)
 				? '-p means --project; write --prompt or --parent in full'

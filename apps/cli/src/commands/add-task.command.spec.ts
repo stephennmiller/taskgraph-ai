@@ -132,6 +132,30 @@ describe('add-task', () => {
 		expect(createTmCore).not.toHaveBeenCalled();
 	});
 
+	it.each([
+		// The title would be dropped: the AI writes one from the prompt
+		[['Fix', 'it', '--prompt=Users get a 500 on login']],
+		// A prompt typed without quotes: --prompt would be only "Add"
+		[['--prompt', 'Add', 'a', 'health', 'check']],
+		[['Fix it', '--prompt=p', '--description=d']]
+	])('refuses title words with --prompt, before tm-core: %j', async (args) => {
+		await expect(run(...args)).rejects.toThrow('exit 1');
+
+		expect(err.join('\n')).toContain(
+			'add-task takes a title or --prompt, not both'
+		);
+		expect(createTmCore).not.toHaveBeenCalled();
+	});
+
+	it('still takes --title with --prompt, as before #1149', async () => {
+		await run('--title=T', '--prompt=p');
+
+		expect(add).toHaveBeenCalledWith(
+			expect.objectContaining({ title: 'T', prompt: 'p' }),
+			expect.any(Object)
+		);
+	});
+
 	it('stops with a usage error, before tm-core, without a title or a prompt', async () => {
 		await expect(run('--description=Only a description')).rejects.toThrow(
 			'exit 1'

@@ -31,19 +31,27 @@ interface GoCommandOptions {
 	project?: string;
 }
 
-/** The CLI commands `go` runs for `prd`, in order */
+/**
+ * The CLI commands `go` runs for `prd`, in order.
+ * @param project - The `--project` folder, absolute. The steps name it too:
+ *   from the folder alone they would follow TASKGRAPH_PROJECT_ROOT instead
+ */
 function goSteps(
 	prd: string,
 	isProject: boolean,
-	options: GoCommandOptions
+	options: GoCommandOptions,
+	project?: string
 ): string[][] {
+	const inProject = project ? ['--project', project] : [];
 	return [
+		// init takes no --project: it sets up the folder it runs in
 		...(isProject ? [] : [['init', '--yes']]),
-		['parse-prd', prd, '--append'],
+		['parse-prd', prd, '--append', ...inProject],
 		[
 			'loop',
 			...(options.trust ? ['--trust'] : []),
-			...(options.sandbox ? ['--sandbox'] : [])
+			...(options.sandbox ? ['--sandbox'] : []),
+			...inProject
 		]
 	];
 }
@@ -147,7 +155,13 @@ export class GoCommand extends Command {
 			}
 		}
 		const isProject = isTaskGraphProject(projectRoot);
-		for (const args of goSteps(prd, isProject, options)) {
+		const steps = goSteps(
+			prd,
+			isProject,
+			options,
+			options.project ? projectRoot : undefined
+		);
+		for (const args of steps) {
 			if (isProject && args[0] === 'loop') {
 				// Only a heads-up: a file loop can't read fails loop's own way
 				await this.printResume(projectRoot).catch(() => {});
