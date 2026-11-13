@@ -42,7 +42,8 @@ Without a terminal (scripts, CI, agents), `init` asks nothing: it stops with an 
 # Set up the project if needed, plan the PRD into tasks, then run loop
 taskgraph go docs/prd.md
 
-# Without a terminal: let loop turn Claude's permission prompts off
+# Without a terminal, or to skip the question: let loop turn Claude's
+# permission prompts off
 taskgraph go docs/prd.md --trust
 
 # Or run loop in Docker sandbox mode
@@ -51,10 +52,25 @@ taskgraph go docs/prd.md --sandbox
 
 `go` runs `init --yes` when the folder isn't a TaskGraph project yet, then
 `parse-prd <file> --append` (new sections become tasks; tasks you already have
-stay), then [`loop`](/capabilities/loop) with the default preset. Each step
-prints what it always prints. The first step that fails stops the rest, and
-`go` exits with its code. Stopping `go` (Ctrl-C, `kill`, closing the terminal) stops
-the step that is running too.
+stay), then [`loop`](/capabilities/loop) with the default preset. `init` and
+`parse-prd` print their result without a next step, since `go` runs the next
+step itself. The first step that fails stops the rest, and `go` exits with its
+code. Stopping `go` (Ctrl-C, `kill`, closing the terminal) stops the step that
+is running too.
+
+`loop` runs Claude Code with permission prompts off, so `go` asks you to
+allow that before its first step, unless you passed `--trust` or `--sandbox`.
+Answering no, or Ctrl-C, stops it before anything is set up or planned.
+Without a terminal it stops there with an error instead of asking. A yes
+covers the tasks this run plans from the PRD. It is remembered as
+[`loop` remembers it](/capabilities/loop-trust) once planning is done and
+`loop` starts; if planning fails or you stop it, nothing is remembered.
+
+An approval you gave earlier doesn't answer for tasks that aren't planned
+yet: `go` asks whenever it is going to plan (the folder isn't a project yet,
+or the PRD has sections with no tasks, or it can't tell). When you run `go`
+again and every section already has its tasks, nothing new is planned and an
+approval the project still has stands, as it does for `loop`.
 
 When you run `go` again on a project with work done or under way, it prints
 one line saying what it is resuming before `loop` starts:

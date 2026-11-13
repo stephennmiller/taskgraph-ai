@@ -37,6 +37,7 @@ import { formatMergeDriverSetup } from '../ui/formatters/merge-driver-formatters
 import { formatUpstreamImport } from '../ui/formatters/upstream-import-formatters.js';
 import { theme } from '../ui/theme.js';
 import { displayError, printError } from '../utils/error-handler.js';
+import { isGoStep } from '../utils/go-step.js';
 
 interface InitCommandOptions {
 	yes?: boolean;
@@ -181,7 +182,7 @@ export class InitCommand extends Command {
 		}
 
 		// `taskgraph go` runs init as a step and prints what comes next itself
-		const goStep = process.env.TASKGRAPH_GO_STEP === '1';
+		const goStep = isGoStep();
 		// The banner welcomes a first run in a terminal. A re-run, a dry run, a
 		// pipe and a `go` step start with the result (#1147)
 		if (

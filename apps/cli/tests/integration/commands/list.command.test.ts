@@ -320,7 +320,7 @@ describe('list command', () => {
 		const { output, exitCode } = runList();
 
 		expect(exitCode).toBe(0);
-		expect(output).toContain('No tasks found');
+		expect(output).toContain('No tasks yet');
 	});
 
 	it('should list all tasks with correct information', () => {
