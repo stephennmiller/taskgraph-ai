@@ -14,13 +14,13 @@ import {
 import chalk from 'chalk';
 import Table from 'cli-table3';
 import { getComplexityWithColor } from '../formatters/complexity-formatters.js';
+import { fit, visibleLength } from '../formatters/markdown-formatters.js';
 import { getPriorityWithColor } from '../formatters/priority-formatters.js';
 import { getStatusWithColor } from '../formatters/status-formatters.js';
 import {
 	type ColumnSpec,
 	getContentWidth,
 	planColumns,
-	truncate,
 	wrapLine
 } from '../layout/helpers.js';
 import { TABLE_BORDER, theme } from '../theme.js';
@@ -29,6 +29,12 @@ import { TABLE_BORDER, theme } from '../theme.js';
  * Default priority for tasks/subtasks when not specified
  */
 const DEFAULT_PRIORITY: TaskPriority = 'medium';
+
+/**
+ * Blocks and Complexity show only while the title keeps this much (28
+ * characters and the cell padding): at 80 columns they would cut it to 22
+ */
+const ROOMY_TITLE = 30;
 
 /**
  * Task-like object that can optionally have blocks field and tag name
@@ -42,7 +48,9 @@ type TaskTableItem = (Task | Subtask) & {
 /**
  * Table columns in display order. Optional columns are hidden, lowest
  * dropOrder first, when the terminal is too narrow to show them all.
- * Tag and ID widths here are maximums.
+ * The widths are maximums: a column is as wide as its header or its widest
+ * value, and the title gets the rest. Priority and Complexity hold nothing
+ * wider than their headers.
  */
 const TASK_TABLE_COLUMNS: (ColumnSpec & { header: string })[] = [
 	// Never dropped: the column only shows when requested, and IDs repeat across tags
@@ -51,9 +59,21 @@ const TASK_TABLE_COLUMNS: (ColumnSpec & { header: string })[] = [
 	{ key: 'title', header: 'Title', width: 'flex' },
 	{ key: 'status', header: 'Status', width: 15 },
 	{ key: 'priority', header: 'Priority', width: 10, dropOrder: 4 },
-	{ key: 'dependencies', header: 'Dependencies', width: 14, dropOrder: 3 },
-	{ key: 'blocks', header: 'Blocks', width: 10, dropOrder: 0 },
-	{ key: 'complexity', header: 'Complexity', width: 12, dropOrder: 1 }
+	{ key: 'dependencies', header: 'Deps', width: 14, dropOrder: 3 },
+	{
+		key: 'blocks',
+		header: 'Blocks',
+		width: 10,
+		dropOrder: 0,
+		flexMin: ROOMY_TITLE
+	},
+	{
+		key: 'complexity',
+		header: 'Complexity',
+		width: 12,
+		dropOrder: 1,
+		flexMin: ROOMY_TITLE
+	}
 ];
 
 /**
@@ -94,22 +114,31 @@ export function createTaskTable(
 		blocks: showBlocks,
 		complexity: showComplexity && hasComplexity
 	};
-	// Tag and ID fit their widest value (plus cell padding), up to the default width
+	// These fit their widest value (plus cell padding), up to the default width
+	const subtasksOf = (t: TaskTableItem) =>
+		showSubtasks ? (t.subtasks ?? []) : [];
+	const rows = tasks.flatMap((t) => [t, ...subtasksOf(t)]);
 	const fitTo: Record<string, string[]> = {
 		tag: tasks.map((t) => t.tagName || '-'),
 		id: tasks.flatMap((t) => [
 			String(t.id),
-			...(showSubtasks ? (t.subtasks ?? []) : []).map((s) => ` └─ ${s.id}`)
-		])
+			...subtasksOf(t).map((s) => ` └─ ${s.id}`)
+		]),
+		status: rows.map((row) => getStatusWithColor(row.status, true)),
+		dependencies: rows.map((row) => (row.dependencies ?? []).join(', ')),
+		blocks: tasks.map((t) => t.blocks?.join(', ') ?? '')
 	};
 	const specs = TASK_TABLE_COLUMNS.filter(
 		(col) => requested[col.key] ?? true
-	).map((col) => {
+	).map((spec) => {
 		// Hide Blocks last, not never: below about 47 columns it can't fit
-		if (col.key === 'blocks' && keepBlocks) return { ...col, dropOrder: 5 };
+		const col =
+			spec.key === 'blocks' && keepBlocks
+				? { ...spec, dropOrder: 5, flexMin: undefined }
+				: spec;
 		const values = fitTo[col.key];
 		if (!values) return col;
-		const widest = Math.max(col.header.length, ...values.map((v) => v.length));
+		const widest = Math.max(col.header.length, ...values.map(visibleLength));
 		return { ...col, width: Math.min(widest + 2, col.width as number) };
 	});
 	const plan = planColumns(getContentWidth(), specs);
@@ -137,7 +166,7 @@ export function createTaskTable(
 				tag: theme.accent(task.tagName || '-'),
 				id: chalk.cyan(task.id.toString()),
 				// The width includes one space of cell padding on each side
-				title: truncate(task.title, width('title') - 2),
+				title: fit(task.title, width('title') - 2),
 				status: getStatusWithColor(task.status, true), // Use table version
 				priority: getPriorityWithColor(task.priority),
 				// For table display, show simple format without status icons
@@ -167,7 +196,7 @@ export function createTaskTable(
 						// Subtasks inherit parent's tag, just show dash
 						tag: theme.muted('-'),
 						id: theme.muted(` └─ ${subtask.id}`),
-						title: theme.muted(truncate(subtask.title, width('title') - 2)),
+						title: theme.muted(fit(subtask.title, width('title') - 2)),
 						status: theme.muted(getStatusWithColor(subtask.status, true)),
 						priority: theme.muted(subtask.priority || DEFAULT_PRIORITY),
 						dependencies: theme.muted(

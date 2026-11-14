@@ -7,6 +7,13 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import {
+	PRD_SNAPSHOT_KEY,
+	buildPrdSnapshot,
+	trackedPrdSections,
+	withPrdSnapshot
+} from '../../prd/prd-deltas.js';
+import { parsePrdSections } from '../../prd/prd-sections.js';
 import { ParsePrdService } from './parse-prd.service.js';
 
 let base: string;
@@ -42,12 +49,13 @@ describe('resolvePrdPath', () => {
 		expect(service.resolvePrdPath()).toBe(path.join(docs, 'PRD.md'));
 	});
 
-	it('keeps the not-found messages', () => {
+	// #1148: with no PRD named, the message listed four paths on one 137-character line
+	it('says which PRD is missing in a line that fits 80 columns', () => {
 		expect(() => service.resolvePrdPath('missing.md')).toThrow(
 			'missing.md not found'
 		);
 		expect(() => service.resolvePrdPath()).toThrow(
-			'Required PRD file not found. Searched: .taskgraph/docs/PRD.md, .taskgraph/docs/prd.md, .taskgraph/docs/PRD.txt, .taskgraph/docs/prd.txt'
+			'No PRD file given, and no prd.md or prd.txt in .taskgraph/docs/'
 		);
 	});
 
@@ -93,5 +101,65 @@ describe('resolvePrdPath', () => {
 		expect(linked.resolvePrdPath()).toBe(
 			path.join(link, '.taskgraph', 'docs', 'PRD.md')
 		);
+	});
+});
+
+describe('hasNewSections (#1146)', () => {
+	const PRD = '# App\n\n## Notes\n\nCreate notes.\n';
+	/** A tag that recorded `recorded` as the PRD it was last parsed from */
+	const withTag = (recorded: string) => {
+		const sections = parsePrdSections(recorded);
+		const metadata = {
+			[PRD_SNAPSHOT_KEY]: withPrdSnapshot(
+				null,
+				'spec.md',
+				buildPrdSnapshot(trackedPrdSections(sections, recorded))
+			)
+		};
+		fs.mkdirSync(path.join(root, '.taskgraph', 'tasks'), { recursive: true });
+		fs.writeFileSync(
+			path.join(root, '.taskgraph', 'tasks', 'tasks.json'),
+			JSON.stringify({ master: { tasks: [], metadata } })
+		);
+		return new ParsePrdService(
+			{
+				initialize: async () => {},
+				getStorage: () => ({
+					getAllTags: async () => ['master'],
+					loadTasks: async () => [],
+					loadMetadata: async () => metadata
+				})
+			} as any,
+			{ getProjectRoot: () => root, getActiveTag: () => 'master' } as any
+		);
+	};
+
+	beforeEach(() => {
+		fs.writeFileSync(path.join(root, 'spec.md'), PRD);
+	});
+
+	it('is true for a PRD the tag knows nothing of: all of it is new', async () => {
+		const fresh = new ParsePrdService(
+			{} as any,
+			{ getProjectRoot: () => root, getActiveTag: () => 'master' } as any
+		);
+
+		expect(await fresh.hasNewSections({ prdPath: 'spec.md' })).toBe(true);
+	});
+
+	it('is false when every section was recorded: an append adds nothing', async () => {
+		expect(await withTag(PRD).hasNewSections({ prdPath: 'spec.md' })).toBe(
+			false
+		);
+	});
+
+	it('is true once the PRD gains a section', async () => {
+		const service = withTag(PRD);
+		fs.writeFileSync(
+			path.join(root, 'spec.md'),
+			`${PRD}\n## Tags\n\nTag notes.\n`
+		);
+
+		expect(await service.hasNewSections({ prdPath: 'spec.md' })).toBe(true);
 	});
 });

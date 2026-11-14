@@ -1,11 +1,11 @@
 ---
 description: "TaskGraph: break a task, or every task with all, into subtasks. Use when a task is too big for one go."
-argument-hint: "<task ID>|all [number of subtasks] [research]"
+argument-hint: "<task-id>|all [count] [research]"
 ---
 
 Break one task, or every open task without subtasks, into subtasks with AI.
 
-Usage: `/taskgraph:expand <id> [number] [research]` or `/taskgraph:expand all [research]`
+Usage: `/taskgraph:expand <task-id> [count] [research]` or `/taskgraph:expand all [research]`
 
 Arguments: $ARGUMENTS (task ID or `all`, then optional modifiers)
 

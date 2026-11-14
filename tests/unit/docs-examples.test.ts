@@ -109,7 +109,7 @@ const REWRITTEN: Record<string, string> = {
 	'taskgraph tags add <tag-name> --from-branch':
 		'taskgraph tags add --from-branch',
 	// To a free ID
-	'taskgraph move --from=<id> --to=<id>': 'taskgraph move --from=4 --to=9'
+	'taskgraph move <id> <id>': 'taskgraph move 4 9'
 };
 
 /** Split a command line into arguments, honouring single and double quotes */
@@ -268,7 +268,7 @@ describe.skipIf(process.platform === 'win32')('CLI reference examples', () => {
 		expect(examples.length).toBeGreaterThanOrEqual(150);
 		expect(run.length).toBeGreaterThanOrEqual(80);
 		expect(run.map(({ text }) => text)).toContain(
-			'taskgraph move --from=5 --from-tag=backlog --to-tag=in-progress'
+			'taskgraph move 5 --from-tag=backlog --to-tag=in-progress'
 		);
 	});
 

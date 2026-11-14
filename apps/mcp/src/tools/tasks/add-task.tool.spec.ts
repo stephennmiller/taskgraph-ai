@@ -157,6 +157,19 @@ describe('add_task', () => {
 		);
 	});
 
+	it('passes a title alone to tm-core, which saves it with no AI call (#1149)', async () => {
+		await register().execute({ title: 'T', projectRoot: project }, ctx);
+
+		expect(tasks.add).toHaveBeenCalledWith(
+			expect.objectContaining({
+				title: 'T',
+				prompt: undefined,
+				description: undefined
+			}),
+			expect.any(Object)
+		);
+	});
+
 	it('returns a tm-core failure as an error with the tag', async () => {
 		tasks.add.mockRejectedValue(new Error("Task 42 doesn't exist"));
 

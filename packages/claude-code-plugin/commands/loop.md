@@ -1,11 +1,11 @@
 ---
 description: "TaskGraph: have Claude Code work through the tasks one after another, committing after each."
-argument-hint: "[number of runs] [task ID] [preset] [parallel <n>] [sandbox]"
+argument-hint: "[runs] [task-id] [preset] [parallel <n>] [sandbox]"
 ---
 
 Run `taskgraph loop`: Claude Code finishes one ready task per session, marking it done and committing it, then a fresh session takes the next. Stopped, it picks up where it left off.
 
-Usage: `/taskgraph:loop [<n>] [<id>] [tdd|test-coverage|linting|duplication|entropy] [parallel <n>] [sandbox]`
+Usage: `/taskgraph:loop [runs] [task-id] [preset] [parallel <n>] [sandbox]`
 
 Arguments: $ARGUMENTS
 

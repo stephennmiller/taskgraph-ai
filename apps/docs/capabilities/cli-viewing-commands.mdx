@@ -84,7 +84,9 @@ When the task came from a PRD (`metadata.source`), `show` prints that PRD sectio
 
 Piped (`taskgraph show 3 | cat`, or an agent reading the output), `show` and `next` print the description, details and test strategy as written: markdown isn't rendered, and prose wraps at 80 columns (or `COLUMNS`) while code (fenced, or indented 4 spaces or a tab) and table rows don't, so a command or table row stays on one line.
 
-With several IDs (`show 2,5`), `show` prints the tasks it found and lists the rest as not found, and exits 1 if any ID is missing, in text, JSON and with `--silent`. The MCP `get_task` tool returns the found tasks in `data` and the missing IDs in a top-level `notFound`.
+Notes added with `taskgraph note`, `update <id> --append` or `update-subtask` are listed under `Notes`, above the commits, oldest first, each with the local date and time it was added (`Nov 12 19:47  Cookie path was wrong`). The rest of the details print under `Details`. `show --json` and the MCP `get_task` tool return the details as stored, with each note in its `<info added on <time>>` block.
+
+With several IDs (`show 2,5`), `show` prints each task it found as `show <id>` does, a blank line apart and without the `Next:` line, and lists the rest as not found. Piped with no `--format`, it prints one plain line per task instead (see [JSON output](/capabilities/json-output#plain-lines-from-list-in-a-pipe)). It exits 1 if any ID is missing, in text, JSON and with `--silent`. The MCP `get_task` tool returns the found tasks in `data` and the missing IDs in a top-level `notFound`.
 
 ## Show the Dependency Tree
 

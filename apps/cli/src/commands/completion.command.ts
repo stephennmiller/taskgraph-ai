@@ -30,7 +30,7 @@ export class CompletionCommand extends Command {
 	constructor(name?: string) {
 		super(name || 'completion');
 
-		this.description('Set up Tab completion for bash, zsh or fish')
+		this.description('Install Tab completion for your shell')
 			.addArgument(
 				new Argument(
 					'[shell]',

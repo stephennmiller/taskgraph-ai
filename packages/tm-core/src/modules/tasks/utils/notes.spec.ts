@@ -5,9 +5,11 @@ import {
 	appendNote,
 	formatNoteBlock,
 	hasNoteSince,
+	lastNote,
 	normalizeNoteText,
 	noteTimes,
-	parseNoteSince
+	parseNoteSince,
+	splitNotes
 } from './notes.js';
 
 describe('normalizeNoteText', () => {
@@ -93,6 +95,52 @@ describe('noteTimes', () => {
 		).toEqual([]);
 		expect(noteTimes(undefined)).toEqual([]);
 		expect(noteTimes('')).toEqual([]);
+	});
+});
+
+describe('splitNotes', () => {
+	const first = '2026-10-23T10:00:00.000Z';
+	const second = '2026-10-23T12:30:00.000Z';
+
+	it('returns each block oldest first, and the text around them without the blocks', () => {
+		const details = `${appendNote(appendNote('Plan:\n  use argon2', 'first\nline two', first), 'second', second)}\nAfterword`;
+
+		const { text, notes } = splitNotes(details);
+
+		expect(text).toBe('Plan:\n  use argon2\nAfterword');
+		expect(notes).toEqual([
+			{ addedAt: new Date(first), text: 'first\nline two' },
+			{ addedAt: new Date(second), text: 'second' }
+		]);
+	});
+
+	it('leaves no text when the details are only notes, and none for no details', () => {
+		expect(splitNotes(appendNote(undefined, 'only', first))).toEqual({
+			text: '',
+			notes: [{ addedAt: new Date(first), text: 'only' }]
+		});
+		expect(splitNotes(undefined)).toEqual({ text: '', notes: [] });
+	});
+
+	it('keeps a block in the text when its time does not parse or its tags differ', () => {
+		const unparsed = '<info added on someday>\nx\n</info added on someday>';
+		const unclosed = `<info added on ${first}>\nx\n</info added on ${second}>`;
+
+		expect(splitNotes(unparsed)).toEqual({ text: unparsed, notes: [] });
+		expect(splitNotes(unclosed)).toEqual({ text: unclosed, notes: [] });
+	});
+});
+
+describe('lastNote', () => {
+	it('is the text of the block that ends the details, and nothing when text follows it', () => {
+		const details = appendNote(
+			appendNote('Plan', 'first', '2026-10-23T10:00:00.000Z'),
+			'second\nline',
+			'2026-10-23T12:30:00.000Z'
+		);
+
+		expect(lastNote(`${details}\n`)).toBe('second\nline');
+		expect(lastNote(`${details}\nAfterword`)).toBeUndefined();
 	});
 });
 

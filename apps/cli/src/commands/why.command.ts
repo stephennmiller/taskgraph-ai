@@ -13,6 +13,7 @@ import {
 	neutralizeTaskData
 } from '@tm/core';
 import { Command } from 'commander';
+import { projectOption, tagOption } from '../utils/shared-options.js';
 import { renderBlockerExplanation } from '../ui/components/blocker-explanation.component.js';
 import { fencesTaskData, getContentWidth } from '../ui/layout/helpers.js';
 import { displayCommandHeader } from '../utils/display-helpers.js';
@@ -40,13 +41,10 @@ export class WhyCommand extends Command {
 		this.description('Explain why a task is blocked')
 			.argument('[id]', 'Task ID, or a subtask ID like 3.1')
 			.option('-i, --id <id>', 'Task ID, or a subtask ID like 3.1')
-			.option('-t, --tag <tag>', 'Use a specific tag')
-			.option('-f, --format <format>', 'Output format (text, json)', 'text')
+			.addOption(tagOption())
+			.option('-f, --format <format>', 'Output format: text or json', 'text')
 			.addOption(jsonOption())
-			.option(
-				'-p, --project <path>',
-				'Project root directory (auto-detected if not provided)'
-			)
+			.addOption(projectOption())
 			.action(
 				async (taskId: string | undefined, options: WhyCommandOptions) => {
 					await this.executeCommand(taskId, options);

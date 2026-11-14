@@ -5,6 +5,7 @@ import chalk from 'chalk';
 import { afterEach, describe, expect, it } from 'vitest';
 import {
 	formatEmptyList,
+	formatNoTasks,
 	formatInvalidDependencyWarning,
 	formatListNextStep,
 	formatListSummary,
@@ -216,15 +217,22 @@ describe('formatListNextStep', () => {
 });
 
 describe('formatEmptyList', () => {
-	it('says there are no tasks and how to add one, including by hand', () => {
+	it('says there are no tasks in one line that names go and add-task (#1146)', () => {
 		const out = lines(formatEmptyList(undefined, { width: 80 }));
 
 		expect(out).toEqual([
-			'No tasks found',
-			"Next: taskgraph add-task --prompt='...' to add one, or taskgraph parse-prd",
-			"      or taskgraph add-task -t 'Title' -d 'What'"
+			'No tasks yet. Run taskgraph go <prd> to build a PRD, or taskgraph add-task'
 		]);
-		for (const line of out) expect(line.length).toBeLessThanOrEqual(80);
+		expect(out[0].length).toBeLessThanOrEqual(80);
+	});
+
+	it('wraps that line at a space in a narrow terminal', () => {
+		const out = lines(formatEmptyList(undefined, { width: 40 }));
+
+		expect(out.join(' ')).toBe(
+			'No tasks yet. Run taskgraph go <prd> to build a PRD, or taskgraph add-task'
+		);
+		for (const line of out) expect(line.length).toBeLessThanOrEqual(40);
 	});
 
 	it('names the filter that matched nothing', () => {
@@ -271,8 +279,8 @@ describe('formatNoNextTask', () => {
 	it('says there are no tasks in an empty project', () => {
 		const out = lines(formatNoNextTask(false, { width: 80 }));
 
-		expect(out[0]).toBe('No tasks found');
-		expect(out).toContain("      or taskgraph add-task -t 'Title' -d 'What'");
+		expect(out).toEqual([lines(formatNoTasks(80))[0]]);
+		expect(out[0]).toContain('taskgraph go <prd>');
 	});
 });
 

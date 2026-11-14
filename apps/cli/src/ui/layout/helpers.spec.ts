@@ -115,6 +115,18 @@ describe('Layout Helpers', () => {
 			expect(plan.widths[plan.keys.indexOf('title')]).toBe(10);
 		});
 
+		it('hides a column with its own minimum unless the flexible column keeps that much', () => {
+			const roomy = specs.map((spec) =>
+				spec.key === 'blocks' ? { ...spec, flexMin: 30 } : spec
+			);
+
+			// 97 holds every column with 20 for the title; 107 holds them with 30
+			expect(planColumns(97, specs).hidden).toEqual([]);
+			expect(planColumns(97, roomy).hidden).toEqual(['blocks']);
+			expect(planColumns(97, roomy).keys).toContain('complexity');
+			expect(planColumns(107, roomy).hidden).toEqual([]);
+		});
+
 		it('keeps display order for the columns it keeps', () => {
 			const plan = planColumns(85, specs);
 			expect(plan.keys).toEqual([

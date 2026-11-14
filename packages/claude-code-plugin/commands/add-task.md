@@ -1,6 +1,6 @@
 ---
 description: "TaskGraph: add a task to the plan. Use when the user asks to track, file or remember new work."
-argument-hint: "<what the task is>"
+argument-hint: "<description>"
 ---
 
 Add a task to the plan.

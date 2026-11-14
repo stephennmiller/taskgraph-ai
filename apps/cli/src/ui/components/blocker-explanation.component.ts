@@ -21,8 +21,9 @@ import {
 	type TaskStatus
 } from '@tm/core';
 import chalk from 'chalk';
+import { fit } from '../formatters/markdown-formatters.js';
 import { getStatusIcon } from '../formatters/status-formatters.js';
-import { drawTree, truncate, wrapLine } from '../layout/helpers.js';
+import { drawTree, wrapLine } from '../layout/helpers.js';
 import { theme } from '../theme.js';
 
 export interface RenderBlockerExplanationOptions {
@@ -107,11 +108,11 @@ export function renderBlockerExplanation(
 					? `task ${older}, stored in an older form`
 					: 'no such task';
 		const room = Math.max(12, width - visible(head) - visible(suffix));
-		return head + truncate(title, room) + suffix;
+		return head + fit(title, room) + suffix;
 	};
 
 	lines.push(
-		`${getStatusIcon(explanation.status)} ${theme.brand(explanation.id)}  ${truncate(explanation.title, Math.max(12, width - explanation.id.length - 4))}`
+		`${getStatusIcon(explanation.status)} ${theme.brand(explanation.id)}  ${fit(explanation.title, Math.max(12, width - explanation.id.length - 4))}`
 	);
 
 	if (!explanation.blocked) {

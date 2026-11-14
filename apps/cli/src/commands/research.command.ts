@@ -15,6 +15,7 @@ import {
 } from '@tm/core';
 import chalk from 'chalk';
 import { Command, Option } from 'commander';
+import { projectOption, tagOption } from '../utils/shared-options.js';
 import type { Ora } from 'ora';
 import { terminalSafe } from '../ui/formatters/markdown-formatters.js';
 import {
@@ -47,6 +48,7 @@ export interface ResearchCommandOptions {
 	saveTo?: string;
 	saveFile?: boolean;
 	tag?: string;
+	project?: string;
 }
 
 type TmCore = Awaited<ReturnType<typeof createTmCore>>;
@@ -61,38 +63,29 @@ export class ResearchCommand extends Command {
 	constructor(name?: string) {
 		super(name || 'research');
 
-		this.description('Perform AI-powered research queries with project context')
-			.argument('[prompt]', 'Research prompt to investigate')
-			// -f is --files here, so the legacy flag has no short form
+		this.description('Ask a research question about the project')
+			.argument('[prompt]', 'The question')
 			.addOption(new Option('--file <file>').hideHelp())
 			.option(
 				'-i, --id <ids>',
-				'Comma-separated task/subtask IDs to include as context (e.g., "15,16.2")'
+				'Tasks or subtasks to include as context, comma separated (15,16.2)'
 			)
+			.option('--files <paths>', 'Files to include as context, comma separated')
+			.option('--context <text>', 'Extra context to include')
+			.option('--tree', "Include the project's file tree")
+			.option('--save <file>', 'Save the answer to a markdown file')
 			.option(
-				'-f, --files <paths>',
-				'Comma-separated file paths to include as context'
-			)
-			.option(
-				'-c, --context <text>',
-				'Additional custom context to include in the research prompt'
-			)
-			.option(
-				'-t, --tree',
-				'Include project file tree structure in the research context'
-			)
-			.option('-s, --save <file>', 'Save the answer to a markdown file')
-			.option(
-				'-d, --detail <level>',
-				'Output detail level: low, medium, high',
+				'--detail <level>',
+				'How detailed the answer is: low, medium or high',
 				'medium'
 			)
 			.option(
 				'--save-to <id>',
-				'Add the answer to a task or subtask\'s details (e.g., "15" or "15.2")'
+				"Add the answer to a task or subtask's details (15 or 15.2)"
 			)
 			.option('--save-file', 'Save the answer to .taskgraph/docs/research/')
-			.option('--tag <tag>', 'Specify tag context for task operations')
+			.addOption(tagOption())
+			.addOption(projectOption())
 			.action((prompt: string | undefined, options: ResearchCommandOptions) =>
 				exitOnStopSignals(() => this.executeCommand(prompt, options))
 			);
@@ -109,9 +102,13 @@ export class ResearchCommand extends Command {
 			);
 			process.exit(1);
 		}
-		const fileError = otherTasksFileError(options.file, 'research');
+		const fileError = otherTasksFileError(
+			options.file,
+			'research',
+			options.project
+		);
 		if (fileError) displayError(fileError);
-		const projectRoot = getProjectRoot();
+		const projectRoot = getProjectRoot(options.project);
 
 		try {
 			const tmCore = await createTmCore({ projectPath: projectRoot });

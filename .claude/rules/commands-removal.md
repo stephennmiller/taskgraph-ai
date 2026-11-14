@@ -15,9 +15,11 @@ The rest of the CLI command rules are in [commands.md](commands.md).
   each ID names. One unknown ID refuses the whole list, changes nothing and
   exits 1.
 - **Confirm by default.** `remove-task` shows what will go
-  (`printRemovalPlan`), then asks with an inquirer `confirm` that defaults
-  to no. `-y, --yes` skips it. `remove-subtask` and `clear-subtasks` don't
-  ask.
+  (`formatRemovalPlan`: titles cut to the terminal width), then asks one
+  short question (`formatRemovalQuestion`) through `confirm()` in
+  `utils/confirm.ts`, which defaults to no. "No" and Ctrl-C print
+  `Cancelled; nothing was removed`; Ctrl-C exits 130. `-y, --yes` skips it.
+  `remove-subtask` and `clear-subtasks` don't ask.
 - **Without a terminal, require `--yes`.** A prompt there hangs scripts and
   agents, so print an error whose hint is `--yes` and exit 1.
 - **tm-core cleans up.** It drops every dependency and link that pointed at

@@ -148,11 +148,12 @@ taskgraph init
 
 This creates `.taskgraph/` (tasks, docs, config) and a `CLAUDE.md` import with
 TaskGraph's workflow guide (`--no-claude` skips the import). It does not install
-slash commands: step 3 does. Don't run it twice; it only re-adds the same files.
+slash commands: step 3 does. Running it again is safe: it says the project is
+already set up and adds only what is missing.
 
 ### 3. Install the plugin
 
-The plugin lets Claude act on plain requests about your tasks. It also adds 16
+The plugin lets Claude act on plain requests about your tasks. It also adds 17
 slash commands (as `/taskgraph:<name>`) and two agents (`task-executor`,
 `task-checker`). In Claude Code, run:
 
@@ -256,8 +257,11 @@ taskgraph go .taskgraph/docs/prd.md
 
 It runs `parse-prd`, then `taskgraph loop`, which works the tasks in order and
 commits after each. If it stops partway, run `taskgraph loop` again and it
-picks up from the task statuses. Add `--trust` to run with Claude Code's
-permission prompts off.
+picks up from the task statuses. With the plugin, `/taskgraph:go <prd-file>`
+does the same from Claude Code.
+
+`loop` always runs Claude Code with permission prompts off, and asks you
+first. `--trust` skips the question; `--sandbox` runs it in Docker instead.
 
 ## Reference
 
@@ -323,7 +327,7 @@ functionality of the software.
 See [LICENSE](LICENSE) and [licensing details](docs/licensing.md).
 
 [benchmarks]: https://taskgraph-ai.com/best-practices/benchmarks
-[installation]: https://taskgraph-ai.com/getting-started/quick-start/installation
+[installation]: https://taskgraph-ai.com/getting-started/installation
 [mcp-tiers]: https://taskgraph-ai.com/capabilities/mcp#tool-tiers-at-a-glance
 [migrating]: https://taskgraph-ai.com/migrating-from-taskmaster
 [models]: https://taskgraph-ai.com/capabilities/claude-code#models

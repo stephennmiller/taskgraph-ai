@@ -64,7 +64,7 @@ ROOT=/agent/repos/taskgraph-ai
 PROOF=/tmp/tg-grok-proof-eUp8
 cd "$PROOF"
 node "$ROOT/dist/taskgraph.js" init --yes --name "Grok connector proof"
-node "$ROOT/dist/taskgraph.js" add-task -t "Write the connector note" -d "Record how a bot calls next, show, and set-status."
+node "$ROOT/dist/taskgraph.js" add-task "Write the connector note" -d "Record how a bot calls next, show, and set-status."
 printf '%s\n' 'TASKGRAPH_TOOLS=all' > "$PROOF/.env"
 ```
 
@@ -88,7 +88,7 @@ by x.com/stephennmiller_
   CLAUDE.md       loads TaskGraph's instructions in Claude Code
 
 Next: taskgraph add-task --prompt='<what to do>', or taskgraph parse-prd <file>
-      or taskgraph add-task -t 'Title' -d 'What'
+      or taskgraph add-task 'Title' -d 'What'
 Add the slash commands in Claude Code:
   /plugin marketplace add stephennmiller/taskgraph-ai
   /plugin install taskgraph@taskgraph

@@ -7,7 +7,11 @@ import { neutralizeTaskData, TASK_DATA_NOTE } from '@tm/core';
 import type { FastMCP } from 'fastmcp';
 import { z } from 'zod';
 import type { ToolContext } from '../../shared/types.js';
-import { handleApiResult, withToolContext } from '../../shared/utils.js';
+import {
+	errorMessage,
+	handleApiResult,
+	withToolContext
+} from '../../shared/utils.js';
 
 const PushSchema = z.object({
 	projectRoot: z
@@ -84,7 +88,7 @@ export function registerGithubPushTool(server: FastMCP) {
 						result: {
 							success: false,
 							error: {
-								message: `Failed to push to GitHub: ${error.message}`
+								message: `Failed to push to GitHub: ${errorMessage(error)}`
 							}
 						},
 						log,

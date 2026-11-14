@@ -6,6 +6,7 @@
 import { createTmCore, isConfigFilePresent } from '@tm/core';
 import chalk from 'chalk';
 import { Command } from 'commander';
+import { projectOption } from '../utils/shared-options.js';
 import { terminalSafe } from '../ui/formatters/markdown-formatters.js';
 import { theme } from '../ui/theme.js';
 import { printError } from '../utils/error-handler.js';
@@ -14,15 +15,17 @@ import { getProjectRoot } from '../utils/project-root.js';
 interface LangCommandOptions {
 	response?: string;
 	setup?: boolean;
+	project?: string;
 }
 
 export class LangCommand extends Command {
 	constructor(name?: string) {
 		super(name || 'lang');
 
-		this.description('Show or set the language AI responses are written in')
+		this.description('View or change the AI response language')
 			.option('--response <response_language>', 'Set the response language')
 			.option('--setup', 'Choose the response language interactively')
+			.addOption(projectOption())
 			.addHelpText(
 				'after',
 				`
@@ -37,7 +40,7 @@ Examples:
 	}
 
 	private async executeCommand(options: LangCommandOptions): Promise<void> {
-		const projectRoot = getProjectRoot();
+		const projectRoot = getProjectRoot(options.project);
 		if (!isConfigFilePresent(projectRoot)) {
 			printError(
 				'No .taskgraph/config.json in this project',

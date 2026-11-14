@@ -138,8 +138,10 @@ export {
 	STOP_SIGNALS,
 	TASK_PRESETS,
 	exitOnStopSignals,
+	isGoTrusted,
 	parseLoopCaps,
-	parseLoopModel
+	parseLoopModel,
+	trustLoop
 } from './modules/loop/index.js';
 export {
 	DEFAULT_CONTAINER_IMAGE,
@@ -232,6 +234,7 @@ export {
 	parseStatusFilter,
 	ACTIONABLE_STATUSES,
 	selectNextTask,
+	projectHasTagSync,
 	readTagNamesSync,
 	shouldShowTagIndicator,
 	shouldShowTagIndicatorForProject,
@@ -256,6 +259,7 @@ export {
 	noteTimes,
 	hasNoteSince,
 	parseNoteSince,
+	splitNotes,
 	type TaskNote,
 	todoListNote,
 	type SelectNextTaskOptions,

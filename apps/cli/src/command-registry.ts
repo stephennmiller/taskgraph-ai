@@ -89,13 +89,13 @@ export class CommandRegistry {
 		},
 		{
 			name: 'show',
-			description: 'Display detailed information about a specific task',
+			description: 'Show one task in detail',
 			commandClass: ShowCommand as any,
 			category: 'task'
 		},
 		{
 			name: 'next',
-			description: 'Find the next available task to work on',
+			description: 'Show the next task to work on',
 			commandClass: NextCommand as any,
 			category: 'task'
 		},
@@ -113,19 +113,19 @@ export class CommandRegistry {
 		},
 		{
 			name: 'archive',
-			description: 'Move done and cancelled tasks out of tasks.json',
+			description: 'Move finished tasks out, or restore one',
 			commandClass: ArchiveCommand as any,
 			category: 'task'
 		},
 		{
 			name: 'set-status',
-			description: 'Update the status of one or more tasks',
+			description: 'Change a task or subtask status',
 			commandClass: SetStatusCommand as any,
 			category: 'task'
 		},
 		{
 			name: 'add-subtask',
-			description: 'Add a subtask to an existing task',
+			description: 'Add a subtask, or make a task one',
 			commandClass: AddSubtaskCommand as any,
 			category: 'task'
 		},
@@ -137,26 +137,25 @@ export class CommandRegistry {
 		},
 		{
 			name: 'add-task',
-			description:
-				'Add a task with AI from a prompt, or with -t and -d (no AI)',
+			description: 'Add a task; --prompt has the AI write it',
 			commandClass: AddTaskCommand as any,
 			category: 'task'
 		},
 		{
 			name: 'expand',
-			description: 'Expand a task into subtasks using AI',
+			description: 'Break a task into subtasks',
 			commandClass: ExpandCommand as any,
 			category: 'task'
 		},
 		{
 			name: 'parse-prd',
-			description: 'Parse a PRD file and generate tasks',
+			description: 'Generate tasks from a PRD',
 			commandClass: ParsePrdCommand as any,
 			category: 'task'
 		},
 		{
 			name: 'scope',
-			description: 'Make tasks more (up) or less (down) complex with AI',
+			description: 'Grow or shrink a task’s scope with AI',
 			commandClass: ScopeCommand as any,
 			category: 'task'
 		},
@@ -177,21 +176,19 @@ export class CommandRegistry {
 		},
 		{
 			name: 'research',
-			description: 'Perform AI-powered research queries with project context',
+			description: 'Ask a research question about the project',
 			commandClass: ResearchCommand as any,
 			category: 'task'
 		},
 		{
 			name: 'update-subtask',
-			description:
-				'Update a subtask by appending additional timestamped information',
+			description: 'Have the AI append a timestamped note to a subtask',
 			commandClass: UpdateSubtaskCommand as any,
 			category: 'task'
 		},
 		{
 			name: 'update',
-			description:
-				'Update one task with the AI, or every unfinished task --from an ID on',
+			description: 'Update one task, or --from an ID onwards',
 			commandClass: UpdateCommand as any,
 			category: 'task'
 		},
@@ -204,13 +201,13 @@ export class CommandRegistry {
 		},
 		{
 			name: 'note',
-			description: 'Log a progress note on a task, as written (no AI)',
+			description: 'Log a progress note on a task, as written',
 			commandClass: NoteCommand as any,
 			category: 'task'
 		},
 		{
 			name: 'analyze-complexity',
-			description: 'Analyze tasks and generate expansion recommendations',
+			description: 'Score complexity; --report shows it',
 			commandClass: AnalyzeComplexityCommand as any,
 			category: 'task'
 		},
@@ -223,13 +220,13 @@ export class CommandRegistry {
 		},
 		{
 			name: 'depend',
-			description: 'Make a task depend on another, or --remove the dependency',
+			description: 'Add or --remove a dependency',
 			commandClass: DependCommand as any,
 			category: 'task'
 		},
 		{
 			name: 'fix-dependencies',
-			description: 'Fix invalid dependencies, or --check to only report them',
+			description: 'Fix invalid dependencies, or --check',
 			commandClass: FixDependenciesCommand as any,
 			category: 'task'
 		},
@@ -257,7 +254,7 @@ export class CommandRegistry {
 		},
 		{
 			name: 'remove-task',
-			description: 'Remove one or more tasks or subtasks permanently',
+			description: 'Remove a task or subtask',
 			commandClass: RemoveTaskCommand as any,
 			category: 'task'
 		},
@@ -270,20 +267,19 @@ export class CommandRegistry {
 		},
 		{
 			name: 'clear-subtasks',
-			description: 'Clear subtasks from specified tasks',
+			description: 'Remove all subtasks from tasks',
 			commandClass: ClearSubtasksCommand as any,
 			category: 'task'
 		},
 		{
 			name: 'loop',
-			description:
-				'Run Claude Code in a loop over the ready tasks, committing after each',
+			description: 'Have Claude Code work through your tasks',
 			commandClass: LoopCommand as any,
 			category: 'development'
 		},
 		{
 			name: 'go',
-			description: 'Plan a PRD into tasks and build them with Claude Code',
+			description: 'Plan a PRD into tasks and build them',
 			commandClass: GoCommand as any,
 			category: 'development'
 		},
@@ -295,44 +291,43 @@ export class CommandRegistry {
 		},
 		{
 			name: 'tags',
-			description: 'Manage tags for task organization',
+			description: 'List or manage tags',
 			commandClass: TagsCommand as any,
 			category: 'task'
 		},
 		{
 			name: 'generate',
-			description: 'Generate individual task files from tasks.json',
+			description: 'Write a file for each task',
 			commandClass: GenerateCommand as any,
 			category: 'utility'
 		},
 		{
 			name: 'sync-readme',
-			description:
-				'Sync the current task list to README.md in the project root',
+			description: 'Export tasks to README.md',
 			commandClass: SyncReadmeCommand as any,
 			category: 'utility'
 		},
 		{
 			name: 'models',
-			description: 'Manage AI model configurations (Claude Code models)',
+			description: 'View or change the AI models',
 			commandClass: ModelsCommand as any,
 			category: 'utility'
 		},
 		{
 			name: 'lang',
-			description: 'Show or set the language AI responses are written in',
+			description: 'View or change the AI response language',
 			commandClass: LangCommand as any,
 			category: 'utility'
 		},
 		{
 			name: 'github',
-			description: 'Push tasks to GitHub Issues (status, push, unlink)',
+			description: 'Sync tasks with GitHub Issues',
 			commandClass: GithubCommand as any,
 			category: 'utility'
 		},
 		{
 			name: 'doctor',
-			description: 'Check that TaskGraph and Claude Code are set up',
+			description: 'Check that TaskGraph and Claude Code work',
 			commandClass: DoctorCommand as any,
 			category: 'utility'
 		},
@@ -344,20 +339,22 @@ export class CommandRegistry {
 		},
 		{
 			name: 'completion',
-			description: 'Set up Tab completion for bash, zsh or fish',
+			description: 'Install Tab completion for your shell',
 			commandClass: CompletionCommand as any,
 			category: 'utility'
 		},
 		{
 			name: 'log-todos',
-			description: "Log Claude Code's finished todo list (the plugin runs it)",
+			description:
+				"Log Claude Code's finished todo list on the task in progress (the plugin runs it)",
 			commandClass: LogTodosCommand as any,
 			category: 'utility',
 			hidden: true
 		},
 		{
 			name: 'merge-driver',
-			description: 'Git merge driver for tasks.json (git runs it)',
+			description:
+				'Git merge driver for tasks.json and archive.json (git runs it)',
 			commandClass: MergeDriverCommand as any,
 			category: 'utility',
 			hidden: true

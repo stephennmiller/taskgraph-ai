@@ -58,6 +58,45 @@ describe('createSpinner', () => {
 	});
 });
 
+describe('createSpinner on a terminal 0 columns wide (#1165)', () => {
+	it('prints the text once and never erases lines', () => {
+		let written = '';
+		let erased = 0;
+		// ora erased lines without end here; fail the test instead of hanging it
+		const erase = () => {
+			if (++erased > 100) throw new Error('ora is erasing lines without end');
+			return true;
+		};
+		const stream = Object.assign(
+			new Writable({
+				write(chunk, _enc, done) {
+					written += chunk.toString();
+					done();
+				}
+			}),
+			{
+				isTTY: true,
+				columns: 0,
+				cursorTo: () => true,
+				moveCursor: erase,
+				clearLine: erase
+			}
+		);
+
+		const spinner = createSpinner({
+			text: 'Reading prd.md and planning tasks',
+			stream,
+			isEnabled: true
+		}).start();
+		spinner.succeed('3 tasks');
+
+		expect(erased).toBe(0);
+		expect(stripAnsi(written)).toBe(
+			'- Reading prd.md and planning tasks\n✓ 3 tasks\n'
+		);
+	});
+});
+
 describe('createSpinner elapsed time (#881)', () => {
 	afterEach(() => {
 		vi.useRealTimers();

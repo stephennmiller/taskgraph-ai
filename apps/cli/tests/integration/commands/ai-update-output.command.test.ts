@@ -163,7 +163,7 @@ describe.skipIf(!built)('AI command output (fake claude)', () => {
 		expect(res.stdout).toContain(
 			`Saved to ${path.join('.taskgraph', 'tasks', 'tasks.json')}`
 		);
-		expect(res.stdout).toContain('Next: taskgraph next');
+		expect(res.stdout).toContain('Next: taskgraph loop to build them');
 		expect(res.stdout).not.toContain('Next steps');
 		expectTidy(res.stdout);
 	});

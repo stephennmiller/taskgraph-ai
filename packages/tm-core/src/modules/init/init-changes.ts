@@ -7,7 +7,6 @@ import { runGitSync } from '../../common/utils/git-utils.js';
 import fs from 'node:fs';
 import path from 'node:path';
 import {
-	ENV_EXAMPLE_FILE,
 	GITIGNORE_FILE,
 	TASKGRAPH_CONFIG_FILE,
 	TASKGRAPH_DIR,
@@ -37,7 +36,6 @@ export function trackedPaths(targetDir: string): string[] {
 		path.join(targetDir, '.git'),
 		path.join(targetDir, GITIGNORE_FILE),
 		path.join(targetDir, GITATTRIBUTES_FILE),
-		path.join(targetDir, ENV_EXAMPLE_FILE),
 		path.join(targetDir, 'CLAUDE.md'),
 		path.join(targetDir, '.mcp.json'),
 		...shellConfigFiles()
@@ -102,7 +100,6 @@ export function describeInitChanges(
 			'Git merges tasks.json by task; commit it',
 			'Git merges tasks.json by task; commit it'
 		],
-		[ENV_EXAMPLE_FILE, 'optional settings', 'updated'],
 		[
 			'CLAUDE.md',
 			"loads TaskGraph's instructions in Claude Code",

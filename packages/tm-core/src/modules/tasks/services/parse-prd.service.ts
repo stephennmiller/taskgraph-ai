@@ -185,7 +185,7 @@ export class ParsePrdService {
 		).find((file) => this.prdExists(file));
 		if (!found) {
 			throw new TaskGraphError(
-				`Required PRD file not found. Searched: ${DEFAULT_PRD_FILES.join(', ')}`,
+				`No PRD file given, and no prd.md or prd.txt in ${TASKGRAPH_DOCS_DIR}/`,
 				ERROR_CODES.FILE_NOT_FOUND
 			);
 		}
@@ -218,6 +218,30 @@ export class ParsePrdService {
 		const prdPath = this.resolvePrdPath(input.prdPath);
 		const tag = input.tag || this.configManager.getActiveTag();
 		return { prdPath, tag, taskCount: (await this.readTag(tag)).tasks.length };
+	}
+
+	/**
+	 * Whether `--append` would have the AI plan anything, without an AI call:
+	 * the PRD has a section recorded for none of the tag's tasks, or the tag
+	 * knows nothing of this PRD yet. false: an append adds no tasks
+	 */
+	async hasNewSections(
+		input: Pick<ParsePrdInput, 'prdPath' | 'tag'> = {}
+	): Promise<boolean> {
+		const prdPath = this.resolvePrdPath(input.prdPath);
+		const loaded = await this.readTag(
+			input.tag || this.configManager.getActiveTag()
+		);
+		const content = fs.readFileSync(prdPath, 'utf8');
+		const source = prdPathForSource(this.projectRoot, prdPath);
+		// As parse() diffs it for an append
+		const delta = diffPrdSections(
+			trackedPrdSections(parsePrdSections(content), content),
+			source,
+			loaded.tasks,
+			getPrdSnapshot(loaded.metadata, source)
+		);
+		return !delta.known || delta.added.length > 0;
 	}
 
 	/** Ask the model which gaps in the PRD would change the tasks */

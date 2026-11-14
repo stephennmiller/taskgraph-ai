@@ -12,6 +12,7 @@ import {
 	PROJECT_ROOT_ENV,
 	TASKGRAPH_VERSION,
 	isTaskGraphProject,
+	projectHasTagSync,
 	resolveProjectRoot,
 	stripTerminalControls,
 	takeMigrationNotice
@@ -36,6 +37,7 @@ import {
 	printError
 } from './utils/error-handler.js';
 import { wantsJsonOutput } from './utils/json-output.js';
+import { typedOldShortFlagHint } from './utils/old-short-flags.js';
 
 const RUNS_WITHOUT_PROJECT = new Set([
 	'init',
@@ -71,10 +73,8 @@ function requireProject(_hookedCommand: Command, actionCommand: Command) {
 	// An explicit tasks file means the caller has said where the project is
 	if (actionCommand.getOptionValueSource('file') === 'cli') return;
 
-	const takesProject = actionCommand.options.some(
-		(option) => option.attributeName() === 'project'
-	);
-	const projectOption = takesProject ? actionCommand.opts().project : null;
+	// With globals: `tags` parses --project for its subcommands
+	const projectOption = actionCommand.optsWithGlobals().project;
 	const explicitRoot =
 		typeof projectOption === 'string' ? path.resolve(projectOption) : null;
 
@@ -89,11 +89,10 @@ function requireProject(_hookedCommand: Command, actionCommand: Command) {
 			`No TaskGraph project at ${explicitRoot}`,
 			// An old script's `loop -p tdd` or `add-subtask -p 5` lands here (#882);
 			// a real folder means the caller meant --project
-			['loop', 'add-subtask'].includes(topLevel.name()) &&
-				process.argv.some((arg) => /^-p/.test(arg)) &&
-				!fs.existsSync(explicitRoot)
-				? '-p means --project; write --prompt or --parent in full'
-				: 'Run `taskgraph init` in that folder to set one up'
+			(fs.existsSync(explicitRoot)
+				? undefined
+				: typedOldShortFlagHint(topLevel.name(), 'p')) ??
+				'Run `taskgraph init` in that folder to set one up'
 		);
 	} else if (process.env[PROJECT_ROOT_ENV]?.trim()) {
 		printError(
@@ -110,6 +109,31 @@ function requireProject(_hookedCommand: Command, actionCommand: Command) {
 }
 
 /**
+ * Stop `add-task -t 'Fix login'`, where `-t` was `--title` until it meant
+ * `--tag` everywhere (#1155), unless the value is one of the project's tags.
+ * The command would refuse the tag too; this names the long form to write
+ * instead, before any AI call.
+ *
+ * @param _hookedCommand - The program
+ * @param actionCommand - The command about to run
+ */
+function refuseOldShortTag(_hookedCommand: Command, actionCommand: Command) {
+	const { tag, project } = actionCommand.opts();
+	const hint = typedOldShortFlagHint(actionCommand.name(), 't');
+	if (!hint || typeof tag !== 'string') return;
+	// `analyze-complexity -t 7 --tag feature`: Commander keeps the last value,
+	// so the old -t value would be dropped without a word
+	if (process.argv.some((arg) => /^--tag(=|$)/.test(arg))) {
+		printError('-t and --tag both name a tag', hint);
+		process.exit(1);
+	}
+	if (projectHasTagSync(tag, typeof project === 'string' ? project : undefined))
+		return;
+	printError(`Tag "${tag}" not found`, hint);
+	process.exit(1);
+}
+
+/**
  * Build the `taskgraph` program with every command registered
  */
 export function setupCLI(): Command {
@@ -117,7 +141,6 @@ export function setupCLI(): Command {
 		.name('taskgraph')
 		.description('AI-driven development task management')
 		.version(process.env.TM_PUBLIC_VERSION || 'unknown')
-		.helpOption('-h, --help', 'Display help')
 		.helpCommand(false);
 
 	// The program's own help is the grouped screen; subcommands keep
@@ -168,14 +191,14 @@ export function setupCLI(): Command {
 			target.help();
 		});
 
-	program.configureHelp({ helpWidth: 120, sortSubcommands: false });
-
 	registerAllCommands(program);
 
 	// Commander's own parse errors (unknown command, missing argument) read
 	// like every other error. Commands added with addCommand() don't inherit
-	// output settings, so apply them to the whole tree.
-	const styleParseErrors = (command: Command, commandPath: string) => {
+	// output settings, so apply them to the whole tree. The same for the -h
+	// row, which Commander words `display help for command`.
+	const styleCommands = (command: Command, commandPath: string) => {
+		command.helpOption('-h, --help', 'Show help');
 		command.configureOutput({
 			// No leading blank line: printError doesn't start with one (#928)
 			outputError: (text, write) =>
@@ -184,16 +207,17 @@ export function setupCLI(): Command {
 				)
 		});
 		for (const sub of command.commands) {
-			styleParseErrors(
+			styleCommands(
 				sub,
 				commandPath ? `${commandPath} ${sub.name()}` : sub.name()
 			);
 		}
 	};
-	styleParseErrors(program, '');
+	styleCommands(program, '');
 
 	// Runs before every subcommand's action, nested ones included
 	program.hook('preAction', requireProject);
+	program.hook('preAction', refuseOldShortTag);
 
 	return program;
 }

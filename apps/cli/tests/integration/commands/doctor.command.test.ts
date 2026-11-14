@@ -70,9 +70,22 @@ describe('doctor command', () => {
 
 		expect(result.status).toBe(1);
 		expect(result.stderr).toBe('');
-		expect(result.stdout).toContain('✗ Plugin          not installed');
 		expect(result.stdout).toContain('✗ Project         none in this folder');
 		expect(result.stdout).toContain('Run taskgraph init to set one up');
+	});
+
+	it('exits 0 in a project without the plugin, and says how to add it (#1147)', () => {
+		fs.mkdirSync(path.join(dir, '.taskgraph'));
+		fs.writeFileSync(path.join(dir, '.taskgraph', 'config.json'), '{}');
+		fakeClaude([]);
+
+		const result = run();
+
+		expect(result.status).toBe(0);
+		expect(result.stdout).toContain(
+			'– Plugin          optional; not installed'
+		);
+		expect(result.stdout).toContain('/plugin install taskgraph@taskgraph');
 	});
 
 	it('exits 0 when every check passes, and lists the optional MCP server', () => {
@@ -111,7 +124,7 @@ describe('doctor command', () => {
 		expect(report.ok).toBe(false);
 		expect(
 			report.checks.find((check: { name: string }) => check.name === 'plugin')
-		).toEqual({ name: 'plugin', status: 'fail', problem: 'not-installed' });
+		).toEqual({ name: 'plugin', status: 'skip', problem: 'not-installed' });
 	});
 
 	describe('in a project with broken data files', () => {

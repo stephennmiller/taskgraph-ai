@@ -16,6 +16,7 @@ import {
 	parseTaskIds
 } from '@tm/core';
 import { Command } from 'commander';
+import { projectOption, tagOption } from '../utils/shared-options.js';
 import {
 	formatChecklistUpdate,
 	formatUncheckedCriteria
@@ -90,18 +91,12 @@ export class SetStatusCommand extends Command {
 		super(name || 'set-status');
 
 		// Configure the command with positional arguments
-		this.description('Update the status of one or more tasks')
+		this.description('Change a task or subtask status')
 			.alias('status')
-			.argument(
-				'[id]',
-				'Task ID(s) - comma-separated for multiple (e.g., 1 or 1,1.1,2)'
-			)
-			.argument('[status]', `Status - ${TASK_STATUSES.join(', ')}`)
-			.option('-i, --id <id>', 'Task ID(s) (fallback if not using positional)')
-			.option(
-				'-s, --status <status>',
-				'Status (fallback if not using positional)'
-			)
+			.argument('[id]', 'Task or subtask ID; several with commas (1,1.1,2)')
+			.argument('[status]', TASK_STATUSES.join(', '))
+			.option('-i, --id <id>', 'The same as the [id] argument')
+			.option('-s, --status <status>', 'The same as the [status] argument')
 			.option(
 				'--check <numbers>',
 				'Check off criteria by number, e.g. 2 or 2,4 (see show)',
@@ -113,14 +108,11 @@ export class SetStatusCommand extends Command {
 				collect
 			)
 			.option('--force', 'Mark done even with unchecked criteria')
-			.option('-t, --tag <tag>', 'Use a specific tag')
-			.option('-f, --format <format>', 'Output format (text, json)', 'text')
+			.addOption(tagOption())
+			.option('-f, --format <format>', 'Output format: text or json', 'text')
 			.addOption(jsonOption())
-			.option('--silent', 'Suppress output (useful for programmatic usage)')
-			.option(
-				'-p, --project <path>',
-				'Project root directory (auto-detected if not provided)'
-			)
+			.option('--silent', 'Print nothing')
+			.addOption(projectOption())
 			.action(
 				async (
 					idArg?: string,

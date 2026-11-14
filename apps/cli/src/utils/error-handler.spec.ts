@@ -148,26 +148,6 @@ describe('formatErrorMessage', () => {
 });
 
 describe('formatCommanderError', () => {
-	it('says -p means --project (#882)', () => {
-		const text = formatCommanderError("error: unknown option '-p'", 'add-task');
-
-		expect(plain(text)).toBe(
-			"✗ Unknown option '-p'\n  -p means --project; write --prompt or --parent in full"
-		);
-	});
-
-	it('gives scope the -p hint too', () => {
-		const text = formatCommanderError("error: unknown option '-p'", 'scope');
-
-		expect(plain(text)).toContain('-p means --project');
-	});
-
-	it('keeps the usual hint where -p never meant --prompt', () => {
-		const text = formatCommanderError("error: unknown option '-p'", 'models');
-
-		expect(plain(text)).toContain('taskgraph models --help');
-	});
-
 	it('turns Commander suggestions for commands into a runnable hint', () => {
 		const text = formatCommanderError(
 			"error: unknown command 'shwo'\n(Did you mean show?)\n"
@@ -261,6 +241,51 @@ describe('formatCommanderError', () => {
 		expect(plain(text)).toBe(
 			'✗ --status needs a value\n  Run taskgraph list --help to see its options'
 		);
+	});
+
+	it('names the long form for a short flag that meant something else (#1155)', () => {
+		const text = formatCommanderError("error: unknown option '-f'", 'expand');
+
+		expect(plain(text)).toBe(
+			"✗ Unknown option '-f'\n  -f means --format; write --force in full"
+		);
+	});
+
+	it('names --tree when research gets -t with no value, not when --tag does', () => {
+		const missing = "error: option '-t, --tag <tag>' argument missing";
+		const argv = process.argv;
+		try {
+			process.argv = ['node', 'taskgraph', 'research', 'q', '-t'];
+			expect(plain(formatCommanderError(missing, 'research'))).toBe(
+				'✗ --tag needs a value\n  -t means --tag; write --tree in full'
+			);
+
+			process.argv = ['node', 'taskgraph', 'research', 'q', '--tag'];
+			expect(plain(formatCommanderError(missing, 'research'))).toContain(
+				'taskgraph research --help'
+			);
+
+			// -t took `--save` as its value and left out.md over
+			process.argv = [
+				'node',
+				'taskgraph',
+				'research',
+				'q',
+				'-t',
+				'--save',
+				'out.md'
+			];
+			expect(
+				plain(
+					formatCommanderError(
+						"error: too many arguments for 'research'. Expected 1 argument but got 2.",
+						'research'
+					)
+				)
+			).toContain('-t means --tag; write --tree in full');
+		} finally {
+			process.argv = argv;
+		}
 	});
 });
 

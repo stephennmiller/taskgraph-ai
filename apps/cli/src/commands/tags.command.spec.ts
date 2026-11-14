@@ -340,7 +340,7 @@ describe('the deprecated tag commands', () => {
 		TagsCommand.register(program).setThrowOnError(true);
 
 		await program.parseAsync(
-			['use-tag', 'feature', '-f', '.taskgraph/tasks/tasks.json'],
+			['use-tag', 'feature', '--file', '.taskgraph/tasks/tasks.json'],
 			{ from: 'user' }
 		);
 

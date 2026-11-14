@@ -10,9 +10,9 @@
 import { type UpdateHooks, createTmCore, exitOnStopSignals } from '@tm/core';
 import chalk from 'chalk';
 import { Command } from 'commander';
+import { projectOption, tagOption } from '../utils/shared-options.js';
 import type { Ora } from 'ora';
-import { truncate } from '../ui/layout/helpers.js';
-import { terminalSafe } from '../ui/formatters/markdown-formatters.js';
+import { fit, terminalSafe } from '../ui/formatters/markdown-formatters.js';
 import {
 	formatAssigned,
 	formatNotesAdded,
@@ -42,6 +42,7 @@ interface CommonOptions {
 	prompt?: string;
 	research?: boolean;
 	tag?: string;
+	project?: string;
 }
 
 interface UpdateTaskCommandOptions extends CommonOptions {
@@ -74,9 +75,9 @@ async function runUpdate(
 		stopSpinner: () => void
 	) => Promise<void>
 ): Promise<void> {
-	const fileError = otherTasksFileError(options.file, command);
+	const fileError = otherTasksFileError(options.file, command, options.project);
 	if (fileError) displayError(fileError);
-	const projectRoot = getProjectRoot();
+	const projectRoot = getProjectRoot(options.project);
 	let spinner: Ora | undefined;
 	// A line printed while the spinner runs would be drawn over
 	const print = (line: string) => {
@@ -198,7 +199,7 @@ async function updateOne(
 					),
 				onAiCall: ([task]) =>
 					hooks.startSpinner(
-						`Updating task ${terminalSafe(task.id)}: ${truncate(terminalSafe(task.title), 50)}${options.research ? ' (with research)' : ''}`
+						`Updating task ${terminalSafe(task.id)}: ${fit(terminalSafe(task.title), 50)}${options.research ? ' (with research)' : ''}`
 					)
 			}
 		);
@@ -230,28 +231,26 @@ export class UpdateTaskCommand extends Command {
 	constructor(name?: string) {
 		super(name || 'update-task');
 
-		this.description('Update a single specific task by ID with new information')
-			.argument('[id]', 'Task ID to update (e.g., 1, 1.1, TAS-123)')
-			.argument(
-				'[prompt...]',
-				'Update prompt - multiple words, no quotes needed'
-			)
+		this.description('Alias of update <id>')
+			.argument('[id]', 'Task ID to update, e.g. 3 or 3.2 (same as --id)')
+			.argument('[prompt...]', 'What to change; several words need no quotes')
 			.addOption(legacyFileOption())
 			.option('-i, --id <id>', 'The same as the [id] argument')
-			.option('--prompt <text>', 'Prompt (fallback if not using positional)')
+			.option('--prompt <text>', 'The same as the [prompt] argument')
 			.option(
 				'-r, --research',
-				'Use Claude Code web research for research-backed task updates'
+				'Use the research model, which can search the web'
 			)
 			.option(
 				'--append',
-				'Append timestamped information to task details instead of full update'
+				'Append timestamped notes to its details instead of rewriting it'
 			)
 			.option(
 				'--assignee <login>',
 				"GitHub login of who the task is for ('' clears it); no prompt needed"
 			)
-			.option('--tag <tag>', 'Specify tag context for task operations')
+			.addOption(tagOption())
+			.addOption(projectOption())
 			.action(
 				async (
 					idArg: string | undefined,
@@ -281,27 +280,22 @@ export class UpdateCommand extends Command {
 	constructor(name?: string) {
 		super(name || 'update');
 
-		this.description(
-			'Update one task with the AI, or every unfinished task --from an ID on'
-		)
+		this.description('Update one task, or --from an ID onwards')
 			.argument(
 				'[id]',
 				'Task ID to update, e.g. 3 or 3.2 (same as --id). Or use --from'
 			)
-			.argument(
-				'[prompt...]',
-				'Update prompt - multiple words, no quotes needed'
-			)
+			.argument('[prompt...]', 'What to change; several words need no quotes')
 			.addOption(legacyFileOption())
 			.option('-i, --id <id>', 'The same as the [id] argument')
 			.option(
 				'--from <id>',
 				'Update every unfinished task with ID >= this one (default: 1)'
 			)
-			.option('--prompt <text>', 'Prompt explaining the changes or new context')
+			.option('--prompt <text>', 'The same as the [prompt] argument')
 			.option(
 				'-r, --research',
-				'Use Claude Code web research for research-backed task updates'
+				'Use the research model, which can search the web'
 			)
 			.option(
 				'--append',
@@ -311,7 +305,8 @@ export class UpdateCommand extends Command {
 				'--assignee <login>',
 				"One task: GitHub login of who it is for ('' clears it); no prompt needed"
 			)
-			.option('--tag <tag>', 'Specify tag context for task operations')
+			.addOption(tagOption())
+			.addOption(projectOption())
 			.addHelpText(
 				'after',
 				`

@@ -68,7 +68,7 @@ describe('add-subtask and move', () => {
 			'add-subtask',
 			'--parent=1',
 			'--title=Child',
-			'-f',
+			'--file',
 			'.taskgraph/tasks/tasks.json',
 			'--generate'
 		]);
@@ -88,6 +88,39 @@ describe('add-subtask and move', () => {
 			'2',
 			'7'
 		]);
+	});
+
+	it('take the parent and the IDs as arguments, the same as the flags (#1149)', () => {
+		const added = run(['add-subtask', '1', '--title=Child']);
+		const moved = run(['move', '3', '7']);
+
+		expect(added.stderr).toBe('');
+		expect(added.status).toBe(0);
+		expect(moved.stderr).toBe('');
+		expect(moved.status).toBe(0);
+		const { tasks } = JSON.parse(read()).master;
+		expect(tasks[0].subtasks.map((s: { title: string }) => s.title)).toEqual([
+			'Child'
+		]);
+		expect(tasks.map((t: { id: string }) => String(t.id))).toEqual([
+			'1',
+			'2',
+			'7'
+		]);
+	});
+
+	it('refuse an argument and a different flag, with the fix, and change nothing', () => {
+		const before = read();
+
+		const added = run(['add-subtask', '1', '--parent=2', '--title=Child']);
+		const moved = run(['move', '3', '7', '--to=8']);
+
+		expect(added.status).toBe(1);
+		expect(added.stderr).toContain('✗ Give the parent once: "1" or --parent=2');
+		expect(added.stderr).toContain('Try taskgraph add-subtask --parent=2');
+		expect(moved.status).toBe(1);
+		expect(moved.stderr).toContain('✗ Give the new ID once: "7" or --to=8');
+		expect(read()).toBe(before);
 	});
 
 	it('refuse --file naming another file and leave the project alone', () => {

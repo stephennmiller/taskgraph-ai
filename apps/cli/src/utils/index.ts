@@ -32,6 +32,9 @@ export {
 	wantsJsonOutput
 } from './json-output.js';
 
+// Options most commands take
+export { projectOption, tagOption } from './shared-options.js';
+
 // Auto-update utilities
 export {
 	checkForUpdate,

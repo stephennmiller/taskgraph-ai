@@ -138,6 +138,27 @@ describe('GitHub push - integration', () => {
 		fs.rmSync(projectDir, { recursive: true, force: true });
 	});
 
+	// #1148: one 113-character line held both the problem and the fix
+	it('says how to name the repo, as a hint, when none is given or detected', async () => {
+		await setup([makeTask('1')]);
+		const originalPath = process.env.PATH;
+		// No gh to ask
+		process.env.PATH = projectDir;
+
+		try {
+			await expect(
+				domain.push({ tag: 'master', dryRun: true })
+			).rejects.toThrow(
+				expect.objectContaining({
+					message: 'No GitHub repository found for this project',
+					hint: 'Pass `--repo owner/name`, or run `gh auth login` in a GitHub checkout'
+				})
+			);
+		} finally {
+			process.env.PATH = originalPath;
+		}
+	});
+
 	it('creates issues, links them in metadata, and numbers dependencies', async () => {
 		await setup([
 			makeTask('1'),

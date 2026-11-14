@@ -2,9 +2,10 @@
  * @fileoverview What `parse-prd` says after the progress lines, e.g.
  *
  *   Saved to .taskgraph/tasks/tasks.json · 12 tasks in total · research-backed
- *   Next: taskgraph next to pick a task, or taskgraph expand --all to split them
+ *   Next: taskgraph loop to build them, or taskgraph next to pick one
  *
- * It replaces a boxed "Next steps" list of three commands.
+ * It replaces a boxed "Next steps" list of three commands. As a step of `go`
+ * the next-step line is left out: `go` starts loop itself.
  */
 
 import { sanitizeForTerminal } from '@tm/core';
@@ -20,6 +21,8 @@ export interface ParsePrdSaved {
 	total: number;
 	/** Whether research mode was on */
 	research?: boolean;
+	/** false leaves the `Next:` line out (default true) */
+	nextStep?: boolean;
 }
 
 /**
@@ -38,18 +41,20 @@ export function formatParsePrdSaved(
 	if (result.total > result.added) facts.push(`${result.total} tasks in total`);
 	if (result.research) facts.push('research-backed');
 
-	const short = 'Next: taskgraph next to pick a task';
-	const long = `${short}, or taskgraph expand --all to split them`;
-	const next =
-		long.length <= width
-			? theme.muted('Next: ') +
-				theme.brand('taskgraph next') +
-				theme.muted(' to pick a task, or ') +
-				theme.brand('taskgraph expand --all') +
-				theme.muted(' to split them')
-			: theme.muted('Next: ') +
-				theme.brand('taskgraph next') +
-				theme.muted(' to pick a task');
+	const saved = theme.muted(facts.join(' · '));
+	if (result.nextStep === false) return saved;
 
-	return [theme.muted(facts.join(' · ')), next].join('\n');
+	const short = 'Next: taskgraph loop to build them';
+	const long = `${short}, or taskgraph next to pick one`;
+	const next =
+		theme.muted('Next: ') +
+		theme.brand('taskgraph loop') +
+		theme.muted(' to build them') +
+		(long.length <= width
+			? theme.muted(', or ') +
+				theme.brand('taskgraph next') +
+				theme.muted(' to pick one')
+			: '');
+
+	return [saved, next].join('\n');
 }

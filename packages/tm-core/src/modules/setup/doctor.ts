@@ -54,6 +54,7 @@ export type DoctorProblem =
 	| 'too-old'
 	| 'not-found'
 	| 'signed-out'
+	/** The optional plugin isn't installed in Claude Code */
 	| 'not-installed'
 	| 'disabled'
 	/** The optional MCP server isn't in the project's .mcp.json */
@@ -241,8 +242,9 @@ function checkPlugin(
 	);
 	const plugin =
 		candidates.find((entry) => entry.enabled !== false) ?? candidates[0];
+	// The CLI works without the plugin, so a missing one is not a failure (#1147)
 	if (!plugin) {
-		return { name: 'plugin', status: 'fail', problem: 'not-installed' };
+		return { name: 'plugin', status: 'skip', problem: 'not-installed' };
 	}
 	const folder = pluginFolder(plugin);
 	const manifest = folder ? readPluginManifest(folder) : null;

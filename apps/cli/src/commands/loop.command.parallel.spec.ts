@@ -36,7 +36,10 @@ vi.mock('@tm/core', async (importOriginal) => {
 	};
 });
 
-vi.mock('../utils/error-handler.js', () => ({ displayError: vi.fn() }));
+vi.mock('../utils/error-handler.js', () => ({
+	displayError: vi.fn(),
+	printError: vi.fn()
+}));
 
 vi.mock('../utils/project-root.js', () => ({
 	getProjectRoot: vi.fn().mockReturnValue('/test/project')
@@ -44,7 +47,7 @@ vi.mock('../utils/project-root.js', () => ({
 
 import type { ParallelLoopResult } from '@tm/core';
 import { createTmCore } from '@tm/core';
-import { displayError } from '../utils/error-handler.js';
+import { displayError, printError } from '../utils/error-handler.js';
 import { getProjectRoot } from '../utils/project-root.js';
 
 describe('LoopCommand --parallel', () => {
@@ -234,12 +237,11 @@ describe('LoopCommand --parallel', () => {
 		}
 
 		expect(runParallel).not.toHaveBeenCalled();
-		const [error] = (displayError as Mock).mock.calls[0];
-		expect(error.message).toContain(
-			'up to 2 Claude Code processes at once, with permission prompts off'
-		);
-		expect(error.message).toContain('--trust');
-		expect(error.message).not.toContain('--sandbox');
+		const [message, hint] = (printError as Mock).mock.calls[0];
+		expect(message).toContain('approval');
+		expect(hint).toContain('--trust');
+		expect(hint).not.toContain('--sandbox');
+		expect(process.exitCode).toBe(1);
 	});
 
 	it('exits 1 when a task failed and 130 when stopped', async () => {

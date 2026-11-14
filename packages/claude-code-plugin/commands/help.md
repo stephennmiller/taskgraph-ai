@@ -11,33 +11,34 @@ If the arguments name a command in the list below, read its line and run `taskgr
 
 ```
 Daily workflow
-  /taskgraph:next                          The next task to work on
-  /taskgraph:show <id>                     One task in full
-  /taskgraph:list [status]                 All tasks, or one status
-  /taskgraph:set-status <id> <status>      Start a task, or set any status
-  /taskgraph:to-done <id>                  Check the criteria and close a task
-  /taskgraph:note <id> <text>              Log a progress note, as written
-  /taskgraph:graph [id]                    Tasks as a dependency tree
-  /taskgraph:why <id>                      Why a task is blocked
-  /taskgraph:loop [n]                      Have Claude Code work the tasks
+  /taskgraph:next                              The next task to work on
+  /taskgraph:show <task-id>                    One task in full
+  /taskgraph:list [status]                     All tasks, or one status
+  /taskgraph:set-status <task-id> <status>     Start a task, or set any status
+  /taskgraph:to-done [task-id]                 Check the criteria and close a task
+  /taskgraph:note [task-id] [note]             Log a progress note, as written
+  /taskgraph:graph [task-id]                   Tasks as a dependency tree
+  /taskgraph:why <task-id>                     Why a task is blocked
+  /taskgraph:loop [runs]                       Have Claude Code work the tasks
 
 Planning
-  /taskgraph:init [--quick]                Install the CLI, set up this project
-  /taskgraph:parse-prd <file> [research]   Turn a PRD into tasks, gaps first
-  /taskgraph:add-task <text>               Add a task
-  /taskgraph:update-task <id> <changes>    Rewrite one task
-  /taskgraph:analyze-complexity            Score tasks, say which to split
-  /taskgraph:expand <id>|all               Break tasks into subtasks
+  /taskgraph:go <prd-file>                     Plan a PRD and build every task
+  /taskgraph:init [--quick]                    Install the CLI, set up this project
+  /taskgraph:parse-prd <prd-file> [research]   Turn a PRD into tasks, gaps first
+  /taskgraph:add-task <description>            Add a task
+  /taskgraph:update <task-id> <changes>        Rewrite one task
+  /taskgraph:analyze-complexity                Score tasks, say which to split
+  /taskgraph:expand <task-id>|all              Break tasks into subtasks
 
 In the CLI
-  taskgraph models                         Show or choose the AI models
-  taskgraph update                         Rewrite every task from an ID onward
-  taskgraph depend <id> <ids> [--remove]   Make a task wait on others, or not
-  taskgraph fix-dependencies [--check]     Check or fix broken or circular links
-  taskgraph add-subtask                    Add or move a subtask
-  taskgraph remove-task                    Delete a task or subtask
-  taskgraph analyze-complexity --report    Show the complexity report
-  taskgraph --help                         Everything else
+  taskgraph models                             Show or choose the AI models
+  taskgraph update --from                      Rewrite every task from an ID onward
+  taskgraph depend <id> <ids> [--remove]       Make a task wait on others, or not
+  taskgraph fix-dependencies [--check]         Check or fix broken or circular links
+  taskgraph add-subtask                        Add or move a subtask
+  taskgraph remove-task                        Delete a task or subtask
+  taskgraph analyze-complexity --report        Show the complexity report
+  taskgraph --help                             Everything else
 ```
 
-Then, in one sentence, suggest `/taskgraph:next` to find what to work on. In a project with no tasks yet, start with `/taskgraph:init` and `/taskgraph:parse-prd`.
+Then, in one sentence, suggest `/taskgraph:next` to find what to work on. In a project with no tasks yet, start with `/taskgraph:go <prd-file>` to plan a PRD and build it, or `/taskgraph:init` and `/taskgraph:parse-prd` to plan first.

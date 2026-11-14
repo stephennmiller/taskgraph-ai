@@ -1,11 +1,11 @@
 ---
 description: "TaskGraph: set a task's status (pending, in-progress, review, done, deferred, cancelled, blocked)."
-argument-hint: "<task ID> <status>"
+argument-hint: "<task-id> <status>"
 ---
 
 Set a task's status.
 
-Usage: `/taskgraph:set-status <id> <status>`
+Usage: `/taskgraph:set-status <task-id> <status>`
 
 Arguments: $ARGUMENTS (task ID, then status)
 

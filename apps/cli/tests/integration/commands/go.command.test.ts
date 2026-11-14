@@ -1,9 +1,10 @@
 /**
  * @fileoverview `taskgraph go <prd>` against the built CLI with the fake
- * `claude` program (#957): it plans the PRD with `parse-prd --append`, then
- * hands over to `loop`, saying what it resumes on a rerun, and the first
- * step that fails stops it. A SIGTERM to `go` alone stops the running step
- * too (#1103).
+ * `claude` program (#957): without a terminal, `--trust` or `--sandbox` it
+ * stops before planning anything, also where an approval is stored (#1146),
+ * and a SIGTERM to `go` alone stops
+ * the running step too (#1103). What it runs once approved is in
+ * `go.command.consent.spec.ts`; `loop` itself is never started here.
  *
  * Needs the build (`npm run build`); skipped when dist/ is missing.
  *
@@ -14,6 +15,7 @@ import { spawn, spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { isGoTrusted, trustLoop } from '@tm/core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
 	installFakeClaude,
@@ -71,87 +73,48 @@ describe.skipIf(!built)('go (fake claude)', { timeout: 120000 }, () => {
 		expect(fs.existsSync(path.join(project, '.taskgraph'))).toBe(false);
 	});
 
-	it('plans the PRD into tasks, then stops at loop without --trust', () => {
-		spawnSync('git', ['init', '-q'], { cwd: project });
-		expect(run(project, {}, 'init', '--yes').status).toBe(0);
-		fs.mkdirSync(path.join(project, 'docs'));
-		fs.writeFileSync(path.join(project, 'docs', 'prd.md'), PRD);
-		const fake = installFakeClaude({
-			projectDir: project,
-			workDir: work,
-			replies: [
-				{
-					object: {
-						tasks: [
-							{
-								id: 1,
-								title: 'Notes',
-								description: 'Create and edit notes',
-								details: 'Details',
-								testStrategy: 'Tests',
-								priority: 'medium',
-								dependencies: [],
-								status: 'pending',
-								section: 'notes'
-							}
-						],
-						metadata: null
-					}
-				}
-			]
-		});
+	it.each([
+		['no approval stored', false],
+		['an approval stored', true]
+	])(
+		'with no terminal or --trust and %s, plans nothing (#1146)',
+		(_, stored) => {
+			spawnSync('git', ['init', '-q'], { cwd: project });
+			expect(run(project, {}, 'init', '--yes').status).toBe(0);
+			fs.mkdirSync(path.join(project, 'docs'));
+			fs.writeFileSync(path.join(project, 'docs', 'prd.md'), PRD);
+			const fake = installFakeClaude({
+				projectDir: project,
+				workDir: work,
+				replies: [{ object: { tasks: [], metadata: null } }]
+			});
 
-		const res = run(project, fake.env, 'go', 'docs/prd.md');
+			// An approval loop would take; go is about to plan tasks it doesn't cover
+			if (stored) {
+				trustLoop(project, work);
+				expect(isGoTrusted(project, false, work)).toBe(true);
+			}
 
-		const { tasks } = JSON.parse(
-			fs.readFileSync(
-				path.join(project, '.taskgraph', 'tasks', 'tasks.json'),
-				'utf8'
-			)
-		).master;
-		expect(tasks.map((t: { title: string }) => t.title)).toEqual(['Notes']);
-		// loop asks before turning permission prompts off; no terminal here
-		expect(res.status).toBe(1);
-		expect(`${res.stdout}${res.stderr}`).toContain('--trust');
-		// A first run has nothing to resume
-		expect(res.stdout).not.toContain('Resuming');
-	});
+			// HOME: only that approval for this project, whatever the machine has
+			const res = run(
+				project,
+				{ ...fake.env, HOME: work },
+				'go',
+				'docs/prd.md'
+			);
 
-	it('says what it resumes on a rerun, before loop', () => {
-		spawnSync('git', ['init', '-q'], { cwd: project });
-		expect(run(project, {}, 'init', '--yes').status).toBe(0);
-		const file = path.join(project, '.taskgraph', 'tasks', 'tasks.json');
-		const data = JSON.parse(fs.readFileSync(file, 'utf8'));
-		const task = (id: string, status: string) => ({
-			id,
-			title: `Task ${id}`,
-			description: 'd',
-			status,
-			priority: 'medium',
-			dependencies: [],
-			subtasks: []
-		});
-		data.master.tasks = [
-			task('1', 'done'),
-			task('2', 'in-progress'),
-			task('3', 'pending')
-		];
-		fs.writeFileSync(file, JSON.stringify(data));
-		fs.mkdirSync(path.join(project, 'docs'));
-		fs.writeFileSync(path.join(project, 'docs', 'prd.md'), PRD);
-		const fake = installFakeClaude({
-			projectDir: project,
-			workDir: work,
-			replies: [{ object: { tasks: [], metadata: null } }]
-		});
-
-		const res = run(project, fake.env, 'go', 'docs/prd.md');
-
-		expect(res.stdout).toContain(
-			'Resuming: 1 done, task 2 in progress, 1 pending'
-		);
-		expect(res.status).toBe(1);
-	});
+			// loop's own error and hint, each within 80 columns, and nothing else
+			expect(res.status).toBe(1);
+			expect(res.stderr).toContain('permission prompts off');
+			expect(res.stderr).toContain('--trust');
+			for (const line of res.stderr.trimEnd().split('\n')) {
+				expect(line.length).toBeLessThanOrEqual(80);
+			}
+			expect(res.stdout).toBe('');
+			// parse-prd never ran: no AI call was paid for and then refused
+			expect(readTrace(fake.dir)).toHaveLength(0);
+		}
+	);
 
 	// Windows has no SIGTERM to pass on, and its fake claude has a launcher between
 	it.skipIf(process.platform === 'win32')(
@@ -167,7 +130,10 @@ describe.skipIf(!built)('go (fake claude)', { timeout: 120000 }, () => {
 				workDir: work,
 				replies: [{ object: { tasks: [] }, holdUntil: 'never' }]
 			});
-			const go = spawn(process.execPath, [binPath, 'go', 'docs/prd.md'], {
+			// --sandbox: nothing to ask before the first step. loop is never
+			// reached, since parse-prd is still waiting when the signal comes
+			const args = [binPath, 'go', 'docs/prd.md', '--sandbox'];
+			const go = spawn(process.execPath, args, {
 				cwd: project,
 				stdio: 'ignore',
 				env: {

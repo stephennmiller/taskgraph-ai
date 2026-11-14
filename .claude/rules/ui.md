@@ -72,6 +72,7 @@ It prints to stderr as `✗ <message>` with the hint muted underneath.
 - **Prompt only when stdin and stdout are terminals** (`process.stdin.isTTY && process.stdout.isTTY`). Scripts, CI and agents run without one: a prompt there hangs forever. For a read-only command, print an error with a hint instead of asking.
 - **Use inquirer 14 prompt types:** `select`, `input`, `confirm`, `checkbox`. There's no `list` type; using it throws, and code that swallows the error hides the menu.
 - **Ctrl-C prints one muted line** (`Cancelled; no models changed`), changes nothing, and exits 130. Create the prompt with `clearPromptOnDone: true` so a cancelled menu doesn't stay on screen, and print the answer line yourself (see `apps/cli/src/commands/models/prompts.ts`).
+- **A yes/no question goes through `confirm(question, cancelled)`** from `apps/cli/src/utils/confirm.ts` (#1146). It defaults to no, clears the question once answered, and prints the `cancelled` line for "no" and for Ctrl-C, which exits 130. Keep the question short enough that `? <question> (y/N)` fits 80 columns: print what it is about as plain lines above it.
 - **Start a choice on the current value,** so Enter keeps it.
 
 ## Colors

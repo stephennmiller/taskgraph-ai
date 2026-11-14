@@ -10,6 +10,11 @@
 import { MISSING_TAG_HINT, stripTerminalControls } from '@tm/core';
 import chalk from 'chalk';
 import { theme } from '../ui/theme.js';
+import {
+	oldShortFlagHint,
+	swallowedFlagHint,
+	typedOldShortFlagHint
+} from './old-short-flags.js';
 
 /**
  * Check if debug mode is enabled via environment variable
@@ -145,18 +150,6 @@ const REMOVED_COMMANDS: Record<string, string> = {
 	autopilot: ' --prompt tdd'
 };
 
-// Where -p was --prompt before it meant --project everywhere (#882)
-const OLD_PROMPT_COMMANDS = new Set([
-	'add-task',
-	'expand',
-	'update',
-	'update-task',
-	'update-subtask',
-	'scope',
-	'scope-up',
-	'scope-down'
-]);
-
 /**
  * Restyle an error Commander raised while parsing arguments ("error: unknown
  * command 'shwo'\n(Did you mean show?)") into the same two lines as every
@@ -206,13 +199,23 @@ export function formatCommanderError(
 		});
 	}
 
+	// `expand 3 -f` (unknown now), `research 'q' -t` (now --tag, which needs
+	// a value) and `research 'q' -t --save out.md` (--tag took `--save`): the
+	// letter meant something else here before #1155
+	const raw = first.replace(/^error:\s*/i, '');
+	const unknown = /^unknown option '-(\w)/i.exec(raw)?.[1];
+	const needsValue = /^option '-(\w), .* argument missing$/i.exec(raw)?.[1];
+	const oldFlagHint =
+		commandPath &&
+		(unknown
+			? oldShortFlagHint(commandPath, unknown)
+			: needsValue
+				? typedOldShortFlagHint(commandPath, needsValue)
+				: /^too many arguments/i.test(raw) && swallowedFlagHint(commandPath));
+
 	let hint: string | undefined;
-	if (
-		/^unknown option '-p'$/i.test(reason) &&
-		OLD_PROMPT_COMMANDS.has(commandPath ?? '')
-	) {
-		// -p was --prompt in some commands and --parent in add-subtask (#882)
-		hint = '-p means --project; write --prompt or --parent in full';
+	if (oldFlagHint) {
+		hint = oldFlagHint;
 	} else if (/^unknown command/i.test(reason)) {
 		hint = suggestion
 			? `Did you mean \`taskgraph ${suggestion}\`?`

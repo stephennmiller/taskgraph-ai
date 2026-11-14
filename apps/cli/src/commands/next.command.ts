@@ -14,6 +14,7 @@ import {
 	withFullSubtaskIds
 } from '@tm/core';
 import { Command } from 'commander';
+import { projectOption, tagOption } from '../utils/shared-options.js';
 import { formatClaim } from '../ui/formatters/claim-formatters.js';
 import { formatTaskDetail } from '../ui/formatters/task-detail-formatters.js';
 import { formatNoNextTask } from '../ui/formatters/task-list-formatters.js';
@@ -70,19 +71,16 @@ export class NextCommand extends Command {
 		super(name || 'next');
 
 		// Configure the command
-		this.description('Find the next available task to work on')
-			.option('-t, --tag <tag>', 'Filter by tag')
-			.option('-f, --format <format>', 'Output format (text, json)', 'text')
+		this.description('Show the next task to work on')
+			.addOption(tagOption())
+			.option('-f, --format <format>', 'Output format: text or json', 'text')
 			.addOption(jsonOption())
 			.option(
 				'--claim',
 				'Start the next task and record who took it, in one locked write; assigns it to your GitHub login if nobody has it'
 			)
-			.option('--silent', 'Suppress output (useful for programmatic usage)')
-			.option(
-				'-p, --project <path>',
-				'Project root directory (auto-detected if not provided)'
-			)
+			.option('--silent', 'Print nothing')
+			.addOption(projectOption())
 			.action(async (options: NextCommandOptions) => {
 				await this.executeCommand(options);
 			});

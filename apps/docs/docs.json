@@ -15,28 +15,13 @@
 				"groups": [
 					{
 						"group": "Welcome",
-						"pages": [
-							"introduction",
-							"upgrading",
-							"migrating-from-taskmaster",
-							"privacy"
-						]
+						"pages": ["introduction", "privacy"]
 					},
 					{
 						"group": "Getting Started",
 						"pages": [
-							{
-								"group": "Quick Start",
-								"pages": [
-									"getting-started/quick-start/quick-start",
-									"getting-started/quick-start/requirements",
-									"getting-started/quick-start/installation",
-									"getting-started/quick-start/configuration-quick",
-									"getting-started/quick-start/prd-quick",
-									"getting-started/quick-start/tasks-quick",
-									"getting-started/quick-start/execute-quick"
-								]
-							},
+							"getting-started/quick-start",
+							"getting-started/installation",
 							"getting-started/api-keys",
 							"configuration",
 							"tutorial",
@@ -44,6 +29,10 @@
 							"getting-started/faq",
 							"getting-started/contribute"
 						]
+					},
+					{
+						"group": "Upgrading",
+						"pages": ["upgrading", "migrating-from-taskmaster"]
 					},
 					{
 						"group": "Best Practices",
@@ -58,7 +47,6 @@
 						"group": "Technical Capabilities",
 						"pages": [
 							"capabilities/mcp",
-							"capabilities/grok-bot",
 							"capabilities/claude-code",
 							{
 								"group": "CLI Commands",
@@ -83,7 +71,8 @@
 							"capabilities/research",
 							"capabilities/github-sync",
 							"capabilities/merge-driver",
-							"capabilities/json-output"
+							"capabilities/json-output",
+							"capabilities/grok-bot"
 						]
 					}
 				]
@@ -107,6 +96,34 @@
 		{
 			"source": "/tdd-workflow/:slug*",
 			"destination": "/capabilities/loop-presets#tdd"
+		},
+		{
+			"source": "/getting-started/quick-start/quick-start",
+			"destination": "/getting-started/quick-start"
+		},
+		{
+			"source": "/getting-started/quick-start/requirements",
+			"destination": "/getting-started/quick-start#1-requirements"
+		},
+		{
+			"source": "/getting-started/quick-start/installation",
+			"destination": "/getting-started/installation"
+		},
+		{
+			"source": "/getting-started/quick-start/configuration-quick",
+			"destination": "/configuration"
+		},
+		{
+			"source": "/getting-started/quick-start/prd-quick",
+			"destination": "/tutorial#writing-a-prd"
+		},
+		{
+			"source": "/getting-started/quick-start/tasks-quick",
+			"destination": "/getting-started/quick-start#or-go-step-by-step"
+		},
+		{
+			"source": "/getting-started/quick-start/execute-quick",
+			"destination": "/getting-started/quick-start#or-go-step-by-step"
 		}
 	],
 	"logo": {

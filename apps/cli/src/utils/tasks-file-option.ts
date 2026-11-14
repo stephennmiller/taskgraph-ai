@@ -1,5 +1,6 @@
 /**
- * @fileoverview The `-f, --file` flag the legacy commands took. Commands on
+ * @fileoverview The `--file` flag the legacy commands took (`-f` too, until
+ * `-f` meant `--format` everywhere, #1155). Commands on
  * tm-core always use the project's tasks.json, so the flag is hidden and
  * only that file is accepted: a script passing it keeps working, and one
  * naming another file fails instead of changing the project's file.
@@ -11,7 +12,7 @@ import { Option } from 'commander';
 import { terminalSafe } from '../ui/formatters/markdown-formatters.js';
 
 export const legacyFileOption = (): Option =>
-	new Option('-f, --file <file>').hideHelp();
+	new Option('--file <file>').hideHelp();
 
 /**
  * An error when `file` names something other than the project's tasks.json

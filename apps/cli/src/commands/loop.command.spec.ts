@@ -35,7 +35,10 @@ vi.mock('@tm/core', async (importOriginal) => {
 	};
 });
 
-vi.mock('inquirer', () => ({ default: { prompt: vi.fn() } }));
+vi.mock('inquirer', () => {
+	const ask = vi.fn();
+	return { default: { createPromptModule: () => ask, ask } };
+});
 
 // Mock display utilities
 vi.mock('../utils/display-helpers.js', () => ({
@@ -43,7 +46,8 @@ vi.mock('../utils/display-helpers.js', () => ({
 }));
 
 vi.mock('../utils/error-handler.js', () => ({
-	displayError: vi.fn()
+	displayError: vi.fn(),
+	printError: vi.fn()
 }));
 
 vi.mock('../utils/project-root.js', () => ({
@@ -54,8 +58,10 @@ import type { LoopResult } from '@tm/core';
 import { createTmCore } from '@tm/core';
 import inquirer from 'inquirer';
 import { displayCommandHeader } from '../utils/display-helpers.js';
-import { displayError } from '../utils/error-handler.js';
+import { displayError, printError } from '../utils/error-handler.js';
 import { getProjectRoot } from '../utils/project-root.js';
+
+const ask = (inquirer as unknown as { ask: Mock }).ask;
 
 describe('LoopCommand', () => {
 	let loopCommand: LoopCommand;
@@ -106,6 +112,7 @@ describe('LoopCommand', () => {
 					title: 'Pinned Task'
 				})),
 				isPreset: vi.fn().mockReturnValue(true),
+				nothingLeft: async () => false,
 				plan: vi.fn().mockResolvedValue({
 					prompt: 'default',
 					iterations: 1,
@@ -141,7 +148,9 @@ describe('LoopCommand', () => {
 		});
 
 		it('should have correct description', () => {
-			expect(loopCommand.description()).toContain('loop');
+			expect(loopCommand.description()).toBe(
+				'Have Claude Code work through your tasks'
+			);
 		});
 
 		it('should register on parent program via static register()', () => {
@@ -216,15 +225,14 @@ describe('LoopCommand', () => {
 			});
 		});
 
-		it('refuses to start without a terminal to ask on', async () => {
-			await expect(run({})).rejects.toThrow('process.exit called');
+		it('refuses to start without a terminal, hinting --trust', async () => {
+			await run({});
 
-			expect(displayError).toHaveBeenCalledWith(
-				expect.objectContaining({
-					message: expect.stringContaining('--trust')
-				}),
-				{ skipExit: true }
+			expect(printError).toHaveBeenCalledWith(
+				expect.stringContaining('approval'),
+				expect.stringContaining('--trust')
 			);
+			expect(process.exitCode).toBe(1);
 			expect(mockLoopRun).not.toHaveBeenCalled();
 		});
 
@@ -254,9 +262,7 @@ describe('LoopCommand', () => {
 			});
 
 			it('remembers the approval and runs when the user says yes', async () => {
-				(inquirer.prompt as unknown as Mock).mockResolvedValue({
-					confirmed: true
-				});
+				ask.mockResolvedValue({ yes: true });
 
 				await run({});
 
@@ -264,14 +270,32 @@ describe('LoopCommand', () => {
 				expect(mockLoopRun).toHaveBeenCalled();
 			});
 
-			it('stops and remembers nothing when the user says no', async () => {
-				(inquirer.prompt as unknown as Mock).mockResolvedValue({
-					confirmed: false
-				});
+			it('cancels in one muted line when the user says no', async () => {
+				ask.mockResolvedValue({ yes: false });
+
+				await run({});
+
+				expect(consoleLogSpy).toHaveBeenLastCalledWith(
+					expect.stringContaining('Cancelled; nothing ran')
+				);
+				expect(displayError).not.toHaveBeenCalled();
+				expect(printError).not.toHaveBeenCalled();
+				expect(process.exitCode).toBe(1);
+				expect(mockTmCore.loop.trust).not.toHaveBeenCalled();
+				expect(mockLoopRun).not.toHaveBeenCalled();
+			});
+
+			it('cancels the same way and exits 130 on Ctrl-C', async () => {
+				ask.mockRejectedValue(
+					Object.assign(new Error('SIGINT'), { name: 'ExitPromptError' })
+				);
 
 				await expect(run({})).rejects.toThrow('process.exit called');
 
-				expect(mockTmCore.loop.trust).not.toHaveBeenCalled();
+				expect(processExitSpy).toHaveBeenCalledWith(130);
+				expect(consoleLogSpy).toHaveBeenLastCalledWith(
+					expect.stringContaining('Cancelled; nothing ran')
+				);
 				expect(mockLoopRun).not.toHaveBeenCalled();
 			});
 		});
@@ -352,7 +376,7 @@ describe('LoopCommand', () => {
 				expect.objectContaining({ prompt: 'default', model: 'sonnet' })
 			);
 			expect(mockLoopRun).not.toHaveBeenCalled();
-			expect(inquirer.prompt).not.toHaveBeenCalled();
+			expect(ask).not.toHaveBeenCalled();
 			const output = consoleLogSpy.mock.calls.flat().join('\n');
 			expect(output).toContain('Loop dry run');
 			expect(output).toContain('Test Task');
@@ -629,7 +653,7 @@ describe('LoopCommand', () => {
 			const execute = (loopCommand as any).execute.bind(loopCommand);
 			await expect(execute({ id: '9' })).rejects.toThrow('process.exit called');
 
-			expect(inquirer.prompt).not.toHaveBeenCalled();
+			expect(ask).not.toHaveBeenCalled();
 			expect(mockLoopRun).not.toHaveBeenCalled();
 			expect(displayError).toHaveBeenCalledWith(
 				expect.objectContaining({ message: 'Task "9" doesn\'t exist' }),

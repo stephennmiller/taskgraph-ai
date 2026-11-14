@@ -221,7 +221,15 @@ describe('MCP and CLI writers on one project', () => {
 			}
 			for (let i = 2; i <= N; i++) {
 				jobs.push(
-					cli('add-dependency', '-i', String(i), '-d', '1', '--tag', 'master')
+					cli(
+						'add-dependency',
+						'-i',
+						String(i),
+						'--depends-on',
+						'1',
+						'--tag',
+						'master'
+					)
 				);
 			}
 			jobs.push(cli('tags', 'copy', 'master', 'snap'));

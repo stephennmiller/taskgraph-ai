@@ -102,10 +102,68 @@ describe('add-task', () => {
 		expect(text).not.toContain('\x1b[31m');
 	});
 
-	it('stops with a usage error, before tm-core, without a prompt or title and description', async () => {
-		await expect(run('--title=Only a title')).rejects.toThrow('exit 1');
+	it.each([
+		[['Fix the login bug']],
+		// Unquoted words are one title, as in `note`
+		[['Fix', 'the', 'login', 'bug']],
+		[['--title=Fix the login bug']],
+		[['Fix the login bug', '--title=Fix the login bug']]
+	])('takes %j as the title, with no prompt (#1149)', async (args) => {
+		await run(...args);
 
-		expect(err.join('\n')).toContain('--prompt');
+		expect(add).toHaveBeenCalledWith(
+			expect.objectContaining({
+				title: 'Fix the login bug',
+				prompt: undefined,
+				description: undefined
+			}),
+			expect.any(Object)
+		);
+	});
+
+	it('refuses a title argument and a different --title', async () => {
+		await expect(run('Fix login', '--title=Fix logout')).rejects.toThrow(
+			'exit 1'
+		);
+
+		expect(err.join('\n')).toContain(
+			'Give the title once: "Fix login" or --title=Fix logout'
+		);
+		expect(createTmCore).not.toHaveBeenCalled();
+	});
+
+	it.each([
+		// The title would be dropped: the AI writes one from the prompt
+		[['Fix', 'it', '--prompt=Users get a 500 on login']],
+		// A prompt typed without quotes: --prompt would be only "Add"
+		[['--prompt', 'Add', 'a', 'health', 'check']],
+		[['Fix it', '--prompt=p', '--description=d']]
+	])('refuses title words with --prompt, before tm-core: %j', async (args) => {
+		await expect(run(...args)).rejects.toThrow('exit 1');
+
+		expect(err.join('\n')).toContain(
+			'add-task takes a title or --prompt, not both'
+		);
+		expect(createTmCore).not.toHaveBeenCalled();
+	});
+
+	it('still takes --title with --prompt, as before #1149', async () => {
+		await run('--title=T', '--prompt=p');
+
+		expect(add).toHaveBeenCalledWith(
+			expect.objectContaining({ title: 'T', prompt: 'p' }),
+			expect.any(Object)
+		);
+	});
+
+	it('stops with a usage error, before tm-core, without a title or a prompt', async () => {
+		await expect(run('--description=Only a description')).rejects.toThrow(
+			'exit 1'
+		);
+
+		expect(err.join('\n')).toContain(
+			'add-task needs a title, or --prompt for the AI to write the task'
+		);
 		expect(createTmCore).not.toHaveBeenCalled();
 	});
 
@@ -124,17 +182,14 @@ describe('add-task', () => {
 		expect(add).toHaveBeenCalled();
 	});
 
-	it('says -t and -d work without AI and drops the config key', () => {
+	it('says a title makes no AI call and drops the config key', () => {
 		const help = new AddTaskCommand()
 			.helpInformation()
 			.replace(/\u001b\[[0-9;]*m/g, '')
 			.replace(/\s+/g, ' ');
 
-		expect(help).toContain(
-			'Add a task with AI from --prompt, or with -t and -d (no AI)'
-		);
-		expect(help).toContain('with -d, no AI call');
-		expect(help).toContain('with -t, no AI call');
+		expect(help).toContain('Add a task; --prompt has the AI write it');
+		expect(help).toContain('Task title, saved as written (no AI call)');
 		expect(help).not.toContain('global.defaultPriority');
 		expect(help).not.toContain('for manual task creation');
 		expect(help).not.toContain('Whether to use research');

@@ -27,9 +27,10 @@ import {
 	type TaskStatus
 } from '@tm/core';
 import chalk from 'chalk';
+import { fit } from '../formatters/markdown-formatters.js';
 import { getStatusIcon } from '../formatters/status-formatters.js';
 import { formatWaveSummary } from '../formatters/wave-formatters.js';
-import { drawTree, truncate } from '../layout/helpers.js';
+import { drawTree } from '../layout/helpers.js';
 import { theme } from '../theme.js';
 
 export interface RenderDependencyTreeOptions {
@@ -125,7 +126,7 @@ export function renderDependencyTree(
 				: '');
 		const head = `${lead}${getStatusIcon(node.status)} ${idLabel}  `;
 		const room = Math.max(12, width - visible(head) - visible(suffix));
-		const title = truncate(node.title, room);
+		const title = fit(node.title, room);
 		const styled =
 			isNext || node.status === 'in-progress'
 				? chalk.bold(title)
@@ -172,7 +173,7 @@ export function renderDependencyTree(
 		lines.push('', theme.muted('Bottlenecks'));
 		tree.bottlenecks.forEach((b, i) => {
 			lines.push(
-				`  ${theme.brand(b.id.padEnd(idWidth))}  ${chalk.yellow(blocks[i].padEnd(blocksWidth))}  ${truncate(b.title, room)}`
+				`  ${theme.brand(b.id.padEnd(idWidth))}  ${chalk.yellow(blocks[i].padEnd(blocksWidth))}  ${fit(b.title, room)}`
 			);
 		});
 	}

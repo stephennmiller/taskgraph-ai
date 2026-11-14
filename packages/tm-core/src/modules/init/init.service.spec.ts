@@ -66,8 +66,26 @@ describe('initializeProject', () => {
 		expect(config.global.responseLanguage).toBe('English');
 		expect(exists('.taskgraph/templates/example_prd.txt')).toBe(true);
 		expect(exists('.taskgraph/templates/example_prd_rpg.txt')).toBe(true);
-		expect(exists('.env.example')).toBe(true);
-		expect(read('.gitignore')).toContain('# Task files\n# .taskgraph/tasks/\n');
+		expect(exists('.env.example')).toBe(false);
+		// A .gitignore init creates keeps its starter list: loop --parallel
+		// commits leftover work with `git add -A`, node_modules/ included
+		const ignored = read('.gitignore').split('\n');
+		expect(ignored).toEqual(
+			expect.arrayContaining([
+				'node_modules/',
+				'.env',
+				'*.log',
+				'.vscode',
+				'.DS_Store',
+				'.taskgraph/state.json',
+				'.taskgraph/config.local.json'
+			])
+		);
+		expect(ignored.slice(-3)).toEqual([
+			'# Task files',
+			'# .taskgraph/tasks/',
+			''
+		]);
 		expect(read('CLAUDE.md')).toContain('@./.taskgraph/CLAUDE.md');
 		expect(exists('.mcp.json')).toBe(false);
 		// A new repository with the tasks.json merge driver
@@ -81,11 +99,54 @@ describe('initializeProject', () => {
 			'.git/',
 			'.gitignore',
 			'.gitattributes',
-			'.env.example',
 			'CLAUDE.md'
 		]);
 		expect(result.problems).toEqual([]);
 		expect(result.imported).toBeUndefined();
+	});
+
+	it.each([
+		[true, '# .taskgraph/tasks/'],
+		[false, '.taskgraph/tasks/']
+	])(
+		"adds only TaskGraph's lines to a .gitignore the project has (#1147)",
+		(storeTasksInGit, taskLine) => {
+			write('.gitignore', 'dist/\n');
+
+			const result = initializeProject({
+				projectRoot: projectDir,
+				claudeCode: false,
+				storeTasksInGit
+			});
+
+			expect(read('.gitignore')).toBe(
+				[
+					'dist/',
+					'',
+					'# TaskGraph per-machine files',
+					'.taskgraph/state.json',
+					'.taskgraph/config.local.json',
+					'',
+					'# Task files',
+					taskLine,
+					''
+				].join('\n')
+			);
+			expect(result.changes).toContainEqual({
+				path: '.gitignore',
+				note: 'added TaskGraph entries'
+			});
+		}
+	);
+
+	it('keeps the lines an earlier release added to .gitignore', () => {
+		const earlier =
+			'dist/\n\n# Logs\nlogs\n*.log\nnode_modules/\n.env\n.vscode\n# TaskGraph per-machine files\n.taskgraph/state.json\n.taskgraph/config.local.json\n\n# Task files\n# .taskgraph/tasks/\n';
+		write('.gitignore', earlier);
+
+		initializeProject({ projectRoot: projectDir, claudeCode: false });
+
+		expect(read('.gitignore')).toBe(earlier);
 	});
 
 	it('keeps what the user has on a second run and reports no changes', () => {
@@ -433,7 +494,6 @@ describe.skipIf(process.platform === 'win32')('links in the project', () => {
 		'.taskgraph/tasks/tasks.json',
 		'.taskgraph/templates/example_prd.txt',
 		'.taskgraph/templates/example_prd_rpg.txt',
-		'.env.example',
 		'.gitignore',
 		'.mcp.json',
 		'CLAUDE.md'

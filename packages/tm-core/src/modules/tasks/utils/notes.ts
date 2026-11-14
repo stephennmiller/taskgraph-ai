@@ -79,11 +79,35 @@ export function appendNote(
 	return details ? `${details}\n${block}` : block;
 }
 
+/** A timestamped block: its time, its text, and the same time closing it */
+const NOTE_BLOCK = String.raw`<info added on ([^>\n]+)>\n([\s\S]*?)\n<\/info added on \1>`;
+
 /** The text of the timestamped block that ends `details`, if one does */
 export function lastNote(details: string | undefined): string | undefined {
-	return details?.match(
-		/<info added on ([^>\n]+)>\n([\s\S]*)\n<\/info added on \1>\s*$/
-	)?.[2];
+	return details?.match(new RegExp(`${NOTE_BLOCK}\\s*$`))?.[2];
+}
+
+/**
+ * `details` split into its timestamped blocks, oldest first as they appear,
+ * and the text around them. A block whose time doesn't parse stays in the
+ * text, as `noteTimes` skips it.
+ */
+export function splitNotes(details: string | undefined): {
+	text: string;
+	notes: Array<{ addedAt: Date; text: string }>;
+} {
+	const notes: Array<{ addedAt: Date; text: string }> = [];
+	// With the newline `appendNote` puts before a block
+	const text = (details ?? '').replace(
+		new RegExp(`\\n?${NOTE_BLOCK}`, 'g'),
+		(block, at: string, body: string) => {
+			const addedAt = new Date(at.trim());
+			if (Number.isNaN(addedAt.getTime())) return block;
+			notes.push({ addedAt, text: body });
+			return '';
+		}
+	);
+	return { text: text.replace(/^\n+/, '').trimEnd(), notes };
 }
 
 /** Opening tag of a timestamped block; the closing tag starts with `</` */

@@ -16,17 +16,42 @@ export function isTaskIdToken(value: string): boolean {
  * @param arg - The ID typed as an argument
  * @param flag - The `--id` value
  * @param tryLine - The command to suggest, without the surrounding backticks
+ * @param what - What was given twice, and the flag that takes it
  */
 export function rejectDifferentId(
 	arg: string,
 	flag: string,
-	tryLine: string
+	tryLine: string,
+	what = { name: 'the ID', flag: '--id' }
 ): never {
 	printError(
-		`Give the ID once: "${terminalSafe(arg)}" or --id=${terminalSafe(flag)}`,
+		`Give ${what.name} once: "${terminalSafe(arg)}" or ${what.flag}=${terminalSafe(flag)}`,
 		`Try \`${tryLine}\``
 	);
 	process.exit(1);
+}
+
+/**
+ * `move 3 7` and `move --from=3 --to=7` mean the same (#1149): pick the value
+ * from the argument or its flag, refusing two different ones.
+ * @param what - What the value is, and the flag that takes it
+ * @param command - The command name, for the hint
+ */
+export function pickValue(
+	arg: string | undefined,
+	flag: string | undefined,
+	what: { name: string; flag: string },
+	command: string
+): string | undefined {
+	if (arg !== undefined && flag !== undefined && arg !== flag) {
+		rejectDifferentId(
+			arg,
+			flag,
+			`taskgraph ${command} ${what.flag}=${terminalSafe(flag)}`,
+			what
+		);
+	}
+	return flag ?? arg;
 }
 
 /**

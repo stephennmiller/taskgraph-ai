@@ -1,5 +1,5 @@
 {
-	"version": "0.63.2",
+	"version": "0.63.18",
 	"commands": {
 		"add-dependency": [
 			"check",
@@ -94,6 +94,7 @@
 			"tag",
 			"yes"
 		],
+		"go": ["sandbox", "trust"],
 		"graph": ["format", "id", "json", "project", "tag"],
 		"help": [],
 		"init": [
@@ -133,6 +134,7 @@
 			"watch",
 			"with-subtasks"
 		],
+		"log-todos": ["project"],
 		"loop": [
 			"container",
 			"container-image",

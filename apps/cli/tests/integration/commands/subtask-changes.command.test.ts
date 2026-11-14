@@ -115,16 +115,19 @@ describe('add-subtask, remove-subtask and remove-task output', () => {
 		expect(res.status).toBe(1);
 		expect(res.stdout).toBe('');
 		expect(res.stderr).toContain('✗ add-subtask needs --title');
-		expect(res.stderr).toContain('taskgraph add-subtask --parent=1 --title=');
+		expect(res.stderr).toContain('taskgraph add-subtask 1 --title=');
 		expect(res.stderr).not.toMatch(BOX);
 		expect(fs.readFileSync(tasksPath(), 'utf8')).toBe(before);
 	});
 
-	it('add-subtask without --parent errors with an example', () => {
+	it('add-subtask without a parent errors with an example', () => {
 		const res = run(['add-subtask', '--title=Orphan']);
 
 		expect(res.status).toBe(1);
-		expect(res.stderr).toContain('✗ add-subtask needs --parent');
+		expect(res.stderr).toContain(
+			'✗ add-subtask needs the task to add the subtask to'
+		);
+		expect(res.stderr).toContain("taskgraph add-subtask 5 --title='<title>'");
 		expect(res.stderr).not.toMatch(BOX);
 	});
 

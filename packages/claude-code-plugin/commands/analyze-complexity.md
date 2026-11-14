@@ -1,6 +1,6 @@
 ---
 description: "TaskGraph: score how complex each task is and which to break down. Use before expanding tasks."
-argument-hint: "[task IDs] [research]"
+argument-hint: "[task-ids] [research]"
 ---
 
 Score each task's complexity with AI and recommend which to break into subtasks.

@@ -6,9 +6,10 @@
  *   ✓ Claude Code     2.1.309
  *   ✓ Claude sign-in  signed in
  *   ✓ Project         .
- *   ✗ Plugin          not installed
+ *   – Plugin          optional; not installed
  *     In Claude Code, run /plugin marketplace add stephennmiller/taskgraph-ai
  *     then /plugin install taskgraph@taskgraph
+ *     and /plugin install taskgraph-hooks@taskgraph for its hooks
  *   – MCP server      optional; add it with taskgraph init --mcp
  *
  * With only the Claude Code bundled with TaskGraph (no `claude` on PATH), the
@@ -50,7 +51,11 @@ import {
 import chalk from 'chalk';
 import { terminalWidth, wrapLine } from '../layout/helpers.js';
 import { theme, withCode } from '../theme.js';
-import { PLUGIN_MARKETPLACE, PLUGIN_NAME } from './init-summary-formatters.js';
+import {
+	HOOKS_PLUGIN_NAME,
+	PLUGIN_MARKETPLACE,
+	PLUGIN_NAME
+} from './init-summary-formatters.js';
 
 const LABELS: Record<DoctorCheckName, string> = {
 	node: 'Node',
@@ -71,7 +76,7 @@ export interface DoctorFormatOptions {
 interface Row {
 	mark: string;
 	value: string;
-	/** Lines under a failed check that say how to fix it */
+	/** Lines under a failed or optional check that say how to fix or add it */
 	fix?: string[];
 	/** Lines under a failed check, already styled: each finding and its fix */
 	lines?: string[];
@@ -158,14 +163,22 @@ function row(
 	}
 
 	if (check.status === 'skip') {
-		return check.problem === 'not-set-up'
-			? {
-					mark: theme.muted('–'),
-					value: theme.muted(
-						withCode('optional; add it with `taskgraph init --mcp`')
-					)
-				}
-			: null;
+		const optional = (value: string, fix?: string[]): Row => ({
+			mark: theme.muted('–'),
+			value: theme.muted(withCode(value)),
+			fix
+		});
+		if (check.problem === 'not-set-up') {
+			return optional('optional; add it with `taskgraph init --mcp`');
+		}
+		if (check.problem === 'not-installed') {
+			return optional('optional; not installed', [
+				`In Claude Code, run \`/plugin marketplace add ${PLUGIN_MARKETPLACE}\``,
+				`then \`/plugin install ${PLUGIN_NAME}\``,
+				`and \`/plugin install ${HOOKS_PLUGIN_NAME}\` for its hooks`
+			]);
+		}
+		return null;
 	}
 
 	switch (check.name) {
@@ -248,14 +261,7 @@ function row(
 					fix: ['Run `npm install -g taskgraph-ai@latest`']
 				};
 			}
-			return {
-				mark: fail,
-				value: 'not installed',
-				fix: [
-					`In Claude Code, run \`/plugin marketplace add ${PLUGIN_MARKETPLACE}\``,
-					`then \`/plugin install ${PLUGIN_NAME}\``
-				]
-			};
+			return { mark: fail, value: detail };
 		default:
 			return { mark: fail, value: detail };
 	}
@@ -263,7 +269,8 @@ function row(
 
 /**
  * Format `taskgraph doctor`'s report: what `--fix` repaired, then a ✓, ✗ or
- * – line per check, with the fix muted under each ✗.
+ * – line per check, with the fix muted under each ✗ and how to add the
+ * plugin under its –.
  */
 export function formatDoctorReport(
 	report: DoctorReport,

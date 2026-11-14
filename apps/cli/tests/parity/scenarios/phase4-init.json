@@ -1,7 +1,7 @@
 {
 	"steps": [
 		{
-			"shell": "mkdir -p .taskgraph/reports/s1 && cp .gitignore .gitattributes .env.example CLAUDE.md .taskgraph/templates/example_prd.txt .taskgraph/templates/example_prd_rpg.txt .taskgraph/reports/s1/ && cp .taskgraph/CLAUDE.md .taskgraph/reports/s1/guide.md"
+			"shell": "mkdir -p .taskgraph/reports/s1 && cp .gitignore .gitattributes CLAUDE.md .taskgraph/templates/example_prd.txt .taskgraph/templates/example_prd_rpg.txt .taskgraph/reports/s1/ && cp .taskgraph/CLAUDE.md .taskgraph/reports/s1/guide.md"
 		},
 		{
 			"shell": "printf '# Mine\\n' >> CLAUDE.md && printf 'X=1\\n' > .env.example && printf 'dist/\\n' >> .gitignore && printf 'mine' > .taskgraph/templates/example_prd.txt"

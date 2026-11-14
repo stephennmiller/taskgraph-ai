@@ -1,7 +1,7 @@
 /**
  * @fileoverview add_task MCP tool
- * Add a task, written by the AI from a prompt or given as a title and
- * description, through tm-core's tasks.add()
+ * Add a task, written by the AI from a prompt or given as a title (a
+ * description is optional), through tm-core's tasks.add()
  */
 
 import path from 'node:path';
@@ -22,24 +22,21 @@ const AddTaskSchema = z.object({
 		.string()
 		.optional()
 		.describe(
-			'Description of the task to add (required if not using manual fields)'
+			'What the task should do; the AI writes it (required without a title)'
 		),
 	title: z
 		.string()
 		.optional()
-		.describe('Task title (for manual task creation)'),
+		.describe('Task title; saved as written, with no AI call'),
 	description: z
 		.string()
 		.optional()
-		.describe('Task description (for manual task creation)'),
+		.describe('Task description (optional with a title)'),
 	details: z
 		.string()
 		.optional()
-		.describe('Implementation details (for manual task creation)'),
-	testStrategy: z
-		.string()
-		.optional()
-		.describe('Test strategy (for manual task creation)'),
+		.describe('Implementation details (with a title)'),
+	testStrategy: z.string().optional().describe('Test strategy (with a title)'),
 	dependencies: z
 		.string()
 		.optional()
@@ -85,7 +82,8 @@ type AddTaskArgs = z.infer<typeof AddTaskSchema>;
 export function registerAddTaskTool(server: FastMCP) {
 	server.addTool({
 		name: 'add_task',
-		description: 'Add a new task using AI',
+		description:
+			'Add a task: a title saves it as written, a prompt has the AI write it',
 		parameters: AddTaskSchema,
 		annotations: {
 			title: 'Add Task',

@@ -10,6 +10,7 @@ import {
 	createTmCore
 } from '@tm/core';
 import { Command } from 'commander';
+import { projectOption, tagOption } from '../utils/shared-options.js';
 import {
 	formatCrossTagConflictHint,
 	formatCrossTagConflicts,
@@ -18,6 +19,7 @@ import {
 } from '../ui/formatters/move-formatters.js';
 import { terminalSafe } from '../ui/formatters/markdown-formatters.js';
 import { displayError, printError } from '../utils/error-handler.js';
+import { pickValue } from '../utils/id-argument.js';
 import { getProjectRoot } from '../utils/project-root.js';
 import {
 	legacyFileOption,
@@ -40,31 +42,46 @@ export class MoveCommand extends Command {
 	constructor(name?: string) {
 		super(name || 'move');
 
-		this.description(
-			'Move tasks between tags or reorder within tags. Supports cross-tag moves with dependency resolution options.'
-		)
-			.option(
-				'--from <id>',
-				'ID of the task/subtask to move (e.g., "5" or "5.2"). Can be comma-separated to move multiple tasks (e.g., "5,6,7")'
+		this.description('Move tasks to another position or tag')
+			.argument(
+				'[from]',
+				'Task or subtask to move (5 or 5.2); several with commas (5,6,7)'
 			)
-			.option(
-				'--to <id>',
-				'ID of the destination (e.g., "7" or "7.3"). Must match the number of source IDs if comma-separated'
-			)
-			.option('--tag <tag>', 'Specify tag context for task operations')
-			.option('--from-tag <tag>', 'Source tag for cross-tag moves')
-			.option('--to-tag <tag>', 'Target tag for cross-tag moves')
+			.argument('[to]', 'The ID it gets (7 or 7.3); one for each one moved')
+			.option('--from <id>', 'The same as the [from] argument')
+			.option('--to <id>', 'The same as the [to] argument')
+			.addOption(tagOption())
+			.option('--from-tag <tag>', 'Tag to move the tasks out of')
+			.option('--to-tag <tag>', 'Tag to move the tasks into')
 			.option('--with-dependencies', 'Also move the tasks they depend on')
 			.option(
 				'--ignore-dependencies',
-				'Break cross-tag dependencies during move'
+				'Drop dependencies that would cross tags'
 			)
-			.option(
-				'-p, --project <path>',
-				'Project root directory (auto-detected if not provided)'
-			)
+			.addOption(projectOption())
 			.addOption(legacyFileOption())
-			.action((options: MoveOptions) => this.execute(options));
+			.action(
+				(
+					from: string | undefined,
+					to: string | undefined,
+					options: MoveOptions
+				) =>
+					this.execute({
+						...options,
+						from: pickValue(
+							from,
+							options.from,
+							{ name: 'the task to move', flag: '--from' },
+							'move'
+						),
+						to: pickValue(
+							to,
+							options.to,
+							{ name: 'the new ID', flag: '--to' },
+							'move'
+						)
+					})
+			);
 	}
 
 	private async execute(options: MoveOptions): Promise<void> {
@@ -84,8 +101,8 @@ export class MoveCommand extends Command {
 			if (toTag) {
 				if (!from) {
 					printError(
-						'A move to another tag needs --from, the tasks to move',
-						`Try \`taskgraph move --from=5 --to-tag=${toTag}\``
+						'A move to another tag needs the tasks to move',
+						`Try \`taskgraph move 5 --to-tag=${terminalSafe(toTag)}\``
 					);
 					process.exit(1);
 				}
@@ -106,8 +123,8 @@ export class MoveCommand extends Command {
 
 			if (!from || !to) {
 				printError(
-					'move needs --from and --to',
-					'Try `taskgraph move --from=5 --to=7`, or `--to-tag=<tag>` to move to another tag'
+					'move needs the task to move and its new ID',
+					'Try `taskgraph move 5 7`, or `--to-tag=<tag>` to move to another tag'
 				);
 				process.exit(1);
 			}

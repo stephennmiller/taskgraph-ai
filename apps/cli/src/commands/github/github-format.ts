@@ -1,5 +1,15 @@
 /**
- * @fileoverview Text output for the github command (presentation only)
+ * @fileoverview Text output for the github command (presentation only).
+ * `github status` prints one line per check, as `doctor` does, with the fix
+ * under one that failed:
+ *
+ *   ✗ gh CLI  not available
+ *     Install the GitHub CLI, then run gh auth login
+ *   – Linked  0 of 3 tasks
+ *
+ *   ✓ gh CLI  signed in
+ *   ✓ Repo    acme/app
+ *   ✓ Linked  2 of 3 tasks
  */
 
 import {
@@ -15,8 +25,11 @@ import {
 	type UnlinkResult
 } from '@tm/core';
 import chalk from 'chalk';
-import { terminalWidth, truncate } from '../../ui/layout/helpers.js';
-import { theme } from '../../ui/theme.js';
+import { fit } from '../../ui/formatters/markdown-formatters.js';
+import { terminalWidth } from '../../ui/layout/helpers.js';
+import { theme, withCode } from '../../ui/theme.js';
+
+const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
 
 const ACTION_LABEL: Record<PlanStep['action'], (text: string) => string> = {
 	create: chalk.green,
@@ -57,10 +70,11 @@ export function formatPlan(plan: PushPlan): string {
 		lines.push(describeStep(step));
 	}
 	if (plan.orphans.length > 0) {
+		const orphans = plan.orphans.length;
 		lines.push(
 			'',
 			chalk.yellow(
-				`${plan.orphans.length} open issue(s) have no local task (pass --close-orphans to close them):`
+				`${plural(orphans, 'open issue')} ${orphans === 1 ? 'has' : 'have'} no local task (pass --close-orphans to close ${orphans === 1 ? 'it' : 'them'}):`
 			)
 		);
 		for (const orphan of plan.orphans) {
@@ -133,7 +147,7 @@ export function formatPullPlan(plan: PullPlan): string {
 	const counts = countPullSteps(plan);
 	const lines = [
 		chalk.bold(`Pull plan for ${plan.repo}`),
-		`  ${counts.apply} to update, ${counts.sync} already in sync, ${counts.conflict} conflict(s), ${counts.skip} unchanged or skipped`
+		`  ${counts.apply} to update, ${counts.sync} already in sync, ${plural(counts.conflict, 'conflict')}, ${counts.skip} unchanged or skipped`
 	];
 	// Skipped tasks are only counted, not listed, unless their assignee changes
 	for (const step of plan.steps.filter(
@@ -148,7 +162,10 @@ export function formatPullPlan(plan: PullPlan): string {
 		lines.push(
 			'',
 			chalk.yellow(
-				`${counts.conflict} task(s) changed on both sides and keep their local status. Run \`taskgraph github push\` to overwrite GitHub with it.`
+				`${plural(counts.conflict, 'task')} changed on both sides and ${counts.conflict === 1 ? 'keeps its' : 'keep their'} local status`
+			),
+			theme.muted(
+				withCode('Run `taskgraph github push` to overwrite GitHub with it')
 			)
 		);
 	}
@@ -166,16 +183,44 @@ export function formatPullResult(result: PullResult): string {
 
 export function formatStatus(status: GitHubStatus): string {
 	status = sanitizeForTerminal(status);
-	const gh = status.ghAvailable
-		? chalk.green('available and signed in')
-		: chalk.red('not available (install gh and run `gh auth login`)');
-	return [
-		chalk.bold('GitHub'),
-		`  gh CLI:   ${gh}`,
-		`  repo:     ${status.repo ?? theme.muted('not detected (use --repo owner/name)')}`,
-		`  linked:   ${status.linkedTasks} task(s)`,
-		`  unlinked: ${status.unlinkedTasks} task(s)`
-	].join('\n');
+	const pass = chalk.green('✓');
+	const fail = chalk.red('✗');
+	const total = status.linkedTasks + status.unlinkedTasks;
+	const rows: Array<
+		[mark: string, label: string, value: string, fix?: string]
+	> = [
+		status.ghAvailable
+			? [pass, 'gh CLI', 'signed in']
+			: [
+					fail,
+					'gh CLI',
+					'not available',
+					'Install the GitHub CLI, then run `gh auth login`'
+				]
+	];
+	if (status.repo) {
+		rows.push([pass, 'Repo', status.repo]);
+	} else if (status.ghAvailable) {
+		// Without gh the repo was never looked for; the row above says what to fix
+		rows.push([
+			fail,
+			'Repo',
+			'not detected',
+			'Pass `--repo owner/name`, or run this in a GitHub checkout'
+		]);
+	}
+	rows.push([
+		status.linkedTasks > 0 ? pass : theme.muted('–'),
+		'Linked',
+		`${status.linkedTasks} of ${plural(total, 'task')}`
+	]);
+	const width = Math.max(...rows.map(([, label]) => label.length));
+	return rows
+		.flatMap(([mark, label, value, fix]) => [
+			`${mark} ${label.padEnd(width)}  ${value}`,
+			...(fix ? [`  ${theme.muted(withCode(fix))}`] : [])
+		])
+		.join('\n');
 }
 
 export function formatUnlink(result: UnlinkResult): string {
@@ -187,8 +232,6 @@ export function formatUnlink(result: UnlinkResult): string {
 		)
 	].join('\n');
 }
-
-const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
 
 /**
  * ✓ Imported 2 issues from acme/app into tag master
@@ -215,7 +258,7 @@ export function formatImport(
 	const rows = steps.map((step) => {
 		const lead = `  ${`#${step.issueNumber}`.padEnd(numWidth)}  ${(step.taskId ?? '+').padStart(idWidth)}  `;
 		const tail = step.action === 'link' ? '  linked' : '';
-		const title = truncate(
+		const title = fit(
 			step.title,
 			Math.max(10, width - lead.length - tail.length)
 		);

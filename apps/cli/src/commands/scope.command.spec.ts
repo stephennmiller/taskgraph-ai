@@ -123,9 +123,12 @@ describe('scope-up / scope-down', () => {
 	});
 
 	it('scope <ids> down scopes down (#882)', async () => {
-		await new ScopeCommand().parseAsync(['1,2', 'down', '-s', 'light'], {
-			from: 'user'
-		});
+		await new ScopeCommand().parseAsync(
+			['1,2', 'down', '--strength', 'light'],
+			{
+				from: 'user'
+			}
+		);
 
 		expect(scope).toHaveBeenCalledWith(
 			expect.objectContaining({
