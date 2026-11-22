@@ -2,8 +2,11 @@ name: Version Bump
 
 # Runs after CI passes on main. Bumps the version from conventional commits
 # (feat -> minor, fix/perf/revert -> patch, "!" or BREAKING CHANGE -> major;
-# one level lower below 1.0.0), commits the new version, tags it, creates a
-# GitHub Release and stages the build on npm for a maintainer to approve.
+# one level lower below 1.0.0), commits the new version, tags it, stages the
+# build on npm for a maintainer to approve, then creates the GitHub Release.
+# The release waits for staging so a failed stage (for example npm's cap of
+# 100 staged versions, issue #1167) leaves no release that npm lacks;
+# re-running the failed job finishes both.
 on:
   workflow_run:
     workflows: [ CI ]
@@ -25,7 +28,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
-      contents: write # push the release commit and tag, create the GitHub Release
+      contents: write # push the release commit and tag
     steps:
       # main's ruleset requires pull requests, and the GitHub Actions app
       # cannot be a bypass actor on a user-owned repo. Push as a GitHub App
@@ -99,25 +102,12 @@ jobs:
           git tag "$TAG"
           .github/scripts/release-push.sh
 
-      - name: Create GitHub Release
-        if: steps.push.outputs.pushed == 'true'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAG: ${{ steps.bump.outputs.tag }}
-          BASELINE: ${{ steps.bump.outputs.baseline }}
-        run: |
-          gh release create "$TAG" \
-            --verify-tag \
-            --latest \
-            --title "$TAG" \
-            --generate-notes \
-            --notes-start-tag "$BASELINE"
-
     # Placed after the steps so the lines above keep the positions that
     # .github/zizmor.yml ignores by line number.
     outputs:
       pushed: ${{ steps.push.outputs.pushed }}
       tag: ${{ steps.bump.outputs.tag }}
+      baseline: ${{ steps.bump.outputs.baseline }}
 
   # Uploads the tagged build to npm as a STAGED release under the `next`
   # dist-tag. `npm stage publish` defers proof-of-presence (2FA): nothing is
@@ -162,3 +152,27 @@ jobs:
 
       - name: Stage release on npm
         run: npm stage publish --tag next
+
+  # Created only after the npm stage succeeds, so every GitHub Release has a
+  # build on npm waiting for approval.
+  release:
+    name: Create GitHub Release
+    needs: [ bump, publish ]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write # create the GitHub Release
+    steps:
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ needs.bump.outputs.tag }}
+          BASELINE: ${{ needs.bump.outputs.baseline }}
+        run: |
+          gh release create "$TAG" \
+            --verify-tag \
+            --latest \
+            --title "$TAG" \
+            --generate-notes \
+            --notes-start-tag "$BASELINE"
