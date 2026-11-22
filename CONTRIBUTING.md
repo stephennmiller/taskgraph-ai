@@ -135,7 +135,12 @@ it is promoted.
    ```
 
    Approve only the newest staged version. Each is built from its own tag, so
-   the newest includes every earlier fix.
+   the newest includes every earlier fix. Then reject the older ones with
+   `npm stage reject <stage-id>`: staged versions never expire, and npm refuses
+   new stages once 100 are waiting (`E409 Too many staged versions`). When that
+   happens, the merge's Version Bump run fails at "Stage npm release" before it
+   creates the GitHub Release. Reject the stale stages and re-run its failed
+   jobs.
 
 2. **Soak.** Install it with `npm install -g taskgraph-ai@next` and use it for
    a while.
